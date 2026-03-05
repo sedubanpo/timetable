@@ -35,23 +35,36 @@ function handleApiRequest_(params) {
       return jsonOutput_({ ok: true, sheets: getSheetNames() });
     }
 
+    if (action === "auth") {
+      var loginId = String(params.id || "").trim();
+      var password = String(params.pw || "");
+      if (!loginId || !password) return jsonOutput_({ ok: false, error: "AUTH_REQUIRED" }, params);
+      return jsonOutput_(authenticateTeacher(loginId, password), params);
+    }
+
+    if (action === "version") {
+      var targetSheet = String(params.sheet || "").trim();
+      if (!targetSheet) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
+      return jsonOutput_({ ok: true, version: checkDataVersion(targetSheet) }, params);
+    }
+
     if (action === "grid") {
       var sheetName = String(params.sheet || "").trim();
-      if (!sheetName) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" });
+      if (!sheetName) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
       var teacherName = String(params.teacher || "").trim();
       var forceRefresh = String(params.refresh || "") === "1";
       var lite = String(params.lite || "1") !== "0";
       var payload = teacherName
         ? getTeacherGridData(sheetName, teacherName, forceRefresh)
         : getFixedGridData(sheetName, forceRefresh);
-      if (!payload || payload.error) return jsonOutput_({ ok: false, error: payload && payload.error ? payload.error : "GRID_ERROR" });
+      if (!payload || payload.error) return jsonOutput_({ ok: false, error: payload && payload.error ? payload.error : "GRID_ERROR" }, params);
       if (lite) payload = toLitePayload_(payload);
-      return jsonOutput_({ ok: true, data: payload });
+      return jsonOutput_({ ok: true, data: payload }, params);
     }
 
-    return jsonOutput_({ ok: false, error: "UNKNOWN_ACTION" });
+    return jsonOutput_({ ok: false, error: "UNKNOWN_ACTION" }, params);
   } catch (err) {
-    return jsonOutput_({ ok: false, error: "API_ERR: " + err.message });
+    return jsonOutput_({ ok: false, error: "API_ERR: " + err.message }, params);
   }
 }
 
@@ -89,7 +102,15 @@ function isApiAuthorized_(params) {
   return String(params.token || "").trim() === requiredToken;
 }
 
-function jsonOutput_(obj) {
+function jsonOutput_(obj, params) {
+  var callback = String((params && params.callback) || "").trim();
+  if (callback) {
+    var safeCallback = callback.replace(/[^\w.$]/g, "");
+    var body = safeCallback + "(" + JSON.stringify(obj) + ");";
+    return ContentService
+      .createTextOutput(body)
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);

@@ -627,6 +627,95 @@
       let currentAttendanceReportText = "";
       let attendanceReportHourOffset = 0;
       let selectedStudentForImage = "";
+      const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycbxGiBxdU6zdBeGYy6bEMUfZyNQ9dUn8kr9G00ktZOJQk6HN26NQ961GzH1oo49unPtUDQ/exec";
+      function getApiBaseUrl() {
+        return String(window.SEDU_API_BASE_URL || localStorage.getItem("sedu_api_base_url") || API_BASE_DEFAULT).trim();
+      }
+      function hasGasRunner() {
+        return !!(window.google && google.script && google.script.run);
+      }
+      function apiJsonp(params) {
+        return new Promise(function(resolve, reject){
+          var cbName = "__seduApiCb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+          var base = getApiBaseUrl();
+          if (!base) {
+            reject(new Error("API URL이 설정되지 않았습니다."));
+            return;
+          }
+          var query = Object.assign({}, params || {}, { mode: "api", callback: cbName, _ts: Date.now() });
+          var url = base + (base.indexOf("?") > -1 ? "&" : "?") +
+            Object.keys(query).map(function(k){
+              return encodeURIComponent(k) + "=" + encodeURIComponent(query[k]);
+            }).join("&");
+          var script = document.createElement("script");
+          var timer = null;
+          function cleanup() {
+            if (timer) clearTimeout(timer);
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+            try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+          }
+          window[cbName] = function(payload) {
+            cleanup();
+            resolve(payload || {});
+          };
+          script.onerror = function() {
+            cleanup();
+            reject(new Error("API 호출 실패"));
+          };
+          timer = setTimeout(function(){
+            cleanup();
+            reject(new Error("API 호출 시간 초과"));
+          }, 12000);
+          script.src = url;
+          document.head.appendChild(script);
+        });
+      }
+      function callServer(method, args) {
+        var a = Array.isArray(args) ? args : [];
+        if (hasGasRunner()) {
+          return new Promise(function(resolve, reject){
+            var runner = google.script.run
+              .withSuccessHandler(function(res){ resolve(res); })
+              .withFailureHandler(function(err){ reject(err); });
+            if (typeof runner[method] !== "function") {
+              reject(new Error("서버 메서드를 찾을 수 없습니다: " + method));
+              return;
+            }
+            runner[method].apply(runner, a);
+          });
+        }
+        if (method === "getSheetNames") {
+          return apiJsonp({ action: "sheets" }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "시트 목록 조회 실패");
+            return res.sheets || [];
+          });
+        }
+        if (method === "authenticateTeacher") {
+          return apiJsonp({ action: "auth", id: a[0] || "", pw: a[1] || "" }).then(function(res){
+            if (!res || !res.ok) return { ok: false, message: (res && res.error) || "로그인 실패" };
+            return res;
+          });
+        }
+        if (method === "getFixedGridData") {
+          return apiJsonp({ action: "grid", sheet: a[0] || "", refresh: a[1] ? "1" : "0", lite: "0" }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "시간표 조회 실패");
+            return res.data || { headers: [], grid: {}, version: "" };
+          });
+        }
+        if (method === "getTeacherGridData") {
+          return apiJsonp({ action: "grid", sheet: a[0] || "", teacher: a[1] || "", refresh: a[2] ? "1" : "0", lite: "0" }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "강사 시간표 조회 실패");
+            return res.data || { headers: [], grid: {}, version: "" };
+          });
+        }
+        if (method === "checkDataVersion") {
+          return apiJsonp({ action: "version", sheet: a[0] || "" }).then(function(res){
+            if (!res || !res.ok) return "ERROR";
+            return String(res.version || "ERROR");
+          });
+        }
+        return Promise.reject(new Error("지원하지 않는 서버 메서드: " + method));
+      }
       window.onload = function() { 
         setTimeout(function(){ var t=document.querySelector('.kakao-tooltip'); if(t) t.style.opacity=1; }, 1000);
         setTimeout(function(){ var t=document.querySelector('.kakao-tooltip'); if(t) t.style.opacity=0; }, 4000);
@@ -736,12 +825,12 @@
           initApp(availableSheets);
           return;
         }
-        google.script.run.withSuccessHandler(function(names){
+        callServer("getSheetNames", []).then(function(names){
           sheetNamesLoaded = true;
           initApp(names);
-        }).withFailureHandler(function(err){
+        }).catch(function(err){
           alert("시간표 목록 로딩 실패: " + (err && err.message ? err.message : err));
-        }).getSheetNames();
+        });
       }
       function completeAccessSelection(mode) {
         if (!authState.loggedIn) { alert("먼저 로그인 검증을 완료하세요."); return; }
@@ -759,7 +848,7 @@
           ? !!document.getElementById('rememberLoginToggle').checked
           : !!document.getElementById('rememberLoginToggleAuth').checked;
         if (!loginId || !password) { alert("아이디와 비밀번호를 입력하세요."); return; }
-        google.script.run.withSuccessHandler(function(res) {
+        callServer("authenticateTeacher", [normalizeLoginId(loginId), password]).then(function(res) {
           if (!res || !res.ok) { alert((res && res.message) || "로그인에 실패했습니다."); return; }
           authState.loggedIn = true;
           authState.isMaster = !!res.isMaster;
@@ -787,9 +876,9 @@
             if (currentSheetName) loadData(currentSheetName, true);
           }
           applyRoleUi();
-        }).withFailureHandler(function(err){
+        }).catch(function(err){
           alert("로그인 오류: " + (err && err.message ? err.message : err));
-        }).authenticateTeacher(normalizeLoginId(loginId), password);
+        });
       }
       function logoutTeacher() {
         authState = { loggedIn: false, isMaster: false, teacherName: "", loginId: "" };
@@ -1052,16 +1141,15 @@
           return; 
         } 
 
-        var runner = google.script.run.withSuccessHandler(function(d){ 
+        var method = teacherName ? "getTeacherGridData" : "getFixedGridData";
+        var params = teacherName ? [n, teacherName, r] : [n, r];
+        callServer(method, params).then(function(d){ 
           clientCache[cacheKey]=d; 
           processData(d, r); 
-        }).withFailureHandler(function(err){
+        }).catch(function(err){
           alert("데이터 로딩 실패: " + (err && err.message ? err.message : err));
           processData({ headers: [], grid: {}, version: "ERROR" }, r);
         });
-
-        if (teacherName) runner.getTeacherGridData(n, teacherName, r);
-        else runner.getFixedGridData(n,r); 
       }
       
       function processData(d, isRefresh){ 
@@ -1078,7 +1166,7 @@
         if(pollingTimer)clearInterval(pollingTimer); 
         pollingTimer=setInterval(checkUpdate,30000); 
       }
-      function checkUpdate(){ var c=document.getElementById('mainSheetSelector').value; if(!c)return; google.script.run.withSuccessHandler(function(v){ if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; } }).checkDataVersion(c); }
+      function checkUpdate(){ var c=document.getElementById('mainSheetSelector').value; if(!c)return; callServer("checkDataVersion",[c]).then(function(v){ if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; } }).catch(function(){}); }
       function changeSheet(){ loadData(document.getElementById('mainSheetSelector').value,false); }
       function refreshData(){ if(currentSheetName){ document.getElementById('refreshBtn').classList.add('spinning'); loadData(currentSheetName,true); } }
       function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(sheetMap[k]){ loadData(sheetMap[k][0],false); } else { alert("오늘 시간표 없음"); } return; } var idx=availableSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<availableSheets.length)loadData(availableSheets[n],false); else alert("이동 불가"); }
