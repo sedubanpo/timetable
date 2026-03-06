@@ -215,51 +215,45 @@ function getTeacherAuthData_(forceRefresh) {
   return result;
 }
 
-function authenticateTeacher(loginId, password) {
-  try {
-    var auth = getTeacherAuthData_(false);
-    var keys = buildLoginKeys_(loginId);
-    var account = null;
-    for (var i = 0; i < keys.length; i++) {
-      if (auth.byId[keys[i]]) {
-        account = auth.byId[keys[i]];
-        break;
-      }
-    }
-    if (!account) {
-      auth = getTeacherAuthData_(true);
-      for (var j = 0; j < keys.length; j++) {
-        if (auth.byId[keys[j]]) {
-          account = auth.byId[keys[j]];
-          break;
-        }
-      }
-    }
-    if (!account) return { ok: false, message: "아이디를 찾을 수 없습니다." };
+function authenticateTeacher(id, password) {
+  var sheetId = "1ByPeH0bZZrZDvW_yPkCpQCIuk724_Gt7uudUj_Ue8Ho";
+  var ss = SpreadsheetApp.openById(sheetId);
+  var sheet = ss.getSheetByName("Teachers");
+  if (!sheet) sheet = ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var teacherNames = [];
 
-    var inputPw = sanitizePassword_(password);
-    if (!verifyPasswordForAccount_(account, inputPw)) {
-      auth = getTeacherAuthData_(true);
-      account = null;
-      for (var k = 0; k < keys.length; k++) {
-        if (auth.byId[keys[k]]) {
-          account = auth.byId[keys[k]];
-          break;
-        }
-      }
-      if (!verifyPasswordForAccount_(account, inputPw)) return { ok: false, message: "비밀번호가 올바르지 않습니다." };
-    }
+  // 입력 아이디 정규화 (- 제거, 8자리일 경우 010 추가)
+  var inputIdClean = String(id).replace(/[^0-9]/g, "");
+  if (inputIdClean.length === 8) inputIdClean = "010" + inputIdClean;
+  var inputPw = String(password).trim();
 
-    return {
-      ok: true,
-      loginId: account.loginId,
-      teacherName: account.teacherName || "",
-      isMaster: account.isMaster,
-      teacherNames: auth.teacherNames
-    };
-  } catch (e) {
-    return { ok: false, message: "로그인 처리 중 오류: " + e.message };
+  for (var i = 1; i < data.length; i++) {
+    var dbId = String(data[i][0]).replace(/[^0-9]/g, "");
+    if (!dbId) continue;
+    if (dbId.length === 8) dbId = "010" + dbId;
+
+    var dbName = String(data[i][1]).trim();
+    if (dbName && teacherNames.indexOf(dbName) === -1) teacherNames.push(dbName);
+    var dbPw = String(data[i][6]).trim();
+    // 비밀번호 공란 시 아이디(dbId)로 대체
+    if (dbPw === "") dbPw = dbId;
+    // 검증 및 권한 부여
+    if (inputIdClean === dbId && inputPw === dbPw) {
+      var isMaster = inputIdClean === "01042327428";
+      return {
+        ok: true,
+        success: true,
+        loginId: inputIdClean,
+        teacherName: dbName,
+        name: dbName,
+        isMaster: isMaster,
+        role: isMaster ? "ADMIN" : "TEACHER",
+        teacherNames: teacherNames
+      };
+    }
   }
+  return { ok: false, success: false, message: "아이디 또는 비밀번호가 올바르지 않습니다." };
 }
 
 function getTeacherGridData(sheetName, teacherName, forceRefresh) {
