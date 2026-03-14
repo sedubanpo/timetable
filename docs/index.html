@@ -281,30 +281,26 @@
       .attendance-report-time-nav { display:flex; gap:6px; align-items:center; }
       .attendance-time-btn { border:1px solid #cbd5e1; background:#fff; color:#1e293b; border-radius:8px; padding:8px 10px; font-size:0.82rem; font-weight:700; cursor:pointer; }
       .attendance-time-label { border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; border-radius:999px; padding:6px 10px; font-size:0.78rem; font-weight:800; }
-      #attendanceReportPreview { background:linear-gradient(145deg, #f8fafc, #eef2ff); border:1px solid #dbeafe; border-radius:14px; padding:14px; margin-bottom:10px; }
-      .attendance-report-head { font-size:1.02rem; font-weight:800; color:#0f172a; margin-bottom:8px; }
-      .attendance-report-sub { color:#475569; font-size:0.83rem; margin-bottom:10px; }
-      .attendance-report-summary { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:9px 10px; font-size:0.88rem; color:#1e293b; margin-bottom:10px; }
-      .attendance-report-list { display:flex; flex-direction:column; gap:8px; }
-      .attendance-report-item { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:9px 10px; }
-      .attendance-report-item.late { border-color:#f59e0b; background:#fffbeb; }
-      .attendance-report-item.absent { border-color:#ef4444; background:#fef2f2; }
-      .attendance-report-item-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-      .attendance-report-name { font-size:0.92rem; font-weight:800; color:#0f172a; }
-      .attendance-report-meta { font-size:0.8rem; color:#475569; margin-top:2px; }
-      .attendance-report-chip { border-radius:999px; padding:2px 8px; font-size:0.72rem; font-weight:800; border:1px solid transparent; }
-      .attendance-report-chip.late { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
-      .attendance-report-chip.absent { background:#fee2e2; color:#991b1b; border-color:#f87171; }
-      .attendance-report-note { margin-top:5px; font-size:0.8rem; color:#7c2d12; }
-      .attendance-vcard { background:rgba(255,255,255,0.9); border:1px solid #cbd5e1; border-radius:12px; padding:10px 12px; }
-      .attendance-vrow { border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; background:#fff; margin-top:8px; }
-      .attendance-vrow:first-child { margin-top:0; }
-      .attendance-v-room { font-size:0.88rem; font-weight:900; color:#0f172a; }
-      .attendance-v-class { font-size:0.8rem; color:#334155; margin-top:2px; }
-      .attendance-v-students { margin-top:6px; display:flex; flex-direction:column; gap:4px; }
-      .attendance-v-student { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; }
-      .attendance-v-student-name { font-size:0.84rem; font-weight:700; color:#1e293b; }
-      .attendance-v-student-status { font-size:0.74rem; font-weight:800; border-radius:999px; padding:2px 7px; border:1px solid transparent; }
+      #attendanceReportPreview { max-width: 460px; margin: 0 auto 10px; background:linear-gradient(180deg, #f7faff 0%, #eef4ff 100%); border:1px solid #cfe0ff; border-radius:24px; padding:16px; box-shadow:0 16px 34px rgba(37, 99, 235, 0.10); }
+      .attendance-report-head { font-size:1.02rem; font-weight:900; color:#0f172a; margin-bottom:6px; letter-spacing:-0.01em; }
+      .attendance-report-sub { color:#475569; font-size:0.83rem; margin-bottom:10px; font-weight:700; }
+      .attendance-report-summary { background:#fff; border:1px solid #dbeafe; border-radius:14px; padding:10px 12px; font-size:0.86rem; color:#1e293b; margin-bottom:12px; line-height:1.45; box-shadow:0 6px 14px rgba(148, 163, 184, 0.10); }
+      .attendance-report-note { margin-top:5px; font-size:0.78rem; color:#9a3412; line-height:1.45; }
+      .attendance-vcard { display:flex; flex-direction:column; gap:10px; }
+      .attendance-vroom-card { background:rgba(255,255,255,0.96); border:1px solid #cbd5e1; border-radius:18px; padding:12px; box-shadow:0 10px 24px rgba(148, 163, 184, 0.12); }
+      .attendance-vroom-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
+      .attendance-v-room { font-size:0.94rem; font-weight:900; color:#0f172a; }
+      .attendance-v-room-meta { font-size:0.74rem; color:#64748b; font-weight:700; margin-top:3px; }
+      .attendance-v-room-count { border-radius:999px; padding:4px 8px; font-size:0.72rem; font-weight:800; background:#e0ecff; color:#1d4ed8; border:1px solid #bfdbfe; white-space:nowrap; }
+      .attendance-vclass-card { border-top:1px dashed #dbeafe; padding-top:10px; margin-top:10px; }
+      .attendance-vclass-card:first-of-type { border-top:none; padding-top:0; margin-top:0; }
+      .attendance-v-class { font-size:0.8rem; color:#334155; font-weight:800; margin-bottom:8px; }
+      .attendance-v-students { display:flex; flex-direction:column; gap:6px; }
+      .attendance-v-student { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:8px 9px; }
+      .attendance-v-student-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+      .attendance-v-student-name { font-size:0.84rem; font-weight:800; color:#1e293b; }
+      .attendance-v-student-meta { font-size:0.74rem; color:#64748b; margin-top:4px; }
+      .attendance-v-student-status { font-size:0.72rem; font-weight:800; border-radius:999px; padding:3px 8px; border:1px solid transparent; }
       .attendance-v-student-status.late { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
       .attendance-v-student-status.absent { background:#fee2e2; color:#991b1b; border-color:#f87171; }
       #attendanceReportText { width:100%; min-height:150px; border:1px solid #d1d5db; border-radius:10px; padding:10px; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size:0.9rem; resize:vertical; background:#f8fafc; box-sizing:border-box; }
@@ -611,6 +607,7 @@
     <div class="kakao-wrapper"><div class="kakao-tooltip">불편사항 접수 🚀</div><a href="http://pf.kakao.com/_KIZxin/chat" target="_blank" class="kakao-float" title="문의하기"><svg class="kakao-icon" viewBox="0 0 24 24"><path d="M12 3C6.48 3 2 6.48 2 10.76c0 2.75 1.83 5.17 4.59 6.6-.18.66-.67 2.41-.77 2.79-.12.45.17.44.36.32 1.49-.98 3.42-2.26 4.02-2.66.59.08 1.2.13 1.8.13 5.52 0 10-3.48 10-7.76S17.52 3 12 3z"/></svg></a></div>
     <script>
       let currentDate = new Date(); let sheetMap = {}; let availableSheets = []; let clientCache = {}; let currentVersion = ""; let pollingTimer = null; let currentSheetName = ""; let lastData = null;
+      let teacherCalendarSheetMap = {}; let teacherCalendarSheets = []; let teacherCalendarReady = false; let teacherCalendarRequestId = 0;
       let autoRefreshTimer = null; let countdownTimer = null; let timeLeft = 1800;
       let isHolidayCollapsed = false;
       let collapsedColumns = new Set();
@@ -706,6 +703,12 @@
           return apiJsonp({ action: "grid", sheet: a[0] || "", teacher: a[1] || "", refresh: a[2] ? "1" : "0", lite: "0" }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "강사 시간표 조회 실패");
             return res.data || { headers: [], grid: {}, version: "" };
+          });
+        }
+        if (method === "getTeacherSheetNames") {
+          return apiJsonp({ action: "teacher_sheets", teacher: a[0] || "", refresh: a[1] ? "1" : "0" }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "강사 시트 목록 조회 실패");
+            return res.sheets || [];
           });
         }
         if (method === "checkDataVersion") {
@@ -885,6 +888,9 @@
         availableTeacherNames = [];
         accessMode = "";
         clientCache = {};
+        teacherCalendarSheetMap = {};
+        teacherCalendarSheets = [];
+        teacherCalendarReady = false;
         applyRoleUi();
         document.getElementById('mainPage').style.display = 'none';
         document.getElementById('gateRoleWrap').style.display = 'none';
@@ -918,7 +924,65 @@
       function changeTeacherView() {
         if (!currentSheetName) return;
         clientCache = {};
+        updateTeacherCalendarAvailability(true);
         loadData(currentSheetName, true);
+      }
+      function buildSheetMapFromNames(names) {
+        var map = {};
+        (names || []).forEach(function(n) {
+          var m = String(n || "").match(/(\d+)\/(\d+)/);
+          if (!m) return;
+          var key = parseInt(m[1], 10) + "-" + parseInt(m[2], 10);
+          if (!map[key]) map[key] = [];
+          map[key].push(n);
+        });
+        return map;
+      }
+      function getCalendarSheetMap() {
+        if (isTeacherViewActive() && teacherCalendarReady) return teacherCalendarSheetMap;
+        return sheetMap;
+      }
+      function getNavigableSheetNames() {
+        if (isTeacherViewActive() && teacherCalendarReady) return teacherCalendarSheets;
+        return availableSheets;
+      }
+      function updateTeacherCalendarAvailability(forceRefresh) {
+        if (!isTeacherViewActive()) {
+          teacherCalendarSheetMap = {};
+          teacherCalendarSheets = [];
+          teacherCalendarReady = false;
+          renderCalendar();
+          return Promise.resolve([]);
+        }
+        var teacherName = getActiveTeacherName();
+        if (!teacherName) {
+          teacherCalendarSheetMap = {};
+          teacherCalendarSheets = [];
+          teacherCalendarReady = true;
+          renderCalendar();
+          return Promise.resolve([]);
+        }
+        var requestId = ++teacherCalendarRequestId;
+        teacherCalendarReady = false;
+        teacherCalendarSheetMap = {};
+        teacherCalendarSheets = [];
+        renderCalendar();
+        return callServer("getTeacherSheetNames", [teacherName, !!forceRefresh]).then(function(names) {
+          if (requestId !== teacherCalendarRequestId) return names || [];
+          teacherCalendarSheets = Array.isArray(names) ? names.slice() : [];
+          teacherCalendarSheetMap = buildSheetMapFromNames(teacherCalendarSheets);
+          teacherCalendarReady = true;
+          renderCalendar();
+          return teacherCalendarSheets;
+        }).catch(function(err) {
+          if (requestId !== teacherCalendarRequestId) return [];
+          teacherCalendarSheetMap = {};
+          teacherCalendarSheets = [];
+          teacherCalendarReady = true;
+          renderCalendar();
+          console.error(err);
+          return [];
+        });
       }
       function applyRoleUi() {
         var roleBadge = document.getElementById('roleBadge');
@@ -1084,17 +1148,12 @@
           var targetYear = now.getFullYear();
           var targetMonth = now.getMonth();
           availableSheets.forEach(function(n){ 
-            var m=n.match(/(\d+)\/(\d+)/); 
-            if(m){ 
-              var k=parseInt(m[1])+"-"+parseInt(m[2]); 
-              if(!sheetMap[k])sheetMap[k]=[]; 
-              sheetMap[k].push(n); 
-            } 
             var op=document.createElement("option"); 
             op.value=n; 
             op.text=n; 
             mSel.appendChild(op); 
           }); 
+          sheetMap = buildSheetMapFromNames(availableSheets);
           
           document.getElementById('introLoading').style.display='none'; 
           
@@ -1110,11 +1169,12 @@
           } 
           currentDate = new Date(targetYear, targetMonth, 1);
           applyRoleUi();
-          renderCalendar(); 
+          if (isTeacherViewActive()) updateTeacherCalendarAvailability(false);
+          else renderCalendar(); 
         }catch(e){console.error(e);} 
       }
-      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(sheetMap&&sheetMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
-      function handleDateClick(k){ var s=sheetMap[k]; if(!s)return; if(s.length===1)loadData(s[0],true); else showVersionModal(s); }
+      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
+      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(s.length===1)loadData(s[0],true); else showVersionModal(s); }
       function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
@@ -1169,7 +1229,7 @@
       function checkUpdate(){ var c=document.getElementById('mainSheetSelector').value; if(!c)return; callServer("checkDataVersion",[c]).then(function(v){ if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; } }).catch(function(){}); }
       function changeSheet(){ loadData(document.getElementById('mainSheetSelector').value,false); }
       function refreshData(){ if(currentSheetName){ document.getElementById('refreshBtn').classList.add('spinning'); loadData(currentSheetName,true); } }
-      function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(sheetMap[k]){ loadData(sheetMap[k][0],false); } else { alert("오늘 시간표 없음"); } return; } var idx=availableSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<availableSheets.length)loadData(availableSheets[n],false); else alert("이동 불가"); }
+      function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; var visibleSheets=getNavigableSheetNames(); var activeMap=getCalendarSheetMap(); if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(activeMap[k]){ loadData(activeMap[k][0],false); } else { alert("오늘 시간표 없음"); } return; } var idx=visibleSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<visibleSheets.length)loadData(visibleSheets[n],false); else alert("이동 불가"); }
       
       function generateArrivalMessage(){ 
         if(!lastData)return; 
@@ -1467,11 +1527,17 @@
         status = normalizeStatusLabel(status);
         var school = "";
         var noteTokens = [];
+        var statusConsumed = false;
         for (var i = 1; i < tokens.length; i++) {
           var tk = tokens[i];
           if (!tk) continue;
-          if (/^(개별정규|개별|정규|1:1|2:1|특강|보강|보충|일반보충|당취보충|직보|결석예고|휴강|당취|당일취소|오늘만|지각|병결|자습|신규생|첫수업)$/.test(tk)) continue;
-          if (status && tk === status) continue;
+          if (status && tk === status && !statusConsumed) {
+            statusConsumed = true;
+            continue;
+          }
+          if (!statusConsumed && /^(개별정규|개별|정규|1:1|2:1|특강|보강|보충|일반보충|당취보충|직보|결석예고|휴강|당취|당일취소|오늘만|지각|병결|자습|신규생|첫수업)$/.test(tk)) {
+            continue;
+          }
           if (/[초중고]\d*$/.test(tk) || /[가-힣A-Za-z]+(초|중|고)\d*/.test(tk) || /^신반포(?:초|중|고)?\d*$/.test(tk)) {
             if (!school) {
               school = tk;
@@ -1943,11 +2009,16 @@
       function detectAttendanceIssueType(status, note) {
         var s = normalizeStatusLabel(status || "");
         var nt = String(note || "");
+        if (s === "보강" || s === "보충") {
+          if (/(지각|늦게|\d{1,2}:\d{2}\s*등원\s*예정|등원\s*예정|등원예정)/.test(nt)) return "late";
+          if (/(당취|당일취소|결석|병결|휴강).*(보강|보충|대체수업)|(보강|보충|대체수업).*(당취|당일취소|결석|병결|휴강)/.test(nt)) return "";
+          return "";
+        }
         if (s === "지각") return "late";
         if (s === "당일취소" || s === "결석예고" || s === "병결" || s === "휴강") return "absent";
         if (/(지각|늦게|\d{1,2}:\d{2}\s*등원\s*예정|등원\s*예정|등원예정)/.test(nt)) return "late";
         if (/(당일취소|당취|결석|병결|휴강)/.test(nt)) {
-          if (/(보강|보충)/.test(nt)) return "";
+          if (/(보강|보충|대체수업)/.test(nt)) return "";
           return "absent";
         }
         return "";
@@ -2022,19 +2093,28 @@
         return out.trim();
       }
       function buildAttendanceGroupedRows(payload) {
-        var groups = {};
+        var rooms = {};
         payload.items.forEach(function(v){
           var classText = v.subject + (v.teacher ? "-" + v.teacher + "T" : "");
-          var key = v.room + "||" + classText;
-          if (!groups[key]) groups[key] = { room: v.room, classText: classText, students: [] };
-          groups[key].students.push(v);
+          if (!rooms[v.room]) rooms[v.room] = { room: v.room, classes: {} };
+          if (!rooms[v.room].classes[classText]) rooms[v.room].classes[classText] = { classText: classText, students: [] };
+          rooms[v.room].classes[classText].students.push(v);
         });
-        return Object.keys(groups).sort(function(a, b){
-          var ga = groups[a], gb = groups[b];
-          var ra = String(ga.room || ""), rb = String(gb.room || "");
-          if (ra === rb) return String(ga.classText || "").localeCompare(String(gb.classText || ""));
-          return ra.localeCompare(rb);
-        }).map(function(k){ return groups[k]; });
+        return Object.keys(rooms).sort(function(a, b){
+          return String(a || "").localeCompare(String(b || ""));
+        }).map(function(roomKey){
+          var room = rooms[roomKey];
+          var classList = Object.keys(room.classes).sort(function(a, b){
+            return String(a || "").localeCompare(String(b || ""));
+          }).map(function(classKey){
+            return room.classes[classKey];
+          });
+          return {
+            room: room.room,
+            classes: classList,
+            issueCount: classList.reduce(function(sum, cls){ return sum + cls.students.length; }, 0)
+          };
+        });
       }
       function renderAttendanceReportPreview(payload) {
         var root = document.getElementById("attendanceReportPreview");
@@ -2044,19 +2124,33 @@
         else summaryText += " · 지각 " + payload.lateCount + "명 / 미참여 " + payload.absentCount + "명";
         var grouped = buildAttendanceGroupedRows(payload);
         var listHtml = grouped.length ? grouped.map(function(g){
-          var studentsHtml = g.students.map(function(v){
-            var cls = v.type === "late" ? "late" : "absent";
-            var school = v.school ? (" " + v.school) : "";
-            return "<div class='attendance-v-student'>" +
-                     "<span class='attendance-v-student-name'>" + v.name + school + "</span>" +
-                     "<span class='attendance-v-student-status " + cls + "'>" + v.status + "</span>" +
-                   "</div>" +
-                   (v.note ? "<div class='attendance-report-note'>비고: " + v.note + "</div>" : "");
+          var classesHtml = g.classes.map(function(clsGroup){
+            var studentsHtml = clsGroup.students.map(function(v){
+              var statusCls = v.type === "late" ? "late" : "absent";
+              var school = v.school ? (" " + v.school) : "";
+              var meta = [];
+              if (v.teacher) meta.push(v.teacher + "T");
+              if (v.subject) meta.push(v.subject);
+              return "<div class='attendance-v-student'>" +
+                       "<div class='attendance-v-student-top'>" +
+                         "<span class='attendance-v-student-name'>" + v.name + school + "</span>" +
+                         "<span class='attendance-v-student-status " + statusCls + "'>" + v.status + "</span>" +
+                       "</div>" +
+                       (meta.length ? "<div class='attendance-v-student-meta'>" + meta.join(" · ") + "</div>" : "") +
+                       (v.note ? "<div class='attendance-report-note'>비고: " + v.note + "</div>" : "") +
+                     "</div>";
+            }).join("");
+            return "<div class='attendance-vclass-card'>" +
+                     "<div class='attendance-v-class'>수업: " + clsGroup.classText + "</div>" +
+                     "<div class='attendance-v-students'>" + studentsHtml + "</div>" +
+                   "</div>";
           }).join("");
-          return "<div class='attendance-vrow'>" +
-                   "<div class='attendance-v-room'>강의실: " + g.room + "</div>" +
-                   "<div class='attendance-v-class'>수업: " + g.classText + "</div>" +
-                   "<div class='attendance-v-students'>" + studentsHtml + "</div>" +
+          return "<div class='attendance-vroom-card'>" +
+                   "<div class='attendance-vroom-head'>" +
+                     "<div><div class='attendance-v-room'>" + g.room + "</div><div class='attendance-v-room-meta'>이상 징후 학생 " + g.issueCount + "명</div></div>" +
+                     "<div class='attendance-v-room-count'>" + g.issueCount + "건</div>" +
+                   "</div>" +
+                   "<div class='attendance-vcard'>" + classesHtml + "</div>" +
                  "</div>";
         }).join("") : "<div class='attendance-report-summary'>현재 시간대 이상 징후(지각/결석/취소) 학생이 없습니다.</div>";
         root.innerHTML =

@@ -28,11 +28,11 @@ function handleApiRequest_(params) {
         ok: true,
         now: new Date().toISOString(),
         tz: Session.getScriptTimeZone() || "Asia/Seoul"
-      });
+      }, params);
     }
 
     if (action === "sheets") {
-      return jsonOutput_({ ok: true, sheets: getSheetNames() });
+      return jsonOutput_({ ok: true, sheets: getSheetNames() }, params);
     }
 
     if (action === "auth") {
@@ -40,6 +40,13 @@ function handleApiRequest_(params) {
       var password = String(params.pw || "");
       if (!loginId || !password) return jsonOutput_({ ok: false, error: "AUTH_REQUIRED" }, params);
       return jsonOutput_(authenticateTeacher(loginId, password), params);
+    }
+
+    if (action === "teacher_sheets") {
+      var selectedTeacher = String(params.teacher || "").trim();
+      var teacherRefresh = String(params.refresh || "") === "1";
+      if (!selectedTeacher) return jsonOutput_({ ok: false, error: "TEACHER_REQUIRED" }, params);
+      return jsonOutput_({ ok: true, sheets: getTeacherSheetNames(selectedTeacher, teacherRefresh) }, params);
     }
 
     if (action === "version") {
@@ -293,6 +300,42 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     return result;
   } catch (e) {
     return { error: "TEACHER_GRID_ERR: " + e.message };
+  }
+}
+
+function teacherGridHasItems_(payload) {
+  var headers = (payload && payload.headers) || [];
+  var grid = (payload && payload.grid) || {};
+  for (var h = 9; h <= 22; h++) {
+    var row = grid[h] || [];
+    for (var i = 0; i < headers.length; i++) {
+      if (row[i] && row[i].length) return true;
+    }
+  }
+  return false;
+}
+
+function getTeacherSheetNames(teacherName, forceRefresh) {
+  try {
+    var selectedTeacher = String(teacherName || "").trim();
+    if (!selectedTeacher) return getSheetNames();
+
+    var cache = CacheService.getScriptCache();
+    var cacheKey = "TEACHER_SHEETS_V1_" + selectedTeacher;
+    if (!forceRefresh) {
+      var cached = cache.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    }
+
+    var names = getSheetNames();
+    var filtered = names.filter(function(sheetName) {
+      var data = getTeacherGridData(sheetName, selectedTeacher, forceRefresh);
+      return data && !data.error && teacherGridHasItems_(data);
+    });
+    cache.put(cacheKey, JSON.stringify(filtered), 120);
+    return filtered;
+  } catch (e) {
+    return [];
   }
 }
 
