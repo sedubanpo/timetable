@@ -1114,8 +1114,8 @@
         }catch(e){console.error(e);} 
       }
       function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(sheetMap&&sheetMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
-      function handleDateClick(k){ var s=sheetMap[k]; if(!s)return; if(s.length===1)loadData(s[0],false); else showVersionModal(s); }
-      function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,false);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
+      function handleDateClick(k){ var s=sheetMap[k]; if(!s)return; if(s.length===1)loadData(s[0],true); else showVersionModal(s); }
+      function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
       function nextMonth(){ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); }
@@ -1303,7 +1303,9 @@
         if (t.includes("보강") || t.includes("보충")) return "보강";
         var ordered = ["결석예고","당일취소","당취","신규생","첫수업","휴강","지각","병결","자습","직보","특강","오늘만","정규"];
         for (var i = 0; i < ordered.length; i++) {
-          if (t.indexOf(ordered[i]) > -1) return ordered[i];
+          var escaped = ordered[i].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          var rx = new RegExp("(^|\\s)" + escaped + "(?=\\s|$)");
+          if (rx.test(t)) return ordered[i];
         }
         return "";
       }
@@ -1479,7 +1481,7 @@
           noteTokens.push(tk);
         }
         var noteText = normalizeNoticeText(noteTokens.join(" ").trim());
-        if ((!status || status === "정규" || status === "보강" || status === "보충" || status === "오늘만") && /(지각|늦게|등원\s*예정|등원예정)/.test(noteText)) {
+        if ((!status || status === "정규" || status === "보강" || status === "보충" || status === "오늘만") && /(지각|늦게|\d{1,2}:\d{2}\s*등원\s*예정|등원\s*예정|등원예정)/.test(noteText)) {
           status = "지각";
         }
         return {
@@ -1943,7 +1945,7 @@
         var nt = String(note || "");
         if (s === "지각") return "late";
         if (s === "당일취소" || s === "결석예고" || s === "병결" || s === "휴강") return "absent";
-        if (/(지각|늦게|등원\s*예정|등원예정)/.test(nt)) return "late";
+        if (/(지각|늦게|\d{1,2}:\d{2}\s*등원\s*예정|등원\s*예정|등원예정)/.test(nt)) return "late";
         if (/(당일취소|당취|결석|병결|휴강)/.test(nt)) {
           if (/(보강|보충)/.test(nt)) return "";
           return "absent";
