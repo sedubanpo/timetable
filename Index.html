@@ -294,7 +294,8 @@
       .attendance-v-room-count { border-radius:999px; padding:4px 8px; font-size:0.72rem; font-weight:800; background:#e0ecff; color:#1d4ed8; border:1px solid #bfdbfe; white-space:nowrap; }
       .attendance-vclass-card { border-top:1px dashed #dbeafe; padding-top:10px; margin-top:10px; }
       .attendance-vclass-card:first-of-type { border-top:none; padding-top:0; margin-top:0; }
-      .attendance-v-class { font-size:0.8rem; color:#334155; font-weight:800; margin-bottom:8px; }
+      .attendance-v-class { font-size:0.8rem; color:#334155; font-weight:800; margin-bottom:4px; }
+      .attendance-v-class-type { font-size:0.74rem; color:#475569; font-weight:700; margin-bottom:8px; }
       .attendance-v-students { display:flex; flex-direction:column; gap:6px; }
       .attendance-v-student { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:8px 9px; }
       .attendance-v-student-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -2051,6 +2052,7 @@
           var teacherItem = cell.find(function(v){ return String(v || "").includes("T"); });
           var subject = teacherItem ? getSubjectName(String(teacherItem)) : "";
           var teacher = teacherItem ? extractTeacherName(String(teacherItem)) : "";
+          var classType = teacherItem ? detectClassType(String(teacherItem)) : "";
           cell.forEach(function(v){
             var raw = String(v || "");
             if (!raw || raw.includes("T")) return;
@@ -2066,6 +2068,7 @@
               note: parsed.note || "",
               subject: subject || "수업",
               teacher: teacher || "",
+              classType: classType || "",
               room: room
             });
           });
@@ -2074,6 +2077,12 @@
         var absentCount = items.filter(function(v){ return v.type === "absent"; }).length;
         var info = parseDisplayDateInfo();
         return { hour: h, slotText: h + ":00~" + (h + 1) + ":00", dateText: info.text, items: items, lateCount: lateCount, absentCount: absentCount };
+      }
+      function getAttendanceClassTypeLabel(classType) {
+        var t = String(classType || "").trim();
+        if (!t) return "";
+        if (t === "개별정규") return "개별정규(개별)";
+        return t;
       }
       function composeAttendanceReportText(payload) {
         var head = payload.dateText + " " + payload.slotText + " 등원 현황 보고";
@@ -2085,7 +2094,8 @@
         out += "(지각인원수) " + payload.lateCount + "명 외 전원 등원 완료했습니다.\n";
         out += "미등원/지각 학생 명단:\n";
         payload.items.forEach(function(v){
-          var cls = v.subject + (v.teacher ? "-" + v.teacher + "T" : "");
+          var typeLabel = getAttendanceClassTypeLabel(v.classType);
+          var cls = v.subject + (v.teacher ? "-" + v.teacher + "T" : "") + (typeLabel ? " [" + typeLabel + "]" : "");
           var school = v.school ? (" (" + v.school + ")") : "";
           var note = v.note ? (" / 비고: " + v.note) : "";
           out += "- [" + v.status + "] " + v.name + school + " / " + cls + " / " + v.room + note + "\n";
@@ -2095,10 +2105,12 @@
       function buildAttendanceGroupedRows(payload) {
         var rooms = {};
         payload.items.forEach(function(v){
+          var typeLabel = getAttendanceClassTypeLabel(v.classType);
           var classText = v.subject + (v.teacher ? "-" + v.teacher + "T" : "");
+          var classKey = classText + "||" + typeLabel;
           if (!rooms[v.room]) rooms[v.room] = { room: v.room, classes: {} };
-          if (!rooms[v.room].classes[classText]) rooms[v.room].classes[classText] = { classText: classText, students: [] };
-          rooms[v.room].classes[classText].students.push(v);
+          if (!rooms[v.room].classes[classKey]) rooms[v.room].classes[classKey] = { classText: classText, classType: typeLabel, students: [] };
+          rooms[v.room].classes[classKey].students.push(v);
         });
         return Object.keys(rooms).sort(function(a, b){
           return String(a || "").localeCompare(String(b || ""));
@@ -2131,6 +2143,7 @@
               var meta = [];
               if (v.teacher) meta.push(v.teacher + "T");
               if (v.subject) meta.push(v.subject);
+              if (v.classType) meta.push(getAttendanceClassTypeLabel(v.classType));
               return "<div class='attendance-v-student'>" +
                        "<div class='attendance-v-student-top'>" +
                          "<span class='attendance-v-student-name'>" + v.name + school + "</span>" +
@@ -2142,6 +2155,7 @@
             }).join("");
             return "<div class='attendance-vclass-card'>" +
                      "<div class='attendance-v-class'>수업: " + clsGroup.classText + "</div>" +
+                     (clsGroup.classType ? "<div class='attendance-v-class-type'>유형: " + clsGroup.classType + "</div>" : "") +
                      "<div class='attendance-v-students'>" + studentsHtml + "</div>" +
                    "</div>";
           }).join("");
@@ -2612,14 +2626,16 @@
             if (String(colName || "").includes("휴강")) continue;
             
             var cellStudents = [];
-            var hasOneOnOneBadge = false;
+            var teacherItem = items.find(function(text) {
+              return String(text || "").includes("T");
+            }) || "";
+            var lessonType = detectClassType(teacherItem);
             
             items.forEach(function(text) {
               var txt = String(text || "");
               if (txt.includes("T")) return; 
               if (txt.includes("결석예고") || txt.includes("휴강")) return;
               if (shouldHideStudentText(txt)) return;
-              if (txt.includes("1:1")) hasOneOnOneBadge = true;
               
               var cleanName = normalizeReviewNameToken(
                 txt.replace("확인필요", "").replace(/신\s*규\s*생?|첫\s*수\s*업/g, "").trim().split(" ")[0]
@@ -2632,10 +2648,15 @@
               }
             });
             
-            if (hasOneOnOneBadge && cellStudents.length > 1) {
+            if (lessonType === "1:1" && cellStudents.length > 1) {
                issues.push({
                  type: 'capacity',
                  msg: `[${h}:00] ${colName} - 1:1 수업에 ${cellStudents.length}명 배정 (${cellStudents.join(", ")})`
+               });
+            } else if (lessonType === "2:1" && cellStudents.length > 2) {
+               issues.push({
+                 type: 'capacity',
+                 msg: `[${h}:00] ${colName} - 2:1 수업에 ${cellStudents.length}명 배정 (${cellStudents.join(", ")})`
                });
             }
           }
