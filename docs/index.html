@@ -56,8 +56,18 @@
       .gate-input::placeholder { color: rgba(255,255,255,0.75); }
       .gate-save-row { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; font-size: 0.86rem; color: rgba(255,255,255,0.95); }
       .gate-save-row input { width: 16px; height: 16px; accent-color: #bfdbfe; cursor: pointer; }
-      .gate-btn { width: 100%; border: 0; border-radius: 12px; padding: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #0b2f79; }
+      .gate-btn { width: 100%; border: 0; border-radius: 12px; padding: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #0b2f79; transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease; }
       .gate-btn.secondary { margin-top: 8px; background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.35); }
+      .gate-btn.loading, .auth-btn.loading { opacity: 0.86; cursor: wait; pointer-events: none; box-shadow: 0 10px 24px rgba(59,130,246,0.22); }
+      .login-progress { display: none; margin: 12px 0 4px; }
+      .login-progress.is-visible { display: block; }
+      .login-progress-track { position: relative; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.18); border: 1px solid rgba(191,219,254,0.52); box-shadow: inset 0 1px 2px rgba(15,23,42,0.15); }
+      .login-progress-fill { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #93c5fd 0%, #dbeafe 30%, #60a5fa 65%, #2563eb 100%); background-size: 200% 100%; box-shadow: 0 0 18px rgba(96,165,250,0.35); transition: width 0.22s ease; animation: loginProgressShimmer 1.6s linear infinite; }
+      .login-progress-text { margin-top: 7px; font-size: 0.78rem; font-weight: 700; color: rgba(255,255,255,0.92); letter-spacing: -0.01em; }
+      .auth-progress .login-progress-track { background: #e2e8f0; border-color: #bfdbfe; }
+      .auth-progress .login-progress-fill { box-shadow: 0 0 14px rgba(59,130,246,0.22); }
+      .auth-progress .login-progress-text { color: #475569; }
+      @keyframes loginProgressShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
       .gate-role-wrap { display: none; margin-top: 14px; }
       .gate-role-title { margin: 0 0 8px; font-size: 0.9rem; color: rgba(255,255,255,0.95); font-weight: 700; }
       .gate-tip { margin-top: 10px; font-size: 0.78rem; color: rgba(255,255,255,0.88); }
@@ -145,8 +155,9 @@
       .absent-cancel { background-color: rgba(254, 226, 226, 0.65) !important; color: #7f1d1d !important; opacity: 0.88 !important; text-decoration: none !important; border: 1px solid rgba(248, 113, 113, 0.65); }
       .absent-cancel .school-text { color: #991b1b !important; }
       
-      #liveTimeline { position: absolute; left: 0; width: 100%; height: 2px; background: red; z-index: 50; pointer-events: none; display: none; box-shadow: 0 0 5px rgba(255,0,0,0.5); }
-      #liveTimeline::after { content: "◀ Current Time"; position: absolute; right: 0; top: -10px; background: red; color: white; font-size: 10px; padding: 2px 4px; border-radius: 3px; }
+      #liveTimeline { position: absolute; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, rgba(56,189,248,0.95), rgba(37,99,235,0.98)); z-index: 50; pointer-events: none; display: none; box-shadow: 0 0 0 1px rgba(255,255,255,0.82), 0 0 18px rgba(37,99,235,0.35); }
+      #liveTimeline::before { content: ""; position: absolute; left: -7px; top: 50%; width: 13px; height: 13px; border-radius: 50%; background: #2563eb; border: 2px solid #dbeafe; transform: translateY(-50%); box-shadow: 0 0 0 4px rgba(96,165,250,0.16); }
+      #liveTimeline::after { content: "NOW"; position: absolute; right: 8px; top: -14px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 999px; box-shadow: 0 6px 14px rgba(37,99,235,0.28); }
       .empty-mode-active .cell-inner { opacity: 0.1; transition: 0.3s; }
       .empty-mode-active td:not(:has(.student-item)) { background-color: #e8f5e9 !important; opacity: 1 !important; border: 2px dashed #4caf50; }
       .empty-mode-active td:has(.student-item) { background-color: #eee !important; }
@@ -434,7 +445,11 @@
         <input id="gateIdInput" class="gate-input" type="text" placeholder="아이디 (휴대폰 번호)" onkeydown="if(event.key==='Enter') submitTeacherLogin('gate');">
         <input id="gatePwInput" class="gate-input" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') submitTeacherLogin('gate');">
         <label class="gate-save-row"><input id="rememberLoginToggle" type="checkbox">아이디/비밀번호 저장</label>
-        <button class="gate-btn" onclick="submitTeacherLogin('gate')">로그인 검증</button>
+        <button id="gateLoginBtn" class="gate-btn" onclick="submitTeacherLogin('gate')">로그인 검증</button>
+        <div id="gateLoginProgress" class="login-progress">
+          <div class="login-progress-track"><div id="gateLoginProgressFill" class="login-progress-fill"></div></div>
+          <div id="gateLoginProgressText" class="login-progress-text">인증 정보를 확인하고 있습니다...</div>
+        </div>
         <div id="gateRoleWrap" class="gate-role-wrap">
           <div class="gate-role-title">접근 모드를 선택하세요</div>
           <button id="gateTeacherModeBtn" class="gate-btn secondary" onclick="completeAccessSelection('teacher')">강사 시간표로 접근</button>
@@ -483,8 +498,12 @@
         <input id="authIdInput" class="auth-input" type="text" placeholder="아이디 (휴대폰 번호)" onkeydown="if(event.key==='Enter') submitTeacherLogin();">
         <input id="authPwInput" class="auth-input" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') submitTeacherLogin();">
         <label style="display:flex; align-items:center; gap:8px; margin:4px 0 10px; color:#475569; font-size:0.85rem;"><input id="rememberLoginToggleAuth" type="checkbox" style="width:16px; height:16px; cursor:pointer;">아이디/비밀번호 저장</label>
+        <div id="authLoginProgress" class="login-progress auth-progress">
+          <div class="login-progress-track"><div id="authLoginProgressFill" class="login-progress-fill"></div></div>
+          <div id="authLoginProgressText" class="login-progress-text">접근 권한을 준비하고 있습니다...</div>
+        </div>
         <div class="auth-row">
-          <button class="auth-btn primary" onclick="submitTeacherLogin()">로그인</button>
+          <button id="authLoginBtn" class="auth-btn primary" onclick="submitTeacherLogin()">로그인</button>
           <button class="auth-btn secondary" onclick="closeAuthModal()">취소</button>
         </div>
       </div>
@@ -609,6 +628,7 @@
     <script>
       let currentDate = new Date(); let sheetMap = {}; let availableSheets = []; let clientCache = {}; let currentVersion = ""; let pollingTimer = null; let currentSheetName = ""; let lastData = null;
       let teacherCalendarSheetMap = {}; let teacherCalendarSheets = []; let teacherCalendarReady = false; let teacherCalendarRequestId = 0;
+      let loginProgressTimer = null; let loginProgressSource = ""; let loginProgressValue = 0;
       let autoRefreshTimer = null; let countdownTimer = null; let timeLeft = 1800;
       let isHolidayCollapsed = false;
       let collapsedColumns = new Set();
@@ -749,6 +769,88 @@
         if (digits.length === 8) return digits;
         return s;
       }
+      function normalizeLoginPassword(v) {
+        return String(v || "").replace(/\u00A0/g, " ").trim();
+      }
+      function getLoginProgressUi(source) {
+        var isGate = source === 'gate';
+        return {
+          button: document.getElementById(isGate ? 'gateLoginBtn' : 'authLoginBtn'),
+          wrap: document.getElementById(isGate ? 'gateLoginProgress' : 'authLoginProgress'),
+          fill: document.getElementById(isGate ? 'gateLoginProgressFill' : 'authLoginProgressFill'),
+          text: document.getElementById(isGate ? 'gateLoginProgressText' : 'authLoginProgressText'),
+          defaultLabel: isGate ? '로그인 검증' : '로그인',
+          loadingLabel: isGate ? '검증 중...' : '로그인 중...'
+        };
+      }
+      function startLoginProgress(source) {
+        var ui = getLoginProgressUi(source);
+        if (!ui.button || !ui.wrap || !ui.fill || !ui.text) return;
+        if (loginProgressTimer) clearInterval(loginProgressTimer);
+        loginProgressSource = source;
+        loginProgressValue = 14;
+        ui.wrap.classList.add('is-visible');
+        ui.button.disabled = true;
+        ui.button.classList.add('loading');
+        ui.button.textContent = ui.loadingLabel;
+        ui.fill.style.width = loginProgressValue + "%";
+        ui.text.textContent = source === 'gate' ? "인증 정보를 확인하고 있습니다..." : "접근 권한을 확인하고 있습니다...";
+        loginProgressTimer = setInterval(function() {
+          if (loginProgressValue < 48) loginProgressValue += 8;
+          else if (loginProgressValue < 72) loginProgressValue += 5;
+          else if (loginProgressValue < 90) loginProgressValue += 2;
+          loginProgressValue = Math.min(90, loginProgressValue);
+          ui.fill.style.width = loginProgressValue + "%";
+          if (loginProgressValue >= 62) ui.text.textContent = source === 'gate' ? "시간표 접근 모드를 준비하고 있습니다..." : "로그인 정보를 적용하고 있습니다...";
+        }, 160);
+      }
+      function stopLoginProgress(source, success) {
+        var ui = getLoginProgressUi(source);
+        if (!ui.button || !ui.wrap || !ui.fill || !ui.text) return;
+        if (loginProgressTimer) clearInterval(loginProgressTimer);
+        loginProgressTimer = null;
+        loginProgressSource = "";
+        ui.fill.style.width = (success ? 100 : Math.max(26, loginProgressValue)) + "%";
+        ui.text.textContent = success ? "완료되었습니다." : "다시 시도할 수 있습니다.";
+        ui.button.disabled = false;
+        ui.button.classList.remove('loading');
+        ui.button.textContent = ui.defaultLabel;
+        setTimeout(function() {
+          ui.wrap.classList.remove('is-visible');
+          ui.fill.style.width = "0%";
+        }, success ? 380 : 240);
+      }
+      function shouldHideTeacherCopySheet(name) {
+        return isTeacherViewActive() && String(name || "").indexOf("사본") !== -1;
+      }
+      function getSheetSelectorNames() {
+        var source = availableSheets;
+        if (isTeacherViewActive()) {
+          source = (teacherCalendarReady && teacherCalendarSheets.length) ? teacherCalendarSheets : availableSheets;
+        }
+        return (source || []).filter(function(name) {
+          return !shouldHideTeacherCopySheet(name);
+        });
+      }
+      function populateMainSheetSelector(preferredValue) {
+        var mSel = document.getElementById('mainSheetSelector');
+        if (!mSel) return [];
+        var names = getSheetSelectorNames();
+        var fallback = preferredValue || currentSheetName || mSel.value || "";
+        mSel.innerHTML = "";
+        names.forEach(function(n) {
+          var op = document.createElement("option");
+          op.value = n;
+          op.text = n;
+          mSel.appendChild(op);
+        });
+        if (fallback && names.indexOf(fallback) !== -1) mSel.value = fallback;
+        else if (names.length) {
+          mSel.value = names[0];
+          if (!currentSheetName || names.indexOf(currentSheetName) === -1) currentSheetName = names[0];
+        }
+        return names;
+      }
       function getRememberStorageKey() { return "sedu_login_remember_v1"; }
       function saveLoginCredentials(loginId, password, remember) {
         if (!remember) {
@@ -820,6 +922,7 @@
       function closeAuthModal() {
         document.getElementById('authModal').style.display = 'none';
         document.getElementById('authPwInput').value = "";
+        stopLoginProgress('auth', false);
       }
       function startAppAfterAuth() {
         document.getElementById('introPage').style.display = 'flex';
@@ -848,12 +951,18 @@
         var fromGate = source === 'gate';
         var loginId = fromGate ? document.getElementById('gateIdInput').value.trim() : document.getElementById('authIdInput').value.trim();
         var password = fromGate ? document.getElementById('gatePwInput').value : document.getElementById('authPwInput').value;
+        password = normalizeLoginPassword(password);
         var remember = fromGate
           ? !!document.getElementById('rememberLoginToggle').checked
           : !!document.getElementById('rememberLoginToggleAuth').checked;
         if (!loginId || !password) { alert("아이디와 비밀번호를 입력하세요."); return; }
+        startLoginProgress(fromGate ? 'gate' : 'auth');
         callServer("authenticateTeacher", [normalizeLoginId(loginId), password]).then(function(res) {
-          if (!res || !res.ok) { alert((res && res.message) || "로그인에 실패했습니다."); return; }
+          if (!res || !res.ok) {
+            stopLoginProgress(fromGate ? 'gate' : 'auth', false);
+            alert((res && res.message) || "로그인에 실패했습니다.");
+            return;
+          }
           authState.loggedIn = true;
           authState.isMaster = !!res.isMaster;
           authState.teacherName = res.teacherName || "";
@@ -880,8 +989,10 @@
             if (currentSheetName) loadData(currentSheetName, true);
           }
           applyRoleUi();
+          stopLoginProgress(fromGate ? 'gate' : 'auth', true);
         }).catch(function(err){
           alert("로그인 오류: " + (err && err.message ? err.message : err));
+          stopLoginProgress(fromGate ? 'gate' : 'auth', false);
         });
       }
       function logoutTeacher() {
@@ -944,14 +1055,17 @@
         return sheetMap;
       }
       function getNavigableSheetNames() {
-        if (isTeacherViewActive() && teacherCalendarReady) return teacherCalendarSheets;
-        return availableSheets;
+        if (isTeacherViewActive() && teacherCalendarReady) {
+          return teacherCalendarSheets.filter(function(name) { return !shouldHideTeacherCopySheet(name); });
+        }
+        return getSheetSelectorNames();
       }
       function updateTeacherCalendarAvailability(forceRefresh) {
         if (!isTeacherViewActive()) {
           teacherCalendarSheetMap = {};
           teacherCalendarSheets = [];
           teacherCalendarReady = false;
+          populateMainSheetSelector(currentSheetName);
           renderCalendar();
           return Promise.resolve([]);
         }
@@ -960,6 +1074,7 @@
           teacherCalendarSheetMap = {};
           teacherCalendarSheets = [];
           teacherCalendarReady = true;
+          populateMainSheetSelector(currentSheetName);
           renderCalendar();
           return Promise.resolve([]);
         }
@@ -971,6 +1086,7 @@
         return callServer("getTeacherSheetNames", [teacherName, !!forceRefresh]).then(function(names) {
           if (requestId !== teacherCalendarRequestId) return names || [];
           teacherCalendarSheets = Array.isArray(names) ? names.slice() : [];
+          populateMainSheetSelector(currentSheetName);
           if (!teacherCalendarSheets.length) {
             teacherCalendarSheetMap = {};
             teacherCalendarReady = false;
@@ -986,6 +1102,7 @@
           teacherCalendarSheetMap = {};
           teacherCalendarSheets = [];
           teacherCalendarReady = false;
+          populateMainSheetSelector(currentSheetName);
           renderCalendar();
           console.error(err);
           return [];
@@ -1021,6 +1138,7 @@
           if (hide9Control) hide9Control.style.display = '';
           if (studentImageBtn) studentImageBtn.style.display = '';
           document.body.classList.remove('teacher-compact');
+          populateMainSheetSelector(currentSheetName);
           document.getElementById('mainPage').style.display = 'none';
           document.getElementById('introPage').style.display = 'none';
           return;
@@ -1064,6 +1182,7 @@
           document.body.classList.remove('teacher-compact');
         }
         searchInput.placeholder = isTeacherViewActive() ? "🔍 내 시간표 검색" : "🔍 학생/강사 검색";
+        populateMainSheetSelector(currentSheetName);
       }
       function toggleFullscreen() {
         if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => { alert(`전체화면 오류: ${err.message}`); }); } else { if (document.exitFullscreen) document.exitFullscreen(); }
@@ -1148,18 +1267,11 @@
         try{ 
           availableSheets=names||[]; 
           if(availableSheets.length>0&&availableSheets[0].startsWith("ERROR")){console.error(availableSheets[0]);return;} 
-          var mSel=document.getElementById('mainSheetSelector'); 
-          mSel.innerHTML=""; 
           sheetMap={}; 
           var now = new Date();
           var targetYear = now.getFullYear();
           var targetMonth = now.getMonth();
-          availableSheets.forEach(function(n){ 
-            var op=document.createElement("option"); 
-            op.value=n; 
-            op.text=n; 
-            mSel.appendChild(op); 
-          }); 
+          populateMainSheetSelector(currentSheetName); 
           sheetMap = buildSheetMapFromNames(availableSheets);
           
           document.getElementById('introLoading').style.display='none'; 
@@ -1234,7 +1346,7 @@
         pollingTimer=setInterval(checkUpdate,30000); 
       }
       function checkUpdate(){ var c=document.getElementById('mainSheetSelector').value; if(!c)return; callServer("checkDataVersion",[c]).then(function(v){ if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; } }).catch(function(){}); }
-      function changeSheet(){ loadData(document.getElementById('mainSheetSelector').value,false); }
+      function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false); }
       function refreshData(){ if(currentSheetName){ document.getElementById('refreshBtn').classList.add('spinning'); loadData(currentSheetName,true); } }
       function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; var visibleSheets=getNavigableSheetNames(); var activeMap=getCalendarSheetMap(); if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(activeMap[k]){ loadData(activeMap[k][0],false); } else { alert("오늘 시간표 없음"); } return; } var idx=visibleSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<visibleSheets.length)loadData(visibleSheets[n],false); else alert("이동 불가"); }
       

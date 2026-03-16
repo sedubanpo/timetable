@@ -188,6 +188,20 @@ function matchesDefaultPassword_(inputPw, loginIdRaw) {
   return false;
 }
 
+function looksLikePhoneCredential_(value) {
+  var digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 8 || digits.length === 10 || digits.length === 11;
+}
+
+function matchesPhoneStylePassword_(inputPw, storedPw) {
+  var input = sanitizePassword_(inputPw);
+  var stored = sanitizePassword_(storedPw);
+  if (!input || !stored) return false;
+  if (input === stored) return true;
+  if (!looksLikePhoneCredential_(stored)) return false;
+  return matchesDefaultPassword_(input, stored);
+}
+
 function verifyPasswordForAccount_(account, inputPw) {
   if (!account) return false;
   if (account.password) return sanitizePassword_(inputPw) === account.password;
@@ -244,7 +258,7 @@ function authenticateTeacher(id, password) {
   // 입력 아이디 정규화 (- 제거, 8자리일 경우 010 추가)
   var inputIdClean = String(id).replace(/[^0-9]/g, "");
   if (inputIdClean.length === 8) inputIdClean = "010" + inputIdClean;
-  var inputPw = String(password).trim();
+  var inputPw = sanitizePassword_(password);
 
   for (var i = 1; i < data.length; i++) {
     var dbId = String(data[i][0]).replace(/[^0-9]/g, "");
@@ -253,11 +267,11 @@ function authenticateTeacher(id, password) {
 
     var dbName = String(data[i][1]).trim();
     if (dbName && teacherNames.indexOf(dbName) === -1) teacherNames.push(dbName);
-    var dbPw = String(data[i][6]).trim();
+    var dbPw = sanitizePassword_(data[i][6]);
     // 비밀번호 공란 시 아이디(dbId)로 대체
     if (dbPw === "") dbPw = dbId;
     // 검증 및 권한 부여
-    if (inputIdClean === dbId && inputPw === dbPw) {
+    if (inputIdClean === dbId && matchesPhoneStylePassword_(inputPw, dbPw)) {
       var isMaster = inputIdClean === "01042327428";
       return {
         ok: true,
@@ -341,6 +355,7 @@ function getTeacherSheetNames(teacherName, forceRefresh) {
 
     var names = getSheetNames();
     var filtered = names.filter(function(sheetName) {
+      if (String(sheetName || "").indexOf("사본") !== -1) return false;
       var data = getTeacherGridData(sheetName, selectedTeacher, forceRefresh);
       return data && !data.error && teacherGridHasItems_(data);
     });
