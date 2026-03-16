@@ -971,6 +971,12 @@
         return callServer("getTeacherSheetNames", [teacherName, !!forceRefresh]).then(function(names) {
           if (requestId !== teacherCalendarRequestId) return names || [];
           teacherCalendarSheets = Array.isArray(names) ? names.slice() : [];
+          if (!teacherCalendarSheets.length) {
+            teacherCalendarSheetMap = {};
+            teacherCalendarReady = false;
+            renderCalendar();
+            return [];
+          }
           teacherCalendarSheetMap = buildSheetMapFromNames(teacherCalendarSheets);
           teacherCalendarReady = true;
           renderCalendar();
@@ -979,7 +985,7 @@
           if (requestId !== teacherCalendarRequestId) return [];
           teacherCalendarSheetMap = {};
           teacherCalendarSheets = [];
-          teacherCalendarReady = true;
+          teacherCalendarReady = false;
           renderCalendar();
           console.error(err);
           return [];
@@ -1170,7 +1176,7 @@
           } 
           currentDate = new Date(targetYear, targetMonth, 1);
           applyRoleUi();
-          if (isTeacherViewActive()) updateTeacherCalendarAvailability(false);
+          if (isTeacherViewActive()) updateTeacherCalendarAvailability(true);
           else renderCalendar(); 
         }catch(e){console.error(e);} 
       }

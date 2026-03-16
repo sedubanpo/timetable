@@ -281,7 +281,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     if (!selectedTeacher) return getFixedGridData(sheetName, forceRefresh);
 
     var cache = CacheService.getScriptCache();
-    var cacheKey = "TEACHER_GRID_V3_" + sheetName + "_" + selectedTeacher;
+    var cacheKey = "TEACHER_GRID_V4_" + sheetName + "_" + selectedTeacher;
     if (!forceRefresh) {
       var cached = cache.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -333,7 +333,7 @@ function getTeacherSheetNames(teacherName, forceRefresh) {
     if (!selectedTeacher) return getSheetNames();
 
     var cache = CacheService.getScriptCache();
-    var cacheKey = "TEACHER_SHEETS_V1_" + selectedTeacher;
+    var cacheKey = "TEACHER_SHEETS_V2_" + selectedTeacher;
     if (!forceRefresh) {
       var cached = cache.get(cacheKey);
       if (cached) return JSON.parse(cached);
