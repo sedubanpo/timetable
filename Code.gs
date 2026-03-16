@@ -155,6 +155,17 @@ function extractTeacherName_(teacherItem) {
   return token.replace(/T/g, "").trim();
 }
 
+function normalizeTeacherName_(value) {
+  return String(value || "")
+    .replace(/\u00A0/g, " ")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/선생님$/i, "")
+    .replace(/T$/i, "")
+    .replace(/[·ㆍ•]/g, "")
+    .toLowerCase();
+}
+
 function sanitizePassword_(value) {
   return String(value || "").replace(/\u00A0/g, " ").trim();
 }
@@ -265,7 +276,8 @@ function authenticateTeacher(id, password) {
 
 function getTeacherGridData(sheetName, teacherName, forceRefresh) {
   try {
-    var selectedTeacher = String(teacherName || "").trim();
+    var selectedTeacherRaw = String(teacherName || "").trim();
+    var selectedTeacher = normalizeTeacherName_(selectedTeacherRaw);
     if (!selectedTeacher) return getFixedGridData(sheetName, forceRefresh);
 
     var cache = CacheService.getScriptCache();
@@ -285,7 +297,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
         var list = items || [];
         var teacherItem = list.find(function(item) { return String(item || "").includes("T"); });
         if (!teacherItem) return [];
-        var name = extractTeacherName_(teacherItem);
+        var name = normalizeTeacherName_(extractTeacherName_(teacherItem));
         if (name !== selectedTeacher) return [];
         return list;
       });
@@ -294,7 +306,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     var result = {
       headers: base.headers || [],
       grid: filtered,
-      version: String(base.version || "") + "_T_" + selectedTeacher
+      version: String(base.version || "") + "_T_" + selectedTeacherRaw
     };
     cache.put(cacheKey, JSON.stringify(result), 120);
     return result;
@@ -317,7 +329,7 @@ function teacherGridHasItems_(payload) {
 
 function getTeacherSheetNames(teacherName, forceRefresh) {
   try {
-    var selectedTeacher = String(teacherName || "").trim();
+    var selectedTeacher = normalizeTeacherName_(teacherName);
     if (!selectedTeacher) return getSheetNames();
 
     var cache = CacheService.getScriptCache();
