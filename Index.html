@@ -680,40 +680,74 @@
       function hasGasRunner() {
         return !!(window.google && google.script && google.script.run);
       }
-      function apiJsonp(params) {
+      function apiJsonp(params, options) {
         return new Promise(function(resolve, reject){
-          var cbName = "__seduApiCb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+          var opts = options || {};
+          var timeoutMs = Math.max(8000, parseInt(opts.timeoutMs, 10) || 20000);
+          var retries = Math.max(0, parseInt(opts.retries, 10) || 0);
           var base = getApiBaseUrl();
           if (!base) {
             reject(new Error("API URL이 설정되지 않았습니다."));
             return;
           }
-          var query = Object.assign({}, params || {}, { mode: "api", callback: cbName, _ts: Date.now() });
-          var url = base + (base.indexOf("?") > -1 ? "&" : "?") +
-            Object.keys(query).map(function(k){
-              return encodeURIComponent(k) + "=" + encodeURIComponent(query[k]);
-            }).join("&");
-          var script = document.createElement("script");
-          var timer = null;
-          function cleanup() {
-            if (timer) clearTimeout(timer);
-            if (script && script.parentNode) script.parentNode.removeChild(script);
-            try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+
+          function attempt(remainingRetries, attemptIndex) {
+            var cbName = "__seduApiCb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+            var query = Object.assign({}, params || {}, {
+              mode: "api",
+              callback: cbName,
+              _ts: Date.now(),
+              _attempt: attemptIndex || 1
+            });
+            var url = base + (base.indexOf("?") > -1 ? "&" : "?") +
+              Object.keys(query).map(function(k){
+                return encodeURIComponent(k) + "=" + encodeURIComponent(query[k]);
+              }).join("&");
+            var script = document.createElement("script");
+            var timer = null;
+            var settled = false;
+
+            function cleanup() {
+              if (timer) clearTimeout(timer);
+              if (script && script.parentNode) script.parentNode.removeChild(script);
+              try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+            }
+
+            function retryOrReject(message) {
+              cleanup();
+              if (remainingRetries > 0) {
+                setTimeout(function() {
+                  attempt(remainingRetries - 1, (attemptIndex || 1) + 1);
+                }, 350);
+                return;
+              }
+              reject(new Error(message));
+            }
+
+            window[cbName] = function(payload) {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              resolve(payload || {});
+            };
+
+            script.onerror = function() {
+              if (settled) return;
+              settled = true;
+              retryOrReject("API 호출 실패");
+            };
+
+            timer = setTimeout(function(){
+              if (settled) return;
+              settled = true;
+              retryOrReject("API 호출 시간 초과");
+            }, timeoutMs);
+
+            script.src = url;
+            document.head.appendChild(script);
           }
-          window[cbName] = function(payload) {
-            cleanup();
-            resolve(payload || {});
-          };
-          script.onerror = function() {
-            cleanup();
-            reject(new Error("API 호출 실패"));
-          };
-          timer = setTimeout(function(){
-            cleanup();
-            reject(new Error("API 호출 시간 초과"));
-          }, 12000);
-          script.src = url;
-          document.head.appendChild(script);
+
+          attempt(retries, 1);
         });
       }
       function callServer(method, args) {
@@ -731,49 +765,49 @@
           });
         }
         if (method === "getSheetNames") {
-          return apiJsonp({ action: "sheets" }).then(function(res){
+          return apiJsonp({ action: "sheets" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "시트 목록 조회 실패");
             return res.sheets || [];
           });
         }
         if (method === "authenticateTeacher") {
-          return apiJsonp({ action: "auth", id: a[0] || "", pw: a[1] || "" }).then(function(res){
+          return apiJsonp({ action: "auth", id: a[0] || "", pw: a[1] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
             if (!res || !res.ok) return { ok: false, message: (res && res.error) || "로그인 실패" };
             return res;
           });
         }
         if (method === "getFixedGridData") {
-          return apiJsonp({ action: "grid", sheet: a[0] || "", refresh: a[1] ? "1" : "0", lite: "0" }).then(function(res){
+          return apiJsonp({ action: "grid", sheet: a[0] || "", refresh: a[1] ? "1" : "0", lite: "0" }, { timeoutMs: 25000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "시간표 조회 실패");
             return res.data || { headers: [], grid: {}, version: "" };
           });
         }
         if (method === "getTeacherGridData") {
-          return apiJsonp({ action: "grid", sheet: a[0] || "", teacher: a[1] || "", refresh: a[2] ? "1" : "0", lite: "0" }).then(function(res){
+          return apiJsonp({ action: "grid", sheet: a[0] || "", teacher: a[1] || "", refresh: a[2] ? "1" : "0", lite: "0" }, { timeoutMs: 25000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "강사 시간표 조회 실패");
             return res.data || { headers: [], grid: {}, version: "" };
           });
         }
         if (method === "getTeacherSheetNames") {
-          return apiJsonp({ action: "teacher_sheets", teacher: a[0] || "", refresh: a[1] ? "1" : "0" }).then(function(res){
+          return apiJsonp({ action: "teacher_sheets", teacher: a[0] || "", refresh: a[1] ? "1" : "0" }, { timeoutMs: 25000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "강사 시트 목록 조회 실패");
             return res.sheets || [];
           });
         }
         if (method === "logTeacherView") {
-          return apiJsonp({ action: "teacher_view_log", teacher: a[0] || "", sheet: a[1] || "", loginId: a[2] || "" }).then(function(res){
+          return apiJsonp({ action: "teacher_view_log", teacher: a[0] || "", sheet: a[1] || "", loginId: a[2] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "강사 열람 로그 저장 실패");
             return true;
           });
         }
         if (method === "getTeacherViewLogs") {
-          return apiJsonp({ action: "teacher_view_logs", teacher: a[0] || "", limit: a[1] || "120" }).then(function(res){
+          return apiJsonp({ action: "teacher_view_logs", teacher: a[0] || "", limit: a[1] || "120" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "강사 열람 로그 조회 실패");
             return res.logs || [];
           });
         }
         if (method === "checkDataVersion") {
-          return apiJsonp({ action: "version", sheet: a[0] || "" }).then(function(res){
+          return apiJsonp({ action: "version", sheet: a[0] || "" }, { timeoutMs: 12000, retries: 1 }).then(function(res){
             if (!res || !res.ok) return "ERROR";
             return String(res.version || "ERROR");
           });
