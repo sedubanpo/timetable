@@ -155,9 +155,9 @@
       .absent-cancel { background-color: rgba(254, 226, 226, 0.65) !important; color: #7f1d1d !important; opacity: 0.88 !important; text-decoration: none !important; border: 1px solid rgba(248, 113, 113, 0.65); }
       .absent-cancel .school-text { color: #991b1b !important; }
       
-      #liveTimeline { position: absolute; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, rgba(56,189,248,0.95), rgba(37,99,235,0.98)); z-index: 50; pointer-events: none; display: none; box-shadow: 0 0 0 1px rgba(255,255,255,0.82), 0 0 18px rgba(37,99,235,0.35); }
-      #liveTimeline::before { content: ""; position: absolute; left: -7px; top: 50%; width: 13px; height: 13px; border-radius: 50%; background: #2563eb; border: 2px solid #dbeafe; transform: translateY(-50%); box-shadow: 0 0 0 4px rgba(96,165,250,0.16); }
-      #liveTimeline::after { content: "NOW"; position: absolute; right: 8px; top: -14px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 999px; box-shadow: 0 6px 14px rgba(37,99,235,0.28); }
+      #liveTimeline { position: absolute; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, rgba(56,189,248,0.52), rgba(37,99,235,0.58)); z-index: 50; pointer-events: none; display: none; box-shadow: 0 0 10px rgba(59,130,246,0.18); backdrop-filter: blur(1px); }
+      #liveTimeline::before { content: ""; position: absolute; left: -6px; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: rgba(37,99,235,0.72); border: 2px solid rgba(219,234,254,0.72); transform: translateY(-50%); box-shadow: 0 0 0 3px rgba(96,165,250,0.10); }
+      #liveTimeline::after { content: "NOW"; position: absolute; right: 8px; top: -14px; background: linear-gradient(135deg, rgba(37,99,235,0.82), rgba(29,78,216,0.82)); color: rgba(255,255,255,0.96); font-size: 10px; font-weight: 800; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 999px; box-shadow: 0 6px 14px rgba(37,99,235,0.16); }
       .empty-mode-active .cell-inner { opacity: 0.1; transition: 0.3s; }
       .empty-mode-active td:not(:has(.student-item)) { background-color: #e8f5e9 !important; opacity: 1 !important; border: 2px dashed #4caf50; }
       .empty-mode-active td:has(.student-item) { background-color: #eee !important; }
@@ -316,10 +316,10 @@
       .attendance-v-student-status.late { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
       .attendance-v-student-status.absent { background:#fee2e2; color:#991b1b; border-color:#f87171; }
       #attendanceReportText { width:100%; min-height:150px; border:1px solid #d1d5db; border-radius:10px; padding:10px; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size:0.9rem; resize:vertical; background:#f8fafc; box-sizing:border-box; }
-      #studentImagePreview { background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(241,246,255,0.66)); border:1px solid rgba(191,219,254,0.55); border-radius:20px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
+      #studentImagePreview { max-width: 460px; margin: 0 auto; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
       #studentImagePreview th, #studentImagePreview td { border:1px solid #e5e7eb; padding:8px; font-size:0.9rem; text-align:left; }
-      .student-preview-shell { --si-bg:#f6f9ff; --si-surface:rgba(255,255,255,0.56); --si-border:rgba(226,232,240,0.9); --si-text:#0f172a; --si-muted:#64748b; --si-accent:#3b82f6; position: relative; overflow: hidden; background: linear-gradient(165deg, rgba(248,251,255,0.95), rgba(239,245,255,0.88)); border: 1px solid rgba(191,219,254,0.72); border-radius: 28px; padding: 22px; box-shadow: 0 18px 40px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+      .student-preview-shell { --si-bg:#f6f9ff; --si-surface:rgba(255,255,255,0.56); --si-border:rgba(226,232,240,0.9); --si-text:#0f172a; --si-muted:#64748b; --si-accent:#3b82f6; position: relative; overflow: hidden; max-width: 420px; margin: 0 auto; background: linear-gradient(165deg, rgba(248,251,255,0.95), rgba(239,245,255,0.88)); border: 1px solid rgba(191,219,254,0.72); border-radius: 28px; padding: 18px; box-shadow: 0 18px 40px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
       .student-preview-shell::before { content:""; position:absolute; width:62%; height:240px; top:-120px; left:-70px; background: radial-gradient(circle at center, rgba(255,255,255,0.56) 0%, rgba(255,255,255,0) 72%); pointer-events:none; }
       .student-preview-shell::after { content: ""; position: absolute; right: calc(var(--wm-size, 220px) * -0.34); bottom: calc(var(--wm-size, 220px) * -0.26); width: var(--wm-size, 220px); height: var(--wm-size, 220px); background-image: url('https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png'); background-size: contain; background-repeat: no-repeat; opacity: 0.14; pointer-events: none; }
       .student-preview-header { position:relative; z-index:2; display:grid; grid-template-columns: 56px 1fr; gap:12px; align-items:center; margin-bottom:14px; padding:10px 12px; border-radius:18px; background: rgba(255,255,255,0.44); border:1px solid rgba(226,232,240,0.86); }
@@ -327,19 +327,19 @@
       .student-preview-avatar img { width:72%; height:72%; object-fit:contain; object-position:center; display:block; filter: saturate(0) brightness(0.45) contrast(1.45) hue-rotate(196deg); }
       .student-preview-avatar-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
       .student-preview-meta { min-width:0; }
-      .student-preview-title { font-size: 1.45rem; font-weight: 700; color: #0f172a; margin: 0; letter-spacing: -0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .student-preview-title { font-size: 1.28rem; font-weight: 700; color: #0f172a; margin: 0; letter-spacing: -0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .student-preview-date { display:flex; align-items:center; gap:6px; margin-top:3px; font-size: 0.82rem; color: rgba(15,23,42,0.70); font-weight: 500; }
       .student-preview-status-chip { display:inline-flex; align-items:center; border-radius:999px; padding:3px 8px; font-size:0.68rem; font-weight:600; color:#334155; background:rgba(255,255,255,0.7); border:1px solid rgba(203,213,225,0.9); }
-      .student-preview-row { position:relative; z-index:2; display: grid; grid-template-columns: 120px 1fr; gap: 12px; margin-top: 10px; padding: 11px 12px; border-radius: 22px; border: 1px solid rgba(226,232,240,0.9); background: linear-gradient(142deg, rgba(255,255,255,0.55), rgba(255,255,255,0.34)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 8px 22px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.52); overflow:hidden; }
+      .student-preview-row { position:relative; z-index:2; display:flex; flex-direction:column; gap:10px; margin-top: 10px; padding: 12px; border-radius: 22px; border: 1px solid rgba(226,232,240,0.9); background: linear-gradient(142deg, rgba(255,255,255,0.55), rgba(255,255,255,0.34)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 8px 22px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.52); overflow:hidden; }
       .student-preview-row::before { display:none; }
-      .student-preview-time-wrap { display:flex; flex-direction:column; gap:10px; align-items:flex-start; justify-content:center; min-width:0; }
-      .student-preview-time { white-space: nowrap; font-size: 1.05rem; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; line-height: 1.15; }
+      .student-preview-time-wrap { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+      .student-preview-time { white-space: nowrap; font-size: 1.02rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; line-height: 1.15; }
       .student-preview-time-duration { margin-top:0; }
-      .student-preview-detail { position:relative; display:flex; flex-direction:column; gap:6px; font-size: 0.92rem; color: #1e293b; min-width:0; padding-left:6px; }
+      .student-preview-detail { position:relative; display:flex; flex-direction:column; gap:6px; font-size: 0.92rem; color: #1e293b; min-width:0; padding-left:0; padding-right:84px; }
       .student-preview-heading { display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; min-width:0; }
       .student-preview-heading-subject { font-size:0.98rem; font-weight:600; color:#1d4ed8; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:48%; }
       .student-preview-heading-teacher { font-size:0.90rem; font-weight:500; color:rgba(51,65,85,0.92); max-width:48%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .student-preview-heading-line { display:flex; align-items:center; gap:8px; min-width:0; white-space:nowrap; overflow:hidden; }
+      .student-preview-heading-line { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
       .student-preview-inline-type { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; font-size:0.70rem; font-weight:700; color:#0369a1; background:rgba(186,230,253,0.48); border:1px solid rgba(56,189,248,0.52); }
       .student-preview-chipline { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:0; }
       .student-preview-chipline:last-child { margin-bottom: 0; }
@@ -354,9 +354,11 @@
       .student-preview-duration.duration-social { color:#9f1239; background: rgba(251,207,232,0.52); border-color:rgba(244,114,182,0.60); }
       .student-preview-duration.duration-default { color:#334155; background: rgba(226,232,240,0.58); border-color:rgba(148,163,184,0.62); }
       .student-preview-note-box { margin-top:4px; padding:6px 8px; border-radius:10px; border:1px solid rgba(251,146,60,0.24); background: rgba(255,247,237,0.42); color:#9a3412; font-size:0.73rem; font-weight:600; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-      .student-preview-room-ghost { position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:1.3rem; font-weight:800; color:rgba(30,41,59,0.18); letter-spacing:-0.01em; pointer-events:none; white-space:nowrap; z-index:0; }
+      .student-preview-room-ghost { position:absolute; right:0; top:0; font-size:1.05rem; font-weight:800; color:rgba(30,41,59,0.18); letter-spacing:-0.01em; pointer-events:none; white-space:nowrap; z-index:0; }
       .student-preview-heading-line, .student-preview-note-box { position:relative; z-index:2; }
-      .student-preview-subject-art { position:absolute; right:190px; top:50%; transform:translateY(-48%); font-size:2.05rem; font-weight:700; letter-spacing:0.08em; color:rgba(100,116,139,0.18); pointer-events:none; white-space:nowrap; z-index:0; user-select:none; }
+      .student-preview-subject-art { position:absolute; right:78px; top:6px; font-size:1.55rem; font-weight:700; letter-spacing:0.08em; color:rgba(100,116,139,0.16); pointer-events:none; white-space:nowrap; z-index:0; user-select:none; }
+      .student-preview-policy { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(203,213,225,0.85); font-size: 0.72rem; line-height: 1.55; color: #6b7280; }
+      .student-preview-policy-title { font-weight: 800; color: #475569; margin-bottom: 4px; }
       .student-preview-break { background: #dbe2ea; border-color: #cbd5e1; box-shadow: 0 6px 14px rgba(15,23,42,0.08); }
       .student-preview-muted { background: #dbe2ea; border-color: #cbd5e1; }
       .student-preview-break::before, .student-preview-muted::before { background: #64748b; }
@@ -510,10 +512,10 @@
     </div>
     <div id="studentImageModal">
       <div class="modal-box student-img-box">
-        <div class="modal-title">학생 시간표 이미지 생성</div>
+        <div class="modal-title">시간표 카드 생성</div>
         <div class="student-img-controls">
           <input id="studentImageSearch" type="text" placeholder="학생명 검색 (예: 김철수)" onkeyup="filterStudentImageList()">
-          <button class="msg-copy-btn" style="margin-top:0;" onclick="downloadStudentScheduleImage()">이미지 저장</button>
+          <button class="msg-copy-btn" style="margin-top:0;" onclick="downloadStudentScheduleImage()">카드 저장</button>
         </div>
         <div id="studentImageList" class="student-list"></div>
         <div id="studentImagePreview"></div>
@@ -593,8 +595,8 @@
           <button class="capture-btn" onclick="captureScreen()" title="이미지 저장">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l.74 2.228a1 1 0 00.948.684h6.168a2 2 0 011.992 2.181l-.637 7A2 2 0 0115.445 20H4.555a2 2 0 01-1.992-1.819l-.637-7a1.99 1.99 0 01.316-1.318A2 2 0 013 9.5V5z" clip-rule="evenodd" /></svg><span>저장</span>
           </button>
-          <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="학생별 시간표 이미지 생성">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h9a1 1 0 001-1V8.414a1 1 0 00-.293-.707l-3.414-3.414A1 1 0 009.586 4H4zm7 1.414L13.586 7H11V4.414z"/><path d="M16 9a1 1 0 011 1v5h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-5a1 1 0 011-1z"/></svg><span>학생 이미지</span>
+          <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="학생별 시간표 카드 생성">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h9a1 1 0 001-1V8.414a1 1 0 00-.293-.707l-3.414-3.414A1 1 0 009.586 4H4zm7 1.414L13.586 7H11V4.414z"/><path d="M16 9a1 1 0 011 1v5h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-5a1 1 0 011-1z"/></svg><span>시간표 카드</span>
           </button>
           <button class="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 (F11)">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>전체화면</span>
@@ -756,6 +758,8 @@
         var authToggle = document.getElementById('rememberLoginToggleAuth');
         if (gateToggle) gateToggle.addEventListener('change', function(){ syncRememberToggleState('gate'); });
         if (authToggle) authToggle.addEventListener('change', function(){ syncRememberToggleState('auth'); });
+        var tableContainer = document.getElementById('tableContainer');
+        if (tableContainer) tableContainer.addEventListener('scroll', updateTimelinePosition);
         document.addEventListener('click', function(){ closeAllNoteBubbles(); });
       };
       window.addEventListener('resize', function() {
@@ -770,7 +774,12 @@
         return s;
       }
       function normalizeLoginPassword(v) {
-        return String(v || "").replace(/\u00A0/g, " ").trim();
+        var raw = String(v || "").replace(/\u00A0/g, " ").trim();
+        var digits = raw.replace(/\D/g, "");
+        if (digits.length === 11) return digits;
+        if (digits.length === 10 && digits.indexOf("10") === 0) return "0" + digits;
+        if (digits.length === 8) return digits;
+        return raw;
       }
       function getLoginProgressUi(source) {
         var isGate = source === 'gate';
@@ -1247,7 +1256,8 @@
          if(h < 9 || h > 23) { line.style.display = 'none'; return; }
          
          var table = document.getElementById('scheduleTable');
-         if(!table || table.rows.length < 2) return;
+         var container = document.getElementById('tableContainer');
+         if(!table || table.rows.length < 2 || !container) return;
          
          var rowIndex = h - 9 + 1; 
          var hide9am = document.getElementById('hide9amToggle').checked;
@@ -1257,7 +1267,7 @@
             if(row) {
                var top = row.offsetTop;
                var height = row.offsetHeight;
-               var finalTop = top + (height * (m / 60));
+               var finalTop = top - container.scrollTop + (height * (m / 60));
                line.style.top = finalTop + "px";
                line.style.display = 'block';
             }
@@ -1977,13 +1987,21 @@
           });
         });
       }
+      function getStudentCardPolicyHtml() {
+        return "<div class='student-preview-policy'>" +
+          "<div class='student-preview-policy-title'>학원 안내사항</div>" +
+          "<div>수업 전날 오후 8시 이후 취소된 당일취소 수업은 수강료가 정상 책정됩니다.</div>" +
+          "<div>사전에 말씀해 주신 결석예고 수업은 수강료가 책정되지 않습니다.</div>" +
+          "<div>당일취소 및 결석예고 수업은 모두 2주 이내 보강이 가능하며, 기존 정규 수업 시간 외 별도 시간으로 진행됩니다.</div>" +
+        "</div>";
+      }
       function renderStudentImagePreview(name) {
         var preview = document.getElementById('studentImagePreview');
         selectedStudentForImage = name;
         var schedules = (studentImageScheduleMap[name] || []).slice().sort(function(a,b){ return a.hour - b.hour; });
         if (!name) { preview.innerHTML = ""; return; }
         if (!schedules.length) {
-          preview.innerHTML = "<div class='student-preview-shell'><div class='student-preview-title'>" + name + " 학생 일일 시간표</div><div class='student-preview-date'>" + (currentSheetName || "") + "</div><div class='teacher-empty'>수업 정보가 없습니다.</div></div>";
+          preview.innerHTML = "<div class='student-preview-shell'><div class='student-preview-title'>" + name + " 학생 시간표 카드</div><div class='student-preview-date'>" + (currentSheetName || "") + "</div><div class='teacher-empty'>수업 정보가 없습니다.</div>" + getStudentCardPolicyHtml() + "</div>";
           return;
         }
         // 연속 시간대의 동일 수업 병합
@@ -2082,17 +2100,18 @@
                   : "<span class='student-preview-avatar-fallback'>" + initials + "</span>") +
               "</div>" +
               "<div class='student-preview-meta'>" +
-                "<h3 class='student-preview-title'>" + name + " 학생 일일 시간표</h3>" +
+                "<h3 class='student-preview-title'>" + name + " 학생 시간표 카드</h3>" +
                 "<div class='student-preview-date'><span>" + metaLine + "</span></div>" +
               "</div>" +
             "</div>" +
             rows +
+            getStudentCardPolicyHtml() +
           "</div>";
       }
       function downloadStudentScheduleImage() {
         if (!selectedStudentForImage) { alert("학생을 먼저 선택하세요."); return; }
         var target = document.getElementById('studentImagePreview');
-        if (!target || !target.innerHTML.trim()) { alert("출력할 시간표가 없습니다."); return; }
+        if (!target || !target.innerHTML.trim()) { alert("출력할 시간표 카드가 없습니다."); return; }
         waitForImagesInElement(target, 1500).then(function(){
           return html2canvas(target, {
             scale: Math.max(2, window.devicePixelRatio || 1),
@@ -2103,7 +2122,7 @@
         }).then(function(canvas){
           var a = document.createElement('a');
           a.href = canvas.toDataURL("image/png");
-          a.download = "학생시간표_" + selectedStudentForImage + ".png";
+          a.download = "시간표카드_" + selectedStudentForImage + ".png";
           a.click();
         }).catch(function(){
           alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
