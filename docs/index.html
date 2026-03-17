@@ -35,7 +35,7 @@
       .guide-item:last-child { border-bottom: none; }
       .guide-icon { font-size: 1.2rem; }
       /* 모달 공통 */
-      #versionModal, #messageModal, #selectionModal, #reviewModal, #authModal, #studentImageModal, #absenceNoticeModal, #attendanceReportModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
+      #versionModal, #messageModal, #selectionModal, #reviewModal, #authModal, #studentImageModal, #absenceNoticeModal, #attendanceReportModal, #teacherViewLogModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
       .modal-box { background: white; width: 300px; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; }
       .auth-box { width: 360px; max-width: 92%; text-align: left; }
       .auth-title { font-size: 1.2rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; }
@@ -359,6 +359,15 @@
       .student-preview-subject-art { position:absolute; right:78px; top:6px; font-size:1.55rem; font-weight:700; letter-spacing:0.08em; color:rgba(100,116,139,0.16); pointer-events:none; white-space:nowrap; z-index:0; user-select:none; }
       .student-preview-policy { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(203,213,225,0.85); font-size: 0.72rem; line-height: 1.55; color: #6b7280; }
       .student-preview-policy-title { font-weight: 800; color: #475569; margin-bottom: 4px; }
+      .late-night-toggle-row td { padding: 10px 12px; background: #f8fafc; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1; }
+      .late-night-toggle-btn { width: 100%; border: 1px solid #cbd5e1; background: linear-gradient(180deg, #ffffff, #eef4ff); color: #1e3a8a; border-radius: 12px; padding: 9px 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer; }
+      .teacher-log-box { width: 720px; max-width: 94%; max-height: 86vh; overflow: auto; text-align: left; }
+      .teacher-log-controls { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+      .teacher-log-list { display:flex; flex-direction:column; gap:8px; }
+      .teacher-log-item { border:1px solid #dbe2ea; border-radius:14px; padding:12px; background:#fff; box-shadow:0 4px 14px rgba(15,23,42,0.05); }
+      .teacher-log-time { font-size:0.84rem; font-weight:800; color:#1d4ed8; margin-bottom:5px; }
+      .teacher-log-main { font-size:0.96rem; font-weight:800; color:#0f172a; }
+      .teacher-log-sub { margin-top:4px; font-size:0.8rem; color:#64748b; }
       .student-preview-break { background: #dbe2ea; border-color: #cbd5e1; box-shadow: 0 6px 14px rgba(15,23,42,0.08); }
       .student-preview-muted { background: #dbe2ea; border-color: #cbd5e1; }
       .student-preview-break::before, .student-preview-muted::before { background: #64748b; }
@@ -555,6 +564,17 @@
         <div class="close-modal" onclick="closeAttendanceReportModal()">닫기</div>
       </div>
     </div>
+    <div id="teacherViewLogModal">
+      <div class="modal-box teacher-log-box">
+        <div class="modal-title">강사 시간표 열람 로그</div>
+        <div class="teacher-log-controls">
+          <input id="teacherViewLogSearch" class="modal-search" type="text" placeholder="강사명 또는 일자 검색" onkeyup="filterTeacherViewLogs()" style="margin-bottom:0; flex:1 1 260px;">
+          <button class="attendance-time-btn" onclick="refreshTeacherViewLogs()">새로고침</button>
+        </div>
+        <div id="teacherViewLogList" class="teacher-log-list"></div>
+        <div class="close-modal" onclick="closeTeacherViewLogModal()">닫기</div>
+      </div>
+    </div>
     <div id="mainPage">
       <div class="ticker-wrap" onclick="editNotice()">
          <div class="ticker" id="noticeText">📢 [공지] 이곳을 클릭하여 실시간 공지사항을 입력하세요. (시험기간, 보강 안내 등)</div>
@@ -613,6 +633,9 @@
           <button class="attendance-report-btn" onclick="openAttendanceReportModal()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm-.75 3.5a.75.75 0 011.5 0v4.25l2.5 1.5a.75.75 0 11-.75 1.3l-2.87-1.72a.75.75 0 01-.38-.65V5.5z" clip-rule="evenodd"/></svg><span>출결 현황 보고</span>
           </button>
+          <button id="teacherViewLogBtn" class="review-btn" onclick="openTeacherViewLogModal()" style="display:none;">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>열람로그</span>
+          </button>
         </div>
       </div>
       
@@ -647,6 +670,8 @@
       let currentAttendanceReportText = "";
       let attendanceReportHourOffset = 0;
       let selectedStudentForImage = "";
+      let teacherViewLogsCache = [];
+      let lateNightCollapsed = true;
       const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycby0WjDQVlFG2LzNF9wkb4Rm4PKfCL306I-JaW8LuHkC6yIJ1mnUFAgO2udBxfEzif7GoQ/exec";
       function getApiBaseUrl() {
         return String(window.SEDU_API_BASE_URL || localStorage.getItem("sedu_api_base_url") || API_BASE_DEFAULT).trim();
@@ -732,6 +757,18 @@
           return apiJsonp({ action: "teacher_sheets", teacher: a[0] || "", refresh: a[1] ? "1" : "0" }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "강사 시트 목록 조회 실패");
             return res.sheets || [];
+          });
+        }
+        if (method === "logTeacherView") {
+          return apiJsonp({ action: "teacher_view_log", teacher: a[0] || "", sheet: a[1] || "", loginId: a[2] || "" }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "강사 열람 로그 저장 실패");
+            return true;
+          });
+        }
+        if (method === "getTeacherViewLogs") {
+          return apiJsonp({ action: "teacher_view_logs", teacher: a[0] || "", limit: a[1] || "120" }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "강사 열람 로그 조회 실패");
+            return res.logs || [];
           });
         }
         if (method === "checkDataVersion") {
@@ -909,20 +946,24 @@
         var token = raw.split(/\s+/).pop() || "";
         return token.replace(/T/g, "").trim();
       }
+      function getAdminSelectedTeacher() {
+        var sel = document.getElementById('teacherViewSelector');
+        if (!sel || !sel.value || sel.value === "__ALL__") return "";
+        return sel.value;
+      }
       function isTeacherViewActive() {
         if (!authState.loggedIn) return false;
-        if (accessMode !== "teacher") return false;
-        if (!authState.isMaster) return true;
-        var sel = document.getElementById('teacherViewSelector');
-        return !!(sel && sel.value);
+        if (!authState.isMaster) return accessMode === "teacher";
+        if (getAdminSelectedTeacher()) return true;
+        return accessMode === "teacher";
       }
       function getActiveTeacherName() {
         if (!authState.loggedIn) return "";
-        if (accessMode !== "teacher") return "";
-        if (!authState.isMaster) return authState.teacherName;
-        var sel = document.getElementById('teacherViewSelector');
-        if (!sel || !sel.value || sel.value === "__ALL__") return authState.teacherName || "";
-        return sel.value || authState.teacherName || "";
+        if (!authState.isMaster) return accessMode === "teacher" ? (authState.teacherName || "") : "";
+        var selectedTeacher = getAdminSelectedTeacher();
+        if (selectedTeacher) return selectedTeacher;
+        if (accessMode === "teacher") return authState.teacherName || "";
+        return "";
       }
       function openAuthModal() {
         document.getElementById('authModal').style.display = 'flex';
@@ -1021,32 +1062,33 @@
       }
       function populateTeacherSelector() {
         var sel = document.getElementById('teacherViewSelector');
+        var currentValue = sel.value || "__ALL__";
         sel.innerHTML = "";
         if (!authState.isMaster) return;
-        if (accessMode === "all") {
-          var all = document.createElement('option');
-          all.value = "__ALL__";
-          all.textContent = "전체 시간표";
-          sel.appendChild(all);
-        }
+        var all = document.createElement('option');
+        all.value = "__ALL__";
+        all.textContent = "전체 시간표";
+        sel.appendChild(all);
         availableTeacherNames.forEach(function(name){
           var op = document.createElement('option');
           op.value = name;
           op.textContent = "강사: " + name;
           sel.appendChild(op);
         });
-        if (accessMode === "teacher") {
-          var fallback = authState.teacherName || "";
-          if (fallback) sel.value = fallback;
-        } else {
-          sel.value = "__ALL__";
-        }
+        if (currentValue && Array.prototype.some.call(sel.options, function(opt){ return opt.value === currentValue; })) sel.value = currentValue;
+        else if (accessMode === "teacher" && authState.teacherName) sel.value = authState.teacherName;
+        else sel.value = "__ALL__";
       }
       function changeTeacherView() {
-        if (!currentSheetName) return;
+        var sel = document.getElementById('teacherViewSelector');
+        if (sel) sel.dataset.selected = sel.value || "__ALL__";
         clientCache = {};
-        updateTeacherCalendarAvailability(true);
-        loadData(currentSheetName, true);
+        updateTeacherCalendarAvailability(true).then(function(names) {
+          var visibleNames = Array.isArray(names) && names.length ? names : getNavigableSheetNames();
+          var targetSheet = currentSheetName;
+          if (visibleNames.length && visibleNames.indexOf(targetSheet) === -1) targetSheet = visibleNames[0];
+          if (targetSheet) loadData(targetSheet, true);
+        });
       }
       function buildSheetMapFromNames(names) {
         var map = {};
@@ -1131,6 +1173,7 @@
         var msgGenBtn = document.querySelector('.msg-gen-btn');
         var msgSimpleBtn = document.querySelector('.msg-simple-btn');
         var emptyBtn = document.querySelector('.empty-btn');
+        var teacherViewLogBtn = document.getElementById('teacherViewLogBtn');
 
         if (!authState.loggedIn) {
           roleBadge.style.display = 'none';
@@ -1146,6 +1189,7 @@
           if (privacyControl) privacyControl.style.display = '';
           if (hide9Control) hide9Control.style.display = '';
           if (studentImageBtn) studentImageBtn.style.display = '';
+          if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
           document.body.classList.remove('teacher-compact');
           populateMainSheetSelector(currentSheetName);
           document.getElementById('mainPage').style.display = 'none';
@@ -1162,14 +1206,17 @@
         roleBadge.style.display = '';
 
         if (authState.isMaster) {
-          roleBadge.textContent = accessMode === "teacher" ? "관리자·강사 모드" : "관리자·전체 모드";
+          var previewTeacher = getAdminSelectedTeacher();
+          if (previewTeacher) roleBadge.textContent = "관리자·강사 보기: " + previewTeacher;
+          else roleBadge.textContent = accessMode === "teacher" ? "관리자·강사 모드" : "관리자·전체 모드";
           populateTeacherSelector();
-          teacherSel.style.display = accessMode === "teacher" ? '' : 'none';
+          teacherSel.style.display = '';
           if (reviewBtn) reviewBtn.style.display = '';
           if (excelBtn) excelBtn.style.display = '';
           if (msgGenBtn) msgGenBtn.style.display = '';
           if (msgSimpleBtn) msgSimpleBtn.style.display = '';
           if (emptyBtn) emptyBtn.style.display = '';
+          if (teacherViewLogBtn) teacherViewLogBtn.style.display = '';
         } else {
           roleBadge.textContent = "강사 모드: " + authState.teacherName;
           teacherSel.style.display = 'none';
@@ -1178,6 +1225,7 @@
           if (msgGenBtn) msgGenBtn.style.display = 'none';
           if (msgSimpleBtn) msgSimpleBtn.style.display = 'none';
           if (emptyBtn) emptyBtn.style.display = 'none';
+          if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
         }
         if (isTeacherViewActive()) {
           if (privacyControl) privacyControl.style.display = 'none';
@@ -1303,14 +1351,14 @@
         }catch(e){console.error(e);} 
       }
       function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
-      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(s.length===1)loadData(s[0],true); else showVersionModal(s); }
-      function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
+      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(s.length===1)loadData(s[0],true,true); else showVersionModal(s); }
+      function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
       function nextMonth(){ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); }
       function goHome(){ document.getElementById('mainPage').style.display='none'; document.getElementById('loginGate').style.display='flex'; if(pollingTimer)clearInterval(pollingTimer); }
       
-      function loadData(n,r){ 
+      function loadData(n,r,auditView){ 
         currentSheetName=n; 
         document.getElementById('introPage').style.display='none'; 
         document.getElementById('mainPage').style.display='flex'; 
@@ -1333,6 +1381,9 @@
         var method = teacherName ? "getTeacherGridData" : "getFixedGridData";
         var params = teacherName ? [n, teacherName, r] : [n, r];
         callServer(method, params).then(function(d){ 
+          if (auditView && authState.loggedIn && !authState.isMaster && accessMode === "teacher" && teacherName) {
+            callServer("logTeacherView", [teacherName, n, authState.loginId || ""]).catch(function(){});
+          }
           clientCache[cacheKey]=d; 
           processData(d, r); 
         }).catch(function(err){
@@ -1356,9 +1407,9 @@
         pollingTimer=setInterval(checkUpdate,30000); 
       }
       function checkUpdate(){ var c=document.getElementById('mainSheetSelector').value; if(!c)return; callServer("checkDataVersion",[c]).then(function(v){ if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; } }).catch(function(){}); }
-      function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false); }
+      function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false,true); }
       function refreshData(){ if(currentSheetName){ document.getElementById('refreshBtn').classList.add('spinning'); loadData(currentSheetName,true); } }
-      function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; var visibleSheets=getNavigableSheetNames(); var activeMap=getCalendarSheetMap(); if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(activeMap[k]){ loadData(activeMap[k][0],false); } else { alert("오늘 시간표 없음"); } return; } var idx=visibleSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<visibleSheets.length)loadData(visibleSheets[n],false); else alert("이동 불가"); }
+      function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; var visibleSheets=getNavigableSheetNames(); var activeMap=getCalendarSheetMap(); if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(activeMap[k]){ loadData(activeMap[k][0],false,true); } else { alert("오늘 시간표 없음"); } return; } var idx=visibleSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<visibleSheets.length)loadData(visibleSheets[n],false,true); else alert("이동 불가"); }
       
       function generateArrivalMessage(){ 
         if(!lastData)return; 
@@ -1366,7 +1417,7 @@
         var ignoreNames = new Set(["정규","일반보충","당취보충","보충","보강"]);
         var dm=currentSheetName.match(/(\d+\/\d+\([가-힣]\))/); var dd=dm?dm[1]:currentSheetName; 
         
-        for(var h=9;h<=22;h++){ 
+        for(var h=9;h<=23;h++){ 
           var row=lastData.grid[h]||[]; 
           for(var i=0;i<hds.length;i++){ 
             var items=row[i]||[]; var rn=hds[i]; 
@@ -1402,7 +1453,7 @@
         studentScheduleMap = {};
         
         var headers = lastData.headers;
-        for (var h = 9; h <= 22; h++) {
+        for (var h = 9; h <= 23; h++) {
           var row = lastData.grid[h] || [];
           for (var i = 0; i < headers.length; i++) {
             var items = row[i] || [];
@@ -1690,7 +1741,7 @@
       function buildStudentImageMap() {
         studentImageScheduleMap = {};
         if (!lastData || !lastData.headers) return;
-        for (var h = 9; h <= 22; h++) {
+        for (var h = 9; h <= 23; h++) {
           var row = (lastData.grid && lastData.grid[h]) || [];
           for (var i = 0; i < lastData.headers.length; i++) {
             var items = row[i] || [];
@@ -1744,7 +1795,7 @@
       function buildAbsenceNoticeMap() {
         absenceNoticeMap = {};
         if (!lastData || !lastData.headers) return;
-        for (var h = 9; h <= 22; h++) {
+        for (var h = 9; h <= 23; h++) {
           var row = (lastData.grid && lastData.grid[h]) || [];
           for (var i = 0; i < lastData.headers.length; i++) {
             var room = lastData.headers[i];
@@ -2128,14 +2179,59 @@
           alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
         });
       }
+      function renderTeacherViewLogs(logs) {
+        teacherViewLogsCache = Array.isArray(logs) ? logs.slice() : [];
+        filterTeacherViewLogs();
+      }
+      function filterTeacherViewLogs() {
+        var list = document.getElementById('teacherViewLogList');
+        var keyword = String((document.getElementById('teacherViewLogSearch').value || "")).trim().toLowerCase();
+        if (!teacherViewLogsCache.length) {
+          list.innerHTML = "<div class='teacher-empty'>열람 기록이 없습니다.</div>";
+          return;
+        }
+        var filtered = teacherViewLogsCache.filter(function(item) {
+          if (!keyword) return true;
+          var text = [item.teacherName, item.sheetName, item.viewedAt, item.loginId].join(" ").toLowerCase();
+          return text.indexOf(keyword) !== -1;
+        });
+        if (!filtered.length) {
+          list.innerHTML = "<div class='teacher-empty'>검색 결과가 없습니다.</div>";
+          return;
+        }
+        list.innerHTML = filtered.map(function(item) {
+          return "<div class='teacher-log-item'>" +
+            "<div class='teacher-log-time'>" + String(item.viewedAt || "") + "</div>" +
+            "<div class='teacher-log-main'>" + String(item.teacherName || "") + " · " + String(item.sheetName || "") + "</div>" +
+            "<div class='teacher-log-sub'>로그인 아이디: " + String(item.loginId || "-") + "</div>" +
+          "</div>";
+        }).join("");
+      }
+      function refreshTeacherViewLogs() {
+        var teacherFilter = getAdminSelectedTeacher();
+        callServer("getTeacherViewLogs", [teacherFilter, 180]).then(function(logs) {
+          renderTeacherViewLogs(logs);
+        }).catch(function(err) {
+          alert("열람 로그 로딩 실패: " + (err && err.message ? err.message : err));
+        });
+      }
+      function openTeacherViewLogModal() {
+        if (!authState.isMaster) return;
+        document.getElementById('teacherViewLogModal').style.display = 'flex';
+        document.getElementById('teacherViewLogSearch').value = "";
+        refreshTeacherViewLogs();
+      }
+      function closeTeacherViewLogModal() {
+        document.getElementById('teacherViewLogModal').style.display = 'none';
+      }
       function getCurrentReportHour() {
         var now = new Date();
         var h = now.getHours();
         if (h < 9) h = 9;
-        if (h > 22) h = 22;
+        if (h > 23) h = 23;
         h += attendanceReportHourOffset;
         if (h < 9) h = 9;
-        if (h > 22) h = 22;
+        if (h > 23) h = 23;
         return h;
       }
       function parseDisplayDateInfo() {
@@ -2330,8 +2426,8 @@
         var now = new Date();
         var base = now.getHours();
         if (base < 9) base = 9;
-        if (base > 22) base = 22;
-        if (base + nextOffset < 9 || base + nextOffset > 22) return;
+        if (base > 23) base = 23;
+        if (base + nextOffset < 9 || base + nextOffset > 23) return;
         attendanceReportHourOffset = nextOffset;
         refreshAttendanceReportModal();
       }
@@ -2393,6 +2489,7 @@
         
         var hide9am = document.getElementById('hide9amToggle').checked;
         var teacherView = isTeacherViewActive();
+        var lateNightRows = [];
         // 숨길 열 계산
         var hiddenIndices = new Set();
         data.headers.forEach(function(h, index) {
@@ -2402,7 +2499,7 @@
             }
             if (teacherView) {
                 var hasTeacherData = false;
-                for (var t = 9; t <= 22; t++) {
+                for (var t = 9; t <= 23; t++) {
                   var rr = data.grid[t] || [];
                   var its = rr[index] || [];
                   if (its.length > 0) { hasTeacherData = true; break; }
@@ -2411,7 +2508,7 @@
             }
             if (h === "원장실") {
                 var hasData = false;
-                for (var time = 9; time <= 22; time++) {
+                for (var time = 9; time <= 23; time++) {
                     var row = data.grid[time] || [];
                     var items = row[index] || [];
                     if (items.length > 0) {
@@ -2438,7 +2535,7 @@
         
         var tbody = document.createElement('tbody');
         var targetRow = null; 
-        for (var h=9; h<=22; h++) {
+        for (var h=9; h<=23; h++) {
           if (hide9am && h === 9) continue;
           var rowData = data.grid[h] || []; 
           if (rowData.every(function(items){return items.length===0})) continue; 
@@ -2495,7 +2592,29 @@
             }
             tr.appendChild(td);
           }
-          tbody.appendChild(tr);
+          if (!teacherView && h >= 22) lateNightRows.push(tr);
+          else tbody.appendChild(tr);
+        }
+        if (lateNightRows.length && !teacherView) {
+          var toggleTr = document.createElement('tr');
+          toggleTr.className = 'late-night-toggle-row';
+          var toggleTd = document.createElement('td');
+          toggleTd.colSpan = data.headers.length - hiddenIndices.size + 1;
+          var toggleBtn = document.createElement('button');
+          toggleBtn.className = 'late-night-toggle-btn';
+          toggleBtn.textContent = lateNightCollapsed ? "22시 이후 수업 펼치기" : "22시 이후 수업 접기";
+          toggleBtn.onclick = function() {
+            lateNightCollapsed = !lateNightCollapsed;
+            renderTable(data, true);
+          };
+          toggleTd.appendChild(toggleBtn);
+          toggleTr.appendChild(toggleTd);
+          tbody.appendChild(toggleTr);
+          if (!lateNightCollapsed) {
+            lateNightRows.forEach(function(tr) {
+              tbody.appendChild(tr);
+            });
+          }
         }
         table.appendChild(tbody);
         if (isRefresh) {
@@ -2526,7 +2645,7 @@
         mobileWrap.innerHTML = "";
         var studentLessonHours = {};
         var progressBySlot = {};
-        for (var hh = 9; hh <= 22; hh++) {
+        for (var hh = 9; hh <= 23; hh++) {
           var rr = (data.grid && data.grid[hh]) || [];
           for (var ci = 0; ci < data.headers.length; ci++) {
             var roomName = data.headers[ci];
@@ -2563,7 +2682,7 @@
           }
         });
         var hasAny = false;
-        for (var h = 9; h <= 22; h++) {
+        for (var h = 9; h <= 23; h++) {
           var row = (data.grid && data.grid[h]) || [];
           var lessons = [];
           for (var i = 0; i < data.headers.length; i++) {
@@ -2753,7 +2872,7 @@
           return false;
         }
         
-        for (var h = 9; h <= 22; h++) {
+        for (var h = 9; h <= 23; h++) {
           var row = lastData.grid[h] || [];
           if (!hourlyStudents[h]) hourlyStudents[h] = [];
           
@@ -2904,7 +3023,7 @@
         var rawEntries = [];
         var headers = lastData.headers;
         
-        for (var h = 9; h <= 22; h++) {
+        for (var h = 9; h <= 23; h++) {
           var row = lastData.grid[h] || [];
           for (var i = 0; i < headers.length; i++) {
             var roomName = headers[i];

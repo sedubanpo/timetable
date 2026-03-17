@@ -49,6 +49,21 @@ function handleApiRequest_(params) {
       return jsonOutput_({ ok: true, sheets: getTeacherSheetNames(selectedTeacher, teacherRefresh) }, params);
     }
 
+    if (action === "teacher_view_log") {
+      var logTeacher = String(params.teacher || "").trim();
+      var logSheet = String(params.sheet || "").trim();
+      var logLoginId = String(params.loginId || "").trim();
+      if (!logTeacher || !logSheet) return jsonOutput_({ ok: false, error: "LOG_REQUIRED" }, params);
+      logTeacherView_(logTeacher, logSheet, logLoginId);
+      return jsonOutput_({ ok: true }, params);
+    }
+
+    if (action === "teacher_view_logs") {
+      var filterTeacher = String(params.teacher || "").trim();
+      var limit = parseInt(String(params.limit || "120"), 10);
+      return jsonOutput_({ ok: true, logs: getTeacherViewLogs_(filterTeacher, limit) }, params);
+    }
+
     if (action === "version") {
       var targetSheet = String(params.sheet || "").trim();
       if (!targetSheet) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
@@ -79,7 +94,7 @@ function toLitePayload_(payload) {
   var headers = (payload && payload.headers) || [];
   var grid = (payload && payload.grid) || {};
   var rows = [];
-  for (var h = 9; h <= 22; h++) {
+  for (var h = 9; h <= 23; h++) {
     var line = grid[h] || [];
     for (var i = 0; i < headers.length; i++) {
       var items = line[i] || [];
@@ -202,6 +217,17 @@ function matchesPhoneStylePassword_(inputPw, storedPw) {
   return matchesDefaultPassword_(input, stored);
 }
 
+function verifyTeacherPassword_(inputPw, storedPw, loginId) {
+  var input = sanitizePassword_(inputPw);
+  var stored = sanitizePassword_(storedPw);
+  var login = String(loginId || "").trim();
+  if (!input) return false;
+  if (stored && input === stored) return true;
+  if (stored && matchesPhoneStylePassword_(input, stored)) return true;
+  if (login && matchesDefaultPassword_(input, login)) return true;
+  return false;
+}
+
 function verifyPasswordForAccount_(account, inputPw) {
   if (!account) return false;
   if (account.password) return sanitizePassword_(inputPw) === account.password;
@@ -271,7 +297,7 @@ function authenticateTeacher(id, password) {
     // 비밀번호 공란 시 아이디(dbId)로 대체
     if (dbPw === "") dbPw = dbId;
     // 검증 및 권한 부여
-    if (inputIdClean === dbId && matchesPhoneStylePassword_(inputPw, dbPw)) {
+    if (inputIdClean === dbId && verifyTeacherPassword_(inputPw, dbPw, dbId)) {
       var isMaster = inputIdClean === "01042327428";
       return {
         ok: true,
@@ -305,7 +331,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     if (!base || base.error) return base;
 
     var filtered = {};
-    for (var h = 9; h <= 22; h++) {
+    for (var h = 9; h <= 23; h++) {
       var row = base.grid[h] || [];
       filtered[h] = row.map(function(items) {
         var list = items || [];
@@ -332,7 +358,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
 function teacherGridHasItems_(payload) {
   var headers = (payload && payload.headers) || [];
   var grid = (payload && payload.grid) || {};
-  for (var h = 9; h <= 22; h++) {
+  for (var h = 9; h <= 23; h++) {
     var row = grid[h] || [];
     for (var i = 0; i < headers.length; i++) {
       if (row[i] && row[i].length) return true;
@@ -361,6 +387,57 @@ function getTeacherSheetNames(teacherName, forceRefresh) {
     });
     cache.put(cacheKey, JSON.stringify(filtered), 120);
     return filtered;
+  } catch (e) {
+    return [];
+  }
+}
+
+function getTeacherViewLogSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("강사열람로그");
+  if (!sheet) {
+    sheet = ss.insertSheet("강사열람로그");
+    sheet.getRange(1, 1, 1, 4).setValues([["열람시각", "강사명", "일자시트", "로그인ID"]]);
+    if (ss.getSheets().length > 1) sheet.hideSheet();
+  }
+  return sheet;
+}
+
+function logTeacherView_(teacherName, sheetName, loginId) {
+  try {
+    var teacher = String(teacherName || "").trim();
+    var sheet = String(sheetName || "").trim();
+    if (!teacher || !sheet) return false;
+    var logSheet = getTeacherViewLogSheet_();
+    var tz = Session.getScriptTimeZone() || "Asia/Seoul";
+    var timestamp = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss");
+    logSheet.appendRow([timestamp, teacher, sheet, String(loginId || "").trim()]);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getTeacherViewLogs_(teacherName, limit) {
+  try {
+    var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("강사열람로그");
+    if (!logSheet) return [];
+    var values = logSheet.getDataRange().getDisplayValues();
+    if (!values || values.length <= 1) return [];
+    var selectedTeacher = String(teacherName || "").trim();
+    var maxRows = Math.max(1, Math.min(parseInt(limit, 10) || 120, 300));
+    var rows = values.slice(1).filter(function(row) {
+      if (!selectedTeacher) return true;
+      return String((row && row[1]) || "").trim() === selectedTeacher;
+    });
+    return rows.slice(-maxRows).reverse().map(function(row) {
+      return {
+        viewedAt: String((row && row[0]) || ""),
+        teacherName: String((row && row[1]) || ""),
+        sheetName: String((row && row[2]) || ""),
+        loginId: String((row && row[3]) || "")
+      };
+    });
   } catch (e) {
     return [];
   }
@@ -429,7 +506,7 @@ function getFixedGridData(sheetName, forceRefresh) {
     if (classrooms.length > 0) classrooms[classrooms.length - 1].endCol = headerRow.length - 1;
 
     var gridData = {}; 
-    for (var h = 9; h <= 22; h++) gridData[h] = classrooms.map(function() { return []; });
+    for (var h = 9; h <= 23; h++) gridData[h] = classrooms.map(function() { return []; });
 
     var currentHour = -1; 
     var skipKeywords = ["개학시간표","개학","필드","주말","질문","클리닉","휴식","직전"];
@@ -447,7 +524,7 @@ function getFixedGridData(sheetName, forceRefresh) {
           if (!timeText.includes("~")) { if (rawHour >= 23) currentHour = -1; else currentHour = rawHour; }
         }
       }
-      if (currentHour >= 9 && currentHour <= 22) {
+      if (currentHour >= 9 && currentHour <= 23) {
         classrooms.forEach(function(room, roomIndex) {
           var parts = [];
           var firstNonEmptyCol = -1;
