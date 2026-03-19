@@ -372,10 +372,17 @@
       .teacher-log-refresh { min-width:98px; }
       .teacher-log-list { display:flex; flex-direction:column; gap:16px; opacity:0; transform:translateY(6px); transition:opacity .24s ease, transform .24s ease; }
       .teacher-log-list.is-ready { opacity:1; transform:translateY(0); }
-      .teacher-log-date-card { border:1px solid #dbe7ff; border-radius:22px; background:#fff; box-shadow:0 16px 40px rgba(30,58,138,0.08); overflow:hidden; }
-      .teacher-log-date-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid #e6efff; background:linear-gradient(180deg,#f8fbff,#edf4ff); }
-      .teacher-log-date-title { font-size:1.12rem; font-weight:800; color:#15327d; }
-      .teacher-log-date-meta { font-size:0.9rem; font-weight:700; color:#64748b; }
+      .teacher-log-board { border:1px solid #dbe7ff; border-radius:24px; background:#fff; box-shadow:0 16px 40px rgba(30,58,138,0.08); overflow:hidden; }
+      .teacher-log-date-rail { display:flex; gap:12px; padding:16px; overflow-x:auto; background:linear-gradient(180deg,#111827,#1f2937); }
+      .teacher-log-date-chip { min-width:116px; border:1px solid rgba(255,255,255,0.10); border-radius:18px; background:rgba(255,255,255,0.04); color:#e5eefc; padding:14px 14px 12px; cursor:pointer; transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+      .teacher-log-date-chip:hover { transform:translateY(-1px); border-color:rgba(147,197,253,0.45); background:rgba(255,255,255,0.08); }
+      .teacher-log-date-chip.active { background:linear-gradient(180deg,#ffffff,#eef4ff); color:#0f172a; border-color:#bfdbfe; box-shadow:0 14px 24px rgba(15,23,42,0.18); }
+      .teacher-log-date-chip-label { font-size:1.08rem; font-weight:800; line-height:1.1; }
+      .teacher-log-date-chip-meta { margin-top:8px; font-size:0.78rem; font-weight:700; color:inherit; opacity:0.72; }
+      .teacher-log-detail-panel { display:flex; flex-direction:column; }
+      .teacher-log-detail-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; padding:20px 22px 18px; border-bottom:1px solid #e6efff; background:linear-gradient(180deg,#f8fbff,#f2f7ff); }
+      .teacher-log-date-title { font-size:1.18rem; font-weight:800; color:#15327d; }
+      .teacher-log-date-meta { font-size:0.92rem; font-weight:700; color:#64748b; }
       .teacher-log-date-body { display:flex; flex-direction:column; }
       .teacher-log-item + .teacher-log-item { border-top:1px solid #eef3ff; }
       .teacher-log-item { background:#fff; }
@@ -410,7 +417,9 @@
         .teacher-log-search { width:100%; min-width:0; }
         .teacher-log-refresh { width:100%; }
         .teacher-log-week-label { min-width:0; flex:1; }
-        .teacher-log-date-head { flex-direction:column; align-items:flex-start; }
+        .teacher-log-date-rail { padding:12px; gap:10px; }
+        .teacher-log-date-chip { min-width:96px; }
+        .teacher-log-detail-head { flex-direction:column; align-items:flex-start; }
         .teacher-log-row { flex-direction:column; align-items:flex-start; }
         .teacher-log-side { align-items:flex-start; }
         .teacher-log-time { text-align:left; }
@@ -726,6 +735,7 @@
       let selectedStudentForImage = "";
       let teacherViewLogsCache = [];
       let teacherViewLogWeekIndex = 0;
+      let teacherViewLogSelectedDateIndex = 0;
       let lateNightCollapsed = true;
       let lateNightAccessCode = "2371";
       const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycbzpTiz9CtJ_T39H2VkY-WQ0YisjirRuiSmKX8pJSHTSCS_fn-bnh8AnNe_4aGWG75LcMA/exec";
@@ -2437,6 +2447,7 @@
       function renderTeacherViewLogs(logs) {
         teacherViewLogsCache = Array.isArray(logs) ? logs.slice() : [];
         teacherViewLogWeekIndex = 0;
+        teacherViewLogSelectedDateIndex = 0;
         filterTeacherViewLogs();
       }
       function filterTeacherViewLogs() {
@@ -2450,6 +2461,7 @@
           var weeks = buildTeacherLogDashboardData(teacherViewLogsCache, keyword);
           if (!weeks.length) {
             teacherViewLogWeekIndex = 0;
+            teacherViewLogSelectedDateIndex = 0;
             if (weekLabel) weekLabel.textContent = keyword ? "검색 결과 없음" : "열람 기록 없음";
             if (prevBtn) prevBtn.disabled = true;
             if (nextBtn) nextBtn.disabled = true;
@@ -2460,17 +2472,28 @@
           if (teacherViewLogWeekIndex > weeks.length - 1) teacherViewLogWeekIndex = weeks.length - 1;
           if (teacherViewLogWeekIndex < 0) teacherViewLogWeekIndex = 0;
           var currentWeek = weeks[teacherViewLogWeekIndex];
+          if (teacherViewLogSelectedDateIndex > currentWeek.dates.length - 1) teacherViewLogSelectedDateIndex = 0;
+          if (teacherViewLogSelectedDateIndex < 0) teacherViewLogSelectedDateIndex = 0;
+          var activeDate = currentWeek.dates[teacherViewLogSelectedDateIndex] || currentWeek.dates[0];
           if (weekLabel) weekLabel.textContent = currentWeek.label;
           if (prevBtn) prevBtn.disabled = teacherViewLogWeekIndex >= weeks.length - 1;
           if (nextBtn) nextBtn.disabled = teacherViewLogWeekIndex <= 0;
-          list.innerHTML = currentWeek.dates.map(function(dateGroup) {
-            return "<section class='teacher-log-date-card'>" +
-              "<div class='teacher-log-date-head'>" +
-                "<div class='teacher-log-date-title'>" + escapeTeacherLogHtml(dateGroup.targetDateLabel) + "</div>" +
-                "<div class='teacher-log-date-meta'>강사 " + dateGroup.teacherCount + "명 · 총 " + dateGroup.totalViews + "회 열람</div>" +
+          list.innerHTML = "<section class='teacher-log-board'>" +
+            "<div class='teacher-log-date-rail'>" +
+              currentWeek.dates.map(function(dateGroup, index) {
+                return "<button type='button' class='teacher-log-date-chip " + (index === teacherViewLogSelectedDateIndex ? "active" : "") + "' onclick='selectTeacherLogDate(" + index + ")'>" +
+                  "<div class='teacher-log-date-chip-label'>" + escapeTeacherLogHtml(dateGroup.targetDateLabel) + "</div>" +
+                  "<div class='teacher-log-date-chip-meta'>강사 " + dateGroup.teacherCount + "명 · " + dateGroup.totalViews + "회</div>" +
+                "</button>";
+              }).join("") +
+            "</div>" +
+            "<div class='teacher-log-detail-panel'>" +
+              "<div class='teacher-log-detail-head'>" +
+                "<div class='teacher-log-date-title'>" + escapeTeacherLogHtml(activeDate.targetDateLabel) + "</div>" +
+                "<div class='teacher-log-date-meta'>강사 " + activeDate.teacherCount + "명 · 총 " + activeDate.totalViews + "회 열람</div>" +
               "</div>" +
               "<div class='teacher-log-date-body'>" +
-                dateGroup.teachers.map(function(teacher) {
+                activeDate.teachers.map(function(teacher) {
                   var loginText = teacher.loginIds.length ? teacher.loginIds.join(", ") : "-";
                   return "<details class='teacher-log-item'>" +
                     "<summary class='teacher-log-row'>" +
@@ -2494,12 +2517,16 @@
                   "</details>";
                 }).join("") +
               "</div>" +
-            "</section>";
-          }).join("");
+            "</div>" +
+          "</section>";
           requestAnimationFrame(function() {
             list.classList.add('is-ready');
           });
         });
+      }
+      function selectTeacherLogDate(index) {
+        teacherViewLogSelectedDateIndex = index;
+        filterTeacherViewLogs();
       }
       function shiftTeacherLogWeek(offset) {
         var keyword = String((document.getElementById('teacherViewLogSearch').value || "")).trim();
@@ -2508,6 +2535,7 @@
         var nextIndex = teacherViewLogWeekIndex + offset;
         if (nextIndex < 0 || nextIndex > weeks.length - 1) return;
         teacherViewLogWeekIndex = nextIndex;
+        teacherViewLogSelectedDateIndex = 0;
         filterTeacherViewLogs();
       }
       function refreshTeacherViewLogs() {
@@ -2524,6 +2552,7 @@
         document.getElementById('teacherViewLogModal').style.display = 'flex';
         document.getElementById('teacherViewLogSearch').value = "";
         teacherViewLogWeekIndex = 0;
+        teacherViewLogSelectedDateIndex = 0;
         renderTeacherLogLoading("spinner");
         refreshTeacherViewLogs();
       }
