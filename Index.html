@@ -692,6 +692,7 @@
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
+      let studentCardCaptureCache = {};
       let teacherViewLogsCache = [];
       let lateNightCollapsed = true;
       let lateNightAccessCode = "2371";
@@ -1849,6 +1850,7 @@
       function openStudentImageModal() {
         if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
         buildStudentImageMap();
+        resetStudentCardCaptureCache();
         document.getElementById('studentImageModal').style.display = 'flex';
         document.getElementById('studentImageSearch').value = "";
         selectedStudentForImage = "";
@@ -2022,6 +2024,21 @@
         var record = getStudentCardStatusRecord(name);
         return record.sent ? "발송 완료" : "미발송";
       }
+      function getStudentCardCaptureKey(name) {
+        return String(currentSheetName || "") + "||" + String(name || "");
+      }
+      function resetStudentCardCaptureCache() {
+        studentCardCaptureCache = {};
+      }
+      function refreshStudentImageListSelectionState() {
+        var list = document.getElementById('studentImageList');
+        if (!list) return;
+        Array.prototype.slice.call(list.querySelectorAll('.student-list-item[data-student-name]')).forEach(function(row) {
+          var rowName = row.getAttribute('data-student-name') || "";
+          if (rowName === selectedStudentForImage) row.classList.add('active');
+          else row.classList.remove('active');
+        });
+      }
       function syncStudentCardActionButtons() {
         var toggleBtn = document.getElementById('studentCardSentToggleBtn');
         var copyBtn = document.getElementById('studentImageCopyBtn');
@@ -2071,6 +2088,17 @@
           if (!opts.silent) alert("학생 또는 일자 정보가 없습니다.");
           return Promise.reject(new Error("학생 또는 일자 정보가 없습니다."));
         }
+        var previous = studentCardSentMap[studentName] ? Object.assign({}, studentCardSentMap[studentName]) : null;
+        var optimistic = {
+          studentName: studentName,
+          sent: !!sent,
+          updatedAt: previous && previous.updatedAt ? previous.updatedAt : "",
+          updatedBy: String(authState.loginId || "")
+        };
+        studentCardSentMap[studentName] = optimistic;
+        filterStudentImageList();
+        if (selectedStudentForImage === studentName) renderStudentImagePreview(studentName);
+        refreshStudentImageListSelectionState();
         studentCardStatusLoading = true;
         syncStudentCardActionButtons();
         return callServer("setStudentCardSentStatus", [targetSheet, studentName, !!sent, authState.loginId || ""]).then(function(status) {
@@ -2082,9 +2110,15 @@
           };
           filterStudentImageList();
           if (selectedStudentForImage === studentName) renderStudentImagePreview(studentName);
+          refreshStudentImageListSelectionState();
           syncStudentCardActionButtons();
           return studentCardSentMap[studentName];
         }).catch(function(err) {
+          if (previous) studentCardSentMap[studentName] = previous;
+          else delete studentCardSentMap[studentName];
+          filterStudentImageList();
+          if (selectedStudentForImage === studentName) renderStudentImagePreview(studentName);
+          refreshStudentImageListSelectionState();
           if (!opts.silent) alert("발송 상태 저장에 실패했습니다. 다시 시도해주세요.");
           throw err;
         }).finally(function() {
@@ -2116,6 +2150,7 @@
           visibleNames.push(name);
           var row = document.createElement('div');
           row.className = 'student-list-item' + (selectedStudentForImage === name ? ' active' : '') + (status.sent ? ' is-sent' : '');
+          row.setAttribute('data-student-name', name);
           row.onclick = function(){ renderStudentImagePreview(name); };
 
           var main = document.createElement('div');
@@ -2153,6 +2188,7 @@
         if (!selectedStudentForImage || visibleNames.indexOf(selectedStudentForImage) === -1) {
           renderStudentImagePreview(visibleNames[0]);
         } else {
+          refreshStudentImageListSelectionState();
           syncStudentCardActionButtons();
         }
       }
@@ -2311,11 +2347,6 @@
         var wmSize = Math.min(760, 270 + (model.timelineRows.length * 42));
         var avatarUrl = getStudentAvatarUrl(name);
         var initials = buildStudentInitials(name);
-        var status = getStudentCardStatusRecord(name);
-        var sendLine = "<div class='student-preview-sendline'>" +
-          "<span class='student-preview-send-badge " + (status.sent ? "sent" : "pending") + "'>" + getStudentCardStatusLabel(name) + "</span>" +
-          (status.updatedAt ? "<span class='student-preview-send-meta'>마지막 표시: " + status.updatedAt + "</span>" : "") +
-        "</div>";
 
         preview.innerHTML =
           "<div class='student-preview-shell' style='--wm-size:" + wmSize + "px; --si-bg:" + STUDENT_IMAGE_PALETTE.bg + "; --si-surface:" + STUDENT_IMAGE_PALETTE.surface + "; --si-border:" + STUDENT_IMAGE_PALETTE.line + "; --si-text:" + STUDENT_IMAGE_PALETTE.text + "; --si-muted:" + STUDENT_IMAGE_PALETTE.muted + "; --si-accent:" + STUDENT_IMAGE_PALETTE.accent + ";'>" +
@@ -2328,17 +2359,17 @@
               "<div class='student-preview-meta'>" +
                 "<h3 class='student-preview-title'>" + name + " 학생 시간표 카드</h3>" +
                 "<div class='student-preview-date'><span>" + model.metaLine + "</span></div>" +
-                sendLine +
               "</div>" +
             "</div>" +
             renderStudentCardRowsHtml(model.timelineRows) +
             getStudentCardPolicyHtml() +
           "</div>";
+        refreshStudentImageListSelectionState();
+        prewarmStudentCardCapture(name);
         syncStudentCardActionButtons();
       }
       function buildStudentExportHtml(name) {
         var model = buildStudentCardViewModel(name);
-        var status = getStudentCardStatusRecord(name);
         var rows = model.timelineRows.map(function(item) {
           var duration = Math.max(1, item.end - item.start);
           var subjectText = item.title || "";
@@ -2381,10 +2412,6 @@
               "<div>" +
                 "<div style='font-size:28px; font-weight:900; color:#0f172a; letter-spacing:-0.03em;'>" + name + " 학생 시간표 카드</div>" +
                 "<div style='margin-top:6px; font-size:17px; font-weight:700; color:#475569;'>" + model.metaLine + "</div>" +
-                "<div style='margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;'>" +
-                  "<span style='display:inline-flex; align-items:center; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:900; " + (status.sent ? "background:#ecfdf5; color:#047857; border:1px solid #86efac;" : "background:#fff7ed; color:#c2410c; border:1px solid #fdba74;") + "'>" + getStudentCardStatusLabel(name) + "</span>" +
-                  (status.updatedAt ? "<span style='font-size:12px; color:#64748b; font-weight:700;'>마지막 표시: " + status.updatedAt + "</span>" : "") +
-                "</div>" +
               "</div>" +
             "</div>" +
             "<div style='position:relative; z-index:2; margin-top:18px;'>" + rows + "</div>" +
@@ -2411,6 +2438,30 @@
           if (host && host.parentNode) host.parentNode.removeChild(host);
         });
       }
+      function buildStudentCardCaptureBlob(name, forceRefresh) {
+        var studentName = String(name || "").trim();
+        if (!studentName) return Promise.reject(new Error("학생을 먼저 선택하세요."));
+        var cacheKey = getStudentCardCaptureKey(studentName);
+        if (!forceRefresh && studentCardCaptureCache[cacheKey]) return studentCardCaptureCache[cacheKey];
+        var blobPromise = captureStudentScheduleCanvas(studentName).then(function(canvas) {
+          return new Promise(function(resolve, reject) {
+            canvas.toBlob(function(blob) {
+              if (!blob) { reject(new Error("이미지 변환 실패")); return; }
+              resolve(blob);
+            }, "image/png");
+          });
+        });
+        studentCardCaptureCache[cacheKey] = blobPromise;
+        blobPromise.catch(function() {
+          if (studentCardCaptureCache[cacheKey] === blobPromise) delete studentCardCaptureCache[cacheKey];
+        });
+        return blobPromise;
+      }
+      function prewarmStudentCardCapture(name) {
+        var studentName = String(name || "").trim();
+        if (!studentName) return;
+        buildStudentCardCaptureBlob(studentName, false).catch(function(){});
+      }
       function downloadStudentScheduleImage() {
         if (!selectedStudentForImage) { alert("학생을 먼저 선택하세요."); return; }
         captureStudentScheduleCanvas(selectedStudentForImage).then(function(canvas){
@@ -2428,17 +2479,12 @@
           alert("현재 브라우저에서는 이미지 클립보드 복사가 지원되지 않습니다. 카드 저장을 사용해주세요.");
           return;
         }
-        captureStudentScheduleCanvas(selectedStudentForImage).then(function(canvas) {
-          return new Promise(function(resolve, reject) {
-            canvas.toBlob(function(blob) {
-              if (!blob) { reject(new Error("이미지 변환 실패")); return; }
-              resolve(blob);
-            }, "image/png");
-          });
-        }).then(function(blob) {
+        var studentName = selectedStudentForImage;
+        buildStudentCardCaptureBlob(studentName, false).then(function(blob) {
           return navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
         }).then(function() {
-          return markStudentCardSentStatus(selectedStudentForImage, true, { silent: true });
+          prewarmStudentCardCapture(studentName);
+          return markStudentCardSentStatus(studentName, true, { silent: true });
         }).then(function() {
           alert("시간표 카드가 클립보드에 복사되었고 발송 완료로 표시되었습니다.");
         }).catch(function() {
