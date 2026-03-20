@@ -64,6 +64,21 @@ function handleApiRequest_(params) {
       return jsonOutput_({ ok: true, logs: getTeacherViewLogs_(filterTeacher, limit) }, params);
     }
 
+    if (action === "student_card_statuses") {
+      var statusSheet = String(params.sheet || "").trim();
+      if (!statusSheet) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
+      return jsonOutput_({ ok: true, statuses: getStudentCardStatuses_(statusSheet) }, params);
+    }
+
+    if (action === "student_card_mark") {
+      var markSheet = String(params.sheet || "").trim();
+      var markStudent = String(params.student || "").trim();
+      var markLoginId = String(params.loginId || "").trim();
+      var markSent = String(params.sent || "0") === "1";
+      if (!markSheet || !markStudent) return jsonOutput_({ ok: false, error: "MARK_REQUIRED" }, params);
+      return jsonOutput_({ ok: true, status: setStudentCardSentStatus_(markSheet, markStudent, markSent, markLoginId) }, params);
+    }
+
     if (action === "version") {
       var targetSheet = String(params.sheet || "").trim();
       if (!targetSheet) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
@@ -441,6 +456,82 @@ function getTeacherViewLogs_(teacherName, limit) {
   } catch (e) {
     return [];
   }
+}
+
+function getStudentCardStatusSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("학생카드발송로그");
+  if (!sheet) {
+    sheet = ss.insertSheet("학생카드발송로그");
+    sheet.getRange(1, 1, 1, 6).setValues([["일자시트", "학생명", "발송여부", "수정시각", "수정자", "상태키"]]);
+    if (ss.getSheets().length > 1) sheet.hideSheet();
+  }
+  return sheet;
+}
+
+function buildStudentCardStatusKey_(sheetName, studentName) {
+  return String(sheetName || "").trim() + "||" + String(studentName || "").trim();
+}
+
+function getStudentCardStatuses_(sheetName) {
+  try {
+    var targetSheet = String(sheetName || "").trim();
+    if (!targetSheet) return {};
+    var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("학생카드발송로그");
+    if (!logSheet) return {};
+    var values = logSheet.getDataRange().getDisplayValues();
+    if (!values || values.length <= 1) return {};
+    var statuses = {};
+    values.slice(1).forEach(function(row) {
+      var rowSheet = String((row && row[0]) || "").trim();
+      var student = String((row && row[1]) || "").trim();
+      if (!rowSheet || !student || rowSheet !== targetSheet) return;
+      statuses[student] = {
+        studentName: student,
+        sent: String((row && row[2]) || "") === "1",
+        updatedAt: String((row && row[3]) || ""),
+        updatedBy: String((row && row[4]) || "")
+      };
+    });
+    return statuses;
+  } catch (e) {
+    return {};
+  }
+}
+
+function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
+  var targetSheet = String(sheetName || "").trim();
+  var student = String(studentName || "").trim();
+  if (!targetSheet || !student) return null;
+
+  var logSheet = getStudentCardStatusSheet_();
+  var values = logSheet.getDataRange().getDisplayValues();
+  var key = buildStudentCardStatusKey_(targetSheet, student);
+  var tz = Session.getScriptTimeZone() || "Asia/Seoul";
+  var timestamp = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss");
+  var payload = [targetSheet, student, sent ? "1" : "0", timestamp, String(loginId || "").trim(), key];
+  var foundRow = 0;
+
+  for (var r = 1; r < values.length; r++) {
+    var rowKey = String((values[r] && values[r][5]) || "").trim();
+    if (!rowKey) {
+      rowKey = buildStudentCardStatusKey_(values[r][0], values[r][1]);
+    }
+    if (rowKey === key) {
+      foundRow = r + 1;
+      break;
+    }
+  }
+
+  if (foundRow) logSheet.getRange(foundRow, 1, 1, payload.length).setValues([payload]);
+  else logSheet.appendRow(payload);
+
+  return {
+    studentName: student,
+    sent: !!sent,
+    updatedAt: timestamp,
+    updatedBy: String(loginId || "").trim()
+  };
 }
 
 function getSheetNames() {
