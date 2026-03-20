@@ -270,8 +270,8 @@
       .student-img-controls .msg-copy-btn.is-muted { background:#64748b; }
       .student-list { border:1px solid #e5e7eb; border-radius:12px; max-height:220px; overflow:auto; margin-bottom:12px; background:#fff; }
       .student-list-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border-bottom:1px solid #f1f5f9; cursor:pointer; }
-      .student-list-item:hover { background:#eff6ff; }
-      .student-list-item.active { background:linear-gradient(180deg, #f8fbff, #eef5ff); }
+      .student-list-item:hover { background:#f8fbff; }
+      .student-list-item.active { background:linear-gradient(180deg, #f8fbff, #eef5ff); box-shadow: inset 4px 0 0 #2563eb; }
       .student-list-item:last-child { border-bottom:none; }
       .student-list-item.is-sent { opacity:0.9; }
       .student-list-main { min-width:0; display:flex; flex-direction:column; gap:4px; }
@@ -341,11 +341,9 @@
       .student-preview-meta { min-width:0; }
       .student-preview-title { font-size: 1.28rem; font-weight: 700; color: #0f172a; margin: 0; letter-spacing: -0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .student-preview-date { display:flex; align-items:center; gap:6px; margin-top:3px; font-size: 0.82rem; color: rgba(15,23,42,0.70); font-weight: 500; }
-      .student-preview-sendline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; }
-      .student-preview-send-badge { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:0.72rem; font-weight:800; letter-spacing:-0.01em; border:1px solid transparent; }
-      .student-preview-send-badge.pending { background:#fff7ed; color:#c2410c; border-color:#fdba74; }
-      .student-preview-send-badge.sent { background:#ecfdf5; color:#047857; border-color:#86efac; }
-      .student-preview-send-meta { font-size:0.72rem; color:#64748b; }
+      .student-preview-sendline,
+      .student-preview-send-badge,
+      .student-preview-send-meta { display:none !important; }
       .student-preview-status-chip { display:inline-flex; align-items:center; border-radius:999px; padding:3px 8px; font-size:0.68rem; font-weight:600; color:#334155; background:rgba(255,255,255,0.7); border:1px solid rgba(203,213,225,0.9); }
       .student-preview-row { position:relative; z-index:2; display:flex; flex-direction:column; gap:10px; margin-top: 10px; padding: 12px; border-radius: 22px; border: 1px solid rgba(226,232,240,0.9); background: linear-gradient(142deg, rgba(255,255,255,0.55), rgba(255,255,255,0.34)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 8px 22px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.52); overflow:hidden; }
       .student-preview-row::before { display:none; }
@@ -2039,6 +2037,12 @@
           else row.classList.remove('active');
         });
       }
+      function selectStudentImageItem(name, options) {
+        var opts = options || {};
+        selectedStudentForImage = String(name || "").trim();
+        if (!opts.skipListRender) filterStudentImageList();
+        renderStudentImagePreview(selectedStudentForImage);
+      }
       function syncStudentCardActionButtons() {
         var toggleBtn = document.getElementById('studentCardSentToggleBtn');
         var copyBtn = document.getElementById('studentImageCopyBtn');
@@ -2151,7 +2155,7 @@
           var row = document.createElement('div');
           row.className = 'student-list-item' + (selectedStudentForImage === name ? ' active' : '') + (status.sent ? ' is-sent' : '');
           row.setAttribute('data-student-name', name);
-          row.onclick = function(){ renderStudentImagePreview(name); };
+          row.onclick = function(){ selectStudentImageItem(name, { skipListRender: false }); };
 
           var main = document.createElement('div');
           main.className = 'student-list-main';
