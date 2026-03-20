@@ -264,18 +264,33 @@
       .mobile-type-red { background:#b91c1c; }
       .mobile-type-gray { background:#475569; }
       .img-student-btn { background:#0ea5e9; color:white; border:none; padding:8px 14px; border-radius:6px; font-size:0.9rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; }
-      .student-img-box { width: 680px; max-width: 94%; max-height: 86vh; overflow: auto; text-align:left; }
+      .student-img-box { width: 1220px; max-width: 97%; max-height: 90vh; overflow: auto; text-align:left; }
       .student-img-controls { display:flex; gap:8px; margin: 8px 0 12px; flex-wrap: wrap; }
       .student-img-controls input { flex:1; min-width: 180px; padding:10px; border:1px solid #d1d5db; border-radius:8px; }
       .student-img-controls .msg-copy-btn.is-muted { background:#64748b; }
-      .student-list { border:1px solid #e5e7eb; border-radius:12px; max-height:220px; overflow:auto; margin-bottom:12px; background:#fff; }
-      .student-list-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border-bottom:1px solid #f1f5f9; cursor:pointer; }
+      .student-dashboard-layout { display:grid; grid-template-columns:minmax(360px, 430px) minmax(0, 1fr); gap:18px; align-items:start; }
+      .student-list-panel { background:linear-gradient(180deg,#f8fbff,#f1f6ff); border:1px solid #dbeafe; border-radius:20px; padding:14px; box-shadow:0 14px 30px rgba(37,99,235,0.08); }
+      .student-list-panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+      .student-list-panel-title { font-size:1rem; font-weight:900; color:#0f172a; }
+      .student-list-panel-sub { font-size:0.78rem; color:#64748b; font-weight:700; }
+      .student-list { border:1px solid #dbe7ff; border-radius:16px; max-height:620px; overflow:auto; background:#fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.85); }
+      .student-list-group { padding:0; }
+      .student-list-group + .student-list-group { border-top:1px solid #dbe7ff; }
+      .student-list-group.pending-group { background:linear-gradient(180deg,#fffaf5,#fff7ed); }
+      .student-list-group.sent-group { background:linear-gradient(180deg,#f3fff9,#ecfdf5); }
+      .student-list-group-head { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; font-size:0.78rem; font-weight:900; letter-spacing:0.01em; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+      .student-list-group.pending-group .student-list-group-head { background:rgba(255,247,237,0.92); color:#c2410c; border-bottom:1px solid #fdba74; }
+      .student-list-group.sent-group .student-list-group-head { background:rgba(236,253,245,0.92); color:#047857; border-bottom:1px solid #86efac; }
+      .student-list-group-count { font-size:0.72rem; opacity:0.85; }
+      .student-list-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 12px; border-bottom:1px solid rgba(226,232,240,0.9); cursor:pointer; }
       .student-list-item:hover { background:#f8fbff; }
-      .student-list-item.active { background:linear-gradient(180deg, #f8fbff, #eef5ff); box-shadow: inset 4px 0 0 #2563eb; }
+      .student-list-item.active { background:linear-gradient(180deg, #f8fbff, #eef5ff); box-shadow: inset 5px 0 0 #2563eb; }
       .student-list-item:last-child { border-bottom:none; }
-      .student-list-item.is-sent { opacity:0.9; }
+      .student-list-item.pending-item { background:rgba(255,247,237,0.32); }
+      .student-list-item.sent-item { background:rgba(236,253,245,0.32); }
+      .student-list-item.is-sent { opacity:0.94; }
       .student-list-main { min-width:0; display:flex; flex-direction:column; gap:4px; }
-      .student-list-name { font-weight:800; color:#0f172a; }
+      .student-list-name { font-weight:900; color:#0f172a; font-size:1.02rem; }
       .student-list-sub { font-size:0.78rem; color:#64748b; }
       .student-list-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
       .student-list-badge { display:inline-flex; align-items:center; justify-content:center; min-width:64px; border-radius:999px; padding:4px 10px; font-size:0.74rem; font-weight:800; border:1px solid transparent; }
@@ -283,6 +298,11 @@
       .student-list-badge.sent { background:#ecfdf5; color:#047857; border-color:#86efac; }
       .student-list-toggle-btn { border:1px solid #cbd5e1; background:#fff; color:#1e3a8a; border-radius:10px; padding:6px 10px; font-size:0.74rem; font-weight:800; cursor:pointer; }
       .student-list-toggle-btn:hover { background:#eff6ff; }
+      .student-preview-panel { background:linear-gradient(180deg,#f8fbff,#eef4ff); border:1px solid #dbeafe; border-radius:22px; padding:16px; min-height:680px; box-shadow:0 16px 34px rgba(37,99,235,0.08); }
+      .student-preview-panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+      .student-preview-panel-title { font-size:1rem; font-weight:900; color:#0f172a; }
+      .student-preview-panel-sub { margin-top:4px; font-size:0.8rem; color:#64748b; font-weight:700; }
+      .student-preview-panel-meta { font-size:0.76rem; color:#475569; font-weight:800; text-align:right; }
       .absence-notice-box { width: 760px; max-width: 95%; max-height: 88vh; overflow: auto; text-align: left; }
       .absence-notice-controls { display:flex; gap:8px; margin:8px 0 12px; flex-wrap:wrap; }
       .absence-notice-controls input { flex:1; min-width:180px; padding:10px; border:1px solid #d1d5db; border-radius:8px; }
@@ -348,7 +368,7 @@
       .attendance-v-student-status.late { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
       .attendance-v-student-status.absent { background:#fee2e2; color:#991b1b; border-color:#f87171; }
       #attendanceReportText { width:100%; min-height:150px; border:1px solid #d1d5db; border-radius:10px; padding:10px; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size:0.9rem; resize:vertical; background:#f8fafc; box-sizing:border-box; }
-      #studentImagePreview { max-width: 460px; margin: 0 auto; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
+      #studentImagePreview { max-width:none; margin:0; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
       #studentImagePreview th, #studentImagePreview td { border:1px solid #e5e7eb; padding:8px; font-size:0.9rem; text-align:left; }
       .student-preview-shell { --si-bg:#f6f9ff; --si-surface:rgba(255,255,255,0.56); --si-border:rgba(226,232,240,0.9); --si-text:#0f172a; --si-muted:#64748b; --si-accent:#3b82f6; position: relative; overflow: hidden; max-width: 420px; margin: 0 auto; background: linear-gradient(165deg, rgba(248,251,255,0.95), rgba(239,245,255,0.88)); border: 1px solid rgba(191,219,254,0.72); border-radius: 28px; padding: 18px; box-shadow: 0 18px 40px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
@@ -522,6 +542,9 @@
         body.teacher-compact .action-group .capture-btn,
         body.teacher-compact .action-group .fullscreen-btn { padding: 8px 10px; }
         .student-img-box { width: 95%; max-height: 90vh; padding: 16px; }
+        .student-dashboard-layout { grid-template-columns:1fr; }
+        .student-list-panel, .student-preview-panel { padding:12px; }
+        .student-list { max-height:320px; }
         .student-preview-shell { padding:14px; border-radius:18px; }
         .student-preview-header { grid-template-columns:46px 1fr; gap:10px; margin-bottom:10px; padding:8px 9px; border-radius:14px; }
         .student-preview-avatar { width:46px; height:46px; font-size:0.82rem; }
@@ -609,17 +632,37 @@
         </div>
       </div>
     </div>
-    <div id="studentImageModal">
+      <div id="studentImageModal">
       <div class="modal-box student-img-box">
         <div class="modal-title">시간표 카드 생성</div>
         <div class="student-img-controls">
           <input id="studentImageSearch" type="text" placeholder="학생명 검색 (예: 김철수)" onkeyup="filterStudentImageList()">
+          <button id="studentImageRefreshBtn" class="attendance-time-btn" onclick="refreshStudentImageDashboard()">새로고침</button>
           <button id="studentImageCopyBtn" class="msg-copy-btn" style="margin-top:0;" onclick="copyStudentScheduleImage()">카드 복사</button>
           <button class="msg-copy-btn" style="margin-top:0;" onclick="downloadStudentScheduleImage()">카드 저장</button>
           <button id="studentCardSentToggleBtn" class="msg-copy-btn is-muted" style="margin-top:0;" onclick="toggleSelectedStudentCardSent()">발송 완료 표시</button>
         </div>
-        <div id="studentImageList" class="student-list"></div>
-        <div id="studentImagePreview"></div>
+        <div class="student-dashboard-layout">
+          <div class="student-list-panel">
+            <div class="student-list-panel-head">
+              <div>
+                <div class="student-list-panel-title">발송 대기 현황</div>
+                <div class="student-list-panel-sub">미발송 학생이 상단에 우선 표시됩니다.</div>
+              </div>
+            </div>
+            <div id="studentImageList" class="student-list"></div>
+          </div>
+          <div class="student-preview-panel">
+            <div class="student-preview-panel-head">
+              <div>
+                <div class="student-preview-panel-title">시간표 카드 미리보기</div>
+                <div class="student-preview-panel-sub">선택한 학생의 내일 시간표를 바로 확인하고 복사할 수 있습니다.</div>
+              </div>
+              <div class="student-preview-panel-meta">Windows 11 카카오톡 붙여넣기용</div>
+            </div>
+            <div id="studentImagePreview"></div>
+          </div>
+        </div>
         <div class="close-modal" onclick="closeStudentImageModal()">닫기</div>
       </div>
     </div>
@@ -772,6 +815,7 @@
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
       let studentCardCaptureCache = {};
+      let studentImageRefreshPendingSelection = "";
       let teacherViewLogsCache = [];
       let teacherViewLogWeekIndex = 0;
       let teacherViewLogSelectedDateIndex = 0;
@@ -1549,6 +1593,26 @@
           lastData=d; 
           currentVersion=String(d.version || "").split("_T_")[0]; 
           renderTable(d, isRefresh); 
+          if (isStudentImageModalOpen()) {
+            var pendingSelection = studentImageRefreshPendingSelection || selectedStudentForImage || "";
+            buildStudentImageMap();
+            resetStudentCardCaptureCache();
+            if (pendingSelection && studentImageScheduleMap[pendingSelection]) selectedStudentForImage = pendingSelection;
+            else if (pendingSelection && !studentImageScheduleMap[pendingSelection]) selectedStudentForImage = "";
+            filterStudentImageList();
+            loadStudentCardStatuses().then(function() {
+              if (pendingSelection && studentImageScheduleMap[pendingSelection]) {
+                selectStudentImageItem(pendingSelection, { skipListRender: false });
+              }
+            }).finally(function() {
+              studentImageRefreshPendingSelection = "";
+              var refreshBtn = document.getElementById('studentImageRefreshBtn');
+              if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = "새로고침";
+              }
+            });
+          }
         } catch(e) { console.error(e); } 
         document.body.classList.remove('loading-protected');
         document.getElementById('loading').style.display='none'; 
@@ -1942,6 +2006,25 @@
       function closeStudentImageModal() {
         document.getElementById('studentImageModal').style.display = 'none';
       }
+      function isStudentImageModalOpen() {
+        var modal = document.getElementById('studentImageModal');
+        return !!(modal && modal.style.display === 'flex');
+      }
+      function refreshStudentImageDashboard() {
+        if (!currentSheetName) {
+          buildStudentImageMap();
+          filterStudentImageList();
+          loadStudentCardStatuses();
+          return;
+        }
+        studentImageRefreshPendingSelection = selectedStudentForImage || "";
+        var refreshBtn = document.getElementById('studentImageRefreshBtn');
+        if (refreshBtn) {
+          refreshBtn.disabled = true;
+          refreshBtn.textContent = "새로고침 중...";
+        }
+        loadData(currentSheetName, true);
+      }
       function isAbsenceNoticeStatus(status) {
         var s = normalizeStatusLabel(status || "");
         return s === "결석예고" || s === "당일취소";
@@ -2284,13 +2367,15 @@
         var preview = document.getElementById('studentImagePreview');
         list.innerHTML = "";
         var visibleNames = [];
+        var pendingRows = [];
+        var sentRows = [];
         names.forEach(function(name) {
           var status = getStudentCardStatusRecord(name);
           var searchText = [name, getStudentCardStatusLabel(name), status.updatedAt].join(" ").toLowerCase();
           if (keyword && searchText.indexOf(keyword) === -1) return;
           visibleNames.push(name);
           var row = document.createElement('div');
-          row.className = 'student-list-item' + (selectedStudentForImage === name ? ' active' : '') + (status.sent ? ' is-sent' : '');
+          row.className = 'student-list-item ' + (status.sent ? 'sent-item is-sent' : 'pending-item') + (selectedStudentForImage === name ? ' active' : '');
           row.setAttribute('data-student-name', name);
           row.onclick = function(){ selectStudentImageItem(name, { skipListRender: false }); };
 
@@ -2318,7 +2403,8 @@
           actions.appendChild(toggleBtn);
           row.appendChild(main);
           row.appendChild(actions);
-          list.appendChild(row);
+          if (status.sent) sentRows.push(row);
+          else pendingRows.push(row);
         });
         if (!visibleNames.length) {
           list.innerHTML = "<div class='student-list-item' style='color:#94a3b8;'>검색 결과가 없습니다.</div>";
@@ -2326,11 +2412,24 @@
           syncStudentCardActionButtons();
           return;
         }
+        function appendGroup(title, className, rows) {
+          if (!rows.length) return;
+          var group = document.createElement('div');
+          group.className = 'student-list-group ' + className;
+          var head = document.createElement('div');
+          head.className = 'student-list-group-head';
+          head.innerHTML = "<span>" + title + "</span><span class='student-list-group-count'>" + rows.length + "명</span>";
+          group.appendChild(head);
+          rows.forEach(function(row) { group.appendChild(row); });
+          list.appendChild(group);
+        }
+        appendGroup("미발송 명단", "pending-group", pendingRows);
+        appendGroup("발송 완료 명단", "sent-group", sentRows);
         if (!selectedStudentForImage || visibleNames.indexOf(selectedStudentForImage) === -1) {
-          renderStudentImagePreview(visibleNames[0]);
+          selectStudentImageItem(visibleNames[0], { skipListRender: true });
         } else {
           refreshStudentImageListSelectionState();
-          syncStudentCardActionButtons();
+          renderStudentImagePreview(selectedStudentForImage);
         }
       }
       var STUDENT_IMAGE_PALETTE = {
