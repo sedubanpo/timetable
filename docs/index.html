@@ -602,6 +602,7 @@
         <div class="modal-title">시간표 카드 생성</div>
         <div class="student-img-controls">
           <input id="studentImageSearch" type="text" placeholder="학생명 검색 (예: 김철수)" onkeyup="filterStudentImageList()">
+          <button class="msg-copy-btn" style="margin-top:0;" onclick="copyStudentScheduleImage()">카드 복사</button>
           <button class="msg-copy-btn" style="margin-top:0;" onclick="downloadStudentScheduleImage()">카드 저장</button>
         </div>
         <div id="studentImageList" class="student-list"></div>
@@ -2353,6 +2354,42 @@
           a.click();
         }).catch(function(){
           alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
+        });
+      }
+      function copyStudentScheduleImage() {
+        if (!selectedStudentForImage) { alert("학생을 먼저 선택하세요."); return; }
+        if (!(navigator.clipboard && window.ClipboardItem)) {
+          alert("현재 브라우저에서는 이미지 클립보드 복사를 지원하지 않습니다. Chrome 또는 Edge 최신 버전에서 다시 시도해주세요.");
+          return;
+        }
+        var target = document.getElementById('studentImagePreview');
+        if (!target || !target.innerHTML.trim()) { alert("복사할 시간표 카드가 없습니다."); return; }
+        waitForImagesInElement(target, 1500).then(function(){
+          return html2canvas(target, {
+            scale: Math.max(2, window.devicePixelRatio || 1),
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            imageTimeout: 1500
+          });
+        }).then(function(canvas){
+          return new Promise(function(resolve, reject) {
+            canvas.toBlob(function(blob) {
+              if (!blob) {
+                reject(new Error("이미지 변환 실패"));
+                return;
+              }
+              resolve(blob);
+            }, "image/png");
+          });
+        }).then(function(blob){
+          return navigator.clipboard.write([
+            new ClipboardItem({ "image/png": blob })
+          ]);
+        }).then(function(){
+          alert("시간표 카드가 클립보드에 복사되었습니다. 카카오톡에 바로 붙여넣기 하시면 됩니다.");
+        }).catch(function(err){
+          console.error(err);
+          alert("카드 복사 중 오류가 발생했습니다. 브라우저 권한을 확인하거나 카드 저장 기능을 이용해주세요.");
         });
       }
       function toggleLateNightRows(data) {
