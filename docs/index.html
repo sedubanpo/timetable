@@ -1605,6 +1605,7 @@
           } else if (lookupPane) {
             renderVisitorLookupResults();
           }
+          syncLookupDimmingState();
           return;
         }
 
@@ -1656,6 +1657,7 @@
         }
         searchInput.placeholder = isTeacherViewActive() ? "🔍 내 시간표 검색" : "🔍 학생/강사 검색";
         populateMainSheetSelector(currentSheetName);
+        syncLookupDimmingState();
       }
       function toggleFullscreen() {
         if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => { alert(`전체화면 오류: ${err.message}`); }); } else { if (document.exitFullscreen) document.exitFullscreen(); }
@@ -1666,7 +1668,18 @@
       }
       
       function toggle9am() { if(lastData) renderTable(lastData); }
-      function toggleDimming(){ var c=document.getElementById('tableContainer'), k=document.getElementById('dimmingToggle').checked; if(k)c.classList.add('dimming-enabled'); else c.classList.remove('dimming-enabled'); }
+      function syncLookupDimmingState() {
+        var c = document.getElementById('tableContainer');
+        var k = document.getElementById('dimmingToggle');
+        if (!c || !k) return;
+        if (isLookupViewActive() && visitorLookupShowFullDay) {
+          c.classList.remove('dimming-enabled');
+          return;
+        }
+        if (k.checked) c.classList.add('dimming-enabled');
+        else c.classList.remove('dimming-enabled');
+      }
+      function toggleDimming(){ syncLookupDimmingState(); }
       function togglePrivacy() { document.body.classList.toggle('privacy-active'); }
       
       function toggleTimeline() {
@@ -1808,6 +1821,7 @@
           lastData=d; 
           currentVersion=String(d.version || "").split("_T_")[0]; 
           renderTable(d, isRefresh); 
+          syncLookupDimmingState();
           if (isStudentImageModalOpen()) {
             var pendingSelection = studentImageRefreshPendingSelection || selectedStudentForImage || "";
             buildStudentImageMap();
@@ -3981,16 +3995,23 @@
         document.body.classList.toggle('visitor-lookup-show-full', visitorLookupShowFullDay);
         var searchInput = document.getElementById('searchInput');
         var homeWrap = document.querySelector('.top-bar > div:first-child');
+        var loading = document.getElementById('loading');
         if (searchInput) searchInput.placeholder = visitorLookupShowFullDay ? "조회용 전체 시간표 확인 중" : "🔍 학생명 검색";
         if (homeWrap && authState.isLookup) {
           homeWrap.setAttribute('title', visitorLookupShowFullDay ? '검색 모드로 돌아가기' : '선택 날짜 전체 시간표 보기');
         }
         if (visitorLookupShowFullDay) {
+          if (loading) loading.style.display = 'flex';
           if (currentSheetName) loadData(currentSheetName, true);
-          else if (lastData && lastData.headers && lastData.headers.length) renderTable(lastData, true);
+          else if (lastData && lastData.headers && lastData.headers.length) {
+            renderTable(lastData, true);
+            if (loading) loading.style.display = 'none';
+          }
         } else {
           renderVisitorLookupResults();
+          if (loading) loading.style.display = 'none';
         }
+        syncLookupDimmingState();
         updateTimelinePosition();
       }
       function toggleVisitorLookupFullDay() {
