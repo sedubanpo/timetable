@@ -454,15 +454,22 @@
       .teacher-log-box { width: 980px; max-width: 96%; max-height: 88vh; overflow: auto; text-align: left; padding-bottom: 22px; }
       #visitorLookupPane { display:none; max-width:860px; margin:30px auto; }
       .visitor-lookup-mode .ticker-wrap { display:none !important; }
-      .visitor-lookup-mode .top-bar { justify-content:center; padding:18px 20px; }
+      .visitor-lookup-mode .top-bar { justify-content:space-between; padding:18px 20px; gap:14px; }
       .visitor-lookup-mode .top-bar > * { display:none !important; }
-      .visitor-lookup-mode .top-bar > .search-wrapper { display:block !important; width:min(760px, 100%); margin:0 auto; }
+      .visitor-lookup-mode .top-bar > div:first-child { display:flex !important; }
+      .visitor-lookup-mode .top-bar > .search-wrapper { display:block !important; width:min(760px, 100%); margin:0 0 0 auto; }
       .visitor-lookup-mode .top-bar > .search-wrapper .search-input { height:54px; font-size:1.08rem; border-radius:18px; }
       .visitor-lookup-mode #scheduleTable,
       .visitor-lookup-mode #teacherMobileList,
       .visitor-lookup-mode #liveTimeline,
       .visitor-lookup-mode #loading { display:none !important; }
       .visitor-lookup-mode #visitorLookupPane { display:block; }
+      .visitor-lookup-mode .top-bar > div:first-child.lookup-header-toggle { padding:10px 14px; border-radius:18px; background:linear-gradient(145deg,#ffffff,#dbeafe); border:1px solid #bfdbfe; box-shadow:0 10px 22px rgba(37,99,235,0.10); }
+      .visitor-lookup-mode .top-bar > div:first-child.lookup-header-toggle span { margin-left:7px !important; color:#0f172a !important; }
+      .visitor-lookup-mode.visitor-lookup-show-full #visitorLookupPane { display:none !important; }
+      .visitor-lookup-mode.visitor-lookup-show-full #scheduleTable { display:table !important; }
+      .visitor-lookup-mode.visitor-lookup-show-full #liveTimeline { display:block !important; }
+      .visitor-lookup-mode.visitor-lookup-show-full .top-bar > .search-wrapper { display:none !important; }
       .visitor-lookup-shell { background:linear-gradient(180deg,#f8fbff,#eef5ff); border:1px solid #dbeafe; border-radius:26px; padding:24px; box-shadow:0 20px 40px rgba(37,99,235,0.08); }
       .visitor-lookup-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
       .visitor-lookup-head-main { display:flex; align-items:flex-start; gap:14px; min-width:0; }
@@ -608,9 +615,7 @@
         .visitor-lookup-head-side { width:100%; justify-content:flex-start; }
         .visitor-lookup-summary { flex-direction:column; align-items:flex-start; }
         .visitor-lookup-card { grid-template-columns:1fr; }
-        .visitor-lookup-hourcard { grid-template-columns:1fr; }
         .visitor-lookup-time { min-height:auto; padding:12px; }
-        .visitor-lookup-hourtime { min-height:auto; padding:12px; }
         .visitor-lookup-mainline { flex-direction:column; align-items:flex-start; }
         #visitorLookupPane { margin:18px auto; }
         body, html { overflow: auto; }
@@ -1498,6 +1503,7 @@
         var roleBadge = document.getElementById('roleBadge');
         var loginBtn = document.getElementById('teacherLoginBtn');
         var logoutBtn = document.getElementById('teacherLogoutBtn');
+        var homeWrap = document.querySelector('.top-bar > div:first-child');
         var teacherSel = document.getElementById('teacherViewSelector');
         var searchInput = document.getElementById('searchInput');
         var privacyControl = document.getElementById('privacyControl');
@@ -1517,6 +1523,11 @@
         var lookupPane = document.getElementById('visitorLookupPane');
 
         if (!authState.loggedIn) {
+          if (homeWrap) {
+            homeWrap.classList.remove('lookup-header-toggle');
+            homeWrap.setAttribute('onclick', 'goHome()');
+            homeWrap.removeAttribute('title');
+          }
           roleBadge.style.display = 'none';
           teacherSel.style.display = 'none';
           loginBtn.style.display = '';
@@ -1539,6 +1550,7 @@
           if (lookupPane) lookupPane.innerHTML = '';
           document.body.classList.remove('teacher-compact');
           document.body.classList.remove('visitor-lookup-mode');
+          document.body.classList.remove('visitor-lookup-show-full');
           populateMainSheetSelector(currentSheetName);
           document.getElementById('mainPage').style.display = 'none';
           document.getElementById('introPage').style.display = 'none';
@@ -1554,6 +1566,11 @@
         roleBadge.style.display = '';
 
         if (authState.isLookup) {
+          if (homeWrap) {
+            homeWrap.classList.add('lookup-header-toggle');
+            homeWrap.setAttribute('onclick', 'toggleVisitorLookupFullDay()');
+            homeWrap.setAttribute('title', visitorLookupShowFullDay ? '검색 모드로 돌아가기' : '선택 날짜 전체 시간표 보기');
+          }
           roleBadge.style.display = 'none';
           teacherSel.style.display = 'none';
           logoutBtn.style.display = 'none';
@@ -1573,12 +1590,19 @@
           if (tickerWrap) tickerWrap.style.display = 'none';
           document.body.classList.remove('teacher-compact');
           document.body.classList.add('visitor-lookup-mode');
-          searchInput.placeholder = "🔍 학생명 검색";
+          document.body.classList.toggle('visitor-lookup-show-full', visitorLookupShowFullDay);
+          searchInput.placeholder = visitorLookupShowFullDay ? "조회용 전체 시간표 확인 중" : "🔍 학생명 검색";
           if (lookupPane && lastData) renderVisitorLookupResults();
           return;
         }
 
+        if (homeWrap) {
+          homeWrap.classList.remove('lookup-header-toggle');
+          homeWrap.setAttribute('onclick', 'goHome()');
+          homeWrap.removeAttribute('title');
+        }
         document.body.classList.remove('visitor-lookup-mode');
+        document.body.classList.remove('visitor-lookup-show-full');
         if (actionGroup) actionGroup.style.display = '';
         if (navGroup) navGroup.style.display = '';
         if (mainSheetSelector) mainSheetSelector.style.display = '';
@@ -3935,101 +3959,20 @@
         });
         return merged;
       }
-      function toggleVisitorLookupFullDay() {
-        visitorLookupShowFullDay = !visitorLookupShowFullDay;
+      function setVisitorLookupFullDay(enabled) {
+        visitorLookupShowFullDay = !!enabled;
+        document.body.classList.toggle('visitor-lookup-show-full', visitorLookupShowFullDay);
+        var searchInput = document.getElementById('searchInput');
+        var homeWrap = document.querySelector('.top-bar > div:first-child');
+        if (searchInput) searchInput.placeholder = visitorLookupShowFullDay ? "조회용 전체 시간표 확인 중" : "🔍 학생명 검색";
+        if (homeWrap && authState.isLookup) {
+          homeWrap.setAttribute('title', visitorLookupShowFullDay ? '검색 모드로 돌아가기' : '선택 날짜 전체 시간표 보기');
+        }
         renderVisitorLookupResults();
+        updateTimelinePosition();
       }
-      function buildVisitorLookupFullDayHtml() {
-        if (!lastData || !lastData.headers) {
-          return "<div class='visitor-lookup-empty'>선택된 날짜의 시간표 데이터가 아직 없습니다.</div>";
-        }
-        var hours = [];
-        for (var h = 9; h <= 23; h++) {
-          var row = (lastData.grid && lastData.grid[h]) || [];
-          var roomBlocks = [];
-          for (var i = 0; i < lastData.headers.length; i++) {
-            var items = row[i] || [];
-            if (!items.length) continue;
-            var roomName = lastData.headers[i];
-            if (String(roomName || "").includes("휴강")) continue;
-            var teacherItem = items.find(function(v) { return String(v || "").includes("T"); }) || "";
-            var teacherName = teacherItem ? extractTeacherName(teacherItem) : "";
-            var subjectName = teacherItem ? getSubjectName(teacherItem) : "수업";
-            var classType = detectClassType(teacherItem || "");
-            var students = items.map(function(raw) {
-              var text = String(raw || "");
-              if (!text || text.includes("T")) return null;
-              if (shouldHideStudentText(text)) return null;
-              var parsed = parseStudentRawText(text);
-              if (!parsed.name) return null;
-              return {
-                name: parsed.name,
-                school: parsed.school || "",
-                note: parsed.note || "",
-                teacher: teacherName,
-                subject: subjectName,
-                classType: classType
-              };
-            }).filter(Boolean);
-            if (!students.length) continue;
-            roomBlocks.push({
-              room: roomName,
-              students: students,
-              teacher: teacherName,
-              subject: subjectName,
-              classType: classType
-            });
-          }
-          if (!roomBlocks.length) continue;
-          hours.push({
-            hour: h,
-            endHour: h + 1,
-            roomBlocks: roomBlocks
-          });
-        }
-        if (!hours.length) {
-          return "<div class='visitor-lookup-empty'>표시할 전체 시간표가 없습니다.</div>";
-        }
-        var totalStudents = hours.reduce(function(sum, hourBlock) {
-          return sum + hourBlock.roomBlocks.reduce(function(roomSum, roomBlock) {
-            return roomSum + roomBlock.students.length;
-          }, 0);
-        }, 0);
-        return "<div class='visitor-lookup-fullwrap'>" +
-          "<div class='visitor-lookup-fullhead'>" +
-            "<div><div class='visitor-lookup-fulltitle'>선택 날짜 전체 시간표</div><div class='visitor-lookup-fullsub'>실무 확인용으로 현재 선택된 날짜의 모든 수업을 시간대별로 표시합니다.</div></div>" +
-            "<div class='visitor-lookup-fullcount'>총 " + hours.length + "개 시간대 · 학생 " + totalStudents + "명</div>" +
-          "</div>" +
-          "<div class='visitor-lookup-hourlist'>" + hours.map(function(hourBlock) {
-            return "<div class='visitor-lookup-hourcard'>" +
-              "<div class='visitor-lookup-hourtime'>" +
-                "<div class='visitor-lookup-hourtime-main'>" + hourBlock.hour + ":00<br>~" + hourBlock.endHour + ":00</div>" +
-                "<div class='visitor-lookup-hourtime-sub'>" + hourBlock.roomBlocks.length + "개 강의실</div>" +
-              "</div>" +
-              "<div class='visitor-lookup-hourbody'>" + hourBlock.roomBlocks.map(function(roomBlock) {
-                return "<div class='visitor-lookup-roomblock'>" +
-                  "<div class='visitor-lookup-roomhead'>" +
-                    "<div class='visitor-lookup-roomname'>" + roomBlock.room + "</div>" +
-                    "<div class='visitor-lookup-roommeta'>" + roomBlock.students.length + "명</div>" +
-                  "</div>" +
-                  "<div class='visitor-lookup-roomstudents'>" + roomBlock.students.map(function(student) {
-                    var lessonLine = student.subject + (student.teacher ? " · " + student.teacher + "T" : "");
-                    if (student.note) lessonLine += " · 비고 있음";
-                    return "<div class='visitor-lookup-roomstudent'>" +
-                      "<div class='visitor-lookup-roomstudent-main'>" +
-                        "<div class='visitor-lookup-roomstudent-name'>" + student.name +
-                          (student.school ? "<span class='visitor-lookup-roomstudent-school'>" + student.school + "</span>" : "") +
-                        "</div>" +
-                        "<div class='visitor-lookup-roomstudent-line'>" + lessonLine + "</div>" +
-                      "</div>" +
-                      "<div class='visitor-lookup-roomstudent-type'>" + (student.classType || "수업") + "</div>" +
-                    "</div>";
-                  }).join("") + "</div>" +
-                "</div>";
-              }).join("") + "</div>" +
-            "</div>";
-          }).join("") + "</div>" +
-        "</div>";
+      function toggleVisitorLookupFullDay() {
+        setVisitorLookupFullDay(!visitorLookupShowFullDay);
       }
       function renderVisitorLookupResults() {
         var pane = document.getElementById('visitorLookupPane');
@@ -4077,22 +4020,18 @@
               "</div>";
             }).join("") + "</div>";
         }
-        var toggleBtnClass = "visitor-lookup-toggle-btn" + (visitorLookupShowFullDay ? " active" : "");
-        var fullDayHtml = visitorLookupShowFullDay ? buildVisitorLookupFullDayHtml() : "";
         pane.innerHTML =
           "<div class='visitor-lookup-shell'>" +
             "<div class='visitor-lookup-head'>" +
               "<div class='visitor-lookup-head-main'>" +
                 "<div class='visitor-lookup-logo-wrap'><img class='visitor-lookup-logo' src='https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png' alt='SEDU'></div>" +
-                "<div><div class='visitor-lookup-title'>학생 이동 안내</div><div class='visitor-lookup-sub'>검색된 학생의 현재 일자 수업 정보만 표시됩니다. 필요한 경우 선택된 날짜의 전체 시간표도 확인할 수 있습니다.</div></div>" +
+                "<div><div class='visitor-lookup-title'>학생 이동 안내</div><div class='visitor-lookup-sub'>검색된 학생의 현재 일자 수업 정보만 표시됩니다. 좌측 상단 로고를 누르면 선택 날짜의 전체 시간표를 확인할 수 있습니다.</div></div>" +
               "</div>" +
               "<div class='visitor-lookup-head-side'>" +
-                "<button type='button' class='" + toggleBtnClass + "' onclick='toggleVisitorLookupFullDay()'>" + (visitorLookupShowFullDay ? "전체 시간표 닫기" : "선택 날짜 전체 시간표 보기") + "</button>" +
                 "<div class='visitor-lookup-sheet'>" + (currentSheetName || "시간표") + "</div>" +
               "</div>" +
             "</div>" +
             bodyHtml +
-            fullDayHtml +
           "</div>";
       }
       function escapeRegExp(str) {
