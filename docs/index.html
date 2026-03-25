@@ -418,6 +418,34 @@
       .late-night-toggle-row td { padding: 10px 12px; background: #f8fafc; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1; }
       .late-night-toggle-btn { width: 100%; border: 1px solid #cbd5e1; background: linear-gradient(180deg, #ffffff, #eef4ff); color: #1e3a8a; border-radius: 12px; padding: 9px 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer; }
       .teacher-log-box { width: 980px; max-width: 96%; max-height: 88vh; overflow: auto; text-align: left; padding-bottom: 22px; }
+      #visitorLookupPane { display:none; max-width:860px; margin:30px auto; }
+      .visitor-lookup-mode .ticker-wrap { display:none !important; }
+      .visitor-lookup-mode .top-bar { justify-content:center; padding:18px 20px; }
+      .visitor-lookup-mode .top-bar > * { display:none !important; }
+      .visitor-lookup-mode .top-bar > .search-wrapper { display:block !important; width:min(760px, 100%); margin:0 auto; }
+      .visitor-lookup-mode .top-bar > .search-wrapper .search-input { height:54px; font-size:1.08rem; border-radius:18px; }
+      .visitor-lookup-mode #scheduleTable,
+      .visitor-lookup-mode #teacherMobileList,
+      .visitor-lookup-mode #liveTimeline,
+      .visitor-lookup-mode #loading { display:none !important; }
+      .visitor-lookup-mode #visitorLookupPane { display:block; }
+      .visitor-lookup-shell { background:linear-gradient(180deg,#f8fbff,#eef5ff); border:1px solid #dbeafe; border-radius:26px; padding:24px; box-shadow:0 20px 40px rgba(37,99,235,0.08); }
+      .visitor-lookup-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+      .visitor-lookup-title { font-size:1.18rem; font-weight:900; color:#0f172a; letter-spacing:-0.02em; }
+      .visitor-lookup-sub { margin-top:4px; font-size:0.9rem; color:#64748b; font-weight:700; line-height:1.5; }
+      .visitor-lookup-sheet { font-size:0.84rem; font-weight:800; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:7px 12px; border-radius:999px; }
+      .visitor-lookup-empty { padding:38px 20px; text-align:center; color:#64748b; background:#fff; border:1px dashed #cbd5e1; border-radius:20px; font-size:1rem; font-weight:700; }
+      .visitor-lookup-result-list { display:flex; flex-direction:column; gap:12px; }
+      .visitor-lookup-card { background:#fff; border:1px solid #dbeafe; border-radius:22px; padding:16px 18px; box-shadow:0 12px 26px rgba(148,163,184,0.10); }
+      .visitor-lookup-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:10px; }
+      .visitor-lookup-student { font-size:1.05rem; font-weight:900; color:#0f172a; }
+      .visitor-lookup-school { margin-top:4px; font-size:0.84rem; color:#64748b; font-weight:700; }
+      .visitor-lookup-time { flex-shrink:0; min-width:88px; text-align:center; border-radius:16px; background:linear-gradient(180deg,#1e293b,#0f172a); color:#f8fafc; padding:10px 12px; font-weight:900; font-size:0.96rem; line-height:1.2; }
+      .visitor-lookup-meta { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+      .visitor-lookup-meta-card { border-radius:16px; padding:12px; background:linear-gradient(180deg,#f8fbff,#eef5ff); border:1px solid #dbeafe; }
+      .visitor-lookup-meta-label { font-size:0.72rem; font-weight:900; color:#64748b; letter-spacing:0.02em; text-transform:uppercase; }
+      .visitor-lookup-meta-value { margin-top:5px; font-size:0.95rem; font-weight:900; color:#0f172a; line-height:1.35; }
+      .visitor-lookup-note { margin-top:10px; border-radius:14px; padding:10px 12px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:0.83rem; font-weight:700; line-height:1.45; }
       .teacher-log-controls { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; }
       .teacher-log-toolbar-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
       .teacher-log-toolbar-right { display:flex; align-items:center; gap:10px; flex:1 1 320px; justify-content:flex-end; flex-wrap:wrap; }
@@ -509,6 +537,8 @@
         .teacher-log-row { flex-direction:column; align-items:flex-start; }
         .teacher-log-side { align-items:flex-start; }
         .teacher-log-time { text-align:left; }
+        .visitor-lookup-meta { grid-template-columns:1fr; }
+        #visitorLookupPane { margin:18px auto; }
         body, html { overflow: auto; }
         input, select, textarea { font-size: 16px !important; }
         #introPage { padding: 8px; align-items: stretch; }
@@ -785,6 +815,7 @@
         <div id="liveTimeline"></div>
         <table id="scheduleTable"></table>
         <div id="teacherMobileList"></div>
+        <div id="visitorLookupPane"></div>
         <div id="loading">
           <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
           <div class="loading-text">데이터를 불러옵니다...</div>
@@ -800,7 +831,7 @@
       let isHolidayCollapsed = false;
       let collapsedColumns = new Set();
       let lastScrollPosition = 0;
-      let authState = { loggedIn: false, isMaster: false, teacherName: "", loginId: "" };
+      let authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "" };
       let availableTeacherNames = [];
       let accessMode = "";
       let sheetNamesLoaded = false;
@@ -1146,13 +1177,18 @@
         if (!sel || !sel.value || sel.value === "__ALL__") return "";
         return sel.value;
       }
+      function isLookupViewActive() {
+        return !!(authState.loggedIn && authState.isLookup);
+      }
       function isTeacherViewActive() {
+        if (isLookupViewActive()) return false;
         if (!authState.loggedIn) return false;
         if (!authState.isMaster) return accessMode === "teacher";
         if (getAdminSelectedTeacher()) return true;
         return accessMode === "teacher";
       }
       function getActiveTeacherName() {
+        if (isLookupViewActive()) return "";
         if (!authState.loggedIn) return "";
         if (!authState.isMaster) return accessMode === "teacher" ? (authState.teacherName || "") : "";
         var selectedTeacher = getAdminSelectedTeacher();
@@ -1186,6 +1222,13 @@
       }
       function completeAccessSelection(mode) {
         if (!authState.loggedIn) { alert("먼저 로그인 검증을 완료하세요."); return; }
+        if (authState.isLookup) {
+          accessMode = "lookup";
+          document.getElementById('loginGate').style.display = 'none';
+          applyRoleUi();
+          startAppAfterAuth();
+          return;
+        }
         if (mode === "all" && !authState.isMaster) { alert("전체 시간표는 관리자 계정만 접근 가능합니다."); return; }
         accessMode = mode;
         document.getElementById('loginGate').style.display = 'none';
@@ -1210,11 +1253,21 @@
           }
           authState.loggedIn = true;
           authState.isMaster = !!res.isMaster;
+          authState.isLookup = !!res.isLookup;
           authState.teacherName = res.teacherName || "";
           authState.loginId = res.loginId || loginId;
           saveLoginCredentials(loginId, password, remember);
           availableTeacherNames = (res.teacherNames || []).slice();
           if (fromGate) {
+            if (authState.isLookup) {
+              document.getElementById('gateRoleWrap').style.display = 'none';
+              accessMode = "lookup";
+              document.getElementById('loginGate').style.display = 'none';
+              applyRoleUi();
+              stopLoginProgress('gate', true);
+              startAppAfterAuth();
+              return;
+            }
             var gateWrap = document.getElementById('gateRoleWrap');
             var allBtn = document.getElementById('gateAllModeBtn');
             var tip = document.getElementById('gateRoleTip');
@@ -1231,6 +1284,7 @@
           } else {
             closeAuthModal();
             clientCache = {};
+            if (authState.isLookup) accessMode = "lookup";
             if (currentSheetName) loadData(currentSheetName, true);
           }
           applyRoleUi();
@@ -1241,13 +1295,15 @@
         });
       }
       function logoutTeacher() {
-        authState = { loggedIn: false, isMaster: false, teacherName: "", loginId: "" };
+        authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "" };
         availableTeacherNames = [];
         accessMode = "";
         clientCache = {};
         teacherCalendarSheetMap = {};
         teacherCalendarSheets = [];
         teacherCalendarReady = false;
+        var lookupPane = document.getElementById('visitorLookupPane');
+        if (lookupPane) lookupPane.innerHTML = "";
         applyRoleUi();
         document.getElementById('mainPage').style.display = 'none';
         document.getElementById('gateRoleWrap').style.display = 'none';
@@ -1369,6 +1425,12 @@
         var msgSimpleBtn = document.querySelector('.msg-simple-btn');
         var emptyBtn = document.querySelector('.empty-btn');
         var teacherViewLogBtn = document.getElementById('teacherViewLogBtn');
+        var actionGroup = document.querySelector('.action-group');
+        var navGroup = document.querySelector('.nav-group');
+        var mainSheetSelector = document.getElementById('mainSheetSelector');
+        var refreshWrap = document.querySelector('.refresh-container');
+        var tickerWrap = document.querySelector('.ticker-wrap');
+        var lookupPane = document.getElementById('visitorLookupPane');
 
         if (!authState.loggedIn) {
           roleBadge.style.display = 'none';
@@ -1385,7 +1447,14 @@
           if (hide9Control) hide9Control.style.display = '';
           if (studentImageBtn) studentImageBtn.style.display = '';
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
+          if (actionGroup) actionGroup.style.display = '';
+          if (navGroup) navGroup.style.display = '';
+          if (mainSheetSelector) mainSheetSelector.style.display = '';
+          if (refreshWrap) refreshWrap.style.display = '';
+          if (tickerWrap) tickerWrap.style.display = '';
+          if (lookupPane) lookupPane.innerHTML = '';
           document.body.classList.remove('teacher-compact');
+          document.body.classList.remove('visitor-lookup-mode');
           populateMainSheetSelector(currentSheetName);
           document.getElementById('mainPage').style.display = 'none';
           document.getElementById('introPage').style.display = 'none';
@@ -1399,6 +1468,38 @@
         loginBtn.style.display = 'none';
         logoutBtn.style.display = '';
         roleBadge.style.display = '';
+
+        if (authState.isLookup) {
+          roleBadge.style.display = 'none';
+          teacherSel.style.display = 'none';
+          logoutBtn.style.display = 'none';
+          if (reviewBtn) reviewBtn.style.display = 'none';
+          if (excelBtn) excelBtn.style.display = 'none';
+          if (msgGenBtn) msgGenBtn.style.display = 'none';
+          if (msgSimpleBtn) msgSimpleBtn.style.display = 'none';
+          if (emptyBtn) emptyBtn.style.display = 'none';
+          if (privacyControl) privacyControl.style.display = 'none';
+          if (hide9Control) hide9Control.style.display = 'none';
+          if (studentImageBtn) studentImageBtn.style.display = 'none';
+          if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
+          if (actionGroup) actionGroup.style.display = 'none';
+          if (navGroup) navGroup.style.display = 'none';
+          if (mainSheetSelector) mainSheetSelector.style.display = 'none';
+          if (refreshWrap) refreshWrap.style.display = 'none';
+          if (tickerWrap) tickerWrap.style.display = 'none';
+          document.body.classList.remove('teacher-compact');
+          document.body.classList.add('visitor-lookup-mode');
+          searchInput.placeholder = "🔍 학생명 검색";
+          if (lookupPane && lastData) renderVisitorLookupResults();
+          return;
+        }
+
+        document.body.classList.remove('visitor-lookup-mode');
+        if (actionGroup) actionGroup.style.display = '';
+        if (navGroup) navGroup.style.display = '';
+        if (mainSheetSelector) mainSheetSelector.style.display = '';
+        if (refreshWrap) refreshWrap.style.display = '';
+        if (tickerWrap) tickerWrap.style.display = '';
 
         if (authState.isMaster) {
           var previewTeacher = getAdminSelectedTeacher();
@@ -3269,6 +3370,19 @@
         var container = document.getElementById('tableContainer');
         if(isRefresh && container) lastScrollPosition = container.scrollTop;
         var table = document.getElementById('scheduleTable'); table.innerHTML = ""; 
+        var lookupPane = document.getElementById('visitorLookupPane');
+        if (isLookupViewActive()) {
+          if (lookupPane) {
+            lookupPane.innerHTML = "";
+            lookupPane.style.display = "block";
+          }
+          renderVisitorLookupResults();
+          updateTimelinePosition();
+          return;
+        } else if (lookupPane) {
+          lookupPane.innerHTML = "";
+          lookupPane.style.display = "none";
+        }
         var now = new Date(); var currentH = now.getHours();
         var isToday = false;
         var match = currentSheetName.match(/(\d+)\/(\d+)/);
@@ -3539,6 +3653,97 @@
 
         if (!hasAny) mobileWrap.innerHTML = "<div class='teacher-empty'>표시할 강의가 없습니다.</div>";
       }
+      function normalizeLookupKeyword(text) {
+        return String(text || "").replace(/\s+/g, "").toUpperCase();
+      }
+      function buildVisitorLookupMatches(keyword) {
+        if (!lastData || !lastData.headers) return [];
+        var query = normalizeLookupKeyword(keyword);
+        if (!query) return [];
+        var matches = [];
+        for (var h = 9; h <= 23; h++) {
+          var row = (lastData.grid && lastData.grid[h]) || [];
+          for (var i = 0; i < lastData.headers.length; i++) {
+            var items = row[i] || [];
+            if (!items.length) continue;
+            var roomName = lastData.headers[i];
+            if (String(roomName || "").includes("휴강")) continue;
+            var teacherItem = items.find(function(v) { return String(v || "").includes("T"); }) || "";
+            var teacherName = teacherItem ? extractTeacherName(teacherItem) : "";
+            var subjectName = teacherItem ? getSubjectName(teacherItem) : "";
+            items.forEach(function(raw) {
+              var text = String(raw || "");
+              if (!text || text.includes("T")) return;
+              if (shouldHideStudentText(text)) return;
+              var parsed = parseStudentRawText(text);
+              var nameKey = normalizeLookupKeyword(parsed.name);
+              if (!nameKey || nameKey.indexOf(query) === -1) return;
+              matches.push({
+                hour: h,
+                endHour: h + 1,
+                room: roomName,
+                teacher: teacherName,
+                subject: subjectName || "수업",
+                classType: detectClassType(teacherItem || ""),
+                studentName: parsed.name || "",
+                school: parsed.school || "",
+                note: parsed.note || ""
+              });
+            });
+          }
+        }
+        matches.sort(function(a, b) {
+          if (a.hour !== b.hour) return a.hour - b.hour;
+          return String(a.room).localeCompare(String(b.room), "ko");
+        });
+        return matches;
+      }
+      function renderVisitorLookupResults() {
+        var pane = document.getElementById('visitorLookupPane');
+        var searchInput = document.getElementById('searchInput');
+        if (!pane) return;
+        if (!isLookupViewActive()) {
+          pane.innerHTML = "";
+          pane.style.display = "none";
+          return;
+        }
+        pane.style.display = "block";
+        var rawKeyword = String((searchInput && searchInput.value) || "").trim();
+        var matches = buildVisitorLookupMatches(rawKeyword);
+        var bodyHtml = "";
+        if (!rawKeyword) {
+          bodyHtml = "<div class='visitor-lookup-empty'>학생 이름을 입력하면 해당 학생의 시간대, 강의실, 선생님 이름만 표시됩니다.</div>";
+        } else if (!matches.length) {
+          bodyHtml = "<div class='visitor-lookup-empty'>검색 결과가 없습니다. 학생 이름을 다시 확인해주세요.</div>";
+        } else {
+          bodyHtml = "<div class='visitor-lookup-result-list'>" + matches.map(function(item) {
+            var noteHtml = item.note ? "<div class='visitor-lookup-note'>비고: " + item.note + "</div>" : "";
+            return "<div class='visitor-lookup-card'>" +
+              "<div class='visitor-lookup-card-head'>" +
+                "<div>" +
+                  "<div class='visitor-lookup-student'>" + item.studentName + "</div>" +
+                  (item.school ? "<div class='visitor-lookup-school'>" + item.school + "</div>" : "") +
+                "</div>" +
+                "<div class='visitor-lookup-time'>" + item.hour + ":00<br>~" + item.endHour + ":00</div>" +
+              "</div>" +
+              "<div class='visitor-lookup-meta'>" +
+                "<div class='visitor-lookup-meta-card'><div class='visitor-lookup-meta-label'>강의실</div><div class='visitor-lookup-meta-value'>" + item.room + "</div></div>" +
+                "<div class='visitor-lookup-meta-card'><div class='visitor-lookup-meta-label'>선생님</div><div class='visitor-lookup-meta-value'>" + (item.teacher || "-") + "</div></div>" +
+                "<div class='visitor-lookup-meta-card'><div class='visitor-lookup-meta-label'>수업</div><div class='visitor-lookup-meta-value'>" + item.subject + (item.classType ? " · " + item.classType : "") + "</div></div>" +
+              "</div>" +
+              noteHtml +
+            "</div>";
+          }).join("") + "</div>";
+        }
+        pane.innerHTML =
+          "<div class='visitor-lookup-shell'>" +
+            "<div class='visitor-lookup-head'>" +
+              "<div><div class='visitor-lookup-title'>학생 이동 안내</div><div class='visitor-lookup-sub'>검색된 학생의 현재 일자 수업 정보만 표시됩니다. 다른 학생 정보는 노출되지 않습니다.</div></div>" +
+              "<div class='visitor-lookup-sheet'>" + (currentSheetName || "시간표") + "</div>" +
+            "</div>" +
+            bodyHtml +
+          "</div>";
+      }
       function escapeRegExp(str) {
         return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       }
@@ -3548,6 +3753,11 @@
         var input = rawInput.toUpperCase(); 
         var table = document.getElementById('scheduleTable'); 
         var mobileWrap = document.getElementById('teacherMobileList');
+
+        if (isLookupViewActive()) {
+          renderVisitorLookupResults();
+          return;
+        }
 
         if (isTeacherViewActive() && window.innerWidth <= 768) {
           var cards = mobileWrap.querySelectorAll('.teacher-hour-card');

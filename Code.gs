@@ -2,6 +2,8 @@
 var AUTH_SPREADSHEET_ID = "1ByPeH0bZZrZDvW_yPkCpQCIuk724_Gt7uudUj_Ue8Ho";
 var MASTER_LOGIN_ID = "010-4232-7428";
 var AUTH_CACHE_KEY = "TEACHER_AUTH_V2";
+var LOOKUP_LOGIN_ID = "2371";
+var LOOKUP_LOGIN_PASSWORD = "2371";
 
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -301,6 +303,20 @@ function authenticateTeacher(id, password) {
   if (inputIdClean.length === 8) inputIdClean = "010" + inputIdClean;
   var inputPw = sanitizePassword_(password);
 
+  if (String(id || "").trim() === LOOKUP_LOGIN_ID && inputPw === LOOKUP_LOGIN_PASSWORD) {
+    return {
+      ok: true,
+      success: true,
+      loginId: LOOKUP_LOGIN_ID,
+      teacherName: "",
+      name: "조회용",
+      isMaster: false,
+      isLookup: true,
+      role: "LOOKUP",
+      teacherNames: []
+    };
+  }
+
   for (var i = 1; i < data.length; i++) {
     var dbId = String(data[i][0]).replace(/[^0-9]/g, "");
     if (!dbId) continue;
@@ -321,6 +337,7 @@ function authenticateTeacher(id, password) {
         teacherName: dbName,
         name: dbName,
         isMaster: isMaster,
+        isLookup: false,
         role: isMaster ? "ADMIN" : "TEACHER",
         teacherNames: teacherNames
       };
