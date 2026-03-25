@@ -454,10 +454,10 @@
       .teacher-log-box { width: 980px; max-width: 96%; max-height: 88vh; overflow: auto; text-align: left; padding-bottom: 22px; }
       #visitorLookupPane { display:none; max-width:860px; margin:30px auto; }
       .visitor-lookup-mode .ticker-wrap { display:none !important; }
-      .visitor-lookup-mode .top-bar { justify-content:space-between; padding:18px 20px; gap:14px; }
+      .visitor-lookup-mode .top-bar { position:relative; justify-content:center; padding:18px 20px; gap:14px; min-height:92px; }
       .visitor-lookup-mode .top-bar > * { display:none !important; }
-      .visitor-lookup-mode .top-bar > div:first-child { display:flex !important; }
-      .visitor-lookup-mode .top-bar > .search-wrapper { display:block !important; width:min(760px, 100%); margin:0 0 0 auto; }
+      .visitor-lookup-mode .top-bar > div:first-child { display:flex !important; position:absolute; left:20px; top:50%; transform:translateY(-50%); }
+      .visitor-lookup-mode .top-bar > .search-wrapper { display:block !important; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); width:min(760px, calc(100vw - 220px)); margin:0; }
       .visitor-lookup-mode .top-bar > .search-wrapper .search-input { height:54px; font-size:1.08rem; border-radius:18px; }
       .visitor-lookup-mode #scheduleTable,
       .visitor-lookup-mode #teacherMobileList,
@@ -470,6 +470,10 @@
       .visitor-lookup-mode.visitor-lookup-show-full #scheduleTable { display:table !important; }
       .visitor-lookup-mode.visitor-lookup-show-full #liveTimeline { display:block !important; }
       .visitor-lookup-mode.visitor-lookup-show-full .top-bar > .search-wrapper { display:none !important; }
+      .visitor-lookup-mode.visitor-lookup-show-full .top-bar { justify-content:flex-start; }
+      .visitor-lookup-mode.visitor-lookup-show-full .top-bar > div:first-child { position:static; transform:none; }
+      .visitor-lookup-mode.visitor-lookup-show-full #tableContainer { overflow:auto; }
+      .visitor-lookup-mode.visitor-lookup-show-full #scheduleTable thead { position:sticky; top:0; z-index:30; }
       .visitor-lookup-shell { background:linear-gradient(180deg,#f8fbff,#eef5ff); border:1px solid #dbeafe; border-radius:26px; padding:24px; box-shadow:0 20px 40px rgba(37,99,235,0.08); }
       .visitor-lookup-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
       .visitor-lookup-head-main { display:flex; align-items:flex-start; gap:14px; min-width:0; }
@@ -600,6 +604,9 @@
       body.teacher-compact .search-wrapper { max-width: 320px; margin-left: 0; }
       body.teacher-compact #teacherMobileList { padding-top: 4px; }
       @media (max-width: 768px) {
+        .visitor-lookup-mode .top-bar { min-height:82px; padding:14px 16px; }
+        .visitor-lookup-mode .top-bar > div:first-child { left:14px; }
+        .visitor-lookup-mode .top-bar > .search-wrapper { width:min(560px, calc(100vw - 132px)); }
         .teacher-log-controls { align-items:stretch; }
         .teacher-log-toolbar-left, .teacher-log-toolbar-right { width:100%; justify-content:space-between; }
         .teacher-log-search { width:100%; min-width:0; }
@@ -1592,7 +1599,12 @@
           document.body.classList.add('visitor-lookup-mode');
           document.body.classList.toggle('visitor-lookup-show-full', visitorLookupShowFullDay);
           searchInput.placeholder = visitorLookupShowFullDay ? "조회용 전체 시간표 확인 중" : "🔍 학생명 검색";
-          if (lookupPane && lastData) renderVisitorLookupResults();
+          if (visitorLookupShowFullDay) {
+            if (lastData && lastData.headers && lastData.headers.length) renderTable(lastData, true);
+            else if (currentSheetName) loadData(currentSheetName, true);
+          } else if (lookupPane) {
+            renderVisitorLookupResults();
+          }
           return;
         }
 
@@ -3515,13 +3527,18 @@
         var table = document.getElementById('scheduleTable'); table.innerHTML = ""; 
         var lookupPane = document.getElementById('visitorLookupPane');
         if (isLookupViewActive()) {
-          if (lookupPane) {
+          if (!visitorLookupShowFullDay) {
+            if (lookupPane) {
+              lookupPane.innerHTML = "";
+              lookupPane.style.display = "block";
+            }
+            renderVisitorLookupResults();
+            updateTimelinePosition();
+            return;
+          } else if (lookupPane) {
             lookupPane.innerHTML = "";
-            lookupPane.style.display = "block";
+            lookupPane.style.display = "none";
           }
-          renderVisitorLookupResults();
-          updateTimelinePosition();
-          return;
         } else if (lookupPane) {
           lookupPane.innerHTML = "";
           lookupPane.style.display = "none";
@@ -3968,7 +3985,12 @@
         if (homeWrap && authState.isLookup) {
           homeWrap.setAttribute('title', visitorLookupShowFullDay ? '검색 모드로 돌아가기' : '선택 날짜 전체 시간표 보기');
         }
-        renderVisitorLookupResults();
+        if (visitorLookupShowFullDay) {
+          if (currentSheetName) loadData(currentSheetName, true);
+          else if (lastData && lastData.headers && lastData.headers.length) renderTable(lastData, true);
+        } else {
+          renderVisitorLookupResults();
+        }
         updateTimelinePosition();
       }
       function toggleVisitorLookupFullDay() {
