@@ -263,6 +263,35 @@
       .mobile-type-orange { background:#ea580c; }
       .mobile-type-red { background:#b91c1c; }
       .mobile-type-gray { background:#475569; }
+      .teacher-mobile-toolbar { position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; padding:10px 12px; border:1px solid #dbeafe; border-radius:16px; background:rgba(255,255,255,0.94); box-shadow:0 10px 28px rgba(15,23,42,0.08); backdrop-filter:blur(8px); }
+      .teacher-mobile-toolbar-title { font-size:0.95rem; font-weight:900; color:#0f172a; }
+      .teacher-mobile-view-toggle { display:inline-flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:800; color:#475569; }
+      .teacher-mobile-view-toggle input { display:none; }
+      .teacher-mobile-view-switch { position:relative; width:54px; height:30px; border-radius:999px; background:linear-gradient(135deg,#d1d5db,#cbd5e1); box-shadow:inset 0 0 0 1px rgba(148,163,184,0.35); transition:all .2s ease; }
+      .teacher-mobile-view-switch::after { content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 4px 10px rgba(15,23,42,0.18); transition:all .2s ease; }
+      .teacher-mobile-view-toggle input:checked + .teacher-mobile-view-switch { background:linear-gradient(135deg,#22c55e,#16a34a); }
+      .teacher-mobile-view-toggle input:checked + .teacher-mobile-view-switch::after { left:27px; }
+      .teacher-simple-hour-card { background:#ffffff; border:1px solid #dbe2ea; border-radius:16px; padding:10px 12px; margin-bottom:10px; box-shadow:0 6px 18px rgba(15,23,42,0.05); }
+      .teacher-simple-hour-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+      .teacher-simple-hour-title { font-size:1rem; font-weight:900; color:#0f172a; }
+      .teacher-simple-hour-sub { font-size:0.78rem; color:#64748b; font-weight:800; }
+      .teacher-simple-count { flex-shrink:0; padding:5px 9px; border-radius:999px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:0.74rem; font-weight:900; }
+      .teacher-simple-students { display:flex; flex-direction:column; gap:7px; }
+      .teacher-simple-student { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:9px 10px; border-radius:12px; background:#f8fafc; border:1px solid #e2e8f0; }
+      .teacher-simple-student.is-cancelled { background:#fee2e2; border-color:#fca5a5; }
+      .teacher-simple-student.is-notice { background:#e5e7eb; border-color:#cbd5e1; }
+      .teacher-simple-main { min-width:0; display:flex; flex-direction:column; gap:5px; }
+      .teacher-simple-name-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0; position:relative; }
+      .teacher-simple-name-trigger { display:inline-flex; align-items:center; gap:4px; border:none; background:none; padding:0; margin:0; color:#0f172a; font-size:0.95rem; font-weight:900; cursor:pointer; text-align:left; }
+      .teacher-simple-school { font-size:0.82rem; color:#64748b; font-weight:700; }
+      .teacher-simple-inline { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+      .teacher-simple-chip { display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-size:0.7rem; font-weight:900; border:1px solid transparent; }
+      .teacher-simple-chip.room { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+      .teacher-simple-chip.subject { background:#eef2ff; color:#4338ca; border-color:#c7d2fe; }
+      .teacher-simple-chip.status-cancel { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+      .teacher-simple-chip.status-notice { background:#f3f4f6; color:#4b5563; border-color:#d1d5db; }
+      .teacher-simple-chip.status-normal { background:#ecfccb; color:#3f6212; border-color:#bef264; }
+      .teacher-simple-teacher { font-size:0.8rem; color:#475569; font-weight:800; white-space:nowrap; }
       .img-student-btn { background:#0ea5e9; color:white; border:none; padding:8px 14px; border-radius:6px; font-size:0.9rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; }
       .student-img-box { width: 1220px; max-width: 97%; max-height: 90vh; overflow: auto; text-align:left; }
       .student-img-controls { display:flex; gap:8px; margin: 8px 0 12px; flex-wrap: wrap; }
@@ -861,6 +890,7 @@
       let currentAttendanceReportText = "";
       let attendanceReportHourOffset = 0;
       let attendanceReportHideResolved = false;
+      let teacherMobileSimpleView = true;
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -1962,6 +1992,23 @@
         else if (t === "특강" || t === "보강") cls = "mobile-type-orange";
         else if (t === "직보") cls = "mobile-type-red";
         return "<span class='mobile-type-badge " + cls + "'>" + t + "</span>";
+      }
+      function getTeacherSimpleStatusLabel(status) {
+        var s = normalizeStatusLabel(status || "");
+        if (s === "당일취소") return "당취";
+        return s || "참여";
+      }
+      function getTeacherSimpleStatusClass(status) {
+        var s = normalizeStatusLabel(status || "");
+        if (s === "당일취소") return "status-cancel";
+        if (s === "결석예고" || s === "휴강") return "status-notice";
+        return "status-normal";
+      }
+      function toggleTeacherMobileSimpleView() {
+        teacherMobileSimpleView = !teacherMobileSimpleView;
+        var toggle = document.getElementById('teacherSimpleViewToggle');
+        if (toggle) toggle.checked = teacherMobileSimpleView;
+        if (lastData) renderTeacherMobileView(lastData);
       }
       function toggleSelectAll() {
         var chk = document.getElementById('selectAllCheckbox').checked;
@@ -3581,6 +3628,93 @@
         timeline.style.display = 'none';
         mobileWrap.style.display = 'block';
         mobileWrap.innerHTML = "";
+        var toolbarHtml = "<div class='teacher-mobile-toolbar'>" +
+          "<div class='teacher-mobile-toolbar-title'>강사 시간표</div>" +
+          "<label class='teacher-mobile-view-toggle'>" +
+            "<input type='checkbox' id='teacherSimpleViewToggle' " + (teacherMobileSimpleView ? "checked" : "") + " onchange='toggleTeacherMobileSimpleView()'>" +
+            "<span class='teacher-mobile-view-switch'></span>" +
+            "<span>심플뷰</span>" +
+          "</label>" +
+        "</div>";
+        mobileWrap.insertAdjacentHTML('beforeend', toolbarHtml);
+
+        if (teacherMobileSimpleView) {
+          var hasSimpleAny = false;
+          for (var sh = 9; sh <= 23; sh++) {
+            var simpleRow = (data.grid && data.grid[sh]) || [];
+            var entries = [];
+            for (var si = 0; si < data.headers.length; si++) {
+              var cellItems = simpleRow[si] || [];
+              if (!cellItems.length) continue;
+              var roomName = data.headers[si];
+              var teacherItem = cellItems.find(function(t) { return t && String(t).includes("T"); }) || "";
+              var subjectName = getSubjectName(teacherItem || "") || "수업";
+              var lessonType = detectClassType(teacherItem || "");
+              var teacherName = teacherItem ? extractTeacherName(String(teacherItem)) : "";
+              cellItems.forEach(function(rawText) {
+                var raw = String(rawText || "");
+                if (!raw || raw.includes("T")) return;
+                if (shouldHideStudentText(raw)) return;
+                var parsed = parseStudentRawText(raw);
+                if (!parsed.name) return;
+                entries.push({
+                  name: parsed.name,
+                  school: parsed.school || "",
+                  status: normalizeStatusLabel(parsed.status || ""),
+                  note: parsed.note || "",
+                  room: roomName,
+                  subject: subjectName,
+                  teacher: teacherName,
+                  lessonType: lessonType
+                });
+              });
+            }
+            if (!entries.length) continue;
+            hasSimpleAny = true;
+            entries.sort(function(a, b) {
+              var byName = String(a.name || "").localeCompare(String(b.name || ""), "ko");
+              if (byName !== 0) return byName;
+              return String(a.room || "").localeCompare(String(b.room || ""), "ko");
+            });
+            var studentsHtml = entries.map(function(entry) {
+              var statusLabel = getTeacherSimpleStatusLabel(entry.status);
+              var statusClass = getTeacherSimpleStatusClass(entry.status);
+              var rowClass = "";
+              if (statusClass === "status-cancel") rowClass = " is-cancelled";
+              else if (statusClass === "status-notice") rowClass = " is-notice";
+              var safeNote = encodeURIComponent(entry.note || "비고 없음");
+              return "<div class='teacher-simple-student" + rowClass + "'>" +
+                "<div class='teacher-simple-main'>" +
+                  "<div class='teacher-simple-name-row'>" +
+                    "<button type='button' class='teacher-simple-name-trigger' data-note='" + safeNote + "' onclick='toggleNoteBubble(this, event)'>" + entry.name + "</button>" +
+                    (entry.school ? "<span class='teacher-simple-school'>" + entry.school + "</span>" : "") +
+                  "</div>" +
+                  "<div class='teacher-simple-inline'>" +
+                    (entry.lessonType ? getMobileTypeBadgeHtml(entry.lessonType) : "") +
+                    (entry.status ? "<span class='teacher-simple-chip " + statusClass + "'>" + statusLabel + "</span>" : "") +
+                    "<span class='teacher-simple-chip subject'>" + entry.subject + "</span>" +
+                    "<span class='teacher-simple-chip room'>" + entry.room + "</span>" +
+                  "</div>" +
+                "</div>" +
+                "<div class='teacher-simple-teacher'>" + (entry.teacher ? entry.teacher + "T" : "-") + "</div>" +
+              "</div>";
+            }).join("");
+            var simpleCard = document.createElement('div');
+            simpleCard.className = 'teacher-simple-hour-card';
+            simpleCard.innerHTML =
+              "<div class='teacher-simple-hour-head'>" +
+                "<div><div class='teacher-simple-hour-title'>" + sh + ":00 ~ " + (sh + 1) + ":00</div><div class='teacher-simple-hour-sub'>이 시간 참여 학생만 표시</div></div>" +
+                "<div class='teacher-simple-count'>" + entries.length + "명</div>" +
+              "</div>" +
+              "<div class='teacher-simple-students'>" + studentsHtml + "</div>";
+            simpleCard.dataset.originalHtml = simpleCard.innerHTML;
+            mobileWrap.appendChild(simpleCard);
+          }
+          if (!hasSimpleAny) {
+            mobileWrap.insertAdjacentHTML('beforeend', "<div class='teacher-empty'>표시할 강의가 없습니다.</div>");
+          }
+          return;
+        }
         var studentLessonHours = {};
         var progressBySlot = {};
         for (var hh = 9; hh <= 23; hh++) {
@@ -3594,7 +3728,7 @@
             var subjectAt = getSubjectName(teacherItemAt || "");
             it.forEach(function(rowText) {
               var raw = String(rowText || "");
-              if (!raw || raw.includes("T") || raw.includes("결석예고")) return;
+              if (!raw || raw.includes("T")) return;
               if (shouldHideStudentText(raw)) return;
               var p = parseStudentRawText(raw);
               if (!p.name) return;
@@ -3689,7 +3823,7 @@
           mobileWrap.appendChild(card);
         }
 
-        if (!hasAny) mobileWrap.innerHTML = "<div class='teacher-empty'>표시할 강의가 없습니다.</div>";
+        if (!hasAny) mobileWrap.insertAdjacentHTML('beforeend', "<div class='teacher-empty'>표시할 강의가 없습니다.</div>");
       }
       function normalizeLookupKeyword(text) {
         return String(text || "").replace(/\s+/g, "").toUpperCase();
@@ -3837,13 +3971,13 @@
         }
 
         if (isTeacherViewActive() && window.innerWidth <= 768) {
-          var cards = mobileWrap.querySelectorAll('.teacher-hour-card');
+          var cards = mobileWrap.querySelectorAll('.teacher-hour-card, .teacher-simple-hour-card');
           cards.forEach(function(card) {
             if (card.dataset.originalHtml) card.innerHTML = card.dataset.originalHtml;
             var text = (card.innerText || card.textContent || "").toUpperCase();
             var visible = (!input || text.includes(input));
             card.style.display = visible ? "" : "none";
-            if (visible && rawInput && card.dataset.originalHtml) {
+            if (!teacherMobileSimpleView && visible && rawInput && card.dataset.originalHtml) {
               var re = new RegExp("(" + escapeRegExp(rawInput) + ")", "gi");
               card.innerHTML = card.dataset.originalHtml.replace(re, "<span class='highlight-text'>$1</span>");
             }
