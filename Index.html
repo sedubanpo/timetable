@@ -435,17 +435,21 @@
       .visitor-lookup-sub { margin-top:4px; font-size:0.9rem; color:#64748b; font-weight:700; line-height:1.5; }
       .visitor-lookup-sheet { font-size:0.84rem; font-weight:800; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:7px 12px; border-radius:999px; }
       .visitor-lookup-empty { padding:38px 20px; text-align:center; color:#64748b; background:#fff; border:1px dashed #cbd5e1; border-radius:20px; font-size:1rem; font-weight:700; }
-      .visitor-lookup-result-list { display:flex; flex-direction:column; gap:12px; }
-      .visitor-lookup-card { background:#fff; border:1px solid #dbeafe; border-radius:22px; padding:16px 18px; box-shadow:0 12px 26px rgba(148,163,184,0.10); }
-      .visitor-lookup-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:10px; }
-      .visitor-lookup-student { font-size:1.05rem; font-weight:900; color:#0f172a; }
-      .visitor-lookup-school { margin-top:4px; font-size:0.84rem; color:#64748b; font-weight:700; }
-      .visitor-lookup-time { flex-shrink:0; min-width:88px; text-align:center; border-radius:16px; background:linear-gradient(180deg,#1e293b,#0f172a); color:#f8fafc; padding:10px 12px; font-weight:900; font-size:0.96rem; line-height:1.2; }
-      .visitor-lookup-meta { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
-      .visitor-lookup-meta-card { border-radius:16px; padding:12px; background:linear-gradient(180deg,#f8fbff,#eef5ff); border:1px solid #dbeafe; }
-      .visitor-lookup-meta-label { font-size:0.72rem; font-weight:900; color:#64748b; letter-spacing:0.02em; text-transform:uppercase; }
-      .visitor-lookup-meta-value { margin-top:5px; font-size:0.95rem; font-weight:900; color:#0f172a; line-height:1.35; }
-      .visitor-lookup-note { margin-top:10px; border-radius:14px; padding:10px 12px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:0.83rem; font-weight:700; line-height:1.45; }
+      .visitor-lookup-result-list { display:flex; flex-direction:column; gap:10px; }
+      .visitor-lookup-summary { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; padding:0 4px; }
+      .visitor-lookup-student { font-size:1.18rem; font-weight:900; color:#0f172a; letter-spacing:-0.02em; }
+      .visitor-lookup-school { margin-top:4px; font-size:0.88rem; color:#64748b; font-weight:700; }
+      .visitor-lookup-count { flex-shrink:0; font-size:0.82rem; color:#475569; font-weight:800; background:#fff; border:1px solid #dbeafe; border-radius:999px; padding:7px 12px; }
+      .visitor-lookup-card { display:grid; grid-template-columns:108px minmax(0, 1fr); gap:12px; align-items:stretch; background:#fff; border:1px solid #dbeafe; border-radius:22px; padding:12px; box-shadow:0 12px 26px rgba(148,163,184,0.10); }
+      .visitor-lookup-time { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; border-radius:18px; background:linear-gradient(180deg,#1e293b,#0f172a); color:#f8fafc; padding:14px 10px; font-weight:900; min-height:104px; }
+      .visitor-lookup-time-main { font-size:1.04rem; line-height:1.15; letter-spacing:-0.02em; }
+      .visitor-lookup-time-sub { margin-top:8px; font-size:0.82rem; color:#cbd5e1; font-weight:800; }
+      .visitor-lookup-content { display:flex; flex-direction:column; justify-content:center; min-width:0; }
+      .visitor-lookup-mainline { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+      .visitor-lookup-lesson { min-width:0; font-size:1rem; font-weight:900; color:#0f172a; line-height:1.35; }
+      .visitor-lookup-room { flex-shrink:0; font-size:0.92rem; font-weight:900; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; padding:7px 11px; }
+      .visitor-lookup-teacherline { margin-top:6px; font-size:0.89rem; font-weight:800; color:#475569; }
+      .visitor-lookup-note { margin-top:10px; border-radius:14px; padding:9px 11px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:0.82rem; font-weight:700; line-height:1.45; }
       .teacher-log-controls { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; }
       .teacher-log-toolbar-left { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
       .teacher-log-toolbar-right { display:flex; align-items:center; gap:10px; flex:1 1 320px; justify-content:flex-end; flex-wrap:wrap; }
@@ -537,7 +541,10 @@
         .teacher-log-row { flex-direction:column; align-items:flex-start; }
         .teacher-log-side { align-items:flex-start; }
         .teacher-log-time { text-align:left; }
-        .visitor-lookup-meta { grid-template-columns:1fr; }
+        .visitor-lookup-summary { flex-direction:column; align-items:flex-start; }
+        .visitor-lookup-card { grid-template-columns:1fr; }
+        .visitor-lookup-time { min-height:auto; padding:12px; }
+        .visitor-lookup-mainline { flex-direction:column; align-items:flex-start; }
         #visitorLookupPane { margin:18px auto; }
         body, html { overflow: auto; }
         input, select, textarea { font-size: 16px !important; }
@@ -3696,7 +3703,37 @@
           if (a.hour !== b.hour) return a.hour - b.hour;
           return String(a.room).localeCompare(String(b.room), "ko");
         });
-        return matches;
+        var merged = [];
+        matches.forEach(function(item) {
+          var prev = merged.length ? merged[merged.length - 1] : null;
+          var canMerge = prev &&
+            prev.endHour === item.hour &&
+            prev.studentName === item.studentName &&
+            prev.school === item.school &&
+            prev.room === item.room &&
+            prev.teacher === item.teacher &&
+            prev.subject === item.subject &&
+            prev.classType === item.classType &&
+            prev.note === item.note;
+          if (canMerge) {
+            prev.endHour = item.endHour;
+            prev.durationHours = prev.endHour - prev.hour;
+          } else {
+            merged.push({
+              hour: item.hour,
+              endHour: item.endHour,
+              durationHours: item.endHour - item.hour,
+              room: item.room,
+              teacher: item.teacher,
+              subject: item.subject,
+              classType: item.classType,
+              studentName: item.studentName,
+              school: item.school,
+              note: item.note
+            });
+          }
+        });
+        return merged;
       }
       function renderVisitorLookupResults() {
         var pane = document.getElementById('visitorLookupPane');
@@ -3716,24 +3753,33 @@
         } else if (!matches.length) {
           bodyHtml = "<div class='visitor-lookup-empty'>검색 결과가 없습니다. 학생 이름을 다시 확인해주세요.</div>";
         } else {
-          bodyHtml = "<div class='visitor-lookup-result-list'>" + matches.map(function(item) {
-            var noteHtml = item.note ? "<div class='visitor-lookup-note'>비고: " + item.note + "</div>" : "";
-            return "<div class='visitor-lookup-card'>" +
-              "<div class='visitor-lookup-card-head'>" +
-                "<div>" +
-                  "<div class='visitor-lookup-student'>" + item.studentName + "</div>" +
-                  (item.school ? "<div class='visitor-lookup-school'>" + item.school + "</div>" : "") +
+          var summary = matches[0];
+          bodyHtml =
+            "<div class='visitor-lookup-summary'>" +
+              "<div>" +
+                "<div class='visitor-lookup-student'>" + summary.studentName + "</div>" +
+                (summary.school ? "<div class='visitor-lookup-school'>" + summary.school + "</div>" : "") +
+              "</div>" +
+              "<div class='visitor-lookup-count'>총 " + matches.length + "개 수업</div>" +
+            "</div>" +
+            "<div class='visitor-lookup-result-list'>" + matches.map(function(item) {
+              var noteHtml = item.note ? "<div class='visitor-lookup-note'>비고: " + item.note + "</div>" : "";
+              var lessonLabel = item.subject + (item.classType ? " · " + item.classType : "");
+              return "<div class='visitor-lookup-card'>" +
+                "<div class='visitor-lookup-time'>" +
+                  "<div class='visitor-lookup-time-main'>" + item.hour + ":00<br>~" + item.endHour + ":00</div>" +
+                  "<div class='visitor-lookup-time-sub'>" + item.durationHours + "시간 수업</div>" +
                 "</div>" +
-                "<div class='visitor-lookup-time'>" + item.hour + ":00<br>~" + item.endHour + ":00</div>" +
-              "</div>" +
-              "<div class='visitor-lookup-meta'>" +
-                "<div class='visitor-lookup-meta-card'><div class='visitor-lookup-meta-label'>강의실</div><div class='visitor-lookup-meta-value'>" + item.room + "</div></div>" +
-                "<div class='visitor-lookup-meta-card'><div class='visitor-lookup-meta-label'>선생님</div><div class='visitor-lookup-meta-value'>" + (item.teacher || "-") + "</div></div>" +
-                "<div class='visitor-lookup-meta-card'><div class='visitor-lookup-meta-label'>수업</div><div class='visitor-lookup-meta-value'>" + item.subject + (item.classType ? " · " + item.classType : "") + "</div></div>" +
-              "</div>" +
-              noteHtml +
-            "</div>";
-          }).join("") + "</div>";
+                "<div class='visitor-lookup-content'>" +
+                  "<div class='visitor-lookup-mainline'>" +
+                    "<div class='visitor-lookup-lesson'>" + lessonLabel + "</div>" +
+                    "<div class='visitor-lookup-room'>" + item.room + "</div>" +
+                  "</div>" +
+                  "<div class='visitor-lookup-teacherline'>선생님: " + (item.teacher || "-") + "</div>" +
+                  noteHtml +
+                "</div>" +
+              "</div>";
+            }).join("") + "</div>";
         }
         pane.innerHTML =
           "<div class='visitor-lookup-shell'>" +
