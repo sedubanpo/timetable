@@ -4342,142 +4342,178 @@
         } 
       }
       // [Excel Export Logic]
+      function normalizeSchoolNameForExport(schoolText) {
+        var school = String(schoolText || "").trim();
+        if (!school) return "";
+        school = school.replace(/\s*(정규|특강|보강|보충|결석예고|당일취소).*$/g, "").trim();
+        var schoolMatch = school.match(/^(.+?(?:초|중|고))\d*$/);
+        if (schoolMatch && schoolMatch[1]) return schoolMatch[1].trim();
+        var gradeLess = school.match(/^([가-힣A-Za-z]+)\d+$/);
+        if (gradeLess && gradeLess[1]) return gradeLess[1].trim();
+        return school.replace(/\d+$/g, "").trim();
+      }
+      function normalizeExportClassType(typeLabel, subjectName) {
+        var t = String(typeLabel || "").trim();
+        if (!t) return subjectName === "자습" ? "자습" : "정규";
+        if (t === "개별정규") return "개별";
+        if (t === "자기주도학습") return "자습";
+        return t;
+      }
+      function mapExportAttendanceStatus(statusLabel) {
+        var s = normalizeStatusLabel(statusLabel || "");
+        if (s === "당일취소" || s === "결석예고" || s === "지각" || s === "병결") return s;
+        return "출석";
+      }
+      function buildExportClassName(entry) {
+        var parts = [];
+        if (entry.subject) parts.push(entry.subject);
+        if (entry.type) parts.push(entry.type);
+        if (entry.teacher) parts.push(entry.teacher);
+        return parts.join("-");
+      }
       function exportScheduleToExcel() {
         if (!lastData) { alert("데이터를 불러오는 중입니다..."); return; }
-        
+
         var dateMatch = currentSheetName.match(/(\d+\/\d+\([가-힣]\))/);
         var dateStr = dateMatch ? dateMatch[1] : currentSheetName;
-        
-        // 1. 데이터 수집 및 병합 (Flattening)
         var rawEntries = [];
-        var headers = lastData.headers;
-        
+        var headers = lastData.headers || [];
+
         for (var h = 9; h <= 23; h++) {
           var row = lastData.grid[h] || [];
           for (var i = 0; i < headers.length; i++) {
-            var roomName = headers[i];
-            if(roomName.includes("휴강")) continue;
-            
+            var roomName = String(headers[i] || "").trim();
+            if (!roomName || roomName.includes("휴강")) continue;
+
             var items = row[i] || [];
-            // 선생님 정보 찾기
-            var teacherItem = items.find(t => String(t||"").includes("T"));
-            var teacherName = "";
-            var subjectName = "";
-            var typeInfo = "";
-            
-            if(teacherItem) {
-                teacherName = teacherItem.split(" ").pop().replace("T","");
-                subjectName = getSubjectName(teacherItem);
-                typeInfo = getTypeBadgeText(teacherItem);
-                if(!typeInfo) typeInfo = "정규"; // 기본값
-            }
-            // 학생 정보 파싱
+            if (!items.length) continue;
+
+            var teacherItem = items.find(function(t) {
+              return String(t || "").includes("T");
+            });
+            var teacherName = teacherItem ? extractTeacherName(teacherItem) : "";
+            var subjectName = teacherItem ? getSubjectName(teacherItem) : "";
+            var typeInfo = normalizeExportClassType(teacherItem ? getTypeBadgeText(teacherItem) : "", subjectName);
+            if (!subjectName && /자습|자기주도/.test(items.join(" "))) subjectName = "자습";
+
             items.forEach(function(text) {
-                var txt = String(text || "");
-                if (txt.includes("T") || txt.includes("결석예고")) return;
-                
-                var isCancel = txt.includes("당일취소");
-                var cleanText = txt.replace("확인필요", "").replace(/신\s*규\s*생?|첫\s*수\s*업/g, "").replace("당일취소", "").trim();
-                var tokens = cleanText.split(/[\s/\u00A0]+/);
-                
-                var validTokens = [];
-                var seen = new Set();
-                tokens.forEach(function(t) {
-                    t = t.trim();
-                    if(!t) return;
-                    if (t.match(/\d+일/)) return;
-                    if (t.match(/\d+\/\d+/)) return;
-                    if (t.match(/확정|예정|보강|취소|결석|확인|신규|첫수업/)) return;
-                    if (!seen.has(t)) { seen.add(t); validTokens.push(t); }
-                });
-                
-                if(validTokens.length > 0) {
-                    var studentName = validTokens[0];
-                    var schoolName = validTokens.slice(1).join(" ");
-                    
-                    rawEntries.push({
-                        student: studentName,
-                        school: schoolName,
-                        subject: subjectName,
-                        teacher: teacherName,
-                        type: typeInfo,
-                        room: roomName,
-                        hour: h,
-                        status: isCancel ? "당일취소" : "출석"
-                    });
-                }
+              var rawText = String(text || "").trim();
+              if (!rawText || rawText.includes("T")) return;
+
+              var parsed = parseStudentRawText(rawText);
+              if (!parsed.name || shouldHideStatus(parsed.status)) return;
+
+              var subject = subjectName || (/자습|자기주도/.test(rawText) ? "자습" : "수업");
+              var classType = normalizeExportClassType(typeInfo, subject);
+              var attendance = mapExportAttendanceStatus(parsed.status);
+              var schoolName = normalizeSchoolNameForExport(parsed.school || parsed.full);
+
+              rawEntries.push({
+                student: parsed.name,
+                school: schoolName,
+                subject: subject,
+                teacher: teacherName,
+                type: classType,
+                room: roomName,
+                hour: h,
+                status: attendance,
+                note: parsed.note || ""
+              });
             });
           }
         }
-        
-        // 2. 연속된 시간 병합 (Merging Logic)
-        rawEntries.sort((a, b) => {
-            if (a.student !== b.student) return a.student.localeCompare(b.student);
-            if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
-            return a.hour - b.hour;
+
+        rawEntries.sort(function(a, b) {
+          if (a.student !== b.student) return a.student.localeCompare(b.student, "ko");
+          if (a.hour !== b.hour) return a.hour - b.hour;
+          if (a.subject !== b.subject) return a.subject.localeCompare(b.subject, "ko");
+          return a.teacher.localeCompare(b.teacher, "ko");
         });
-        
+
         var mergedData = [];
         if (rawEntries.length > 0) {
-            var current = rawEntries[0];
-            current.start = current.hour;
-            current.end = current.hour + 1;
-            
-            for (var i = 1; i < rawEntries.length; i++) {
-                var next = rawEntries[i];
-                // 같은 학생, 같은 과목, 같은 선생님, 연속된 시간인지 확인
-                if (next.student === current.student && 
-                    next.subject === current.subject && 
-                    next.teacher === current.teacher && 
-                    next.type === current.type &&
-                    next.hour === current.end) {
-                    current.end++; // 시간 연장
-                } else {
-                    mergedData.push(current);
-                    current = next;
-                    current.start = current.hour;
-                    current.end = current.hour + 1;
-                }
+          var current = Object.assign({}, rawEntries[0], { start: rawEntries[0].hour, end: rawEntries[0].hour + 1 });
+          for (var idx = 1; idx < rawEntries.length; idx++) {
+            var next = rawEntries[idx];
+            var shouldMerge =
+              next.student === current.student &&
+              next.subject === current.subject &&
+              next.teacher === current.teacher &&
+              next.type === current.type &&
+              next.room === current.room &&
+              next.status === current.status &&
+              next.note === current.note &&
+              next.hour === current.end;
+
+            if (shouldMerge) {
+              current.end = next.hour + 1;
+            } else {
+              mergedData.push(current);
+              current = Object.assign({}, next, { start: next.hour, end: next.hour + 1 });
             }
-            mergedData.push(current);
+          }
+          mergedData.push(current);
         }
-        
-        // 3. 엑셀용 데이터 매핑
-        var excelData = mergedData.map(d => {
-            var duration = d.end - d.start;
-            var className = `${d.subject}-${d.type}(${d.teacher})-${duration}h`; // 반명 생성 규칙
-            var startTime = formatTime(d.start);
-            var endTime = formatTime(d.end);
-            
-            return {
-                "수업일": dateStr,
-                "반명": className,
-                "이름": d.student,
-                "학교": d.school,
-                "학년": "", // 데이터 없음 (공란)
-                "출결": d.status,
-                "관": "반포", // 기본값
-                "TR": d.teacher,
-                "시작": startTime,
-                "종료": endTime,
-                "시간": duration,
-                "참고": ""
-            };
+
+        if (!mergedData.length) { alert("저장할 데이터가 없습니다."); return; }
+
+        var rows = [];
+        var currentStudent = "";
+        mergedData.forEach(function(entry) {
+          var duration = entry.end - entry.start;
+          var school = entry.school || "";
+          var exportRow = {
+            "이름": entry.student,
+            "학교": school,
+            "반명": buildExportClassName(entry),
+            "출결": entry.status,
+            "TR": entry.teacher,
+            "시작": formatTime(entry.start),
+            "종료": formatTime(entry.end),
+            "시간": duration,
+            "수업일": dateStr,
+            "참고": entry.note || ""
+          };
+          if (currentStudent && currentStudent !== entry.student) {
+            rows.push({
+              "이름": "",
+              "학교": "",
+              "반명": "",
+              "출결": "",
+              "TR": "",
+              "시작": "",
+              "종료": "",
+              "시간": "",
+              "수업일": "",
+              "참고": ""
+            });
+          }
+          rows.push(exportRow);
+          currentStudent = entry.student;
         });
-        
-        // 4. 엑셀 파일 생성 및 다운로드
-        if(excelData.length === 0) { alert("저장할 데이터가 없습니다."); return; }
-        
-        var worksheet = XLSX.utils.json_to_sheet(excelData);
+
+        var worksheet = XLSX.utils.json_to_sheet(rows, {
+          header: ["이름", "학교", "반명", "출결", "TR", "시작", "종료", "시간", "수업일", "참고"]
+        });
+        worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+
         var workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "시수표");
-        
-        // 컬럼 너비 자동 조정 (약간의 여유 둠)
-        var wscols = [
-            {wch:10}, {wch:25}, {wch:10}, {wch:15}, {wch:5}, {wch:8}, {wch:5}, {wch:10}, {wch:10}, {wch:10}, {wch:5}, {wch:20}
+
+        worksheet["!cols"] = [
+          { wch: 12 },
+          { wch: 12 },
+          { wch: 26 },
+          { wch: 10 },
+          { wch: 10 },
+          { wch: 10 },
+          { wch: 10 },
+          { wch: 6 },
+          { wch: 10 },
+          { wch: 24 }
         ];
-        worksheet['!cols'] = wscols;
-        XLSX.writeFile(workbook, `시수표_${dateStr}.xlsx`);
+
+        XLSX.writeFile(workbook, "시수표_" + dateStr + ".xlsx");
       }
       
       function formatTime(h) {
