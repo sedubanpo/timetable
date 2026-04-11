@@ -385,13 +385,18 @@
       .attendance-report-top { position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; }
       .attendance-report-head { font-size:1.1rem; font-weight:900; color:#0f172a; margin-bottom:6px; letter-spacing:-0.02em; }
       .attendance-report-sub { color:#475569; font-size:0.88rem; margin-bottom:0; font-weight:800; }
+      .attendance-report-inline-summary { margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:0.84rem; font-weight:900; }
+      .attendance-report-inline-summary .late { color:#dc2626; }
+      .attendance-report-inline-summary .absent { color:#334155; }
+      .attendance-report-inline-summary .active { color:#15803d; }
       .attendance-report-calendar { flex-shrink:0; width:92px; border-radius:22px; background:linear-gradient(180deg,#ffffff,#eff6ff); border:1px solid #bfdbfe; box-shadow:0 14px 24px rgba(37,99,235,0.10); overflow:hidden; text-align:center; }
       .attendance-report-calendar-month { background:linear-gradient(180deg,#2563eb,#1d4ed8); color:#fff; font-size:0.73rem; font-weight:900; letter-spacing:0.08em; padding:7px 6px; }
       .attendance-report-calendar-day { padding:10px 6px 4px; font-size:1.6rem; font-weight:900; color:#0f172a; line-height:1; letter-spacing:-0.04em; }
       .attendance-report-calendar-dow { padding:0 6px 4px; font-size:0.78rem; font-weight:800; color:#64748b; }
+      .attendance-report-calendar-dow.sun { color:#dc2626; }
+      .attendance-report-calendar-dow.sat { color:#2563eb; }
       .attendance-report-calendar-time { padding:0 6px 10px; font-size:0.72rem; font-weight:900; color:#2563eb; }
-      .attendance-report-summary { position:relative; z-index:1; background:#fff; border:1px solid #dbeafe; border-radius:16px; padding:12px 14px; font-size:0.86rem; color:#1e293b; margin-bottom:14px; line-height:1.5; box-shadow:0 6px 14px rgba(148, 163, 184, 0.10); }
-      .attendance-report-summary strong { color:#0f172a; }
+      .attendance-report-summary { background:#ffffff; border:1px dashed #cbd5e1; border-radius:16px; padding:14px; color:#64748b; font-size:0.84rem; font-weight:800; text-align:center; }
       .attendance-report-note { margin-top:5px; font-size:0.78rem; color:#9a3412; line-height:1.45; }
       .attendance-vcard { display:flex; flex-direction:column; gap:10px; }
       .attendance-vroom-card { background:rgba(255,255,255,0.96); border:1px solid #cbd5e1; border-radius:20px; padding:13px; box-shadow:0 10px 24px rgba(148, 163, 184, 0.12); }
@@ -414,6 +419,10 @@
       .attendance-vclass-count { flex-shrink:0; font-size:0.72rem; font-weight:800; color:#475569; background:rgba(255,255,255,0.88); border:1px solid rgba(203,213,225,0.9); border-radius:999px; padding:5px 9px; white-space:nowrap; }
       .attendance-v-students { display:flex; flex-direction:column; gap:6px; }
       .attendance-v-student { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:8px 9px; }
+      .attendance-v-student.is-notice { background:linear-gradient(180deg,#e5e7eb,#cbd5e1); border-color:#94a3b8; box-shadow:inset 0 1px 0 rgba(255,255,255,0.35); }
+      .attendance-v-student.is-notice .attendance-v-student-name { color:#334155; }
+      .attendance-v-student.is-notice .attendance-v-student-meta { color:#64748b; }
+      .attendance-v-student.is-notice .attendance-report-note { color:#475569; }
       .attendance-v-student-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
       .attendance-v-student-name { font-size:0.84rem; font-weight:800; color:#1e293b; }
       .attendance-v-student-meta { font-size:0.74rem; color:#64748b; margin-top:4px; }
@@ -421,7 +430,6 @@
       .attendance-v-student-status.late { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
       .attendance-v-student-status.absent { background:#fee2e2; color:#991b1b; border-color:#f87171; }
       .attendance-v-student-status.notice { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
-      .attendance-v-student.is-notice { background:#f8fafc; border-color:#dbe3ef; }
       #attendanceReportText { width:100%; min-height:150px; border:1px solid #d1d5db; border-radius:10px; padding:10px; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size:0.9rem; resize:vertical; background:#f8fafc; box-sizing:border-box; }
       #studentImagePreview { max-width:none; margin:0; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
@@ -3438,11 +3446,10 @@
       function getAttendanceSummaryText(payload, visibleItems) {
         var lateCount = visibleItems.filter(function(v){ return v.type === "late"; }).length;
         var absentCount = visibleItems.filter(function(v){ return v.type === "absent"; }).length;
-        var text = payload.dateText + " " + payload.slotText + " 기준";
         if (!visibleItems.length) {
-          return text + " · 전원 정상 참여";
+          return { lateCount: 0, absentCount: 0, activeCount: payload.activeCount, empty: true };
         }
-        return text + " · 지각 " + lateCount + "명 / 미참여 " + absentCount + "명 / 참여 중 " + payload.activeCount + "명";
+        return { lateCount: lateCount, absentCount: absentCount, activeCount: payload.activeCount, empty: false };
       }
       function composeAttendanceReportText(payload) {
         var visibleItems = getVisibleAttendanceItems(payload);
@@ -3452,18 +3459,16 @@
         var mode = getAttendanceTextMode();
         var out = "[출결 현황 보고]\n" + head + "\n\n";
         if (!visibleItems.length) {
-          out += "(지각인원수) 0명 외 전원 등원 완료했습니다.";
+          out += "지각 0명 / 미참여 0명 / 참여 " + payload.activeCount + "명";
           return out;
         }
-        out += "(지각인원수) " + lateCount + "명 / 미참여 " + absentCount + "명 / 현재 참여 중 " + payload.activeCount + "명\n";
-        out += "미등원/지각 학생 명단:\n";
+        out += "지각 " + lateCount + "명 / 미참여 " + absentCount + "명 / 참여 " + payload.activeCount + "명\n";
         visibleItems.forEach(function(v){
           var typeLabel = getAttendanceClassTypeLabel(v.classType);
           var cls = v.subject + (v.teacher ? "-" + v.teacher + "T" : "");
           var school = v.school ? (" (" + v.school + ")") : "";
           if (mode === "simple") {
-            var simpleNote = v.note ? (" / 비고: " + v.note) : "";
-            out += "- [" + v.status + "] " + v.name + school + " / " + cls + (typeLabel ? " [" + typeLabel + "]" : "") + simpleNote + "\n";
+            out += "- [" + v.status + "] " + v.name + school + " / " + cls + (typeLabel ? " [" + typeLabel + "]" : "") + "\n";
             return;
           }
           var note = v.note ? (" / 비고: " + v.note) : "";
@@ -3542,8 +3547,7 @@
             return "<div class='attendance-vclass-card'>" +
                      "<div class='attendance-vclass-shell type-" + visualType + "'>" +
                        "<div class='attendance-vclass-head'>" +
-                         "<div><div class='attendance-v-class'>수업: " + clsGroup.classText + "</div>" +
-                         (clsGroup.classType ? "<div class='attendance-v-class-type'>" + clsGroup.classType + "</div>" : "") + "</div>" +
+                         "<div><div class='attendance-v-class'>수업: " + clsGroup.classText + (clsGroup.classType ? " <span class='attendance-v-class-type'>" + clsGroup.classType + "</span>" : "") + "</div></div>" +
                          "<div class='attendance-vclass-count'>참여 " + clsGroup.activeCount + "명 / 이상 " + clsGroup.issueCount + "명 / 전체 " + clsGroup.totalCount + "명</div>" +
                        "</div>" +
                        "<div class='attendance-v-students'>" + studentsHtml + "</div>" +
@@ -3559,19 +3563,26 @@
                  "</div>";
         }).join("") : "<div class='attendance-report-summary'>현재 시간대 이상 징후(지각/결석/취소) 학생이 없습니다.</div>";
         var cal = payload.dateInfo || {};
+        var dowClass = "";
+        if (cal.dow === "토") dowClass = " sat";
+        else if (cal.dow === "일") dowClass = " sun";
         root.innerHTML =
           "<div class='attendance-report-shell'>" +
             "<div class='attendance-report-top'>" +
               "<div><div class='attendance-report-head'>출결 현황 보고</div>" +
-              "<div class='attendance-report-sub'>" + payload.dateText + " · " + payload.slotText + "</div></div>" +
+              "<div class='attendance-report-sub'>" + payload.dateText + " · " + payload.slotText + "</div>" +
+              "<div class='attendance-report-inline-summary'>" +
+                "<span class='late'>지각 " + summaryText.lateCount + "명</span>" +
+                "<span class='absent'>미참여 " + summaryText.absentCount + "명</span>" +
+                "<span class='active'>참여 " + summaryText.activeCount + "명</span>" +
+              "</div></div>" +
               "<div class='attendance-report-calendar'>" +
                 "<div class='attendance-report-calendar-month'>" + (cal.month || "-") + "월</div>" +
                 "<div class='attendance-report-calendar-day'>" + (cal.day || "-") + "</div>" +
-                "<div class='attendance-report-calendar-dow'>" + (cal.dow ? cal.dow + "요일" : "") + "</div>" +
+                "<div class='attendance-report-calendar-dow" + dowClass + "'>" + (cal.dow ? cal.dow + "요일" : "") + "</div>" +
                 "<div class='attendance-report-calendar-time'>" + payload.slotText + "</div>" +
               "</div>" +
             "</div>" +
-            "<div class='attendance-report-summary'><strong>" + summaryText + "</strong></div>" +
             "<div class='attendance-vcard'>" + listHtml + "</div>" +
           "</div>";
         var label = document.getElementById("attendanceReportTimeLabel");
