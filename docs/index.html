@@ -782,6 +782,10 @@
         <div class="modal-title">시간표 카드 생성</div>
         <div class="student-img-controls">
           <input id="studentImageSearch" type="text" placeholder="학생명 검색 (예: 김철수)" onkeyup="filterStudentImageList()">
+          <label class="attendance-filter-chip" style="flex-shrink:0;">
+            <input id="studentImageHideNoteToggle" type="checkbox" onchange="toggleStudentCardHideNote()">
+            <span>비고 숨김</span>
+          </label>
           <button id="studentImageRefreshBtn" class="attendance-time-btn" onclick="refreshStudentImageDashboard()">새로고침</button>
           <button id="studentImageCopyBtn" class="msg-copy-btn" style="margin-top:0;" onclick="copyStudentScheduleImage()">카드 복사</button>
           <button class="msg-copy-btn" style="margin-top:0;" onclick="downloadStudentScheduleImage()">카드 저장</button>
@@ -976,6 +980,7 @@
       let studentCardStatusLoading = false;
       let studentCardCaptureCache = {};
       let studentImageRefreshPendingSelection = "";
+      let studentCardHideNote = false;
       let teacherViewLogsCache = [];
       let teacherViewLogWeekIndex = 0;
       let teacherViewLogSelectedDateIndex = 0;
@@ -2276,8 +2281,11 @@
         if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
         buildStudentImageMap();
         resetStudentCardCaptureCache();
+        studentCardHideNote = false;
         document.getElementById('studentImageModal').style.display = 'flex';
         document.getElementById('studentImageSearch').value = "";
+        var hideToggle = document.getElementById('studentImageHideNoteToggle');
+        if (hideToggle) hideToggle.checked = false;
         selectedStudentForImage = "";
         filterStudentImageList();
         loadStudentCardStatuses();
@@ -2523,10 +2531,16 @@
         return record.sent ? "발송 완료" : "미발송";
       }
       function getStudentCardCaptureKey(name) {
-        return String(currentSheetName || "") + "||" + String(name || "");
+        return String(currentSheetName || "") + "||" + String(name || "") + "||" + (studentCardHideNote ? "hide-note" : "show-note");
       }
       function resetStudentCardCaptureCache() {
         studentCardCaptureCache = {};
+      }
+      function toggleStudentCardHideNote() {
+        var toggle = document.getElementById('studentImageHideNoteToggle');
+        studentCardHideNote = !!(toggle && toggle.checked);
+        resetStudentCardCaptureCache();
+        if (selectedStudentForImage) renderStudentImagePreview(selectedStudentForImage);
       }
       function refreshStudentImageListSelectionState() {
         var list = document.getElementById('studentImageList');
@@ -2793,19 +2807,21 @@
       }
       function buildStudentCardViewModel(name) {
         var studentName = String(name || "").trim();
+        var hideNote = !!studentCardHideNote;
         var schedules = (studentImageScheduleMap[studentName] || []).slice().sort(function(a,b){ return a.hour - b.hour; });
         var merged = [];
         schedules.forEach(function(s){
           var title = (s.subject || "수업") + (s.teacher ? "(" + s.teacher + "T)" : "");
-          var key = [title, s.room, s.note || "", s.classType || ""].join("||");
+          var noteText = hideNote ? "" : (s.note || "");
+          var key = [title, s.room, noteText, s.classType || ""].join("||");
           if (!merged.length) {
-            merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: s.note || "", classType: s.classType || "", school: s.school || "" });
+            merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: noteText, classType: s.classType || "", school: s.school || "" });
             return;
           }
           var last = merged[merged.length - 1];
           if (last.key === key && last.start === s.hour && last.end === s.hour + 1) return;
           if (last.key === key && last.end === s.hour) last.end = s.hour + 1;
-          else merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: s.note || "", classType: s.classType || "", school: s.school || "" });
+          else merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: noteText, classType: s.classType || "", school: s.school || "" });
         });
         var timelineRows = [];
         for (var i = 0; i < merged.length; i++) {
@@ -2822,7 +2838,8 @@
           name: studentName,
           schedules: schedules,
           timelineRows: timelineRows,
-          metaLine: (currentSheetName || "") + (metaSchool ? " · " + metaSchool : "")
+          metaLine: (currentSheetName || "") + (metaSchool ? " · " + metaSchool : ""),
+          hideNote: hideNote
         };
       }
       function renderStudentCardRowsHtml(timelineRows) {
