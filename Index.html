@@ -533,7 +533,7 @@
       .visitor-lookup-left { border-right:1px solid #dbe7ff; }
       .visitor-lookup-tabs { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
       .visitor-lookup-tab { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 24px; border-radius:8px; border:1px solid #dbe2ee; background:#eef2f7; color:#475569; font-size:0.95rem; font-weight:900; cursor:pointer; }
-      .visitor-lookup-tab.active { color:#ffffff; background:linear-gradient(180deg,#1357dc,#0b43bb); border-color:#0b43bb; box-shadow:0 12px 24px rgba(29,78,216,0.20); }
+      .visitor-lookup-tab.active { color:#ffffff; background:#0f1746; border-color:#0f1746; box-shadow:0 12px 24px rgba(15,23,66,0.22); }
       .visitor-lookup-inline-search { display:grid; grid-template-columns:minmax(0,1fr) 128px; gap:12px; margin-bottom:22px; }
       .visitor-lookup-inline-searchbox { min-height:62px; border:1px solid #cbd5e1; border-radius:10px; background:#ffffff; display:flex; align-items:center; gap:14px; padding:0 18px; color:#0f172a; font-size:1.06rem; font-weight:900; box-shadow:0 8px 20px rgba(15,23,42,0.04); }
       .visitor-lookup-inline-icon { font-size:1.45rem; color:#1e3a8a; line-height:1; }
@@ -571,20 +571,20 @@
       .visitor-map-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:24px; }
       .visitor-map-kicker { color:#475569; font-size:0.92rem; font-weight:900; }
       .visitor-map-title { margin-top:8px; color:#0f172a; font-size:2.1rem; font-weight:900; letter-spacing:0; }
-      .visitor-map-target { display:inline-flex; align-items:center; justify-content:center; min-width:104px; min-height:104px; border-radius:999px; color:#ffffff; background:linear-gradient(180deg,#1557dc,#0b43bb); box-shadow:0 18px 34px rgba(29,78,216,0.28); font-size:1rem; font-weight:900; text-align:center; line-height:1.2; }
+      .visitor-map-target { display:inline-flex; align-items:center; justify-content:center; min-width:104px; min-height:104px; border-radius:999px; color:#ffffff; background:#0f1746; box-shadow:0 18px 34px rgba(15,23,66,0.25); font-size:1rem; font-weight:900; text-align:center; line-height:1.2; }
       .visitor-map-target-num { display:block; font-size:2.2rem; line-height:1; margin-bottom:4px; }
       .visitor-map-building-tabs { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
       .visitor-map-building { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:116px; min-height:58px; border:1px solid #dbe2ee; border-radius:9px; background:#ffffff; color:#475569; font-weight:900; }
-      .visitor-map-building.active { background:linear-gradient(180deg,#145de6,#0b43bb); color:#ffffff; border-color:#0b43bb; }
+      .visitor-map-building.active { background:#0f1746; color:#ffffff; border-color:#0f1746; }
       .visitor-map-building span { margin-top:3px; font-size:0.78rem; opacity:0.78; }
-      .visitor-room-map { position:relative; height:360px; min-width:820px; border:1px solid #dbe7ff; border-radius:12px; background:linear-gradient(180deg,#ffffff,#f8fbff); overflow:hidden; }
+      .visitor-room-map { position:relative; height:360px; min-width:820px; border:1px solid #dbe2ee; border-radius:12px; background:#ffffff; overflow:hidden; }
       .visitor-room-map-scroll { overflow-x:auto; overflow-y:visible; padding-bottom:2px; }
-      .visitor-room-map::before { content:""; position:absolute; left:12%; right:8%; top:42%; height:56px; border-radius:8px; background:rgba(254,205,211,0.38); border:1px solid rgba(251,113,133,0.18); }
-      .visitor-room-map::after { content:""; position:absolute; left:66%; right:8%; top:42%; height:92px; border-radius:8px; background:rgba(254,205,211,0.34); border:1px solid rgba(251,113,133,0.16); }
-      .visitor-room { position:absolute; width:17%; height:24%; border:1.5px solid #9fb6dd; background:linear-gradient(180deg,#ffffff,#f7fbff); box-shadow:inset 0 0 0 3px rgba(219,234,254,0.38); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0f172a; font-weight:900; }
+      .visitor-room-map::before { content:""; position:absolute; left:12%; right:8%; top:42%; height:56px; border-radius:8px; background:rgba(254,205,211,0.28); border:1px solid rgba(251,113,133,0.15); }
+      .visitor-room-map::after { content:""; position:absolute; left:66%; right:8%; top:42%; height:92px; border-radius:8px; background:rgba(254,205,211,0.24); border:1px solid rgba(251,113,133,0.12); }
+      .visitor-room { position:absolute; width:17%; height:24%; border:1.5px solid #d4dbe8; background:linear-gradient(180deg,#f9fafb,#eef2f7); box-shadow:inset 0 0 0 2px rgba(255,255,255,0.72); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0f172a; font-weight:900; }
       .visitor-room.empty { border-color:#86efac; background:linear-gradient(180deg,#f0fdf4,#dcfce7); box-shadow:inset 0 0 0 3px rgba(187,247,208,0.58); }
-      .visitor-room.active { border:2px solid #145de6; box-shadow:0 0 0 4px rgba(59,130,246,0.13), 0 14px 28px rgba(37,99,235,0.16); z-index:6; }
-      .visitor-room-num { display:flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:999px; background:linear-gradient(180deg,#1557dc,#0b43bb); color:#ffffff; font-size:1.35rem; font-weight:900; margin-bottom:7px; }
+      .visitor-room.active { border:2px solid #145de6; background:#ffffff; box-shadow:0 0 0 4px rgba(59,130,246,0.16), 0 14px 28px rgba(37,99,235,0.16); z-index:6; }
+      .visitor-room-num { display:flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:999px; background:#145de6; color:#ffffff; font-size:1.35rem; font-weight:900; margin-bottom:7px; }
       .visitor-room-name { font-size:0.98rem; }
       .visitor-room-pin { display:none; position:absolute; top:-16px; left:50%; width:34px; height:34px; border-radius:999px 999px 999px 0; background:#1d4ed8; transform:translateX(-50%) rotate(-45deg); box-shadow:0 10px 24px rgba(37,99,235,0.28); z-index:8; }
       .visitor-room-pin::after { content:""; position:absolute; width:12px; height:12px; border-radius:999px; background:#ffffff; left:11px; top:11px; }
@@ -598,11 +598,9 @@
       .visitor-room-3 { left:38%; bottom:4%; }
       .visitor-room-2 { left:56%; bottom:4%; }
       .visitor-room-1 { left:74%; bottom:4%; width:17%; }
-      .visitor-route-line { position:absolute; left:22%; right:18%; top:48%; height:6px; background:#facc15; border-radius:999px; box-shadow:0 0 0 3px rgba(250,204,21,0.22); z-index:4; }
+      .visitor-route-line { position:absolute; left:19%; right:16%; top:48%; height:6px; background:#facc15; border-radius:999px; box-shadow:0 0 0 5px rgba(250,204,21,0.18); z-index:4; }
       .visitor-route-line::before { content:""; position:absolute; right:0; top:-7px; width:18px; height:18px; border-top:6px solid #facc15; border-right:6px solid #facc15; transform:rotate(45deg); border-radius:3px; }
       .visitor-route-branch { position:absolute; width:6px; height:74px; left:49.5%; top:28%; background:#facc15; border-radius:999px; box-shadow:0 0 0 3px rgba(250,204,21,0.20); z-index:4; }
-      .visitor-map-route-note { margin-top:14px; display:flex; align-items:center; gap:10px; min-height:48px; border:1px solid #dbe7ff; border-radius:10px; padding:0 16px; color:#0f172a; font-weight:900; background:#ffffff; }
-      .visitor-map-route-note strong { color:#145de6; }
       .visitor-map-textonly { display:flex; min-height:360px; border:1px solid #dbe7ff; border-radius:14px; background:linear-gradient(180deg,#ffffff,#f8fbff); align-items:center; justify-content:center; text-align:center; padding:28px; }
       .visitor-map-textonly-title { color:#0f172a; font-size:2.15rem; font-weight:900; letter-spacing:0; }
       .visitor-map-textonly-sub { margin-top:12px; color:#64748b; font-size:1rem; font-weight:800; }
@@ -4450,9 +4448,6 @@
         var target = activeRoom
           ? "<span class='visitor-map-target-num'>" + activeRoom + "</span>강의실"
           : (emptyCount ? "<span class='visitor-map-target-num'>" + emptyCount + "</span>빈 강의실" : "<span class='visitor-map-target-num'>?</span>검색");
-        var routeText = activeRoom
-          ? "노란 안내선을 따라 <strong>" + activeRoomLabel + "</strong>로 이동하세요."
-          : (emptyCount ? "초록색으로 표시된 강의실이 현재 비어 있습니다." : "학생 이름을 검색하면 배정 강의실 위치가 오른쪽에 표시됩니다.");
         return "<div class='visitor-map-head'>" +
             "<div><div class='visitor-map-kicker'>배정 강의실</div><div class='visitor-map-title'>" + title + "</div></div>" +
             "<div class='visitor-map-target'>" + target + "</div>" +
@@ -4465,8 +4460,7 @@
           "<div class='visitor-room-map-scroll'><div class='visitor-room-map'>" +
               "<div class='visitor-route-line'></div><div class='visitor-route-branch'></div>" +
               roomHtml +
-            "</div></div>" +
-          "<div class='visitor-map-route-note'>엘리베이터 → 직진 → 왼쪽 → 직진 → " + routeText + "</div>";
+            "</div></div>";
       }
       function renderVisitorLookupResults() {
         var pane = document.getElementById('visitorLookupPane');
@@ -4546,7 +4540,6 @@
             "<div class='visitor-lookup-main'>" +
               "<div class='visitor-lookup-panel visitor-lookup-left'>" +
                 "<div class='visitor-lookup-tabs'><div class='visitor-lookup-tab" + (visitorLookupTab === "today" ? " active" : "") + "' onclick='setVisitorLookupTab(\"today\")'>오늘 수업</div><div class='visitor-lookup-tab" + (visitorLookupTab === "study" ? " active" : "") + "' onclick='setVisitorLookupTab(\"study\")'>자습실</div></div>" +
-                (visitorLookupTab === "today" ? "<div class='visitor-lookup-inline-search'><div class='visitor-lookup-inline-searchbox'><span class='visitor-lookup-inline-icon'>⌕</span><span" + (!rawKeyword ? " class='visitor-lookup-inline-placeholder'" : "") + ">" + escapeHtml(rawKeyword || "학생명 검색") + "</span></div><button class='visitor-lookup-search-btn' type='button' onclick='document.getElementById(\"searchInput\").focus()'>검색</button></div>" : "") +
                 resultHtml +
               "</div>" +
               "<div class='visitor-lookup-panel visitor-lookup-right'>" + renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []) + "</div>" +
