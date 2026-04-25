@@ -1078,6 +1078,10 @@
       let visitorLookupSelectedIndex = 0;
       let visitorLookupLastKeyword = "";
       let visitorLookupTab = "today";
+      let visitorLookupIndexVersion = "";
+      let visitorLookupIndexRows = [];
+      let visitorLookupMatchCache = Object.create(null);
+      let visitorLookupShellKey = "";
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -1969,6 +1973,7 @@
         try { 
           if(!d || d.error) { d = { headers: [], grid: {}, version: "ERROR" }; } 
           lastData=d; 
+          resetVisitorLookupIndexCache();
           currentVersion=String(d.version || "").split("_T_")[0]; 
           renderTable(d, isRefresh); 
           syncLookupDimmingState();
@@ -4190,13 +4195,29 @@
       function normalizeLookupKeyword(text) {
         return String(text || "").replace(/\s+/g, "").toUpperCase();
       }
-      function buildVisitorLookupMatches(keyword) {
-        if (!lastData || !lastData.headers) return [];
-        var query = normalizeLookupKeyword(keyword);
-        if (!query) return [];
-        var matches = [];
+      function resetVisitorLookupIndexCache() {
+        visitorLookupIndexVersion = "";
+        visitorLookupIndexRows = [];
+        visitorLookupMatchCache = Object.create(null);
+        visitorLookupShellKey = "";
+      }
+      function getVisitorLookupIndexVersion() {
+        if (!lastData || !lastData.headers) return "";
+        return [
+          currentSheetName || "",
+          lastData.version || "",
+          lastData.headers.length
+        ].join("::");
+      }
+      function ensureVisitorLookupIndex() {
+        var version = getVisitorLookupIndexVersion();
+        if (version && visitorLookupIndexVersion === version) return visitorLookupIndexRows;
+        visitorLookupIndexVersion = version;
+        visitorLookupMatchCache = Object.create(null);
+        visitorLookupIndexRows = [];
+        if (!lastData || !lastData.headers || !lastData.grid) return visitorLookupIndexRows;
         for (var h = 9; h <= 23; h++) {
-          var row = (lastData.grid && lastData.grid[h]) || [];
+          var row = lastData.grid[h] || [];
           for (var i = 0; i < lastData.headers.length; i++) {
             var items = row[i] || [];
             if (!items.length) continue;
@@ -4211,8 +4232,9 @@
               if (shouldHideStudentText(text)) return;
               var parsed = parseStudentRawText(text);
               var nameKey = normalizeLookupKeyword(parsed.name);
-              if (!nameKey || nameKey.indexOf(query) === -1) return;
-              matches.push({
+              if (!nameKey) return;
+              visitorLookupIndexRows.push({
+                key: nameKey,
                 hour: h,
                 endHour: h + 1,
                 room: roomName,
@@ -4226,6 +4248,15 @@
             });
           }
         }
+        return visitorLookupIndexRows;
+      }
+      function buildVisitorLookupMatches(keyword) {
+        var query = normalizeLookupKeyword(keyword);
+        if (!query) return [];
+        if (visitorLookupMatchCache[query]) return visitorLookupMatchCache[query];
+        var matches = ensureVisitorLookupIndex().filter(function(item) {
+          return item.key.indexOf(query) !== -1;
+        });
         matches.sort(function(a, b) {
           if (a.hour !== b.hour) return a.hour - b.hour;
           return String(a.room).localeCompare(String(b.room), "ko");
@@ -4260,6 +4291,7 @@
             });
           }
         });
+        visitorLookupMatchCache[query] = merged;
         return merged;
       }
       function ensureVisitorLookupReturnProgress() {
@@ -4462,6 +4494,35 @@
               roomHtml +
             "</div></div>";
       }
+      function ensureVisitorLookupShell(pane) {
+        var shellKey = [
+          currentSheetName || "시간표",
+          visitorLookupTab
+        ].join("::");
+        if (visitorLookupShellKey === shellKey && document.getElementById('visitorLookupResultsHost') && document.getElementById('visitorLookupMapHost')) {
+          return;
+        }
+        visitorLookupShellKey = shellKey;
+        pane.innerHTML =
+          "<div class='visitor-lookup-shell'>" +
+            "<div class='visitor-lookup-head'>" +
+              "<div class='visitor-lookup-head-main'>" +
+                "<div class='visitor-lookup-logo-wrap'><img class='visitor-lookup-logo' src='https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png' alt='SEDU'></div>" +
+                "<div><div class='visitor-lookup-title'>학생 이동 안내</div><div class='visitor-lookup-sub'>이름을 검색하면 시간표, 강의실, 담당 선생님을 바로 확인할 수 있습니다.</div></div>" +
+              "</div>" +
+              "<div class='visitor-lookup-head-side'>" +
+                "<div class='visitor-lookup-sheet'>" + escapeHtml(currentSheetName || "시간표") + "</div>" +
+              "</div>" +
+            "</div>" +
+            "<div class='visitor-lookup-main'>" +
+              "<div class='visitor-lookup-panel visitor-lookup-left'>" +
+                "<div class='visitor-lookup-tabs'><div class='visitor-lookup-tab" + (visitorLookupTab === "today" ? " active" : "") + "' onclick='setVisitorLookupTab(\"today\")'>오늘 수업</div><div class='visitor-lookup-tab" + (visitorLookupTab === "study" ? " active" : "") + "' onclick='setVisitorLookupTab(\"study\")'>자습실</div></div>" +
+                "<div id='visitorLookupResultsHost'></div>" +
+              "</div>" +
+              "<div class='visitor-lookup-panel visitor-lookup-right' id='visitorLookupMapHost'></div>" +
+            "</div>" +
+          "</div>";
+      }
       function renderVisitorLookupResults() {
         var pane = document.getElementById('visitorLookupPane');
         var searchInput = document.getElementById('searchInput');
@@ -4526,25 +4587,11 @@
         }
         var selectedMatch = visitorLookupTab === "today" && matches.length ? matches[visitorLookupSelectedIndex] : null;
         var emptyInfo = visitorLookupTab === "study" ? buildVisitorLookupEmptyRooms() : null;
-        pane.innerHTML =
-          "<div class='visitor-lookup-shell'>" +
-            "<div class='visitor-lookup-head'>" +
-              "<div class='visitor-lookup-head-main'>" +
-                "<div class='visitor-lookup-logo-wrap'><img class='visitor-lookup-logo' src='https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png' alt='SEDU'></div>" +
-                "<div><div class='visitor-lookup-title'>학생 이동 안내</div><div class='visitor-lookup-sub'>이름을 검색하면 시간표, 강의실, 담당 선생님을 바로 확인할 수 있습니다.</div></div>" +
-              "</div>" +
-              "<div class='visitor-lookup-head-side'>" +
-                "<div class='visitor-lookup-sheet'>" + escapeHtml(currentSheetName || "시간표") + "</div>" +
-              "</div>" +
-            "</div>" +
-            "<div class='visitor-lookup-main'>" +
-              "<div class='visitor-lookup-panel visitor-lookup-left'>" +
-                "<div class='visitor-lookup-tabs'><div class='visitor-lookup-tab" + (visitorLookupTab === "today" ? " active" : "") + "' onclick='setVisitorLookupTab(\"today\")'>오늘 수업</div><div class='visitor-lookup-tab" + (visitorLookupTab === "study" ? " active" : "") + "' onclick='setVisitorLookupTab(\"study\")'>자습실</div></div>" +
-                resultHtml +
-              "</div>" +
-              "<div class='visitor-lookup-panel visitor-lookup-right'>" + renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []) + "</div>" +
-            "</div>" +
-          "</div>";
+        ensureVisitorLookupShell(pane);
+        var resultsHost = document.getElementById('visitorLookupResultsHost');
+        var mapHost = document.getElementById('visitorLookupMapHost');
+        if (resultsHost) resultsHost.innerHTML = resultHtml;
+        if (mapHost) mapHost.innerHTML = renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []);
       }
       function escapeRegExp(str) {
         return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
