@@ -513,10 +513,11 @@
       .visitor-lookup-mode.visitor-lookup-show-full #tableContainer { overflow:auto; background:#f8f9fa; }
       .visitor-lookup-mode.visitor-lookup-show-full #tableContainer::before { display:none; }
       .visitor-lookup-mode.visitor-lookup-show-full #scheduleTable thead { position:sticky; top:0; z-index:30; }
-      .visitor-lookup-return-progress { display:none; position:absolute; left:50%; bottom:10px; transform:translateX(-50%); width:min(620px, calc(100vw - 220px)); height:10px; border-radius:999px; overflow:hidden; background:rgba(219,234,254,0.24); border:1px solid rgba(219,234,254,0.38); box-shadow:inset 0 1px 2px rgba(3,10,30,0.16); }
+      .visitor-lookup-return-progress { display:none; position:absolute; left:50%; bottom:10px; transform:translateX(-50%); width:min(760px, calc(100vw - 220px)); min-height:32px; border-radius:999px; overflow:hidden; background:rgba(219,234,254,0.24); border:1px solid rgba(219,234,254,0.38); box-shadow:inset 0 1px 2px rgba(3,10,30,0.16); }
       .visitor-lookup-mode.visitor-lookup-show-full .visitor-lookup-return-progress { display:block !important; }
-      .visitor-lookup-return-progress-fill { width:100%; height:100%; border-radius:inherit; background:linear-gradient(90deg,#dbeafe,#60a5fa,#1d4ed8); transition:width 0.1s linear; }
-      .visitor-lookup-return-progress-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:900; color:#ffffff; text-shadow:0 1px 2px rgba(3,10,30,0.35); }
+      .visitor-lookup-return-progress-fill { position:absolute; left:0; top:0; width:100%; height:100%; border-radius:inherit; background:linear-gradient(90deg,#dbeafe,#60a5fa,#1d4ed8); transition:width 0.1s linear; }
+      .visitor-lookup-return-progress-text { position:relative; z-index:1; min-height:32px; display:flex; align-items:center; justify-content:center; padding:0 118px 0 18px; font-size:0.72rem; font-weight:900; color:#ffffff; text-shadow:0 1px 2px rgba(3,10,30,0.35); }
+      .visitor-lookup-return-extend { position:absolute; right:4px; top:4px; bottom:4px; z-index:2; border:1px solid rgba(255,255,255,0.52); border-radius:999px; background:rgba(255,255,255,0.92); color:#0f3b8f; padding:0 14px; font-size:0.72rem; font-weight:900; cursor:pointer; box-shadow:0 8px 18px rgba(3,10,30,0.14); }
       .visitor-lookup-shell { position:relative; overflow:hidden; background:linear-gradient(180deg,rgba(250,253,255,0.98),rgba(245,249,255,0.96)); border:1px solid rgba(191,219,254,0.78); border-radius:18px; box-shadow:0 30px 70px rgba(3,10,30,0.24); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
       .visitor-lookup-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:30px 34px 24px; border-bottom:1px solid #dbe7ff; flex-wrap:wrap; }
       .visitor-lookup-head-main { display:flex; align-items:flex-start; gap:14px; min-width:0; }
@@ -1075,6 +1076,8 @@
       let visitorLookupShowFullDay = false;
       let visitorLookupReturnTimer = null;
       let visitorLookupReturnStartedAt = 0;
+      let visitorLookupReturnEndsAt = 0;
+      let visitorLookupReturnDurationMs = 30000;
       let visitorLookupSelectedIndex = 0;
       let visitorLookupLastKeyword = "";
       let visitorLookupTab = "today";
@@ -4302,7 +4305,7 @@
           progress = document.createElement('div');
           progress.id = 'visitorLookupReturnProgress';
           progress.className = 'visitor-lookup-return-progress';
-          progress.innerHTML = "<div class='visitor-lookup-return-progress-fill' id='visitorLookupReturnProgressFill'></div><div class='visitor-lookup-return-progress-text' id='visitorLookupReturnProgressText'>10초 후 검색 화면으로 돌아갑니다</div>";
+          progress.innerHTML = "<div class='visitor-lookup-return-progress-fill' id='visitorLookupReturnProgressFill'></div><div class='visitor-lookup-return-progress-text' id='visitorLookupReturnProgressText'>30초 후 검색 화면으로 돌아갑니다</div><button type='button' class='visitor-lookup-return-extend' onclick='extendVisitorLookupFullDayTimer(30)'>시간연장</button>";
           topBar.appendChild(progress);
         }
         return progress;
@@ -4310,16 +4313,26 @@
       function updateVisitorLookupReturnProgress() {
         var fill = document.getElementById('visitorLookupReturnProgressFill');
         var text = document.getElementById('visitorLookupReturnProgressText');
-        if (!fill || !text || !visitorLookupReturnStartedAt) return;
-        var remainingMs = Math.max(0, 10000 - (Date.now() - visitorLookupReturnStartedAt));
-        var pct = Math.max(0, Math.min(100, (remainingMs / 10000) * 100));
+        if (!fill || !text || !visitorLookupReturnStartedAt || !visitorLookupReturnEndsAt) return;
+        var remainingMs = Math.max(0, visitorLookupReturnEndsAt - Date.now());
+        var totalMs = Math.max(1000, visitorLookupReturnDurationMs || 30000);
+        var pct = Math.max(0, Math.min(100, (remainingMs / totalMs) * 100));
         fill.style.width = pct + "%";
         text.textContent = Math.ceil(remainingMs / 1000) + "초 후 검색 화면으로 돌아갑니다";
+      }
+      function extendVisitorLookupFullDayTimer(seconds) {
+        if (!isLookupViewActive() || !visitorLookupShowFullDay) return;
+        var addMs = Math.max(1000, (parseInt(seconds, 10) || 30) * 1000);
+        visitorLookupReturnEndsAt = Math.max(Date.now(), visitorLookupReturnEndsAt || Date.now()) + addMs;
+        visitorLookupReturnDurationMs = Math.max(30000, (visitorLookupReturnEndsAt || 0) - (visitorLookupReturnStartedAt || Date.now()));
+        updateVisitorLookupReturnProgress();
       }
       function clearVisitorLookupReturnTimer() {
         if (visitorLookupReturnTimer) clearInterval(visitorLookupReturnTimer);
         visitorLookupReturnTimer = null;
         visitorLookupReturnStartedAt = 0;
+        visitorLookupReturnEndsAt = 0;
+        visitorLookupReturnDurationMs = 30000;
         var progress = document.getElementById('visitorLookupReturnProgress');
         if (progress && progress.parentNode) progress.parentNode.removeChild(progress);
       }
@@ -4327,6 +4340,8 @@
         clearVisitorLookupReturnTimer();
         ensureVisitorLookupReturnProgress();
         visitorLookupReturnStartedAt = Date.now();
+        visitorLookupReturnDurationMs = 30000;
+        visitorLookupReturnEndsAt = visitorLookupReturnStartedAt + visitorLookupReturnDurationMs;
         updateVisitorLookupReturnProgress();
         visitorLookupReturnTimer = setInterval(function() {
           if (!isLookupViewActive() || !visitorLookupShowFullDay) {
@@ -4334,7 +4349,7 @@
             return;
           }
           updateVisitorLookupReturnProgress();
-          if (Date.now() - visitorLookupReturnStartedAt >= 10000) {
+          if (Date.now() >= visitorLookupReturnEndsAt) {
             setVisitorLookupFullDay(false);
           }
         }, 100);
