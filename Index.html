@@ -606,7 +606,13 @@
       .visitor-map-textonly-title { color:#0f172a; font-size:2.15rem; font-weight:900; letter-spacing:0; }
       .visitor-map-textonly-sub { margin-top:12px; color:#64748b; font-size:1rem; font-weight:800; }
       .visitor-study-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; }
-      .visitor-study-room { border:1px solid #bbf7d0; background:linear-gradient(180deg,#f0fdf4,#dcfce7); border-radius:12px; padding:16px 14px; color:#166534; font-size:1.02rem; font-weight:900; text-align:center; }
+      .visitor-study-room { border:1px solid #bbf7d0; background:linear-gradient(180deg,#f0fdf4,#dcfce7); border-radius:12px; padding:14px; color:#166534; font-size:1.02rem; font-weight:900; text-align:left; }
+      .visitor-study-room-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
+      .visitor-study-room-name { color:#14532d; white-space:nowrap; }
+      .visitor-study-room-count { color:#0f3b8f; background:#dbeafe; border:1px solid #bfdbfe; border-radius:999px; padding:3px 8px; font-size:0.78rem; white-space:nowrap; }
+      .visitor-study-gauge { display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; }
+      .visitor-study-gauge-cell { height:12px; border-radius:3px; background:#dbeafe; border:1px solid #bfdbfe; box-shadow:inset 0 1px 1px rgba(15,23,42,0.08); }
+      .visitor-study-gauge-cell.filled { background:linear-gradient(180deg,#3b82f6,#1d4ed8); border-color:#1d4ed8; box-shadow:0 4px 10px rgba(29,78,216,0.18); }
       .visitor-study-meta { margin-bottom:14px; color:#475569; font-size:0.94rem; font-weight:800; line-height:1.45; }
       @media (max-width: 1100px) {
         #visitorLookupPane { width:calc(100vw - 48px); }
@@ -1085,6 +1091,7 @@
       let visitorLookupIndexRows = [];
       let visitorLookupMatchCache = Object.create(null);
       let visitorLookupShellKey = "";
+      let visitorLookupStudyRefreshing = false;
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -1603,6 +1610,12 @@
         });
         return map;
       }
+      function getTodaySheetNameFromMap(map) {
+        var now = new Date();
+        var key = (now.getMonth() + 1) + "-" + now.getDate();
+        var list = map && map[key];
+        return list && list.length ? list[0] : "";
+      }
       function getCalendarSheetMap() {
         if (isTeacherViewActive() && teacherCalendarReady) return teacherCalendarSheetMap;
         return sheetMap;
@@ -1911,6 +1924,10 @@
           var targetMonth = now.getMonth();
           populateMainSheetSelector(currentSheetName); 
           sheetMap = buildSheetMapFromNames(availableSheets);
+          if (authState.isLookup) {
+            var lookupTodaySheet = getTodaySheetNameFromMap(sheetMap);
+            if (lookupTodaySheet) currentSheetName = lookupTodaySheet;
+          }
           
           document.getElementById('introLoading').style.display='none'; 
           
@@ -1926,6 +1943,9 @@
           } 
           currentDate = new Date(targetYear, targetMonth, 1);
           applyRoleUi();
+          if (authState.isLookup && currentSheetName) {
+            loadData(currentSheetName, true);
+          }
           if (isTeacherViewActive()) updateTeacherCalendarAvailability(true);
           else renderCalendar(); 
         }catch(e){console.error(e);} 
@@ -1977,6 +1997,7 @@
           if(!d || d.error) { d = { headers: [], grid: {}, version: "ERROR" }; } 
           lastData=d; 
           resetVisitorLookupIndexCache();
+          visitorLookupStudyRefreshing = false;
           currentVersion=String(d.version || "").split("_T_")[0]; 
           renderTable(d, isRefresh); 
           syncLookupDimmingState();
@@ -4369,16 +4390,19 @@
         var searchInput = document.getElementById('searchInput');
         var homeWrap = document.querySelector('.top-bar > div:first-child');
         var loading = document.getElementById('loading');
+        var mainPage = document.getElementById('mainPage');
         if (searchInput) searchInput.placeholder = visitorLookupShowFullDay ? "조회용 전체 시간표 확인 중" : "🔍 학생명 검색";
         if (homeWrap && authState.isLookup) {
           homeWrap.setAttribute('title', visitorLookupShowFullDay ? '검색 모드로 돌아가기' : '선택 날짜 전체 시간표 보기');
         }
         if (visitorLookupShowFullDay) {
-          if (loading) loading.style.display = 'flex';
-          if (currentSheetName) loadData(currentSheetName, true);
-          else if (lastData && lastData.headers && lastData.headers.length) {
+          if (mainPage) mainPage.style.display = 'flex';
+          if (lastData && lastData.headers && lastData.headers.length) {
             renderTable(lastData, true);
             if (loading) loading.style.display = 'none';
+          } else if (currentSheetName) {
+            if (loading) loading.style.display = 'flex';
+            loadData(currentSheetName, true);
           }
           startVisitorLookupReturnTimer();
         } else {
@@ -4403,6 +4427,12 @@
       }
       function setVisitorLookupTab(tab) {
         visitorLookupTab = tab === "study" ? "study" : "today";
+        if (visitorLookupTab === "study" && currentSheetName) {
+          visitorLookupStudyRefreshing = true;
+          renderVisitorLookupResults();
+          loadData(currentSheetName, true);
+          return;
+        }
         renderVisitorLookupResults();
       }
       function escapeHtml(value) {
@@ -4428,21 +4458,30 @@
       function buildVisitorLookupEmptyRooms() {
         if (!lastData || !lastData.headers || !lastData.grid) return { hour: new Date().getHours(), rooms: [], ready: false };
         var hour = new Date().getHours();
+        if (hour < 9 || hour > 23 || !Object.prototype.hasOwnProperty.call(lastData.grid, hour)) {
+          return { hour: hour, rooms: [], ready: false };
+        }
         var row = lastData.grid[hour] || [];
         var rooms = [];
         lastData.headers.forEach(function(header, idx) {
           var roomName = String(header || "").trim();
-          if (!roomName || roomName.indexOf("휴강") !== -1 || roomName.indexOf("자습") !== -1) return;
+          if (!roomName || roomName.indexOf("휴강") !== -1) return;
           if (!/[1-9]\s*강의실/.test(roomName)) return;
           var items = row[idx] || [];
-          var occupied = items.some(function(v) {
-            return String(v || "").trim();
+          var hasClass = items.some(function(v) {
+            return String(v || "").includes("T");
           });
-          if (!occupied) {
+          if (!hasClass) {
+            var studentCount = items.filter(function(v) {
+              var text = String(v || "").trim();
+              if (!text || text.includes("T") || shouldHideStudentText(text)) return false;
+              return !!parseStudentRawText(text).name;
+            }).length;
             rooms.push({
               room: roomName,
               building: getVisitorLookupBuilding(roomName),
-              number: getVisitorLookupRoomNumber(roomName)
+              number: getVisitorLookupRoomNumber(roomName),
+              count: studentCount
             });
           }
         });
@@ -4453,16 +4492,28 @@
         return { hour: hour, rooms: rooms, ready: true };
       }
       function renderVisitorStudyRooms() {
+        if (visitorLookupStudyRefreshing) {
+          return "<div class='visitor-lookup-empty'>자습실 현황을 새로고침하고 있습니다.</div>";
+        }
         var info = buildVisitorLookupEmptyRooms();
         if (!info.ready) {
-          return "<div class='visitor-lookup-empty'>시간표 데이터를 불러온 뒤 현재 빈 강의실을 확인할 수 있습니다.</div>";
+          return "<div class='visitor-lookup-empty'>현재 시간의 자습실 현황을 확인할 수 없습니다.</div>";
         }
         if (!info.rooms.length) {
           return "<div class='visitor-lookup-empty'>현재 시간(" + info.hour + ":00)에는 표시할 빈 강의실이 없습니다.</div>";
         }
-        return "<div class='visitor-study-meta'>현재 시간(" + info.hour + ":00) 기준으로 비어 있는 강의실입니다.</div>" +
+        return "<div class='visitor-study-meta'>현재 시간(" + info.hour + ":00) 기준 자습 가능 강의실입니다. 각 칸은 최대 8명 기준의 현재 인원입니다.</div>" +
           "<div class='visitor-study-grid'>" + info.rooms.map(function(item) {
-            return "<div class='visitor-study-room'>" + escapeHtml(item.building + " " + item.number + "강의실") + "</div>";
+            var count = Math.max(0, Number(item.count || 0));
+            var filled = Math.min(8, count);
+            var gauge = "";
+            for (var i = 0; i < 8; i++) {
+              gauge += "<span class='visitor-study-gauge-cell" + (i < filled ? " filled" : "") + "'></span>";
+            }
+            return "<div class='visitor-study-room'>" +
+              "<div class='visitor-study-room-head'><span class='visitor-study-room-name'>" + escapeHtml(item.building + " " + item.number + "강의실") + "</span><span class='visitor-study-room-count'>" + count + "명</span></div>" +
+              "<div class='visitor-study-gauge'>" + gauge + "</div>" +
+            "</div>";
           }).join("") + "</div>";
       }
       function renderVisitorLookupRoomMap(selectedMatch, emptyRooms) {
