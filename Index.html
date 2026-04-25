@@ -481,29 +481,39 @@
       .late-night-toggle-row td { padding: 10px 12px; background: #f8fafc; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1; }
       .late-night-toggle-btn { width: 100%; border: 1px solid #cbd5e1; background: linear-gradient(180deg, #ffffff, #eef4ff); color: #1e3a8a; border-radius: 12px; padding: 9px 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer; }
       .teacher-log-box { width: 980px; max-width: 96%; max-height: 88vh; overflow: auto; text-align: left; padding-bottom: 22px; }
-      #visitorLookupPane { display:none; max-width:860px; margin:30px auto; }
+      #visitorLookupPane { display:none; width:min(1120px, calc(100vw - 160px)); max-width:1120px; margin:54px auto; }
+      body.visitor-lookup-mode { background:radial-gradient(circle at 28% 22%, rgba(45,95,210,0.96) 0%, rgba(30,67,160,0.98) 34%, #0b2f79 68%, #08285e 100%); }
+      .visitor-lookup-mode #mainPage,
+      .visitor-lookup-mode #tableContainer { background:transparent; }
+      .visitor-lookup-mode #tableContainer::before { content:""; position:fixed; inset:0; pointer-events:none; background:radial-gradient(circle at 50% 52%, rgba(255,255,255,0.13), transparent 28%), linear-gradient(145deg, rgba(255,255,255,0.05), transparent 42%); }
       .visitor-lookup-mode .ticker-wrap { display:none !important; }
-      .visitor-lookup-mode .top-bar { position:relative; justify-content:center; padding:18px 20px; gap:14px; min-height:92px; }
+      .visitor-lookup-mode .top-bar { position:relative; justify-content:center; padding:22px 20px; gap:14px; min-height:104px; background:rgba(8,40,94,0.32); border-bottom:1px solid rgba(191,219,254,0.28); box-shadow:0 18px 48px rgba(3,10,30,0.16); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
       .visitor-lookup-mode .top-bar > * { display:none !important; }
       .visitor-lookup-mode .top-bar > div:first-child { display:flex !important; position:absolute; left:20px; top:50%; transform:translateY(-50%); }
       .visitor-lookup-mode .top-bar > .search-wrapper { display:block !important; position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); width:min(760px, calc(100vw - 220px)); margin:0; }
-      .visitor-lookup-mode .top-bar > .search-wrapper .search-input { height:54px; font-size:1.08rem; border-radius:18px; }
+      .visitor-lookup-mode .top-bar > .search-wrapper .search-input { height:60px; font-size:1.14rem; border-radius:20px; border-color:rgba(219,234,254,0.66); background:rgba(255,255,255,0.94); box-shadow:0 18px 44px rgba(3,10,30,0.20); color:#0f172a; font-weight:800; padding:0 20px; }
+      .visitor-lookup-mode .top-bar > .search-wrapper .search-input::placeholder { color:#64748b; font-weight:800; }
       .visitor-lookup-mode #scheduleTable,
       .visitor-lookup-mode #teacherMobileList,
       .visitor-lookup-mode #liveTimeline,
       .visitor-lookup-mode #loading { display:none !important; }
       .visitor-lookup-mode #visitorLookupPane { display:block; }
-      .visitor-lookup-mode .top-bar > div:first-child.lookup-header-toggle { padding:10px 14px; border-radius:18px; background:linear-gradient(145deg,#ffffff,#dbeafe); border:1px solid #bfdbfe; box-shadow:0 10px 22px rgba(37,99,235,0.10); }
+      .visitor-lookup-mode .top-bar > div:first-child.lookup-header-toggle { padding:10px 14px; border-radius:18px; background:rgba(255,255,255,0.92); border:1px solid rgba(191,219,254,0.86); box-shadow:0 16px 36px rgba(3,10,30,0.18); }
       .visitor-lookup-mode .top-bar > div:first-child.lookup-header-toggle span { margin-left:7px !important; color:#0f172a !important; }
       .visitor-lookup-mode.visitor-lookup-show-full #visitorLookupPane { display:none !important; }
       .visitor-lookup-mode.visitor-lookup-show-full #scheduleTable { display:table !important; }
       .visitor-lookup-mode.visitor-lookup-show-full #liveTimeline { display:block !important; }
       .visitor-lookup-mode.visitor-lookup-show-full .top-bar > .search-wrapper { display:none !important; }
-      .visitor-lookup-mode.visitor-lookup-show-full .top-bar { justify-content:flex-start; }
+      .visitor-lookup-mode.visitor-lookup-show-full .top-bar { justify-content:flex-start; min-height:78px; }
       .visitor-lookup-mode.visitor-lookup-show-full .top-bar > div:first-child { position:static; transform:none; }
-      .visitor-lookup-mode.visitor-lookup-show-full #tableContainer { overflow:auto; }
+      .visitor-lookup-mode.visitor-lookup-show-full #tableContainer { overflow:auto; background:#f8f9fa; }
+      .visitor-lookup-mode.visitor-lookup-show-full #tableContainer::before { display:none; }
       .visitor-lookup-mode.visitor-lookup-show-full #scheduleTable thead { position:sticky; top:0; z-index:30; }
-      .visitor-lookup-shell { background:linear-gradient(180deg,#f8fbff,#eef5ff); border:1px solid #dbeafe; border-radius:26px; padding:24px; box-shadow:0 20px 40px rgba(37,99,235,0.08); }
+      .visitor-lookup-return-progress { display:none; position:absolute; left:50%; bottom:10px; transform:translateX(-50%); width:min(620px, calc(100vw - 220px)); height:10px; border-radius:999px; overflow:hidden; background:rgba(219,234,254,0.24); border:1px solid rgba(219,234,254,0.38); box-shadow:inset 0 1px 2px rgba(3,10,30,0.16); }
+      .visitor-lookup-mode.visitor-lookup-show-full .visitor-lookup-return-progress { display:block !important; }
+      .visitor-lookup-return-progress-fill { width:100%; height:100%; border-radius:inherit; background:linear-gradient(90deg,#dbeafe,#60a5fa,#1d4ed8); transition:width 0.1s linear; }
+      .visitor-lookup-return-progress-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:900; color:#ffffff; text-shadow:0 1px 2px rgba(3,10,30,0.35); }
+      .visitor-lookup-shell { position:relative; background:linear-gradient(180deg,rgba(248,251,255,0.96),rgba(231,241,255,0.93)); border:1px solid rgba(191,219,254,0.72); border-radius:26px; padding:24px; box-shadow:0 30px 70px rgba(3,10,30,0.24); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
       .visitor-lookup-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
       .visitor-lookup-head-main { display:flex; align-items:flex-start; gap:14px; min-width:0; }
       .visitor-lookup-logo-wrap { width:58px; height:58px; border-radius:18px; background:linear-gradient(145deg,#ffffff,#dbeafe); border:1px solid #bfdbfe; box-shadow:0 10px 22px rgba(37,99,235,0.10); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -514,7 +524,7 @@
       .visitor-lookup-sheet { font-size:0.84rem; font-weight:800; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:7px 12px; border-radius:999px; }
       .visitor-lookup-toggle-btn { border:1px solid #93c5fd; background:linear-gradient(180deg,#ffffff,#dbeafe); color:#1e3a8a; border-radius:999px; padding:9px 14px; font-size:0.84rem; font-weight:900; cursor:pointer; box-shadow:0 10px 20px rgba(37,99,235,0.08); }
       .visitor-lookup-toggle-btn.active { background:linear-gradient(180deg,#1d4ed8,#2563eb); border-color:#1d4ed8; color:#ffffff; }
-      .visitor-lookup-empty { padding:38px 20px; text-align:center; color:#64748b; background:#fff; border:1px dashed #cbd5e1; border-radius:20px; font-size:1rem; font-weight:700; }
+      .visitor-lookup-empty { padding:44px 20px; text-align:center; color:#475569; background:rgba(255,255,255,0.88); border:1px dashed #bfdbfe; border-radius:20px; font-size:1.02rem; font-weight:800; }
       .visitor-lookup-result-list { display:flex; flex-direction:column; gap:10px; }
       .visitor-lookup-summary { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; padding:0 4px; }
       .visitor-lookup-student { font-size:1.18rem; font-weight:900; color:#0f172a; letter-spacing:-0.02em; }
@@ -636,6 +646,7 @@
         .visitor-lookup-mode .top-bar { min-height:82px; padding:14px 16px; }
         .visitor-lookup-mode .top-bar > div:first-child { left:14px; }
         .visitor-lookup-mode .top-bar > .search-wrapper { width:min(560px, calc(100vw - 132px)); }
+        .visitor-lookup-return-progress { width:calc(100vw - 132px); bottom:6px; }
         .teacher-log-controls { align-items:stretch; }
         .teacher-log-toolbar-left, .teacher-log-toolbar-right { width:100%; justify-content:space-between; }
         .teacher-log-search { width:100%; min-width:0; }
@@ -653,7 +664,7 @@
         .visitor-lookup-card { grid-template-columns:1fr; }
         .visitor-lookup-time { min-height:auto; padding:12px; }
         .visitor-lookup-mainline { flex-direction:column; align-items:flex-start; }
-        #visitorLookupPane { margin:18px auto; }
+        #visitorLookupPane { width:calc(100vw - 28px); margin:18px auto; }
         body, html { overflow: auto; }
         input, select, textarea { font-size: 16px !important; }
         #introPage { padding: 8px; align-items: stretch; }
@@ -975,6 +986,8 @@
       let attendanceReportTextMode = "simple";
       let teacherMobileSimpleView = true;
       let visitorLookupShowFullDay = false;
+      let visitorLookupReturnTimer = null;
+      let visitorLookupReturnStartedAt = 0;
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -1430,6 +1443,7 @@
       }
       function logoutTeacher() {
         authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "" };
+        clearVisitorLookupReturnTimer();
         visitorLookupShowFullDay = false;
         availableTeacherNames = [];
         accessMode = "";
@@ -1597,6 +1611,7 @@
           document.body.classList.remove('teacher-compact');
           document.body.classList.remove('visitor-lookup-mode');
           document.body.classList.remove('visitor-lookup-show-full');
+          clearVisitorLookupReturnTimer();
           populateMainSheetSelector(currentSheetName);
           document.getElementById('mainPage').style.display = 'none';
           document.getElementById('introPage').style.display = 'none';
@@ -1655,6 +1670,7 @@
         }
         document.body.classList.remove('visitor-lookup-mode');
         document.body.classList.remove('visitor-lookup-show-full');
+        clearVisitorLookupReturnTimer();
         if (actionGroup) actionGroup.style.display = '';
         if (navGroup) navGroup.style.display = '';
         if (mainSheetSelector) mainSheetSelector.style.display = '';
@@ -4151,6 +4167,60 @@
         });
         return merged;
       }
+      function ensureVisitorLookupReturnProgress() {
+        var topBar = document.querySelector('.top-bar');
+        if (!topBar) return null;
+        var progress = document.getElementById('visitorLookupReturnProgress');
+        if (!progress) {
+          progress = document.createElement('div');
+          progress.id = 'visitorLookupReturnProgress';
+          progress.className = 'visitor-lookup-return-progress';
+          progress.innerHTML = "<div class='visitor-lookup-return-progress-fill' id='visitorLookupReturnProgressFill'></div><div class='visitor-lookup-return-progress-text' id='visitorLookupReturnProgressText'>10초 후 검색 화면으로 돌아갑니다</div>";
+          topBar.appendChild(progress);
+        }
+        return progress;
+      }
+      function updateVisitorLookupReturnProgress() {
+        var fill = document.getElementById('visitorLookupReturnProgressFill');
+        var text = document.getElementById('visitorLookupReturnProgressText');
+        if (!fill || !text || !visitorLookupReturnStartedAt) return;
+        var remainingMs = Math.max(0, 10000 - (Date.now() - visitorLookupReturnStartedAt));
+        var pct = Math.max(0, Math.min(100, (remainingMs / 10000) * 100));
+        fill.style.width = pct + "%";
+        text.textContent = Math.ceil(remainingMs / 1000) + "초 후 검색 화면으로 돌아갑니다";
+      }
+      function clearVisitorLookupReturnTimer() {
+        if (visitorLookupReturnTimer) clearInterval(visitorLookupReturnTimer);
+        visitorLookupReturnTimer = null;
+        visitorLookupReturnStartedAt = 0;
+        var progress = document.getElementById('visitorLookupReturnProgress');
+        if (progress && progress.parentNode) progress.parentNode.removeChild(progress);
+      }
+      function startVisitorLookupReturnTimer() {
+        clearVisitorLookupReturnTimer();
+        ensureVisitorLookupReturnProgress();
+        visitorLookupReturnStartedAt = Date.now();
+        updateVisitorLookupReturnProgress();
+        visitorLookupReturnTimer = setInterval(function() {
+          if (!isLookupViewActive() || !visitorLookupShowFullDay) {
+            clearVisitorLookupReturnTimer();
+            return;
+          }
+          updateVisitorLookupReturnProgress();
+          if (Date.now() - visitorLookupReturnStartedAt >= 10000) {
+            setVisitorLookupFullDay(false);
+          }
+        }, 100);
+      }
+      function requestVisitorLookupFullDayPassword() {
+        var password = prompt("전체 시간표 비밀번호를 입력하세요.");
+        if (password === null) return false;
+        if (String(password).trim() !== "0306") {
+          alert("비밀번호가 올바르지 않습니다.");
+          return false;
+        }
+        return true;
+      }
       function setVisitorLookupFullDay(enabled) {
         visitorLookupShowFullDay = !!enabled;
         document.body.classList.toggle('visitor-lookup-show-full', visitorLookupShowFullDay);
@@ -4168,7 +4238,9 @@
             renderTable(lastData, true);
             if (loading) loading.style.display = 'none';
           }
+          startVisitorLookupReturnTimer();
         } else {
+          clearVisitorLookupReturnTimer();
           renderVisitorLookupResults();
           if (loading) loading.style.display = 'none';
         }
@@ -4176,7 +4248,12 @@
         updateTimelinePosition();
       }
       function toggleVisitorLookupFullDay() {
-        setVisitorLookupFullDay(!visitorLookupShowFullDay);
+        if (visitorLookupShowFullDay) {
+          setVisitorLookupFullDay(false);
+          return;
+        }
+        if (!requestVisitorLookupFullDayPassword()) return;
+        setVisitorLookupFullDay(true);
       }
       function renderVisitorLookupResults() {
         var pane = document.getElementById('visitorLookupPane');
@@ -4229,7 +4306,7 @@
             "<div class='visitor-lookup-head'>" +
               "<div class='visitor-lookup-head-main'>" +
                 "<div class='visitor-lookup-logo-wrap'><img class='visitor-lookup-logo' src='https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png' alt='SEDU'></div>" +
-                "<div><div class='visitor-lookup-title'>학생 이동 안내</div><div class='visitor-lookup-sub'>검색된 학생의 현재 일자 수업 정보만 표시됩니다. 좌측 상단 로고를 누르면 선택 날짜의 전체 시간표를 확인할 수 있습니다.</div></div>" +
+                "<div><div class='visitor-lookup-title'>학생 이동 안내</div><div class='visitor-lookup-sub'>검색된 학생의 현재 일자 수업 정보만 표시됩니다. HOME 버튼으로 선택 날짜 전체 시간표를 잠시 확인할 수 있습니다.</div></div>" +
               "</div>" +
               "<div class='visitor-lookup-head-side'>" +
                 "<div class='visitor-lookup-sheet'>" + (currentSheetName || "시간표") + "</div>" +
