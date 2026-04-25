@@ -481,7 +481,7 @@
       .late-night-toggle-row td { padding: 10px 12px; background: #f8fafc; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1; }
       .late-night-toggle-btn { width: 100%; border: 1px solid #cbd5e1; background: linear-gradient(180deg, #ffffff, #eef4ff); color: #1e3a8a; border-radius: 12px; padding: 9px 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer; }
       .teacher-log-box { width: 980px; max-width: 96%; max-height: 88vh; overflow: auto; text-align: left; padding-bottom: 22px; }
-      #visitorLookupPane { display:none; width:min(1500px, calc(100vw - 96px)); max-width:1500px; margin:42px auto; }
+      #visitorLookupPane { display:none; width:min(1680px, calc(100vw - 56px)); max-width:1680px; margin:42px auto; }
       body.visitor-lookup-mode { background:radial-gradient(circle at 28% 22%, rgba(45,95,210,0.96) 0%, rgba(30,67,160,0.98) 34%, #0b2f79 68%, #08285e 100%); }
       .visitor-lookup-mode #mainPage,
       .visitor-lookup-mode #tableContainer { background:transparent; }
@@ -528,11 +528,11 @@
       .visitor-lookup-sheet { font-size:0.95rem; font-weight:900; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:12px 18px; border-radius:999px; }
       .visitor-lookup-toggle-btn { border:1px solid #93c5fd; background:linear-gradient(180deg,#ffffff,#dbeafe); color:#1e3a8a; border-radius:999px; padding:9px 14px; font-size:0.84rem; font-weight:900; cursor:pointer; box-shadow:0 10px 20px rgba(37,99,235,0.08); }
       .visitor-lookup-toggle-btn.active { background:linear-gradient(180deg,#1d4ed8,#2563eb); border-color:#1d4ed8; color:#ffffff; }
-      .visitor-lookup-main { display:grid; grid-template-columns:minmax(430px, 0.92fr) minmax(520px, 1.08fr); gap:0; min-height:560px; }
+      .visitor-lookup-main { display:grid; grid-template-columns:minmax(620px, 1fr) minmax(660px, 1.02fr); gap:0; min-height:560px; }
       .visitor-lookup-panel { padding:28px 30px 34px; min-width:0; }
       .visitor-lookup-left { border-right:1px solid #dbe7ff; }
       .visitor-lookup-tabs { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
-      .visitor-lookup-tab { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 24px; border-radius:8px; border:1px solid #dbe2ee; background:#eef2f7; color:#475569; font-size:0.95rem; font-weight:900; }
+      .visitor-lookup-tab { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 24px; border-radius:8px; border:1px solid #dbe2ee; background:#eef2f7; color:#475569; font-size:0.95rem; font-weight:900; cursor:pointer; }
       .visitor-lookup-tab.active { color:#ffffff; background:linear-gradient(180deg,#1357dc,#0b43bb); border-color:#0b43bb; box-shadow:0 12px 24px rgba(29,78,216,0.20); }
       .visitor-lookup-inline-search { display:grid; grid-template-columns:minmax(0,1fr) 128px; gap:12px; margin-bottom:22px; }
       .visitor-lookup-inline-searchbox { min-height:62px; border:1px solid #cbd5e1; border-radius:10px; background:#ffffff; display:flex; align-items:center; gap:14px; padding:0 18px; color:#0f172a; font-size:1.06rem; font-weight:900; box-shadow:0 8px 20px rgba(15,23,42,0.04); }
@@ -546,7 +546,7 @@
       .visitor-lookup-student { font-size:1.28rem; font-weight:900; color:#0f172a; letter-spacing:0; }
       .visitor-lookup-school { margin-top:4px; font-size:0.92rem; color:#64748b; font-weight:800; }
       .visitor-lookup-count { flex-shrink:0; font-size:0.85rem; color:#1d4ed8; font-weight:900; background:#eff6ff; border:1px solid #bfdbfe; border-radius:999px; padding:8px 13px; }
-      .visitor-lookup-card { display:grid; grid-template-columns:34px minmax(90px,0.7fr) minmax(90px,0.95fr) minmax(90px,0.85fr) minmax(82px,0.75fr) 18px; gap:10px; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; box-shadow:0 10px 20px rgba(15,23,42,0.04); cursor:pointer; text-align:left; }
+      .visitor-lookup-card { display:grid; grid-template-columns:34px minmax(110px,0.72fr) minmax(132px,0.86fr) minmax(190px,1.12fr) minmax(104px,0.72fr) 18px; gap:12px; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:14px; box-shadow:0 10px 20px rgba(15,23,42,0.04); cursor:pointer; text-align:left; }
       .visitor-lookup-card:hover { border-color:#93c5fd; box-shadow:0 12px 26px rgba(37,99,235,0.10); }
       .visitor-lookup-card.active { border-color:#1357dc; box-shadow:0 12px 28px rgba(29,78,216,0.13), inset 0 0 0 1px #1357dc; }
       .visitor-lookup-check { width:24px; height:24px; border-radius:999px; border:2px solid #cbd5e1; display:flex; align-items:center; justify-content:center; color:#ffffff; font-size:0.82rem; font-weight:900; }
@@ -557,7 +557,7 @@
       .visitor-lookup-field { min-width:0; border-left:1px solid #e2e8f0; padding-left:12px; }
       .visitor-lookup-field-label { color:#64748b; font-size:0.76rem; font-weight:900; margin-bottom:5px; }
       .visitor-lookup-field-value { color:#0f172a; font-size:0.98rem; font-weight:900; line-height:1.3; }
-      .visitor-lookup-field-sub { margin-top:4px; color:#64748b; font-size:0.82rem; font-weight:800; }
+      .visitor-lookup-field-sub { margin-top:4px; color:#64748b; font-size:0.82rem; font-weight:800; white-space:nowrap; }
       .visitor-lookup-room { color:#145de6; font-size:1.1rem; }
       .visitor-lookup-card-arrow { color:#1e3a8a; font-size:1.5rem; font-weight:900; text-align:right; }
       .visitor-lookup-time { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; text-align:left; color:#0f172a; font-weight:900; }
@@ -577,22 +577,23 @@
       .visitor-map-building { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:116px; min-height:58px; border:1px solid #dbe2ee; border-radius:9px; background:#ffffff; color:#475569; font-weight:900; }
       .visitor-map-building.active { background:linear-gradient(180deg,#145de6,#0b43bb); color:#ffffff; border-color:#0b43bb; }
       .visitor-map-building span { margin-top:3px; font-size:0.78rem; opacity:0.78; }
-      .visitor-room-map { position:relative; height:360px; min-width:760px; border:1px solid #dbe7ff; border-radius:12px; background:linear-gradient(180deg,#ffffff,#f8fbff); overflow:hidden; }
+      .visitor-room-map { position:relative; height:360px; min-width:820px; border:1px solid #dbe7ff; border-radius:12px; background:linear-gradient(180deg,#ffffff,#f8fbff); overflow:hidden; }
       .visitor-room-map-scroll { overflow-x:auto; overflow-y:visible; padding-bottom:2px; }
       .visitor-room-map::before { content:""; position:absolute; left:12%; right:8%; top:42%; height:56px; border-radius:8px; background:rgba(254,205,211,0.38); border:1px solid rgba(251,113,133,0.18); }
       .visitor-room-map::after { content:""; position:absolute; left:66%; right:8%; top:42%; height:92px; border-radius:8px; background:rgba(254,205,211,0.34); border:1px solid rgba(251,113,133,0.16); }
       .visitor-room { position:absolute; width:17%; height:24%; border:1.5px solid #9fb6dd; background:linear-gradient(180deg,#ffffff,#f7fbff); box-shadow:inset 0 0 0 3px rgba(219,234,254,0.38); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0f172a; font-weight:900; }
+      .visitor-room.empty { border-color:#86efac; background:linear-gradient(180deg,#f0fdf4,#dcfce7); box-shadow:inset 0 0 0 3px rgba(187,247,208,0.58); }
       .visitor-room.active { border:2px solid #145de6; box-shadow:0 0 0 4px rgba(59,130,246,0.13), 0 14px 28px rgba(37,99,235,0.16); z-index:6; }
       .visitor-room-num { display:flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:999px; background:linear-gradient(180deg,#1557dc,#0b43bb); color:#ffffff; font-size:1.35rem; font-weight:900; margin-bottom:7px; }
       .visitor-room-name { font-size:0.98rem; }
       .visitor-room-pin { display:none; position:absolute; top:-16px; left:50%; width:34px; height:34px; border-radius:999px 999px 999px 0; background:#1d4ed8; transform:translateX(-50%) rotate(-45deg); box-shadow:0 10px 24px rgba(37,99,235,0.28); z-index:8; }
       .visitor-room-pin::after { content:""; position:absolute; width:12px; height:12px; border-radius:999px; background:#ffffff; left:11px; top:11px; }
       .visitor-room.active .visitor-room-pin { display:block; }
-      .visitor-room-6 { left:16%; top:12%; }
-      .visitor-room-7 { left:37%; top:12%; }
-      .visitor-room-8 { left:58%; top:12%; }
-      .visitor-room-9 { left:80%; top:4%; width:15%; height:30%; }
-      .visitor-room-5 { left:4%; bottom:13%; height:30%; width:16%; }
+      .visitor-room-6 { left:15%; top:12%; }
+      .visitor-room-7 { left:36%; top:12%; }
+      .visitor-room-8 { left:57%; top:12%; }
+      .visitor-room-9 { left:79%; top:0; width:15%; height:30%; }
+      .visitor-room-5 { left:4%; top:43%; height:24%; width:15%; }
       .visitor-room-4 { left:20%; bottom:4%; }
       .visitor-room-3 { left:38%; bottom:4%; }
       .visitor-room-2 { left:56%; bottom:4%; }
@@ -602,6 +603,12 @@
       .visitor-route-branch { position:absolute; width:6px; height:74px; left:49.5%; top:28%; background:#facc15; border-radius:999px; box-shadow:0 0 0 3px rgba(250,204,21,0.20); z-index:4; }
       .visitor-map-route-note { margin-top:14px; display:flex; align-items:center; gap:10px; min-height:48px; border:1px solid #dbe7ff; border-radius:10px; padding:0 16px; color:#0f172a; font-weight:900; background:#ffffff; }
       .visitor-map-route-note strong { color:#145de6; }
+      .visitor-map-textonly { display:flex; min-height:360px; border:1px solid #dbe7ff; border-radius:14px; background:linear-gradient(180deg,#ffffff,#f8fbff); align-items:center; justify-content:center; text-align:center; padding:28px; }
+      .visitor-map-textonly-title { color:#0f172a; font-size:2.15rem; font-weight:900; letter-spacing:0; }
+      .visitor-map-textonly-sub { margin-top:12px; color:#64748b; font-size:1rem; font-weight:800; }
+      .visitor-study-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; }
+      .visitor-study-room { border:1px solid #bbf7d0; background:linear-gradient(180deg,#f0fdf4,#dcfce7); border-radius:12px; padding:16px 14px; color:#166534; font-size:1.02rem; font-weight:900; text-align:center; }
+      .visitor-study-meta { margin-bottom:14px; color:#475569; font-size:0.94rem; font-weight:800; line-height:1.45; }
       @media (max-width: 1100px) {
         #visitorLookupPane { width:calc(100vw - 48px); }
         .visitor-lookup-main { grid-template-columns:1fr; }
@@ -1072,6 +1079,7 @@
       let visitorLookupReturnStartedAt = 0;
       let visitorLookupSelectedIndex = 0;
       let visitorLookupLastKeyword = "";
+      let visitorLookupTab = "today";
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -1533,6 +1541,7 @@
         visitorLookupShowFullDay = false;
         visitorLookupSelectedIndex = 0;
         visitorLookupLastKeyword = "";
+        visitorLookupTab = "today";
         availableTeacherNames = [];
         accessMode = "";
         clientCache = {};
@@ -4347,10 +4356,20 @@
         visitorLookupSelectedIndex = Math.max(0, parseInt(index, 10) || 0);
         renderVisitorLookupResults();
       }
+      function setVisitorLookupTab(tab) {
+        visitorLookupTab = tab === "study" ? "study" : "today";
+        renderVisitorLookupResults();
+      }
       function escapeHtml(value) {
         return String(value == null ? "" : value).replace(/[&<>"']/g, function(ch) {
           return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
         });
+      }
+      function getVisitorLookupBuilding(roomName) {
+        var text = String(roomName || "");
+        if (text.indexOf("2관") !== -1) return "2관";
+        if (text.indexOf("3관") !== -1) return "3관";
+        return "본관";
       }
       function getVisitorLookupRoomNumber(roomName) {
         var text = String(roomName || "");
@@ -4361,25 +4380,79 @@
         m = text.match(/([1-9])/);
         return m && m[1] ? m[1] : "";
       }
-      function renderVisitorLookupRoomMap(selectedMatch) {
+      function buildVisitorLookupEmptyRooms() {
+        if (!lastData || !lastData.headers || !lastData.grid) return { hour: new Date().getHours(), rooms: [], ready: false };
+        var hour = new Date().getHours();
+        var row = lastData.grid[hour] || [];
+        var rooms = [];
+        lastData.headers.forEach(function(header, idx) {
+          var roomName = String(header || "").trim();
+          if (!roomName || roomName.indexOf("휴강") !== -1 || roomName.indexOf("자습") !== -1) return;
+          if (!/[1-9]\s*강의실/.test(roomName)) return;
+          var items = row[idx] || [];
+          var occupied = items.some(function(v) {
+            return String(v || "").trim();
+          });
+          if (!occupied) {
+            rooms.push({
+              room: roomName,
+              building: getVisitorLookupBuilding(roomName),
+              number: getVisitorLookupRoomNumber(roomName)
+            });
+          }
+        });
+        rooms.sort(function(a, b) {
+          if (a.building !== b.building) return a.building.localeCompare(b.building, "ko");
+          return Number(a.number || 99) - Number(b.number || 99);
+        });
+        return { hour: hour, rooms: rooms, ready: true };
+      }
+      function renderVisitorStudyRooms() {
+        var info = buildVisitorLookupEmptyRooms();
+        if (!info.ready) {
+          return "<div class='visitor-lookup-empty'>시간표 데이터를 불러온 뒤 현재 빈 강의실을 확인할 수 있습니다.</div>";
+        }
+        if (!info.rooms.length) {
+          return "<div class='visitor-lookup-empty'>현재 시간(" + info.hour + ":00)에는 표시할 빈 강의실이 없습니다.</div>";
+        }
+        return "<div class='visitor-study-meta'>현재 시간(" + info.hour + ":00) 기준으로 비어 있는 강의실입니다.</div>" +
+          "<div class='visitor-study-grid'>" + info.rooms.map(function(item) {
+            return "<div class='visitor-study-room'>" + escapeHtml(item.building + " " + item.number + "강의실") + "</div>";
+          }).join("") + "</div>";
+      }
+      function renderVisitorLookupRoomMap(selectedMatch, emptyRooms) {
+        var selectedBuilding = selectedMatch ? getVisitorLookupBuilding(selectedMatch.room) : "본관";
         var activeRoom = selectedMatch ? getVisitorLookupRoomNumber(selectedMatch.room) : "";
         var activeRoomLabel = activeRoom ? activeRoom + "강의실" : "강의실";
+        var emptyCount = (emptyRooms || []).length;
+        if (selectedMatch && selectedBuilding === "2관") {
+          return "<div class='visitor-map-head'>" +
+              "<div><div class='visitor-map-kicker'>배정 강의실</div><div class='visitor-map-title'>2관 " + activeRoomLabel + "</div></div>" +
+              "<div class='visitor-map-target'><span class='visitor-map-target-num'>" + (activeRoom || "2") + "</span>2관</div>" +
+            "</div>" +
+            "<div class='visitor-map-textonly'><div><div class='visitor-map-textonly-title'>2관 " + activeRoomLabel + "</div><div class='visitor-map-textonly-sub'>2관 길 안내는 준비 중입니다.</div></div></div>";
+        }
         var rooms = ["6", "7", "8", "9", "5", "4", "3", "2", "1"];
+        var emptySet = {};
+        (emptyRooms || []).forEach(function(item) {
+          if (item.building === "본관" && item.number) emptySet[item.number] = true;
+        });
         var roomHtml = rooms.map(function(num) {
           var active = activeRoom === num;
-          return "<div class='visitor-room visitor-room-" + num + (active ? " active" : "") + "'>" +
+          var isEmpty = !!emptySet[num];
+          return "<div class='visitor-room visitor-room-" + num + (active ? " active" : "") + (isEmpty ? " empty" : "") + "'>" +
             "<div class='visitor-room-pin'></div>" +
             "<div class='visitor-room-num'>" + num + "</div>" +
             "<div class='visitor-room-name'>" + num + "강의실</div>" +
           "</div>";
         }).join("");
-        var title = activeRoom ? "본관 " + activeRoomLabel : "강의실 안내도";
+        var title = activeRoom ? "본관 " + activeRoomLabel : (emptyCount ? "현재 빈 강의실" : "강의실 안내도");
         var target = activeRoom
           ? "<span class='visitor-map-target-num'>" + activeRoom + "</span>강의실"
-          : "<span class='visitor-map-target-num'>?</span>검색";
+          : (emptyCount ? "<span class='visitor-map-target-num'>" + emptyCount + "</span>빈 강의실" : "<span class='visitor-map-target-num'>?</span>검색");
         var routeText = activeRoom
           ? "노란 안내선을 따라 <strong>" + activeRoomLabel + "</strong>로 이동하세요."
-          : "학생 이름을 검색하면 배정 강의실 위치가 오른쪽에 표시됩니다.";
+          : (emptyCount ? "초록색으로 표시된 강의실이 현재 비어 있습니다." : "학생 이름을 검색하면 배정 강의실 위치가 오른쪽에 표시됩니다.");
         return "<div class='visitor-map-head'>" +
             "<div><div class='visitor-map-kicker'>배정 강의실</div><div class='visitor-map-title'>" + title + "</div></div>" +
             "<div class='visitor-map-target'>" + target + "</div>" +
@@ -4413,7 +4486,9 @@
         var matches = buildVisitorLookupMatches(rawKeyword);
         if (visitorLookupSelectedIndex >= matches.length) visitorLookupSelectedIndex = 0;
         var resultHtml = "";
-        if (!rawKeyword) {
+        if (visitorLookupTab === "study") {
+          resultHtml = renderVisitorStudyRooms();
+        } else if (!rawKeyword) {
           resultHtml = "<div class='visitor-lookup-empty'>학생 이름을 입력하면 시간표, 강의실, 담당 선생님을 바로 확인할 수 있습니다.</div>";
         } else if (!matches.length) {
           resultHtml = "<div class='visitor-lookup-empty'>검색 결과가 없습니다. 학생 이름을 다시 확인해주세요.</div>";
@@ -4455,7 +4530,8 @@
               "</div>";
             }).join("") + "</div>";
         }
-        var selectedMatch = matches.length ? matches[visitorLookupSelectedIndex] : null;
+        var selectedMatch = visitorLookupTab === "today" && matches.length ? matches[visitorLookupSelectedIndex] : null;
+        var emptyInfo = visitorLookupTab === "study" ? buildVisitorLookupEmptyRooms() : null;
         pane.innerHTML =
           "<div class='visitor-lookup-shell'>" +
             "<div class='visitor-lookup-head'>" +
@@ -4469,11 +4545,11 @@
             "</div>" +
             "<div class='visitor-lookup-main'>" +
               "<div class='visitor-lookup-panel visitor-lookup-left'>" +
-                "<div class='visitor-lookup-tabs'><div class='visitor-lookup-tab active'>오늘 수업</div><div class='visitor-lookup-tab'>내일 보강</div><div class='visitor-lookup-tab'>자습실</div></div>" +
-                "<div class='visitor-lookup-inline-search'><div class='visitor-lookup-inline-searchbox'><span class='visitor-lookup-inline-icon'>⌕</span><span" + (!rawKeyword ? " class='visitor-lookup-inline-placeholder'" : "") + ">" + escapeHtml(rawKeyword || "학생명 검색") + "</span></div><button class='visitor-lookup-search-btn' type='button' onclick='document.getElementById(\"searchInput\").focus()'>검색</button></div>" +
+                "<div class='visitor-lookup-tabs'><div class='visitor-lookup-tab" + (visitorLookupTab === "today" ? " active" : "") + "' onclick='setVisitorLookupTab(\"today\")'>오늘 수업</div><div class='visitor-lookup-tab" + (visitorLookupTab === "study" ? " active" : "") + "' onclick='setVisitorLookupTab(\"study\")'>자습실</div></div>" +
+                (visitorLookupTab === "today" ? "<div class='visitor-lookup-inline-search'><div class='visitor-lookup-inline-searchbox'><span class='visitor-lookup-inline-icon'>⌕</span><span" + (!rawKeyword ? " class='visitor-lookup-inline-placeholder'" : "") + ">" + escapeHtml(rawKeyword || "학생명 검색") + "</span></div><button class='visitor-lookup-search-btn' type='button' onclick='document.getElementById(\"searchInput\").focus()'>검색</button></div>" : "") +
                 resultHtml +
               "</div>" +
-              "<div class='visitor-lookup-panel visitor-lookup-right'>" + renderVisitorLookupRoomMap(selectedMatch) + "</div>" +
+              "<div class='visitor-lookup-panel visitor-lookup-right'>" + renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []) + "</div>" +
             "</div>" +
           "</div>";
       }
