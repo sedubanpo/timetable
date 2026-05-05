@@ -4253,8 +4253,8 @@
             items.forEach(function(raw) {
               var text = String(raw || "");
               if (!text || text.includes("T")) return;
-              if (shouldHideStudentText(text)) return;
               var parsed = parseStudentRawText(text);
+              if (shouldHideStatus(parsed.status) || isAbsenceNoticeStatus(parsed.status)) return;
               var nameKey = normalizeLookupKeyword(parsed.name);
               if (!nameKey) return;
               visitorLookupIndexRows.push({
