@@ -197,10 +197,14 @@
       .note-bubble::before { content: ""; position: absolute; top: -6px; left: 18px; border-width: 0 6px 6px 6px; border-style: solid; border-color: transparent transparent #fdba74 transparent; }
       .note-bubble::after { content: ""; position: absolute; top: -5px; left: 18px; border-width: 0 6px 6px 6px; border-style: solid; border-color: transparent transparent #fff transparent; }
       .operation-memo-hit { outline: 2px solid #f43f5e !important; box-shadow: 0 0 0 4px rgba(244,63,94,0.13) !important; background: #fff1f2 !important; color: #881337 !important; }
+      .operation-memo-hit.operation-memo-school-hit { outline-color:#f59e0b !important; box-shadow:0 0 0 4px rgba(245,158,11,0.16) !important; background:#fffbeb !important; color:#78350f !important; }
       .operation-memo-student-badge { display:inline-block; margin-left:5px; padding:1px 6px; border-radius:999px; background:#be123c; color:#fff; font-size:0.66rem; font-weight:900; vertical-align:middle; }
+      .operation-memo-student-badge.school { background:#b45309; }
       .operation-memo-box { width:640px; max-width:94%; max-height:88vh; text-align:left; overflow:auto; }
-      .operation-memo-controls { display:grid; grid-template-columns:1fr 130px 130px; gap:8px; margin:12px 0; }
+      .operation-memo-controls { display:grid; grid-template-columns:1.15fr 1fr 100px 130px; gap:8px; margin:12px 0; }
       .operation-memo-controls input, .operation-memo-controls select, .operation-memo-controls textarea { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-size:0.9rem; font-family:inherit; }
+      .operation-memo-controls .operation-memo-wide { grid-column:1 / -1; }
+      .operation-memo-controls .operation-memo-hidden { display:none; }
       .operation-memo-controls textarea { grid-column:1 / -1; min-height:76px; resize:vertical; }
       .operation-memo-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
       .operation-memo-item { border:1px solid #fecdd3; border-radius:10px; padding:10px 12px; background:#fff1f2; color:#4c0519; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
@@ -215,6 +219,11 @@
       .operation-memo-alert-title { font-weight:900; margin-bottom:6px; }
       .operation-memo-alert-body { font-size:0.86rem; line-height:1.45; }
       .operation-memo-alert-close { position:absolute; top:8px; right:10px; border:0; background:transparent; font-size:18px; cursor:pointer; color:#9f1239; }
+      .operation-common-memo-strip { display:none; align-items:flex-start; gap:10px; padding:8px 14px; border-top:1px solid #fee2e2; border-bottom:1px solid #fecaca; background:#fff1f2; color:#7f1d1d; font-size:0.9rem; font-weight:800; line-height:1.45; }
+      .operation-common-memo-strip.is-visible { display:flex; }
+      .operation-common-memo-icon { flex:0 0 auto; width:24px; height:24px; border-radius:999px; background:#dc2626; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.9rem; box-shadow:0 4px 10px rgba(220,38,38,0.18); }
+      .operation-common-memo-content { display:flex; flex-wrap:wrap; gap:6px 10px; min-width:0; }
+      .operation-common-memo-item { word-break:keep-all; }
       .subject-badge { display: inline-block; background: var(--primary); color: white; font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; margin-right: 4px; font-weight: 600; vertical-align: middle; transform: translateY(-1px); }
       .school-text { color: #888; font-size: 0.75rem; margin-left: 2px; font-weight: 400; white-space: nowrap; }
       .item-warning { border: 1px solid #ef5350 !important; background-color: #ffebee !important; color: #c62828 !important; font-weight: 700 !important; }
@@ -1012,15 +1021,16 @@
     <div id="operationMemoModal">
       <div class="modal-box operation-memo-box">
         <div class="modal-title">운영 메모</div>
-        <div style="color:#64748b; font-size:0.84rem; line-height:1.45; margin-top:6px;">현재 선택한 날짜에만 적용됩니다. 학생명은 시간표의 학생명과 정확히 일치할 때 경고 표시됩니다.</div>
+        <div style="color:#64748b; font-size:0.84rem; line-height:1.45; margin-top:6px;">현재 선택한 날짜에만 적용됩니다. 공동 메모는 날짜 상단에 표시되고, 학생/학교 메모는 시간표 항목을 강조합니다.</div>
         <div class="operation-memo-controls">
-          <input id="operationMemoStudentInput" type="text" placeholder="학생명">
-          <select id="operationMemoTypeInput">
-            <option value="absence">결석</option>
-            <option value="late">지각</option>
-            <option value="notice">특이사항</option>
-            <option value="caution">주의</option>
+          <select id="operationMemoTypeInput" class="operation-memo-wide" onchange="syncOperationMemoFormMode()">
+            <option value="common">공동 메모</option>
+            <option value="student">학생 메모</option>
+            <option value="school">학교 메모</option>
           </select>
+          <input id="operationMemoStudentInput" type="text" placeholder="학생명">
+          <input id="operationMemoSchoolInput" type="text" placeholder="학교명 예: 세화고">
+          <input id="operationMemoGradeInput" type="text" placeholder="학년 예: 2">
           <select id="operationMemoSeverityInput">
             <option value="warning">경고</option>
             <option value="danger">긴급</option>
@@ -1098,6 +1108,10 @@
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>열람로그</span>
           </button>
         </div>
+      </div>
+      <div id="operationCommonMemoStrip" class="operation-common-memo-strip" aria-live="polite">
+        <div class="operation-common-memo-icon">📣</div>
+        <div id="operationCommonMemoContent" class="operation-common-memo-content"></div>
       </div>
       
       <div class="table-container dimming-enabled" id="tableContainer">
@@ -1193,12 +1207,38 @@
       function normalizeOperationMemoName(value) {
         return String(value || "").replace(/\s+/g, "").trim();
       }
+      function normalizeOperationMemoSchool(value) {
+        var text = String(value || "").replace(/\s+/g, "").trim();
+        if (!text) return "";
+        return text.replace(/([가-힣A-Za-z]+(?:초|중|고))\d+$/, "$1");
+      }
+      function normalizeOperationMemoGrade(value) {
+        var text = String(value || "").replace(/\s+/g, "").trim();
+        var match = text.match(/(\d+)/);
+        return match ? match[1] : "";
+      }
+      function parseOperationMemoSchoolTarget(value) {
+        var text = String(value || "").replace(/\s+/g, "").trim();
+        var match = text.match(/^(.+?(?:초|중|고))(\d+)$/);
+        return {
+          school: normalizeOperationMemoSchool(match ? match[1] : text),
+          grade: normalizeOperationMemoGrade(match ? match[2] : "")
+        };
+      }
+      function getOperationMemoKind(item) {
+        var type = String((item && item.type) || "").toLowerCase();
+        if (type === "common" || type === "school" || type === "student") return type;
+        return "student";
+      }
       function getOperationMemoTypeLabel(type) {
         var t = String(type || "");
-        if (t === "absence") return "결석";
-        if (t === "late") return "지각";
-        if (t === "caution") return "주의";
-        return "특이사항";
+        if (t === "common") return "공동 메모";
+        if (t === "school") return "학교 메모";
+        if (t === "student") return "학생 메모";
+        if (t === "absence") return "학생 메모";
+        if (t === "late") return "학생 메모";
+        if (t === "caution") return "학생 메모";
+        return "학생 메모";
       }
       function operationMemoSupabaseRequest(path, options) {
         var cfg = operationMemoState.config || {};
@@ -1220,7 +1260,7 @@
       function fetchOperationMemos(dateKey) {
         if (!operationMemoState.configured || operationMemoState.provider !== "supabase" || !dateKey) return Promise.resolve([]);
         var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
-        var query = table + "?select=id,date_key,sheet_name,student_name,type,message,severity,active,created_at,updated_at,created_by&date_key=eq." + encodeURIComponent(dateKey) + "&active=eq.true&order=updated_at.desc";
+        var query = table + "?select=id,date_key,sheet_name,student_name,target_school,target_grade,type,message,severity,active,created_at,updated_at,created_by&date_key=eq." + encodeURIComponent(dateKey) + "&active=eq.true&order=updated_at.desc";
         return operationMemoSupabaseRequest(query).then(function(rows) {
           return Array.isArray(rows) ? rows : [];
         });
@@ -1239,6 +1279,7 @@
           operationMemoState.dateKey = "";
           operationMemoState.items = [];
           clearOperationMemoHighlights();
+          renderOperationCommonMemos();
           return Promise.resolve([]);
         }
         var dateKey = getOperationMemoDateKey(currentSheetName);
@@ -1252,6 +1293,7 @@
           operationMemoState.dateKey = dateKey;
           operationMemoState.items = items.filter(function(item) { return item && item.active !== false; });
           renderOperationMemoList();
+          renderOperationCommonMemos();
           applyOperationMemoHighlights();
           showOperationMemoPopupIfNeeded();
           startOperationMemoPolling();
@@ -1260,6 +1302,7 @@
           if (!opts.silent) console.warn(err);
           operationMemoState.items = [];
           clearOperationMemoHighlights();
+          renderOperationCommonMemos();
           renderOperationMemoList();
           return [];
         }).finally(function() {
@@ -1269,41 +1312,77 @@
       function clearOperationMemoHighlights() {
         document.querySelectorAll('.operation-memo-hit').forEach(function(el) {
           el.classList.remove('operation-memo-hit');
+          el.classList.remove('operation-memo-school-hit');
           el.removeAttribute('data-operation-memo');
           el.removeAttribute('title');
         });
         document.querySelectorAll('.operation-memo-student-badge').forEach(function(el) { el.remove(); });
       }
-      function getOperationMemoMap() {
-        var map = {};
+      function getOperationMemoMaps() {
+        var maps = { student: {}, school: [] };
         (operationMemoState.items || []).forEach(function(item) {
-          var key = normalizeOperationMemoName(item.student_name || item.studentName);
-          if (!key) return;
-          if (!map[key]) map[key] = [];
-          map[key].push(item);
+          var kind = getOperationMemoKind(item);
+          if (kind === "student") {
+            var key = normalizeOperationMemoName(item.student_name || item.studentName);
+            if (!key) return;
+            if (!maps.student[key]) maps.student[key] = [];
+            maps.student[key].push(item);
+            return;
+          }
+          if (kind === "school") {
+            var target = parseOperationMemoSchoolTarget(item.target_school || item.student_name || "");
+            target.grade = normalizeOperationMemoGrade(item.target_grade || target.grade);
+            if (!target.school) return;
+            maps.school.push({ school: target.school, grade: target.grade, item: item });
+          }
         });
-        return map;
+        return maps;
+      }
+      function renderOperationCommonMemos() {
+        var strip = document.getElementById('operationCommonMemoStrip');
+        var content = document.getElementById('operationCommonMemoContent');
+        if (!strip || !content) return;
+        var items = isOperationMemoAvailable() ? (operationMemoState.items || []).filter(function(item) {
+          return getOperationMemoKind(item) === "common" && String(item.message || "").trim();
+        }) : [];
+        if (!items.length) {
+          strip.classList.remove('is-visible');
+          content.innerHTML = "";
+          return;
+        }
+        content.innerHTML = items.map(function(item) {
+          return "<span class='operation-common-memo-item'>" + escapeHtml(item.message || "") + "</span>";
+        }).join("");
+        strip.classList.add('is-visible');
       }
       function applyOperationMemoHighlights() {
         clearOperationMemoHighlights();
         if (!isOperationMemoAvailable() || !operationMemoState.items.length) return;
-        var memoMap = getOperationMemoMap();
+        var memoMaps = getOperationMemoMaps();
         document.querySelectorAll('.student-item.is-student').forEach(function(itemEl) {
           var raw = itemEl.dataset.originalText || itemEl.textContent || "";
           var parsed = parseStudentRawText(raw);
           var key = normalizeOperationMemoName(parsed.name);
-          var memos = key ? memoMap[key] : null;
+          var memos = key ? (memoMaps.student[key] || []) : [];
+          var parsedSchool = parseOperationMemoSchoolTarget(parsed.school || "");
+          memoMaps.school.forEach(function(entry) {
+            if (!entry.school || parsedSchool.school !== entry.school) return;
+            if (entry.grade && parsedSchool.grade !== entry.grade) return;
+            memos.push(entry.item);
+          });
           if (!memos || !memos.length) return;
           var summary = memos.map(function(m) {
             return getOperationMemoTypeLabel(m.type) + (m.message ? ": " + m.message : "");
           }).join(" / ");
           itemEl.classList.add('operation-memo-hit');
+          if (memos.some(function(m) { return getOperationMemoKind(m) === "school"; })) itemEl.classList.add('operation-memo-school-hit');
           itemEl.setAttribute('data-operation-memo', summary);
           itemEl.setAttribute('title', summary);
           if (!itemEl.querySelector('.operation-memo-student-badge')) {
             var badge = document.createElement('span');
-            badge.className = 'operation-memo-student-badge';
-            badge.textContent = '메모';
+            var hasSchool = memos.some(function(m) { return getOperationMemoKind(m) === "school"; });
+            badge.className = 'operation-memo-student-badge' + (hasSchool ? ' school' : '');
+            badge.textContent = hasSchool ? '학교메모' : '메모';
             itemEl.appendChild(badge);
           }
         });
@@ -1318,7 +1397,7 @@
         alertBox.id = 'operationMemoAlert';
         alertBox.className = 'operation-memo-alert';
         var lines = operationMemoState.items.slice(0, 4).map(function(item) {
-          return escapeHtml(item.student_name || "") + " - " + escapeHtml(getOperationMemoTypeLabel(item.type)) + (item.message ? " · " + escapeHtml(item.message) : "");
+          return escapeHtml(getOperationMemoItemTitle(item)) + " - " + escapeHtml(getOperationMemoTypeLabel(item.type)) + (item.message ? " · " + escapeHtml(item.message) : "");
         }).join("<br>");
         alertBox.innerHTML = "<button class='operation-memo-alert-close' onclick='closeOperationMemoAlert()'>×</button><div class='operation-memo-alert-title'>이 날짜에 운영 메모가 있습니다</div><div class='operation-memo-alert-body'>" + lines + (operationMemoState.items.length > 4 ? "<br>외 " + (operationMemoState.items.length - 4) + "건" : "") + "</div>";
         document.body.appendChild(alertBox);
@@ -1343,7 +1422,7 @@
           var id = encodeURIComponent(item.id || "");
           return "<div class='operation-memo-item'>" +
             "<div class='operation-memo-item-main'>" +
-              "<div class='operation-memo-item-title'>" + escapeHtml(item.student_name || "") + " · " + escapeHtml(getOperationMemoTypeLabel(item.type)) + "</div>" +
+              "<div class='operation-memo-item-title'>" + escapeHtml(getOperationMemoItemTitle(item)) + " · " + escapeHtml(getOperationMemoTypeLabel(item.type)) + "</div>" +
               "<div class='operation-memo-item-meta'>" + escapeHtml(item.date_key || operationMemoState.dateKey) + (item.updated_at ? " · " + escapeHtml(String(item.updated_at).slice(0, 16).replace('T', ' ')) : "") + "</div>" +
               (item.message ? "<div class='operation-memo-item-message'>" + escapeHtml(item.message) + "</div>" : "") +
             "</div>" +
@@ -1353,6 +1432,16 @@
             "</div>" +
           "</div>";
         }).join("");
+      }
+      function getOperationMemoItemTitle(item) {
+        var kind = getOperationMemoKind(item);
+        if (kind === "common") return "공동";
+        if (kind === "school") {
+          var target = parseOperationMemoSchoolTarget(item.target_school || item.student_name || "");
+          var grade = normalizeOperationMemoGrade(item.target_grade || target.grade);
+          return target.school + (grade ? " " + grade + "학년" : "");
+        }
+        return item.student_name || "";
       }
       function openOperationMemoModal() {
         if (!isOperationMemoAvailable()) { alert("운영 메모 저장소 설정 또는 관리자 권한이 필요합니다."); return; }
@@ -1368,28 +1457,52 @@
       }
       function resetOperationMemoForm() {
         var student = document.getElementById('operationMemoStudentInput');
+        var school = document.getElementById('operationMemoSchoolInput');
+        var grade = document.getElementById('operationMemoGradeInput');
         var type = document.getElementById('operationMemoTypeInput');
         var severity = document.getElementById('operationMemoSeverityInput');
         var message = document.getElementById('operationMemoMessageInput');
         if (student) student.value = "";
-        if (type) type.value = "absence";
+        if (school) school.value = "";
+        if (grade) grade.value = "";
+        if (type) type.value = "common";
         if (severity) severity.value = "warning";
         if (message) message.value = "";
+        syncOperationMemoFormMode();
+      }
+      function syncOperationMemoFormMode() {
+        var type = document.getElementById('operationMemoTypeInput');
+        var student = document.getElementById('operationMemoStudentInput');
+        var school = document.getElementById('operationMemoSchoolInput');
+        var grade = document.getElementById('operationMemoGradeInput');
+        var mode = type ? type.value : "common";
+        if (student) student.classList.toggle('operation-memo-hidden', mode !== "student");
+        if (school) school.classList.toggle('operation-memo-hidden', mode !== "school");
+        if (grade) grade.classList.toggle('operation-memo-hidden', mode !== "school");
       }
       function saveOperationMemo() {
         if (!isOperationMemoAvailable()) { alert("운영 메모 저장소 설정 또는 관리자 권한이 필요합니다."); return; }
         var dateKey = getOperationMemoDateKey(currentSheetName);
         var student = String(document.getElementById('operationMemoStudentInput').value || "").trim();
-        var type = document.getElementById('operationMemoTypeInput').value || "notice";
+        var school = String(document.getElementById('operationMemoSchoolInput').value || "").trim();
+        var grade = String(document.getElementById('operationMemoGradeInput').value || "").trim();
+        var type = document.getElementById('operationMemoTypeInput').value || "common";
         var severity = document.getElementById('operationMemoSeverityInput').value || "warning";
         var message = String(document.getElementById('operationMemoMessageInput').value || "").trim();
-        if (!dateKey || !student) { alert("날짜와 학생명을 확인해주세요."); return; }
+        if (!dateKey) { alert("날짜를 확인해주세요."); return; }
+        if (type === "common" && !message) { alert("공동 메모 내용을 입력해주세요."); return; }
+        if (type === "student" && !student) { alert("학생명을 입력해주세요."); return; }
+        if (type === "school" && (!school || !grade)) { alert("학교명과 학년을 입력해주세요."); return; }
         var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
         var nowIso = new Date().toISOString();
+        var schoolTarget = parseOperationMemoSchoolTarget(school);
+        var gradeTarget = normalizeOperationMemoGrade(grade || schoolTarget.grade);
         var payload = {
           date_key: dateKey,
           sheet_name: currentSheetName || "",
-          student_name: student,
+          student_name: type === "student" ? student : (type === "school" ? (schoolTarget.school + gradeTarget) : "공동"),
+          target_school: type === "school" ? schoolTarget.school : "",
+          target_grade: type === "school" ? gradeTarget : "",
           type: type,
           message: message,
           severity: severity,
@@ -1417,10 +1530,13 @@
         var item = findOperationMemoById(encodedId);
         if (!item) return;
         operationMemoState.editingId = String(item.id || "");
-        document.getElementById('operationMemoStudentInput').value = item.student_name || "";
-        document.getElementById('operationMemoTypeInput').value = item.type || "notice";
+        document.getElementById('operationMemoTypeInput').value = getOperationMemoKind(item);
+        document.getElementById('operationMemoStudentInput').value = getOperationMemoKind(item) === "student" ? (item.student_name || "") : "";
+        document.getElementById('operationMemoSchoolInput').value = item.target_school || (getOperationMemoKind(item) === "school" ? normalizeOperationMemoSchool(item.student_name || "") : "");
+        document.getElementById('operationMemoGradeInput').value = item.target_grade || (getOperationMemoKind(item) === "school" ? normalizeOperationMemoGrade(item.student_name || "") : "");
         document.getElementById('operationMemoSeverityInput').value = item.severity || "warning";
         document.getElementById('operationMemoMessageInput').value = item.message || "";
+        syncOperationMemoFormMode();
       }
       function deleteOperationMemo(encodedId) {
         var item = findOperationMemoById(encodedId);
@@ -1895,6 +2011,7 @@
         operationMemoState.items = [];
         closeOperationMemoAlert();
         clearOperationMemoHighlights();
+        renderOperationCommonMemos();
         var lookupPane = document.getElementById('visitorLookupPane');
         if (lookupPane) lookupPane.innerHTML = "";
         applyRoleUi();
