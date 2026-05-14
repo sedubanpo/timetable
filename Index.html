@@ -1427,9 +1427,8 @@
         if (!item || !confirm("이 운영 메모를 삭제할까요?")) return;
         var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
         operationMemoSupabaseRequest(table + "?id=eq." + encodeURIComponent(item.id), {
-          method: "PATCH",
-          headers: { "Prefer": "return=minimal" },
-          body: JSON.stringify({ active: false, updated_at: new Date().toISOString() })
+          method: "DELETE",
+          headers: { "Prefer": "return=minimal" }
         }).then(function() {
           return loadOperationMemosForCurrentSheet(true);
         }).catch(function(err) {

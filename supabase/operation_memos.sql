@@ -23,6 +23,9 @@ create index if not exists operation_memos_date_active_idx
 create index if not exists operation_memos_student_idx
   on public.operation_memos (student_name);
 
+grant select, insert, update, delete on table public.operation_memos to anon;
+grant select, insert, update, delete on table public.operation_memos to authenticated;
+
 alter table public.operation_memos enable row level security;
 
 drop policy if exists "operation memo public read" on public.operation_memos;
@@ -47,3 +50,8 @@ create policy "operation memo anon update"
   using (true)
   with check (true);
 
+drop policy if exists "operation memo anon delete" on public.operation_memos;
+create policy "operation memo anon delete"
+  on public.operation_memos
+  for delete
+  using (true);
