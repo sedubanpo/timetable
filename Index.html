@@ -35,7 +35,7 @@
       .guide-item:last-child { border-bottom: none; }
       .guide-icon { font-size: 1.2rem; }
       /* 모달 공통 */
-      #versionModal, #messageModal, #selectionModal, #reviewModal, #authModal, #studentImageModal, #absenceNoticeModal, #attendanceReportModal, #teacherViewLogModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
+      #versionModal, #messageModal, #selectionModal, #reviewModal, #authModal, #studentImageModal, #absenceNoticeModal, #attendanceReportModal, #teacherViewLogModal, #operationMemoModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
       .modal-box { background: white; width: 300px; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; }
       .auth-box { width: 360px; max-width: 92%; text-align: left; }
       .auth-title { font-size: 1.2rem; font-weight: 800; color: var(--primary); margin-bottom: 12px; }
@@ -108,7 +108,7 @@
       .nav-btn:hover { background: #f3f4f6; border-color: var(--primary); color: var(--primary); }
       .nav-btn-today { color: var(--accent); border-color: var(--accent); }
       .action-group { display: flex; gap: 6px; margin-left: auto; }
-      .fullscreen-btn, .msg-gen-btn, .msg-simple-btn, .capture-btn, .empty-btn, .review-btn, .excel-btn, .absence-notice-btn, .attendance-report-btn { border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+      .fullscreen-btn, .msg-gen-btn, .msg-simple-btn, .capture-btn, .empty-btn, .review-btn, .excel-btn, .absence-notice-btn, .attendance-report-btn, .operation-memo-btn { border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
       .fullscreen-btn { background: #333; color: white; }
       .msg-gen-btn { background: var(--accent); color: white; }
       .msg-simple-btn { background: var(--secondary); color: white; }
@@ -118,6 +118,7 @@
       .excel-btn { background: #107c41; color: white; } /* 엑셀 녹색 */
       .absence-notice-btn { background: #334155; color: #fff; }
       .attendance-report-btn { background: #0f766e; color: #fff; }
+      .operation-memo-btn { background:#be123c; color:#fff; }
       .search-wrapper { flex-grow: 1; max-width: 300px; position: relative; margin-left: 10px;}
       .search-input { width: 100%; padding: 8px 8px 8px 10px; border: 1px solid #ccc; border-radius: 6px; outline: none; }
       .sheet-select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; max-width: 150px;}
@@ -187,6 +188,25 @@
       .note-bubble { position: absolute; left: 6px; top: calc(100% + 4px); max-width: 220px; background: #fff; border: 1px solid #fdba74; border-radius: 10px; padding: 7px 9px; font-size: 0.74rem; line-height: 1.35; color: #9a3412; font-weight: 700; box-shadow: 0 6px 18px rgba(15,23,42,0.15); z-index: 600; white-space: normal; word-break: keep-all; }
       .note-bubble::before { content: ""; position: absolute; top: -6px; left: 18px; border-width: 0 6px 6px 6px; border-style: solid; border-color: transparent transparent #fdba74 transparent; }
       .note-bubble::after { content: ""; position: absolute; top: -5px; left: 18px; border-width: 0 6px 6px 6px; border-style: solid; border-color: transparent transparent #fff transparent; }
+      .operation-memo-hit { outline: 2px solid #f43f5e !important; box-shadow: 0 0 0 4px rgba(244,63,94,0.13) !important; background: #fff1f2 !important; color: #881337 !important; }
+      .operation-memo-student-badge { display:inline-block; margin-left:5px; padding:1px 6px; border-radius:999px; background:#be123c; color:#fff; font-size:0.66rem; font-weight:900; vertical-align:middle; }
+      .operation-memo-box { width:640px; max-width:94%; max-height:88vh; text-align:left; overflow:auto; }
+      .operation-memo-controls { display:grid; grid-template-columns:1fr 130px 130px; gap:8px; margin:12px 0; }
+      .operation-memo-controls input, .operation-memo-controls select, .operation-memo-controls textarea { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-size:0.9rem; font-family:inherit; }
+      .operation-memo-controls textarea { grid-column:1 / -1; min-height:76px; resize:vertical; }
+      .operation-memo-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+      .operation-memo-item { border:1px solid #fecdd3; border-radius:10px; padding:10px 12px; background:#fff1f2; color:#4c0519; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+      .operation-memo-item-main { min-width:0; }
+      .operation-memo-item-title { font-weight:900; margin-bottom:3px; }
+      .operation-memo-item-meta { font-size:0.78rem; color:#9f1239; font-weight:700; }
+      .operation-memo-item-message { margin-top:5px; font-size:0.86rem; line-height:1.45; color:#4c0519; word-break:keep-all; }
+      .operation-memo-item-actions { display:flex; gap:6px; flex-shrink:0; }
+      .operation-memo-mini-btn { border:1px solid #fda4af; background:#fff; color:#9f1239; border-radius:8px; padding:5px 8px; font-size:0.76rem; font-weight:800; cursor:pointer; }
+      .operation-memo-empty { padding:18px; text-align:center; color:#94a3b8; border:1px dashed #cbd5e1; border-radius:10px; }
+      .operation-memo-alert { position:fixed; right:20px; top:92px; width:min(380px, calc(100vw - 40px)); z-index:2500; background:#fff; border:1px solid #fecdd3; border-left:6px solid #e11d48; border-radius:12px; box-shadow:0 20px 45px rgba(15,23,42,0.18); padding:14px 16px; color:#4c0519; }
+      .operation-memo-alert-title { font-weight:900; margin-bottom:6px; }
+      .operation-memo-alert-body { font-size:0.86rem; line-height:1.45; }
+      .operation-memo-alert-close { position:absolute; top:8px; right:10px; border:0; background:transparent; font-size:18px; cursor:pointer; color:#9f1239; }
       .subject-badge { display: inline-block; background: var(--primary); color: white; font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; margin-right: 4px; font-weight: 600; vertical-align: middle; transform: translateY(-1px); }
       .school-text { color: #888; font-size: 0.75rem; margin-left: 2px; font-weight: 400; white-space: nowrap; }
       .item-warning { border: 1px solid #ef5350 !important; background-color: #ffebee !important; color: #c62828 !important; font-weight: 700 !important; }
@@ -778,7 +798,7 @@
         th, td, .student-item { font-size: 0.75rem !important; letter-spacing: -0.05em !important; }
         .student-item { padding: 2px 2px; }
         .nav-btn { padding: 6px 8px; font-size: 0.8rem; }
-        .msg-gen-btn span, .fullscreen-btn span, .msg-simple-btn span, .capture-btn span, .empty-btn span, .review-btn span, .excel-btn span, .absence-notice-btn span, .attendance-report-btn span { display: none; }
+        .msg-gen-btn span, .fullscreen-btn span, .msg-simple-btn span, .capture-btn span, .empty-btn span, .review-btn span, .excel-btn span, .absence-notice-btn span, .attendance-report-btn span, .operation-memo-btn span { display: none; }
         .digital-clock { font-size: 0.9rem; margin: 0 5px; flex-direction: column; align-items: flex-end; gap: 0; }
         .clock-date { font-size: 0.7rem; display: none; }
         .clock-time { font-size: 1.0rem; }
@@ -981,6 +1001,30 @@
         <div class="close-modal" onclick="closeTeacherViewLogModal()">닫기</div>
       </div>
     </div>
+    <div id="operationMemoModal">
+      <div class="modal-box operation-memo-box">
+        <div class="modal-title">운영 메모</div>
+        <div style="color:#64748b; font-size:0.84rem; line-height:1.45; margin-top:6px;">현재 선택한 날짜에만 적용됩니다. 학생명은 시간표의 학생명과 정확히 일치할 때 경고 표시됩니다.</div>
+        <div class="operation-memo-controls">
+          <input id="operationMemoStudentInput" type="text" placeholder="학생명">
+          <select id="operationMemoTypeInput">
+            <option value="absence">결석</option>
+            <option value="late">지각</option>
+            <option value="notice">특이사항</option>
+            <option value="caution">주의</option>
+          </select>
+          <select id="operationMemoSeverityInput">
+            <option value="warning">경고</option>
+            <option value="danger">긴급</option>
+            <option value="info">참고</option>
+          </select>
+          <textarea id="operationMemoMessageInput" placeholder="메모 내용"></textarea>
+        </div>
+        <button class="msg-copy-btn" style="width:100%; margin-top:0; background:#be123c;" onclick="saveOperationMemo()">메모 저장</button>
+        <div id="operationMemoList" class="operation-memo-list"></div>
+        <div class="close-modal" onclick="closeOperationMemoModal()">닫기</div>
+      </div>
+    </div>
     <div id="mainPage">
       <div class="ticker-wrap" onclick="editNotice()">
          <div class="ticker" id="noticeText">📢 [공지] 이곳을 클릭하여 실시간 공지사항을 입력하세요. (시험기간, 보강 안내 등)</div>
@@ -1038,6 +1082,9 @@
           </button>
           <button class="attendance-report-btn" onclick="openAttendanceReportModal()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm-.75 3.5a.75.75 0 011.5 0v4.25l2.5 1.5a.75.75 0 11-.75 1.3l-2.87-1.72a.75.75 0 01-.38-.65V5.5z" clip-rule="evenodd"/></svg><span>출결 현황 보고</span>
+          </button>
+          <button id="operationMemoBtn" class="operation-memo-btn" onclick="openOperationMemoModal()" style="display:none;" title="운영 메모">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L15 3.586A2 2 0 0013.586 3H4zm9 1.5V7h2.5L13 4.5zM6 10a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z"/></svg><span>운영 메모</span>
           </button>
           <button id="teacherViewLogBtn" class="review-btn" onclick="openTeacherViewLogModal()" style="display:none;">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>열람로그</span>
@@ -1103,9 +1150,283 @@
       let teacherViewLogSelectedDateIndex = 0;
       let lateNightCollapsed = true;
       let lateNightAccessCode = "2371";
+      let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], loading: false, editingId: "", popupKey: "" };
+      let operationMemoPollTimer = null;
       const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycbztGbkhmKvr23Yx8tSNcgK-Y-WzSCbOoFtc8QSaqYS5XvnAhp1kheu84VNmwr_hWQm9EQ/exec";
       function getApiBaseUrl() {
         return String(window.SEDU_API_BASE_URL || localStorage.getItem("sedu_api_base_url") || API_BASE_DEFAULT).trim();
+      }
+      function initOperationMemoFeature() {
+        var cfg = window.SEDU_OPERATION_MEMO_CONFIG || null;
+        var provider = String((cfg && cfg.provider) || "").toLowerCase();
+        var configured = false;
+        if (provider === "supabase") {
+          configured = !!(cfg && cfg.url && cfg.anonKey);
+        }
+        operationMemoState.configured = configured;
+        operationMemoState.provider = configured ? provider : "";
+        operationMemoState.config = configured ? cfg : null;
+      }
+      function isOperationMemoAvailable() {
+        return !!(operationMemoState.configured && authState.loggedIn && authState.isMaster);
+      }
+      function getOperationMemoDateKey(sheetName) {
+        var text = String(sheetName || currentSheetName || "").trim();
+        var match = text.match(/(\d{1,2})\/(\d{1,2})/);
+        if (!match) return "";
+        var now = new Date();
+        var year = now.getFullYear();
+        var month = parseInt(match[1], 10);
+        var day = parseInt(match[2], 10);
+        if (now.getMonth() === 11 && month === 1) year += 1;
+        if (now.getMonth() === 0 && month === 12) year -= 1;
+        return year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+      }
+      function normalizeOperationMemoName(value) {
+        return String(value || "").replace(/\s+/g, "").trim();
+      }
+      function getOperationMemoTypeLabel(type) {
+        var t = String(type || "");
+        if (t === "absence") return "결석";
+        if (t === "late") return "지각";
+        if (t === "caution") return "주의";
+        return "특이사항";
+      }
+      function operationMemoSupabaseRequest(path, options) {
+        var cfg = operationMemoState.config || {};
+        var base = String(cfg.url || "").replace(/\/+$/, "");
+        var headers = {
+          "apikey": String(cfg.anonKey || ""),
+          "Authorization": "Bearer " + String(cfg.anonKey || ""),
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        };
+        var opts = options || {};
+        opts.headers = Object.assign(headers, opts.headers || {});
+        return fetch(base + "/rest/v1/" + path, opts).then(function(res) {
+          if (!res.ok) throw new Error("운영 메모 저장소 오류: " + res.status);
+          if (res.status === 204) return null;
+          return res.json();
+        });
+      }
+      function fetchOperationMemos(dateKey) {
+        if (!operationMemoState.configured || operationMemoState.provider !== "supabase" || !dateKey) return Promise.resolve([]);
+        var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
+        var query = table + "?select=id,date_key,sheet_name,student_name,type,message,severity,active,created_at,updated_at,created_by&date_key=eq." + encodeURIComponent(dateKey) + "&active=eq.true&order=updated_at.desc";
+        return operationMemoSupabaseRequest(query).then(function(rows) {
+          return Array.isArray(rows) ? rows : [];
+        });
+      }
+      function startOperationMemoPolling() {
+        if (operationMemoPollTimer) clearInterval(operationMemoPollTimer);
+        operationMemoPollTimer = null;
+        if (!isOperationMemoAvailable() || !operationMemoState.dateKey) return;
+        operationMemoPollTimer = setInterval(function() {
+          loadOperationMemosForCurrentSheet(true, { silent: true });
+        }, 15000);
+      }
+      function loadOperationMemosForCurrentSheet(force, options) {
+        var opts = options || {};
+        if (!isOperationMemoAvailable()) {
+          operationMemoState.dateKey = "";
+          operationMemoState.items = [];
+          clearOperationMemoHighlights();
+          return Promise.resolve([]);
+        }
+        var dateKey = getOperationMemoDateKey(currentSheetName);
+        if (!dateKey) return Promise.resolve([]);
+        if (!force && operationMemoState.dateKey === dateKey && operationMemoState.items.length) {
+          applyOperationMemoHighlights();
+          return Promise.resolve(operationMemoState.items);
+        }
+        operationMemoState.loading = true;
+        return fetchOperationMemos(dateKey).then(function(items) {
+          operationMemoState.dateKey = dateKey;
+          operationMemoState.items = items.filter(function(item) { return item && item.active !== false; });
+          renderOperationMemoList();
+          applyOperationMemoHighlights();
+          showOperationMemoPopupIfNeeded();
+          startOperationMemoPolling();
+          return operationMemoState.items;
+        }).catch(function(err) {
+          if (!opts.silent) console.warn(err);
+          operationMemoState.items = [];
+          clearOperationMemoHighlights();
+          renderOperationMemoList();
+          return [];
+        }).finally(function() {
+          operationMemoState.loading = false;
+        });
+      }
+      function clearOperationMemoHighlights() {
+        document.querySelectorAll('.operation-memo-hit').forEach(function(el) {
+          el.classList.remove('operation-memo-hit');
+          el.removeAttribute('data-operation-memo');
+          el.removeAttribute('title');
+        });
+        document.querySelectorAll('.operation-memo-student-badge').forEach(function(el) { el.remove(); });
+      }
+      function getOperationMemoMap() {
+        var map = {};
+        (operationMemoState.items || []).forEach(function(item) {
+          var key = normalizeOperationMemoName(item.student_name || item.studentName);
+          if (!key) return;
+          if (!map[key]) map[key] = [];
+          map[key].push(item);
+        });
+        return map;
+      }
+      function applyOperationMemoHighlights() {
+        clearOperationMemoHighlights();
+        if (!isOperationMemoAvailable() || !operationMemoState.items.length) return;
+        var memoMap = getOperationMemoMap();
+        document.querySelectorAll('.student-item.is-student').forEach(function(itemEl) {
+          var raw = itemEl.dataset.originalText || itemEl.textContent || "";
+          var parsed = parseStudentRawText(raw);
+          var key = normalizeOperationMemoName(parsed.name);
+          var memos = key ? memoMap[key] : null;
+          if (!memos || !memos.length) return;
+          var summary = memos.map(function(m) {
+            return getOperationMemoTypeLabel(m.type) + (m.message ? ": " + m.message : "");
+          }).join(" / ");
+          itemEl.classList.add('operation-memo-hit');
+          itemEl.setAttribute('data-operation-memo', summary);
+          itemEl.setAttribute('title', summary);
+          if (!itemEl.querySelector('.operation-memo-student-badge')) {
+            var badge = document.createElement('span');
+            badge.className = 'operation-memo-student-badge';
+            badge.textContent = '메모';
+            itemEl.appendChild(badge);
+          }
+        });
+      }
+      function showOperationMemoPopupIfNeeded() {
+        if (!isOperationMemoAvailable() || !operationMemoState.items.length || !operationMemoState.dateKey) return;
+        var key = operationMemoState.dateKey + "::" + operationMemoState.items.map(function(v) { return v.id || v.updated_at || v.student_name; }).join("|");
+        if (operationMemoState.popupKey === key) return;
+        operationMemoState.popupKey = key;
+        closeOperationMemoAlert();
+        var alertBox = document.createElement('div');
+        alertBox.id = 'operationMemoAlert';
+        alertBox.className = 'operation-memo-alert';
+        var lines = operationMemoState.items.slice(0, 4).map(function(item) {
+          return escapeHtml(item.student_name || "") + " - " + escapeHtml(getOperationMemoTypeLabel(item.type)) + (item.message ? " · " + escapeHtml(item.message) : "");
+        }).join("<br>");
+        alertBox.innerHTML = "<button class='operation-memo-alert-close' onclick='closeOperationMemoAlert()'>×</button><div class='operation-memo-alert-title'>이 날짜에 운영 메모가 있습니다</div><div class='operation-memo-alert-body'>" + lines + (operationMemoState.items.length > 4 ? "<br>외 " + (operationMemoState.items.length - 4) + "건" : "") + "</div>";
+        document.body.appendChild(alertBox);
+      }
+      function closeOperationMemoAlert() {
+        var el = document.getElementById('operationMemoAlert');
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }
+      function renderOperationMemoList() {
+        var list = document.getElementById('operationMemoList');
+        if (!list) return;
+        var items = operationMemoState.items || [];
+        if (!isOperationMemoAvailable()) {
+          list.innerHTML = "<div class='operation-memo-empty'>운영 메모 저장소가 설정되지 않았습니다.</div>";
+          return;
+        }
+        if (!items.length) {
+          list.innerHTML = "<div class='operation-memo-empty'>이 날짜의 운영 메모가 없습니다.</div>";
+          return;
+        }
+        list.innerHTML = items.map(function(item) {
+          var id = encodeURIComponent(item.id || "");
+          return "<div class='operation-memo-item'>" +
+            "<div class='operation-memo-item-main'>" +
+              "<div class='operation-memo-item-title'>" + escapeHtml(item.student_name || "") + " · " + escapeHtml(getOperationMemoTypeLabel(item.type)) + "</div>" +
+              "<div class='operation-memo-item-meta'>" + escapeHtml(item.date_key || operationMemoState.dateKey) + (item.updated_at ? " · " + escapeHtml(String(item.updated_at).slice(0, 16).replace('T', ' ')) : "") + "</div>" +
+              (item.message ? "<div class='operation-memo-item-message'>" + escapeHtml(item.message) + "</div>" : "") +
+            "</div>" +
+            "<div class='operation-memo-item-actions'>" +
+              "<button class='operation-memo-mini-btn' onclick='editOperationMemo(\"" + id + "\")'>수정</button>" +
+              "<button class='operation-memo-mini-btn' onclick='deleteOperationMemo(\"" + id + "\")'>삭제</button>" +
+            "</div>" +
+          "</div>";
+        }).join("");
+      }
+      function openOperationMemoModal() {
+        if (!isOperationMemoAvailable()) { alert("운영 메모 저장소 설정 또는 관리자 권한이 필요합니다."); return; }
+        operationMemoState.editingId = "";
+        resetOperationMemoForm();
+        document.getElementById('operationMemoModal').style.display = 'flex';
+        renderOperationMemoList();
+        loadOperationMemosForCurrentSheet(true, { silent: true });
+      }
+      function closeOperationMemoModal() {
+        document.getElementById('operationMemoModal').style.display = 'none';
+        operationMemoState.editingId = "";
+      }
+      function resetOperationMemoForm() {
+        var student = document.getElementById('operationMemoStudentInput');
+        var type = document.getElementById('operationMemoTypeInput');
+        var severity = document.getElementById('operationMemoSeverityInput');
+        var message = document.getElementById('operationMemoMessageInput');
+        if (student) student.value = "";
+        if (type) type.value = "absence";
+        if (severity) severity.value = "warning";
+        if (message) message.value = "";
+      }
+      function saveOperationMemo() {
+        if (!isOperationMemoAvailable()) { alert("운영 메모 저장소 설정 또는 관리자 권한이 필요합니다."); return; }
+        var dateKey = getOperationMemoDateKey(currentSheetName);
+        var student = String(document.getElementById('operationMemoStudentInput').value || "").trim();
+        var type = document.getElementById('operationMemoTypeInput').value || "notice";
+        var severity = document.getElementById('operationMemoSeverityInput').value || "warning";
+        var message = String(document.getElementById('operationMemoMessageInput').value || "").trim();
+        if (!dateKey || !student) { alert("날짜와 학생명을 확인해주세요."); return; }
+        var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
+        var nowIso = new Date().toISOString();
+        var payload = {
+          date_key: dateKey,
+          sheet_name: currentSheetName || "",
+          student_name: student,
+          type: type,
+          message: message,
+          severity: severity,
+          active: true,
+          updated_at: nowIso,
+          created_by: authState.loginId || "admin"
+        };
+        var id = operationMemoState.editingId;
+        var request = id
+          ? operationMemoSupabaseRequest(table + "?id=eq." + encodeURIComponent(id), { method: "PATCH", headers: { "Prefer": "return=representation" }, body: JSON.stringify(payload) })
+          : operationMemoSupabaseRequest(table, { method: "POST", headers: { "Prefer": "return=representation" }, body: JSON.stringify(Object.assign({ created_at: nowIso }, payload)) });
+        request.then(function() {
+          resetOperationMemoForm();
+          operationMemoState.editingId = "";
+          return loadOperationMemosForCurrentSheet(true);
+        }).catch(function(err) {
+          alert("운영 메모 저장 실패: " + (err && err.message ? err.message : err));
+        });
+      }
+      function findOperationMemoById(encodedId) {
+        var id = decodeURIComponent(encodedId || "");
+        return (operationMemoState.items || []).find(function(item) { return String(item.id || "") === id; });
+      }
+      function editOperationMemo(encodedId) {
+        var item = findOperationMemoById(encodedId);
+        if (!item) return;
+        operationMemoState.editingId = String(item.id || "");
+        document.getElementById('operationMemoStudentInput').value = item.student_name || "";
+        document.getElementById('operationMemoTypeInput').value = item.type || "notice";
+        document.getElementById('operationMemoSeverityInput').value = item.severity || "warning";
+        document.getElementById('operationMemoMessageInput').value = item.message || "";
+      }
+      function deleteOperationMemo(encodedId) {
+        var item = findOperationMemoById(encodedId);
+        if (!item || !confirm("이 운영 메모를 삭제할까요?")) return;
+        var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
+        operationMemoSupabaseRequest(table + "?id=eq." + encodeURIComponent(item.id), {
+          method: "PATCH",
+          headers: { "Prefer": "return=minimal" },
+          body: JSON.stringify({ active: false, updated_at: new Date().toISOString() })
+        }).then(function() {
+          return loadOperationMemosForCurrentSheet(true);
+        }).catch(function(err) {
+          alert("운영 메모 삭제 실패: " + (err && err.message ? err.message : err));
+        });
       }
       function hasGasRunner() {
         return !!(window.google && google.script && google.script.run);
@@ -1263,6 +1584,7 @@
         setInterval(updateTimeline, 60000); 
         startAutoRefresh();
         loadNotice(); 
+        initOperationMemoFeature();
         applyRoleUi();
         loadSavedLoginCredentials();
         document.getElementById('introPage').style.display = 'none';
@@ -1560,6 +1882,12 @@
         teacherCalendarSheetMap = {};
         teacherCalendarSheets = [];
         teacherCalendarReady = false;
+        if (operationMemoPollTimer) clearInterval(operationMemoPollTimer);
+        operationMemoPollTimer = null;
+        operationMemoState.dateKey = "";
+        operationMemoState.items = [];
+        closeOperationMemoAlert();
+        clearOperationMemoHighlights();
         var lookupPane = document.getElementById('visitorLookupPane');
         if (lookupPane) lookupPane.innerHTML = "";
         applyRoleUi();
@@ -1690,6 +2018,7 @@
         var msgSimpleBtn = document.querySelector('.msg-simple-btn');
         var emptyBtn = document.querySelector('.empty-btn');
         var teacherViewLogBtn = document.getElementById('teacherViewLogBtn');
+        var operationMemoBtn = document.getElementById('operationMemoBtn');
         var actionGroup = document.querySelector('.action-group');
         var navGroup = document.querySelector('.nav-group');
         var mainSheetSelector = document.getElementById('mainSheetSelector');
@@ -1717,6 +2046,7 @@
           if (hide9Control) hide9Control.style.display = '';
           if (studentImageBtn) studentImageBtn.style.display = '';
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
+          if (operationMemoBtn) operationMemoBtn.style.display = 'none';
           if (actionGroup) actionGroup.style.display = '';
           if (navGroup) navGroup.style.display = '';
           if (mainSheetSelector) mainSheetSelector.style.display = '';
@@ -1759,6 +2089,7 @@
           if (hide9Control) hide9Control.style.display = 'none';
           if (studentImageBtn) studentImageBtn.style.display = 'none';
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
+          if (operationMemoBtn) operationMemoBtn.style.display = 'none';
           if (actionGroup) actionGroup.style.display = 'none';
           if (navGroup) navGroup.style.display = 'none';
           if (mainSheetSelector) mainSheetSelector.style.display = 'none';
@@ -1804,6 +2135,7 @@
           if (msgSimpleBtn) msgSimpleBtn.style.display = '';
           if (emptyBtn) emptyBtn.style.display = '';
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = '';
+          if (operationMemoBtn) operationMemoBtn.style.display = operationMemoState.configured ? '' : 'none';
         } else {
           roleBadge.textContent = "강사 모드: " + authState.teacherName;
           teacherSel.style.display = 'none';
@@ -1813,6 +2145,7 @@
           if (msgSimpleBtn) msgSimpleBtn.style.display = 'none';
           if (emptyBtn) emptyBtn.style.display = 'none';
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
+          if (operationMemoBtn) operationMemoBtn.style.display = 'none';
         }
         if (isTeacherViewActive()) {
           if (privacyControl) privacyControl.style.display = 'none';
@@ -1960,6 +2293,7 @@
       
       function loadData(n,r,auditView){ 
         currentSheetName=n; 
+        loadOperationMemosForCurrentSheet(true, { silent: true });
         document.getElementById('introPage').style.display='none'; 
         document.getElementById('mainPage').style.display='flex'; 
         document.getElementById('mainSheetSelector').value=n; 
@@ -2000,6 +2334,8 @@
           visitorLookupStudyRefreshing = false;
           currentVersion=String(d.version || "").split("_T_")[0]; 
           renderTable(d, isRefresh); 
+          applyOperationMemoHighlights();
+          showOperationMemoPopupIfNeeded();
           syncLookupDimmingState();
           if (isStudentImageModalOpen()) {
             var pendingSelection = studentImageRefreshPendingSelection || selectedStudentForImage || "";
@@ -4001,6 +4337,7 @@
         
         renderTeacherMobileView(data);
         updateTimelinePosition();
+        applyOperationMemoHighlights();
       }
       function renderTeacherMobileView(data) {
         var mobileWrap = document.getElementById('teacherMobileList');
@@ -4686,6 +5023,7 @@
               card.innerHTML = card.dataset.originalHtml.replace(re, "<span class='highlight-text'>$1</span>");
             }
           });
+          applyOperationMemoHighlights();
           return;
         }
         
@@ -4753,6 +5091,7 @@
         } else {
            document.querySelectorAll('th[data-col-index], td[data-col-index]').forEach(el => el.style.display = "");
         }
+        applyOperationMemoHighlights();
       }
       function runScheduleReview() {
         if (!lastData) return;
