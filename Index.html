@@ -748,19 +748,26 @@
       .teacher-log-status-card.viewed .teacher-log-status-badge { background:#dcfce7; color:#166534; }
       .teacher-log-status-card.missing .teacher-log-status-badge { background:#fee2e2; color:#991b1b; }
       .teacher-log-status-sub { color:#64748b; font-size:0.78rem; font-weight:700; line-height:1.4; }
+      .teacher-log-gauge { width:100%; height:7px; border-radius:999px; background:#e2e8f0; overflow:hidden; margin-top:8px; box-shadow:inset 0 1px 1px rgba(15,23,42,0.08); }
+      .teacher-log-gauge-fill { height:100%; border-radius:inherit; background:linear-gradient(90deg,#60a5fa,#1d4ed8); }
+      .teacher-log-status-card.viewed .teacher-log-gauge-fill { background:linear-gradient(90deg,#86efac,#16a34a); }
       .teacher-log-week-stack { display:flex; flex-direction:column; gap:14px; }
       .teacher-log-week-board { border:1px solid #dbe7ff; border-radius:20px; background:#fff; overflow:hidden; box-shadow:0 12px 30px rgba(30,58,138,0.05); }
       .teacher-log-week-head { display:flex; justify-content:space-between; gap:10px; padding:14px 16px; background:#111827; color:#e5eefc; font-weight:900; }
       .teacher-log-date-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:12px; padding:14px; background:#f8fbff; }
       .teacher-log-date-card { border:1px solid #dbe7ff; border-radius:16px; background:#fff; overflow:hidden; }
+      .teacher-log-date-card.is-current { border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,0.12); }
+      .teacher-log-date-card.is-upcoming { border-color:#93c5fd; background:#f8fbff; }
       .teacher-log-date-card-head { display:flex; justify-content:space-between; gap:10px; padding:13px 14px; border-bottom:1px solid #eef3ff; }
       .teacher-log-date-card-title { color:#15327d; font-size:0.98rem; font-weight:900; }
+      .teacher-log-date-card-badge { display:inline-flex; margin-left:6px; padding:3px 7px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:0.68rem; font-weight:900; vertical-align:middle; }
       .teacher-log-date-card-meta { color:#64748b; font-size:0.76rem; font-weight:800; text-align:right; }
       .teacher-log-date-teachers { display:flex; flex-direction:column; }
       .teacher-log-mini-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-top:1px solid #f1f5f9; }
       .teacher-log-mini-row:first-child { border-top:0; }
       .teacher-log-mini-name { color:#0f172a; font-size:0.88rem; font-weight:900; }
       .teacher-log-mini-meta { color:#64748b; font-size:0.74rem; font-weight:700; text-align:right; }
+      .teacher-log-mini-side { width:92px; flex-shrink:0; }
       @keyframes teacherLogSpin { to { transform:rotate(360deg); } }
       @keyframes teacherLogShimmer { 100% { transform:translateX(100%); } }
       .student-preview-break { background: #dbe2ea; border-color: #cbd5e1; box-shadow: 0 6px 14px rgba(15,23,42,0.08); }
@@ -3745,6 +3752,24 @@
         var baseYear = fallbackDate instanceof Date ? fallbackDate.getFullYear() : (new Date()).getFullYear();
         return new Date(baseYear, Number(match[1]) - 1, Number(match[2]), 12, 0, 0);
       }
+      function getTeacherLogReferenceDate() {
+        var parsed = parseTeacherLogTargetDate(currentSheetName, new Date());
+        var d = parsed || new Date();
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
+      }
+      function getTeacherLogDayDiff(date, referenceDate) {
+        if (!(date instanceof Date) || !(referenceDate instanceof Date)) return 9999;
+        var a = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        var b = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+        return Math.round((a - b) / 86400000);
+      }
+      function getTeacherLogRelativeLabel(date, referenceDate) {
+        var diff = getTeacherLogDayDiff(date, referenceDate);
+        if (diff === 0) return "오늘";
+        if (diff === 1) return "내일";
+        if (diff === 2) return "모레";
+        return "";
+      }
       function getTeacherLogWeekStart(date) {
         var d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         var day = d.getDay();
@@ -3848,14 +3873,25 @@
               totalViews: teachers.reduce(function(sum, teacher) { return sum + teacher.count; }, 0),
               teachers: teachers
             };
-          }).sort(function(a, b) { return b.targetDateObj - a.targetDateObj; });
+          }).sort(function(a, b) { return a.targetDateObj - b.targetDateObj; });
           return {
             weekKey: week.weekKey,
             weekStart: week.weekStart,
             label: week.label,
             dates: dates
           };
-        }).sort(function(a, b) { return b.weekStart - a.weekStart; });
+        }).sort(function(a, b) {
+          var referenceWeek = getTeacherLogWeekStart(getTeacherLogReferenceDate());
+          var aDiff = Math.round((a.weekStart - referenceWeek) / 604800000);
+          var bDiff = Math.round((b.weekStart - referenceWeek) / 604800000);
+          function rank(v) { return v === 0 ? 0 : (v > 0 ? 1 : 2); }
+          var ar = rank(aDiff);
+          var br = rank(bDiff);
+          if (ar !== br) return ar - br;
+          if (ar === 1) return aDiff - bDiff;
+          if (ar === 2) return bDiff - aDiff;
+          return a.weekStart - b.weekStart;
+        });
       }
       function normalizeTeacherLogName(value) {
         return String(value || "").replace(/\s+/g, "").replace(/T$/i, "").trim();
@@ -3906,6 +3942,13 @@
           "<div class='teacher-log-summary-card'><div class='teacher-log-summary-label'>총 열람 횟수</div><div class='teacher-log-summary-value'>" + totalViews + "회</div><div class='teacher-log-summary-note'>로그 강사 " + loggedTeachers + "명</div></div>" +
         "</div>";
       }
+      function renderTeacherLogGauge(count) {
+        var value = Math.max(0, Math.min(10, parseInt(count, 10) || 0));
+        var pct = value * 10;
+        return "<div class='teacher-log-gauge' title='" + value + "/10'>" +
+          "<div class='teacher-log-gauge-fill' style='width:" + pct + "%'></div>" +
+        "</div>";
+      }
       function renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers) {
         var viewedMap = {};
         if (currentDateLog) {
@@ -3922,6 +3965,7 @@
               "<div class='teacher-log-status-badge'>" + (viewed ? "열람" : "미열람") + "</div>" +
             "</div>" +
             "<div class='teacher-log-status-sub'>" + (viewed ? (teacher.count + "회 · 최근 " + escapeTeacherLogHtml(teacher.lastViewed)) : "아직 열람 기록이 없습니다.") + "</div>" +
+            renderTeacherLogGauge(viewed ? teacher.count : 0) +
           "</div>";
         }).join("");
         if (!expectedTeachers.length) teacherCards = "<div class='teacher-empty'>현재 불러온 시간표에서 강사명을 찾지 못했습니다.</div>";
@@ -3935,6 +3979,7 @@
         "</section>";
       }
       function renderTeacherLogWeekStack(weeks) {
+        var referenceDate = getTeacherLogReferenceDate();
         return "<div class='teacher-log-week-stack'>" + weeks.map(function(week) {
           var weekTeacherCount = {};
           var weekTotalViews = 0;
@@ -3948,16 +3993,19 @@
             "<div class='teacher-log-week-head'><span>" + escapeTeacherLogHtml(week.label) + "</span><span>강사 " + Object.keys(weekTeacherCount).length + "명 · " + weekTotalViews + "회</span></div>" +
             "<div class='teacher-log-date-grid'>" +
               week.dates.map(function(dateGroup) {
-                return "<article class='teacher-log-date-card'>" +
+                var relativeLabel = getTeacherLogRelativeLabel(dateGroup.targetDateObj, referenceDate);
+                var diff = getTeacherLogDayDiff(dateGroup.targetDateObj, referenceDate);
+                var dateClass = diff === 0 ? " is-current" : (diff > 0 && diff <= 2 ? " is-upcoming" : "");
+                return "<article class='teacher-log-date-card" + dateClass + "'>" +
                   "<div class='teacher-log-date-card-head'>" +
-                    "<div class='teacher-log-date-card-title'>" + escapeTeacherLogHtml(dateGroup.targetDateLabel) + "</div>" +
+                    "<div class='teacher-log-date-card-title'>" + escapeTeacherLogHtml(dateGroup.targetDateLabel) + (relativeLabel ? "<span class='teacher-log-date-card-badge'>" + relativeLabel + "</span>" : "") + "</div>" +
                     "<div class='teacher-log-date-card-meta'>강사 " + dateGroup.teacherCount + "명<br>총 " + dateGroup.totalViews + "회</div>" +
                   "</div>" +
                   "<div class='teacher-log-date-teachers'>" +
                     dateGroup.teachers.map(function(teacher) {
                       return "<div class='teacher-log-mini-row'>" +
                         "<div class='teacher-log-mini-name'>" + escapeTeacherLogHtml(teacher.teacherName) + "</div>" +
-                        "<div class='teacher-log-mini-meta'>" + teacher.count + "회<br>" + escapeTeacherLogHtml(teacher.lastViewed) + "</div>" +
+                        "<div class='teacher-log-mini-side'><div class='teacher-log-mini-meta'>" + teacher.count + "회<br>" + escapeTeacherLogHtml(teacher.lastViewed) + "</div>" + renderTeacherLogGauge(teacher.count) + "</div>" +
                       "</div>";
                     }).join("") +
                   "</div>" +
