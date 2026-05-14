@@ -8,6 +8,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+      window.SEDU_OPERATION_MEMO_CONFIG = {
+        provider: "supabase",
+        url: "https://jtdhvkotlvznedqixsvv.supabase.co",
+        anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0ZGh2a290bHZ6bmVkcWl4c3Z2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMjI4NjcsImV4cCI6MjA4NzY5ODg2N30.1RwEpLmPfpx81-O6OfdaEh42lEVVRstPo9597ZsnASc",
+        table: "operation_memos"
+      };
+    </script>
     <style>
       :root { --primary: #0f1746; --secondary: #004d40; --accent: #3b82f6; --bg: #f8f9fa; --border: #e5e7eb; --sedu-blue: #024C9B; }
       body { font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
