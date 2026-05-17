@@ -1834,8 +1834,14 @@
           ui.fill.style.width = "0%";
         }, success ? 380 : 240);
       }
+      function isCopySheetName(name) {
+        return String(name || "").indexOf("사본") !== -1;
+      }
       function shouldHideTeacherCopySheet(name) {
-        return isTeacherViewActive() && String(name || "").indexOf("사본") !== -1;
+        return isTeacherViewActive() && isCopySheetName(name);
+      }
+      function shouldHideLookupCopySheet(name) {
+        return isLookupViewActive() && isCopySheetName(name);
       }
       function getSheetSelectorNames() {
         var source = availableSheets;
@@ -1843,7 +1849,7 @@
           source = (teacherCalendarReady && teacherCalendarSheets.length) ? teacherCalendarSheets : availableSheets;
         }
         return (source || []).filter(function(name) {
-          return !shouldHideTeacherCopySheet(name);
+          return !shouldHideTeacherCopySheet(name) && !shouldHideLookupCopySheet(name);
         });
       }
       function populateMainSheetSelector(preferredValue) {
@@ -2112,7 +2118,12 @@
         var now = new Date();
         var key = (now.getMonth() + 1) + "-" + now.getDate();
         var list = map && map[key];
-        return list && list.length ? list[0] : "";
+        return getPreferredSheetNameForDate(list);
+      }
+      function getPreferredSheetNameForDate(list) {
+        if (!list || !list.length) return "";
+        var normal = list.filter(function(name) { return !isCopySheetName(name); });
+        return (normal.length ? normal : list)[0] || "";
       }
       function getCalendarSheetMap() {
         if (isTeacherViewActive() && teacherCalendarReady) return teacherCalendarSheetMap;
@@ -2466,7 +2477,8 @@
           populateMainSheetSelector(currentSheetName); 
           sheetMap = buildSheetMapFromNames(availableSheets);
           if (authState.isLookup) {
-            var lookupTodaySheet = getTodaySheetNameFromMap(sheetMap);
+            var lookupSheetMap = buildSheetMapFromNames((availableSheets || []).filter(function(name) { return !isCopySheetName(name); }));
+            var lookupTodaySheet = getTodaySheetNameFromMap(lookupSheetMap) || getTodaySheetNameFromMap(sheetMap);
             if (lookupTodaySheet) currentSheetName = lookupTodaySheet;
           }
           
@@ -2492,7 +2504,7 @@
         }catch(e){console.error(e);} 
       }
       function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
-      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(s.length===1)loadData(s[0],true,true); else showVersionModal(s); }
+      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ var filtered=s.filter(function(name){return !isCopySheetName(name);}); if(filtered.length)s=filtered; } if(s.length===1)loadData(s[0],true,true); else showVersionModal(s); }
       function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
@@ -2576,7 +2588,7 @@
       function checkUpdate(){ var c=document.getElementById('mainSheetSelector').value; if(!c)return; callServer("checkDataVersion",[c]).then(function(v){ if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; } }).catch(function(){}); }
       function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false,true); }
       function refreshData(){ if(currentSheetName){ document.getElementById('refreshBtn').classList.add('spinning'); loadData(currentSheetName,true); } }
-      function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; var visibleSheets=getNavigableSheetNames(); var activeMap=getCalendarSheetMap(); if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(activeMap[k]){ loadData(activeMap[k][0],false,true); } else { alert("오늘 시간표 없음"); } return; } var idx=visibleSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<visibleSheets.length)loadData(visibleSheets[n],false,true); else alert("이동 불가"); }
+      function navigateDay(offset){ var sel=document.getElementById('mainSheetSelector'); var c=sel.value; var visibleSheets=getNavigableSheetNames(); var activeMap=getCalendarSheetMap(); if(!c&&offset!==0)return; if(offset===0){ var t=new Date(); var k=(t.getMonth()+1)+"-"+t.getDate(); if(activeMap[k]){ var target=getPreferredSheetNameForDate(activeMap[k]); if(target) loadData(target,false,true); } else { alert("오늘 시간표 없음"); } return; } var idx=visibleSheets.indexOf(c); if(idx===-1)return; var n=idx+offset; if(n>=0&&n<visibleSheets.length)loadData(visibleSheets[n],false,true); else alert("이동 불가"); }
       
       function generateArrivalMessage(){ 
         if(!lastData)return; 
