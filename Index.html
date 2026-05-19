@@ -102,6 +102,9 @@
       .rb-duplicate { background: #ef5350; } 
       .rb-single { background: #ff9800; } 
       .rb-capacity { background: #7b1fa2; }
+      .rb-missing { background: #d32f2f; }
+      .rb-check { background: #1976d2; }
+      .rb-teacher { background: #00897b; }
       .review-text { font-size: 0.9rem; color: #333; line-height: 1.4; }
       .review-empty { text-align: center; padding: 20px; color: #4caf50; font-weight: bold; }
       .ticker-wrap { width: 100%; background: #333; overflow: hidden; height: 30px; line-height: 30px; cursor: pointer; flex-shrink: 0; }
@@ -2484,16 +2487,6 @@
           
           document.getElementById('introLoading').style.display='none'; 
           
-          if(names.length>0){ 
-            var l=names[names.length-1]; 
-            var m=l.match(/(\d+)\/(\d+)/); 
-            if(m) {
-              var sheetMonth = parseInt(m[1]);
-              if (now.getMonth() === 11 && sheetMonth === 1) targetYear += 1;
-              if (now.getMonth() === 0 && sheetMonth === 12) targetYear -= 1;
-              targetMonth = sheetMonth - 1;
-            }
-          } 
           currentDate = new Date(targetYear, targetMonth, 1);
           applyRoleUi();
           if (authState.isLookup && currentSheetName) {
@@ -5426,11 +5419,9 @@
         if (!lastData) return;
         
         var reviewList = document.getElementById('reviewResultList');
-        reviewList.innerHTML = "";
+        reviewList.innerHTML = "<div class='review-empty'>지난주 시간표와 함께 검토 중입니다...</div>";
+        document.getElementById('reviewModal').style.display = 'flex';
         
-        var hourlyStudents = {}; 
-        var studentDuration = {}; 
-        var issues = [];
         var nonStudentKeywords = new Set([
           "일반보충","보충","보강","당취보충","자율학습시간","자율학습","자기주도학습","정규","개별정규","개별","1:1","2:1","특강","직보"
         ]);
@@ -5450,98 +5441,165 @@
           if (/(보충|보강|정규|휴강|결석|당취|취소|특강|직보|수업|학습)/.test(n)) return true;
           return false;
         }
-        
-        for (var h = 9; h <= 23; h++) {
-          var row = lastData.grid[h] || [];
-          if (!hourlyStudents[h]) hourlyStudents[h] = [];
-          
-          for (var i = 0; i < lastData.headers.length; i++) {
-            var items = row[i] || [];
-            var colName = lastData.headers[i];
-            if (String(colName || "").includes("휴강")) continue;
-            
-            var cellStudents = [];
-            var teacherItem = items.find(function(text) {
-              return String(text || "").includes("T");
-            }) || "";
-            var lessonType = detectClassType(teacherItem);
-            
-            items.forEach(function(text) {
-              var txt = String(text || "");
-              if (txt.includes("T")) return; 
-              if (txt.includes("결석예고") || txt.includes("휴강")) return;
-              if (shouldHideStudentText(txt)) return;
-              
-              var cleanName = normalizeReviewNameToken(
-                txt.replace("확인필요", "").replace(/신\s*규\s*생?|첫\s*수\s*업/g, "").trim().split(" ")[0]
-              );
-              if (cleanName && !isNonStudentName(cleanName)) {
-                hourlyStudents[h].push({ name: cleanName, room: colName });
-                cellStudents.push(cleanName);
-                if (!studentDuration[cleanName]) studentDuration[cleanName] = 0;
-                studentDuration[cleanName]++;
+        function getReviewPreviousWeekSheetName() {
+          var currentDateObj = parseTeacherLogTargetDate(currentSheetName, new Date());
+          if (!(currentDateObj instanceof Date)) return "";
+          var prev = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth(), currentDateObj.getDate(), 12, 0, 0);
+          prev.setDate(prev.getDate() - 7);
+          var key = (prev.getMonth() + 1) + "-" + prev.getDate();
+          return getPreferredSheetNameForDate((sheetMap && sheetMap[key]) || []);
+        }
+        function extractReviewStudentName(text) {
+          var cleaned = String(text || "")
+            .replace(/확인필요|확인\s*필요/g, " ")
+            .replace(/신\s*규\s*생?|첫\s*수\s*업/g, " ")
+            .replace(/결석예고|당일취소|휴강|오늘만|보충|보강|보호|지각/g, " ")
+            .trim();
+          var first = cleaned.split(/\s+/)[0] || "";
+          var cleanName = normalizeReviewNameToken(first);
+          return cleanName && !isNonStudentName(cleanName) ? cleanName : "";
+        }
+        function buildReviewSnapshot(data) {
+          var snapshot = {
+            hourlyStudents: {},
+            studentDuration: {},
+            allStudentNames: {},
+            studentOccurrences: {},
+            issues: []
+          };
+          var headers = (data && data.headers) || [];
+          var grid = (data && data.grid) || {};
+          for (var h = 9; h <= 23; h++) {
+            var row = grid[h] || [];
+            if (!snapshot.hourlyStudents[h]) snapshot.hourlyStudents[h] = [];
+            for (var i = 0; i < headers.length; i++) {
+              var items = row[i] || [];
+              var colName = headers[i];
+              if (String(colName || "").includes("휴강")) continue;
+              var cellStudents = [];
+              var cellAllStudents = [];
+              var hasCheckNeeded = false;
+              var teacherItem = items.find(function(text) {
+                return String(text || "").includes("T");
+              }) || "";
+              var lessonType = detectClassType(teacherItem);
+              items.forEach(function(text) {
+                var txt = String(text || "");
+                if (txt.includes("T")) return;
+                var extractedName = extractReviewStudentName(txt);
+                if (extractedName) {
+                  snapshot.allStudentNames[extractedName] = true;
+                  if (!snapshot.studentOccurrences[extractedName]) snapshot.studentOccurrences[extractedName] = [];
+                  snapshot.studentOccurrences[extractedName].push({ hour: h, room: colName });
+                  cellAllStudents.push(extractedName);
+                }
+                if (txt.indexOf("확인필요") !== -1 || /확인\s*필요/.test(txt)) hasCheckNeeded = true;
+                if (txt.includes("결석예고") || txt.includes("휴강")) return;
+                if (shouldHideStudentText(txt)) return;
+                if (extractedName) {
+                  snapshot.hourlyStudents[h].push({ name: extractedName, room: colName });
+                  cellStudents.push(extractedName);
+                  if (!snapshot.studentDuration[extractedName]) snapshot.studentDuration[extractedName] = 0;
+                  snapshot.studentDuration[extractedName]++;
+                }
+              });
+              if (hasCheckNeeded) {
+                snapshot.issues.push({ type: 'check', msg: `[${h}:00] ${colName} - 확인필요 표시가 남아 있습니다. 확정 여부를 확인하세요.` });
               }
-            });
-            
-            if (lessonType === "1:1" && cellStudents.length > 1) {
-               issues.push({
-                 type: 'capacity',
-                 msg: `[${h}:00] ${colName} - 1:1 수업에 ${cellStudents.length}명 배정 (${cellStudents.join(", ")})`
-               });
-            } else if (lessonType === "2:1" && cellStudents.length > 2) {
-               issues.push({
-                 type: 'capacity',
-                 msg: `[${h}:00] ${colName} - 2:1 수업에 ${cellStudents.length}명 배정 (${cellStudents.join(", ")})`
-               });
+              if (cellStudents.length && !teacherItem) {
+                snapshot.issues.push({ type: 'teacher', msg: `[${h}:00] ${colName} - 학생은 있으나 담당 강사 표시가 없습니다 (${cellStudents.join(", ")})` });
+              }
+              if (teacherItem && lessonType && !cellAllStudents.length && !String(teacherItem || "").includes("휴강")) {
+                snapshot.issues.push({ type: 'teacher', msg: `[${h}:00] ${colName} - 담당 강사/수업 정보만 있고 학생이 없습니다. 의도된 빈 수업인지 확인하세요.` });
+              }
+              if (lessonType === "1:1" && cellStudents.length > 1) {
+                 snapshot.issues.push({ type: 'capacity', msg: `[${h}:00] ${colName} - 1:1 수업에 ${cellStudents.length}명 배정 (${cellStudents.join(", ")})` });
+              } else if (lessonType === "2:1" && cellStudents.length > 2) {
+                 snapshot.issues.push({ type: 'capacity', msg: `[${h}:00] ${colName} - 2:1 수업에 ${cellStudents.length}명 배정 (${cellStudents.join(", ")})` });
+              }
             }
           }
+          return snapshot;
         }
-        
-        for (var h in hourlyStudents) {
-           var students = hourlyStudents[h];
-           var nameCounts = {};
-           students.forEach(function(s) {
-              if(!nameCounts[s.name]) nameCounts[s.name] = [];
-              nameCounts[s.name].push(s.room);
-           });
-           
-           for (var name in nameCounts) {
-              if (nameCounts[name].length > 1) {
-                 issues.push({
-                   type: 'duplicate',
-                   msg: `[${h}:00] '${name}' 학생 중복 수강 (${nameCounts[name].join(", ")})`
-                 });
-              }
-           }
+        function addCurrentSnapshotIssues(snapshot, issues) {
+          for (var h in snapshot.hourlyStudents) {
+             var students = snapshot.hourlyStudents[h];
+             var nameCounts = {};
+             students.forEach(function(s) {
+                if(!nameCounts[s.name]) nameCounts[s.name] = [];
+                nameCounts[s.name].push(s.room);
+             });
+             for (var name in nameCounts) {
+                if (nameCounts[name].length > 1) {
+                   issues.push({ type: 'duplicate', msg: `[${h}:00] '${name}' 학생 중복 수강 (${nameCounts[name].join(", ")})` });
+                }
+             }
+          }
+          for (var name in snapshot.studentDuration) {
+             if (snapshot.studentDuration[name] === 1) {
+                issues.push({ type: 'single', msg: `'${name}' 학생 수업이 1시간만 배정됨` });
+             }
+          }
+          snapshot.issues.forEach(function(issue) { issues.push(issue); });
         }
-        
-        for (var name in studentDuration) {
-           if (studentDuration[name] === 1) {
-              issues.push({
-                type: 'single',
-                msg: `'${name}' 학생 수업이 1시간만 배정됨`
-              });
-           }
+        function addPreviousWeekIssues(currentSnapshot, previousSnapshot, previousSheetName, issues) {
+          if (!previousSnapshot || !previousSheetName) return;
+          Object.keys(previousSnapshot.allStudentNames || {}).sort(function(a, b) { return a.localeCompare(b, "ko"); }).forEach(function(name) {
+            if (currentSnapshot.allStudentNames[name]) return;
+            var refs = (previousSnapshot.studentOccurrences[name] || []).slice(0, 3).map(function(item) {
+              return item.hour + ":00 " + item.room;
+            });
+            issues.push({
+              type: 'missing',
+              msg: `'${name}' 학생이 지난주(${previousSheetName})에는 있었지만 현재 시간표에는 없습니다.` + (refs.length ? " 지난주 위치: " + refs.join(", ") : "")
+            });
+          });
         }
-        
-        if (issues.length === 0) {
-           reviewList.innerHTML = "<div class='review-empty'>✅ 발견된 문제가 없습니다!</div>";
-        } else {
-           issues.forEach(function(issue) {
-              var badgeClass = "";
-              var badgeText = "";
-              if(issue.type === 'duplicate') { badgeClass = 'rb-duplicate'; badgeText = '중복'; }
-              else if(issue.type === 'single') { badgeClass = 'rb-single'; badgeText = '1시간'; }
-              else { badgeClass = 'rb-capacity'; badgeText = '정원'; }
-              
-              var div = document.createElement('div');
-              div.className = 'review-item';
-              div.innerHTML = `<span class='review-badge ${badgeClass}'>${badgeText}</span><span class='review-text'>${issue.msg}</span>`;
-              reviewList.appendChild(div);
-           });
+        function renderReviewIssues(issues, previousSheetName) {
+          reviewList.innerHTML = "";
+          if (previousSheetName) {
+            var note = document.createElement('div');
+            note.className = 'review-item';
+            note.innerHTML = "<span class='review-badge rb-check'>비교</span><span class='review-text'>지난주 기준 시트: " + escapeHtml(previousSheetName) + "</span>";
+            reviewList.appendChild(note);
+          }
+          if (issues.length === 0) {
+             reviewList.innerHTML += "<div class='review-empty'>✅ 발견된 문제가 없습니다!</div>";
+             return;
+          }
+          issues.forEach(function(issue) {
+            var badgeClass = "";
+            var badgeText = "";
+            if(issue.type === 'duplicate') { badgeClass = 'rb-duplicate'; badgeText = '중복'; }
+            else if(issue.type === 'single') { badgeClass = 'rb-single'; badgeText = '1시간'; }
+            else if(issue.type === 'missing') { badgeClass = 'rb-missing'; badgeText = '누락'; }
+            else if(issue.type === 'check') { badgeClass = 'rb-check'; badgeText = '확인'; }
+            else if(issue.type === 'teacher') { badgeClass = 'rb-teacher'; badgeText = '강사'; }
+            else { badgeClass = 'rb-capacity'; badgeText = '정원'; }
+            var div = document.createElement('div');
+            div.className = 'review-item';
+            div.innerHTML = "<span class='review-badge " + badgeClass + "'>" + badgeText + "</span><span class='review-text'>" + escapeHtml(issue.msg) + "</span>";
+            reviewList.appendChild(div);
+          });
         }
-        
-        document.getElementById('reviewModal').style.display = 'flex';
+        var currentSnapshot = buildReviewSnapshot(lastData);
+        var previousSheetName = getReviewPreviousWeekSheetName();
+        var teacherName = getActiveTeacherName();
+        var previousPromise = previousSheetName
+          ? callServer(teacherName ? "getTeacherGridData" : "getFixedGridData", teacherName ? [previousSheetName, teacherName, true] : [previousSheetName, true]).catch(function() { return null; })
+          : Promise.resolve(null);
+        previousPromise.then(function(previousData) {
+          var issues = [];
+          addCurrentSnapshotIssues(currentSnapshot, issues);
+          if (previousData && previousData.grid) {
+            addPreviousWeekIssues(currentSnapshot, buildReviewSnapshot(previousData), previousSheetName, issues);
+          } else if (previousSheetName) {
+            issues.push({ type: 'check', msg: `지난주 기준 시트(${previousSheetName}) 데이터를 불러오지 못했습니다.` });
+          } else {
+            issues.push({ type: 'check', msg: "지난주 같은 요일 시간표를 찾지 못해 누락 학생 비교를 건너뛰었습니다." });
+          }
+          renderReviewIssues(issues, previousData && previousData.grid ? previousSheetName : "");
+        });
       }
       
       function closeReviewModal() {
