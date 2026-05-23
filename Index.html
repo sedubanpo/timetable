@@ -80,7 +80,7 @@
       .gate-role-title { margin: 0 0 8px; font-size: 0.9rem; color: rgba(255,255,255,0.95); font-weight: 700; }
       .gate-tip { margin-top: 10px; font-size: 0.78rem; color: rgba(255,255,255,0.88); }
       /* 리뷰 모달 */
-      .review-box { background: white; width: 500px; max-height: 80vh; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; text-align: left;}
+      .review-box { background: white; width: min(1120px, calc(100vw - 40px)); max-height: 88vh; padding: 24px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; text-align: left;}
       .msg-box { background: white; width: 500px; max-height: 85vh; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
       .msg-textarea { flex-grow: 1; width: 100%; height: 300px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 0.9rem; resize: none; margin-top: 15px; background: #f9fafb; overflow-y: auto;}
       .msg-copy-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 1rem; transition: 0.2s; }
@@ -95,7 +95,31 @@
       .select-all-box { padding: 10px; background: #f0f4ff; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; font-weight: bold; color: var(--primary); }
       .select-guide { font-size: 0.8rem; color: #d32f2f; margin-bottom: 5px; font-weight: bold; }
       .modal-search { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; box-sizing: border-box; }
-      .review-list { margin-top: 15px; overflow-y: auto; max-height: 400px; border: 1px solid #eee; border-radius: 8px; padding: 10px; }
+      .review-list { margin-top: 15px; overflow-y: auto; max-height: min(680px, 72vh); border: 1px solid #dbeafe; border-radius: 14px; padding: 16px; background: #f8fbff; }
+      .review-dashboard { display:flex; flex-direction:column; gap:14px; }
+      .review-dashboard-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:14px 16px; border:1px solid #bfdbfe; border-radius:14px; background:linear-gradient(180deg,#eff6ff,#ffffff); }
+      .review-dashboard-title { font-size:1.05rem; font-weight:900; color:#0f172a; }
+      .review-dashboard-sub { margin-top:4px; font-size:0.82rem; font-weight:700; color:#64748b; }
+      .review-dashboard-score { min-width:150px; text-align:right; }
+      .review-dashboard-score strong { display:block; font-size:2rem; line-height:1; color:#1d4ed8; }
+      .review-dashboard-score span { display:block; margin-top:5px; font-size:0.78rem; font-weight:800; color:#475569; }
+      .review-meter { height:8px; margin-top:9px; border-radius:999px; background:#dbeafe; overflow:hidden; }
+      .review-meter-fill { height:100%; width:0%; border-radius:inherit; background:linear-gradient(90deg,#2563eb,#22c55e); }
+      .review-kpi-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:10px; }
+      .review-kpi { padding:13px; border:1px solid #dbeafe; border-radius:12px; background:white; }
+      .review-kpi-label { font-size:0.76rem; font-weight:800; color:#64748b; }
+      .review-kpi-value { margin-top:6px; font-size:1.35rem; font-weight:900; color:#0f172a; }
+      .review-kpi-note { margin-top:4px; font-size:0.76rem; font-weight:700; color:#64748b; }
+      .review-section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:2px; font-size:0.92rem; font-weight:900; color:#0f172a; }
+      .review-change-grid { display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap:8px; }
+      .review-change-pill { padding:10px 12px; border-radius:12px; border:1px solid #e2e8f0; background:#fff; }
+      .review-change-pill strong { display:block; font-size:1.15rem; color:#0f172a; }
+      .review-change-pill span { display:block; margin-top:3px; font-size:0.74rem; font-weight:800; color:#64748b; }
+      .review-change-pill.warn { border-color:#fecaca; background:#fff1f2; }
+      .review-change-pill.info { border-color:#bfdbfe; background:#eff6ff; }
+      .review-change-pill.good { border-color:#bbf7d0; background:#f0fdf4; }
+      .review-detail-list { display:flex; flex-direction:column; gap:8px; }
+      .review-detail-list.compact { gap:6px; }
       .review-item { padding: 10px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: flex-start; gap: 10px; }
       .review-item:last-child { border-bottom: none; }
       .review-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: white; white-space: nowrap; }
@@ -107,6 +131,13 @@
       .rb-teacher { background: #00897b; }
       .review-text { font-size: 0.9rem; color: #333; line-height: 1.4; }
       .review-empty { text-align: center; padding: 20px; color: #4caf50; font-weight: bold; }
+      @media (max-width: 900px) {
+        .review-box { width: calc(100vw - 18px); padding: 16px; }
+        .review-dashboard-head { flex-direction: column; }
+        .review-dashboard-score { width: 100%; text-align:left; }
+        .review-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .review-change-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
       .ticker-wrap { width: 100%; background: #333; overflow: hidden; height: 30px; line-height: 30px; cursor: pointer; flex-shrink: 0; }
       .ticker { display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker 30s linear infinite; color: #fff; font-size: 0.85rem; font-weight: 500; }
       @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
@@ -942,7 +973,7 @@
     </div>
     <div id="reviewModal">
       <div class="review-box">
-        <div class="modal-title" style="margin-bottom: 10px;">📋 시간표 검토 결과</div>
+        <div class="modal-title" style="margin-bottom: 10px;">📋 시간표 검토 대시보드</div>
         <div class="review-list" id="reviewResultList"></div>
         <div class="close-modal" onclick="closeReviewModal()">닫기</div>
       </div>
@@ -5422,9 +5453,10 @@
         reviewList.innerHTML = "<div class='review-empty'>지난주 시간표와 함께 검토 중입니다...</div>";
         document.getElementById('reviewModal').style.display = 'flex';
         
-        var nonStudentKeywords = new Set([
-          "일반보충","보충","보강","당취보충","자율학습시간","자율학습","자기주도학습","정규","개별정규","개별","1:1","2:1","특강","직보"
-        ]);
+	        var nonStudentKeywords = new Set([
+	          "일반보충","보충","보강","당취보충","자율학습시간","자율학습","자기주도학습","정규","개별정규","개별","1:1","2:1","특강","직보",
+	          "국어","영어","수학","과학","사회","사탐","한국사","역사","물리","화학","생명","지구과학","언매","화작","미적","확통","기하","수I","수II"
+	        ]);
         function normalizeReviewNameToken(text) {
           return String(text || "")
             .replace(/[‘’“”"'`]/g, "")
@@ -5436,11 +5468,12 @@
         function isNonStudentName(name) {
           var n = normalizeReviewNameToken(name);
           if (!n) return true;
-          if (nonStudentKeywords.has(n)) return true;
-          if (/^(자율|자습|학습|자기주도)/.test(n)) return true;
-          if (/(보충|보강|정규|휴강|결석|당취|취소|특강|직보|수업|학습)/.test(n)) return true;
-          return false;
-        }
+	          if (nonStudentKeywords.has(n)) return true;
+	          if (/^(자율|자습|학습|자기주도)/.test(n)) return true;
+	          if (/^(국어|영어|수학|과학|사회|사탐|한국사|역사|물리|화학|생명|지구과학|언매|화작|미적|확통|기하|수I|수II)$/.test(n)) return true;
+	          if (/(보충|보강|정규|휴강|결석|당취|취소|특강|직보|수업|학습)/.test(n)) return true;
+	          return false;
+	        }
         function getReviewPreviousWeekSheetName() {
           var currentDateObj = parseTeacherLogTargetDate(currentSheetName, new Date());
           if (!(currentDateObj instanceof Date)) return "";
@@ -5460,16 +5493,38 @@
           return cleanName && !isNonStudentName(cleanName) ? cleanName : "";
         }
         function buildReviewSnapshot(data) {
-          var snapshot = {
-            hourlyStudents: {},
-            studentDuration: {},
-            allStudentNames: {},
-            studentOccurrences: {},
-            issues: []
-          };
-          var headers = (data && data.headers) || [];
-          var grid = (data && data.grid) || {};
-          for (var h = 9; h <= 23; h++) {
+	          var snapshot = {
+	            hourlyStudents: {},
+	            studentDuration: {},
+	            allStudentNames: {},
+	            studentOccurrences: {},
+	            studentDetails: {},
+	            statusCounts: {},
+	            totalActiveSlots: 0,
+	            issues: []
+	          };
+	          var headers = (data && data.headers) || [];
+	          var grid = (data && data.grid) || {};
+	          function ensureStudentDetail(name) {
+	            if (!snapshot.studentDetails[name]) {
+	              snapshot.studentDetails[name] = {
+	                occurrences: [],
+	                hours: {},
+	                rooms: {},
+	                statuses: {},
+	                teachers: {},
+	                subjects: {},
+	                activeCount: 0,
+	                totalCount: 0
+	              };
+	            }
+	            return snapshot.studentDetails[name];
+	          }
+	          function getTeacherLabel(text) {
+	            var matches = String(text || "").match(/[가-힣A-Za-z0-9]+T/g);
+	            return matches && matches.length ? matches[matches.length - 1] : "";
+	          }
+	          for (var h = 9; h <= 23; h++) {
             var row = grid[h] || [];
             if (!snapshot.hourlyStudents[h]) snapshot.hourlyStudents[h] = [];
             for (var i = 0; i < headers.length; i++) {
@@ -5486,10 +5541,23 @@
               items.forEach(function(text) {
                 var txt = String(text || "");
                 if (txt.includes("T")) return;
-                var extractedName = extractReviewStudentName(txt);
-                if (extractedName) {
-                  snapshot.allStudentNames[extractedName] = true;
-                  if (!snapshot.studentOccurrences[extractedName]) snapshot.studentOccurrences[extractedName] = [];
+	                var extractedName = extractReviewStudentName(txt);
+	                if (extractedName) {
+	                  var parsedStudent = parseStudentRawText(txt);
+	                  var statusLabel = normalizeStatusLabel(parsedStudent.status || "정규") || "정규";
+	                  var detail = ensureStudentDetail(extractedName);
+	                  var teacherLabel = getTeacherLabel(teacherItem);
+	                  var subjectLabel = getSubjectName(String(teacherItem || "") + " " + txt);
+	                  detail.totalCount++;
+	                  detail.occurrences.push({ hour: h, room: colName, status: statusLabel, teacher: teacherLabel, subject: subjectLabel });
+	                  detail.hours[h] = true;
+	                  detail.rooms[colName] = true;
+	                  detail.statuses[statusLabel] = true;
+	                  if (teacherLabel) detail.teachers[teacherLabel] = true;
+	                  if (subjectLabel) detail.subjects[subjectLabel] = true;
+	                  snapshot.statusCounts[statusLabel] = (snapshot.statusCounts[statusLabel] || 0) + 1;
+	                  snapshot.allStudentNames[extractedName] = true;
+	                  if (!snapshot.studentOccurrences[extractedName]) snapshot.studentOccurrences[extractedName] = [];
                   snapshot.studentOccurrences[extractedName].push({ hour: h, room: colName });
                   cellAllStudents.push(extractedName);
                 }
@@ -5499,9 +5567,11 @@
                 if (extractedName) {
                   snapshot.hourlyStudents[h].push({ name: extractedName, room: colName });
                   cellStudents.push(extractedName);
-                  if (!snapshot.studentDuration[extractedName]) snapshot.studentDuration[extractedName] = 0;
-                  snapshot.studentDuration[extractedName]++;
-                }
+	                  if (!snapshot.studentDuration[extractedName]) snapshot.studentDuration[extractedName] = 0;
+	                  snapshot.studentDuration[extractedName]++;
+	                  snapshot.totalActiveSlots++;
+	                  if (snapshot.studentDetails[extractedName]) snapshot.studentDetails[extractedName].activeCount++;
+	                }
               });
               if (hasCheckNeeded) {
                 snapshot.issues.push({ type: 'check', msg: `[${h}:00] ${colName} - 확인필요 표시가 남아 있습니다. 확정 여부를 확인하세요.` });
@@ -5518,10 +5588,88 @@
                  snapshot.issues.push({ type: 'capacity', msg: `[${h}:00] ${colName} - 2:1 수업에 ${cellStudents.length}명 배정 (${cellStudents.join(", ")})` });
               }
             }
-          }
-          return snapshot;
-        }
-        function addCurrentSnapshotIssues(snapshot, issues) {
+	          }
+	          return snapshot;
+	        }
+	        function getReviewObjectKeys(obj) {
+	          return Object.keys(obj || {}).sort(function(a, b) { return a.localeCompare(b, "ko"); });
+	        }
+	        function getReviewDetailSignature(detail, key) {
+	          return getReviewObjectKeys(detail && detail[key]).join("|");
+	        }
+	        function getReviewPositionSignature(detail) {
+	          return ((detail && detail.occurrences) || []).map(function(item) {
+	            return item.hour + "|" + item.room;
+	          }).sort().join(";");
+	        }
+	        function summarizeReviewNames(list, limit) {
+	          var items = (list || []).slice(0, limit || 6);
+	          var more = (list || []).length - items.length;
+	          return items.join(", ") + (more > 0 ? " 외 " + more + "명" : "");
+	        }
+	        function buildReviewComparison(currentSnapshot, previousSnapshot) {
+	          var currentNames = getReviewObjectKeys(currentSnapshot.allStudentNames);
+	          var previousNames = getReviewObjectKeys(previousSnapshot && previousSnapshot.allStudentNames);
+	          var currentSet = new Set(currentNames);
+	          var previousSet = new Set(previousNames);
+	          var shared = currentNames.filter(function(name) { return previousSet.has(name); });
+	          var missing = previousNames.filter(function(name) { return !currentSet.has(name); });
+	          var added = currentNames.filter(function(name) { return !previousSet.has(name); });
+	          var union = new Set(currentNames.concat(previousNames));
+	          var exactMatches = 0;
+	          var changes = { time: [], room: [], duration: [], status: [], teacher: [], subject: [] };
+	          shared.forEach(function(name) {
+	            var cur = currentSnapshot.studentDetails[name] || {};
+	            var prev = previousSnapshot.studentDetails[name] || {};
+	            if (getReviewPositionSignature(cur) === getReviewPositionSignature(prev)) exactMatches++;
+	            if (getReviewDetailSignature(cur, "hours") !== getReviewDetailSignature(prev, "hours")) changes.time.push(name);
+	            if (getReviewDetailSignature(cur, "rooms") !== getReviewDetailSignature(prev, "rooms")) changes.room.push(name);
+	            if ((cur.activeCount || 0) !== (prev.activeCount || 0)) changes.duration.push(name);
+	            if (getReviewDetailSignature(cur, "statuses") !== getReviewDetailSignature(prev, "statuses")) changes.status.push(name);
+	            if (getReviewDetailSignature(cur, "teachers") !== getReviewDetailSignature(prev, "teachers")) changes.teacher.push(name);
+	            if (getReviewDetailSignature(cur, "subjects") !== getReviewDetailSignature(prev, "subjects")) changes.subject.push(name);
+	          });
+	          var unionCount = union.size;
+	          return {
+	            currentCount: currentNames.length,
+	            previousCount: previousNames.length,
+	            sharedCount: shared.length,
+	            missing: missing,
+	            added: added,
+	            changes: changes,
+	            studentMatchPercent: unionCount ? Math.round((shared.length / unionCount) * 100) : 100,
+	            positionMatchPercent: shared.length ? Math.round((exactMatches / shared.length) * 100) : 100
+	          };
+	        }
+	        function buildReviewDashboardItems(comparison) {
+	          if (!comparison) return [];
+	          var items = [];
+	          if (comparison.missing.length) items.push({ type: "missing", msg: "지난주에는 있었지만 이번주에 없는 학생: " + summarizeReviewNames(comparison.missing, 10) });
+	          if (comparison.added.length) items.push({ type: "new", msg: "이번주에 새로 보이는 학생: " + summarizeReviewNames(comparison.added, 10) });
+	          if (comparison.changes.time.length) items.push({ type: "time", msg: "수업 시간이 달라진 학생: " + summarizeReviewNames(comparison.changes.time, 10) });
+	          if (comparison.changes.room.length) items.push({ type: "room", msg: "강의실이 달라진 학생: " + summarizeReviewNames(comparison.changes.room, 10) });
+	          if (comparison.changes.duration.length) items.push({ type: "duration", msg: "수업 시수가 달라진 학생: " + summarizeReviewNames(comparison.changes.duration, 10) });
+	          if (comparison.changes.status.length) items.push({ type: "status", msg: "정규/보강/결석예고 등 상태가 달라진 학생: " + summarizeReviewNames(comparison.changes.status, 10) });
+	          if (comparison.changes.teacher.length) items.push({ type: "teacher", msg: "담당 강사 표시가 달라진 학생: " + summarizeReviewNames(comparison.changes.teacher, 10) });
+	          if (comparison.changes.subject.length) items.push({ type: "subject", msg: "과목 표시가 달라진 학생: " + summarizeReviewNames(comparison.changes.subject, 10) });
+	          return items;
+	        }
+	        function getReviewIssueBadge(issue) {
+	          var type = issue && issue.type;
+	          if(type === 'duplicate') return { cls: 'rb-duplicate', text: '중복' };
+	          if(type === 'single') return { cls: 'rb-single', text: '1시간' };
+	          if(type === 'missing') return { cls: 'rb-missing', text: '누락' };
+	          if(type === 'new') return { cls: 'rb-check', text: '신규' };
+	          if(type === 'check') return { cls: 'rb-check', text: '확인' };
+	          if(type === 'teacher') return { cls: 'rb-teacher', text: '강사' };
+	          if(type === 'time') return { cls: 'rb-capacity', text: '시간' };
+	          if(type === 'room') return { cls: 'rb-capacity', text: '강의실' };
+	          if(type === 'duration') return { cls: 'rb-single', text: '시수' };
+	          if(type === 'status') return { cls: 'rb-check', text: '상태' };
+	          if(type === 'subject') return { cls: 'rb-teacher', text: '과목' };
+	          return { cls: 'rb-capacity', text: '정원' };
+	        }
+	        function addCurrentSnapshotIssues(snapshot, issues) {
           for (var h in snapshot.hourlyStudents) {
              var students = snapshot.hourlyStudents[h];
              var nameCounts = {};
@@ -5555,51 +5703,85 @@
             });
           });
         }
-        function renderReviewIssues(issues, previousSheetName) {
-          reviewList.innerHTML = "";
-          if (previousSheetName) {
-            var note = document.createElement('div');
-            note.className = 'review-item';
-            note.innerHTML = "<span class='review-badge rb-check'>비교</span><span class='review-text'>지난주 기준 시트: " + escapeHtml(previousSheetName) + "</span>";
-            reviewList.appendChild(note);
-          }
-          if (issues.length === 0) {
-             reviewList.innerHTML += "<div class='review-empty'>✅ 발견된 문제가 없습니다!</div>";
-             return;
-          }
-          issues.forEach(function(issue) {
-            var badgeClass = "";
-            var badgeText = "";
-            if(issue.type === 'duplicate') { badgeClass = 'rb-duplicate'; badgeText = '중복'; }
-            else if(issue.type === 'single') { badgeClass = 'rb-single'; badgeText = '1시간'; }
-            else if(issue.type === 'missing') { badgeClass = 'rb-missing'; badgeText = '누락'; }
-            else if(issue.type === 'check') { badgeClass = 'rb-check'; badgeText = '확인'; }
-            else if(issue.type === 'teacher') { badgeClass = 'rb-teacher'; badgeText = '강사'; }
-            else { badgeClass = 'rb-capacity'; badgeText = '정원'; }
-            var div = document.createElement('div');
-            div.className = 'review-item';
-            div.innerHTML = "<span class='review-badge " + badgeClass + "'>" + badgeText + "</span><span class='review-text'>" + escapeHtml(issue.msg) + "</span>";
-            reviewList.appendChild(div);
-          });
-        }
-        var currentSnapshot = buildReviewSnapshot(lastData);
-        var previousSheetName = getReviewPreviousWeekSheetName();
-        var teacherName = getActiveTeacherName();
-        var previousPromise = previousSheetName
-          ? callServer(teacherName ? "getTeacherGridData" : "getFixedGridData", teacherName ? [previousSheetName, teacherName, true] : [previousSheetName, true]).catch(function() { return null; })
-          : Promise.resolve(null);
-        previousPromise.then(function(previousData) {
-          var issues = [];
-          addCurrentSnapshotIssues(currentSnapshot, issues);
-          if (previousData && previousData.grid) {
-            addPreviousWeekIssues(currentSnapshot, buildReviewSnapshot(previousData), previousSheetName, issues);
-          } else if (previousSheetName) {
-            issues.push({ type: 'check', msg: `지난주 기준 시트(${previousSheetName}) 데이터를 불러오지 못했습니다.` });
-          } else {
-            issues.push({ type: 'check', msg: "지난주 같은 요일 시간표를 찾지 못해 누락 학생 비교를 건너뛰었습니다." });
-          }
-          renderReviewIssues(issues, previousData && previousData.grid ? previousSheetName : "");
-        });
+	        function renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, previousDataLoaded) {
+	          var dashboardItems = buildReviewDashboardItems(comparison);
+	          var changeCount = comparison ? (
+	            comparison.missing.length +
+	            comparison.added.length +
+	            comparison.changes.time.length +
+	            comparison.changes.room.length +
+	            comparison.changes.duration.length +
+	            comparison.changes.status.length +
+	            comparison.changes.teacher.length +
+	            comparison.changes.subject.length
+	          ) : 0;
+	          var issueCount = issues.length + changeCount;
+	          var matchPercent = comparison ? comparison.studentMatchPercent : 0;
+	          var positionPercent = comparison ? comparison.positionMatchPercent : 0;
+	          var html = "";
+	          html += "<div class='review-dashboard'>";
+	          html += "<div class='review-dashboard-head'>" +
+	            "<div><div class='review-dashboard-title'>" + escapeHtml(currentSheetName || "현재 시간표") + " 검토</div>" +
+	            "<div class='review-dashboard-sub'>" + (previousSheetName ? "지난주 기준: " + escapeHtml(previousSheetName) : "지난주 같은 요일 기준 시트를 찾지 못했습니다.") + "</div></div>" +
+	            "<div class='review-dashboard-score'><strong>" + (comparison ? matchPercent + "%" : "-") + "</strong><span>지난주 학생 일치율</span><div class='review-meter'><div class='review-meter-fill' style='width:" + (comparison ? matchPercent : 0) + "%'></div></div></div>" +
+	            "</div>";
+	          html += "<div class='review-kpi-grid'>" +
+	            "<div class='review-kpi'><div class='review-kpi-label'>위치 일치율</div><div class='review-kpi-value'>" + (comparison ? positionPercent + "%" : "-") + "</div><div class='review-kpi-note'>시간+강의실 기준</div></div>" +
+	            "<div class='review-kpi'><div class='review-kpi-label'>현재 학생</div><div class='review-kpi-value'>" + (currentSnapshot.allStudentNamesCount || 0) + "명</div><div class='review-kpi-note'>시간표 입력 기준</div></div>" +
+	            "<div class='review-kpi'><div class='review-kpi-label'>수업 슬롯</div><div class='review-kpi-value'>" + (currentSnapshot.totalActiveSlots || 0) + "칸</div><div class='review-kpi-note'>결석예고/휴강 제외</div></div>" +
+	            "<div class='review-kpi'><div class='review-kpi-label'>검토 신호</div><div class='review-kpi-value'>" + issueCount + "건</div><div class='review-kpi-note'>" + (changeCount ? "주간 변동 " + changeCount + "건 포함" : "현재표 자체 검토 포함") + "</div></div>" +
+	            "</div>";
+	          if (comparison) {
+	            html += "<div class='review-section-title'><span>주요 변동 항목</span><span>" + changeCount + "건</span></div>";
+	            html += "<div class='review-change-grid'>" +
+	              "<div class='review-change-pill " + (comparison.missing.length ? "warn" : "good") + "'><strong>" + comparison.missing.length + "</strong><span>지난주 대비 누락</span></div>" +
+	              "<div class='review-change-pill " + (comparison.added.length ? "info" : "good") + "'><strong>" + comparison.added.length + "</strong><span>이번주 신규</span></div>" +
+	              "<div class='review-change-pill " + (comparison.changes.time.length ? "warn" : "good") + "'><strong>" + comparison.changes.time.length + "</strong><span>시간 변경</span></div>" +
+	              "<div class='review-change-pill " + (comparison.changes.room.length ? "info" : "good") + "'><strong>" + comparison.changes.room.length + "</strong><span>강의실 변경</span></div>" +
+	              "<div class='review-change-pill " + (comparison.changes.duration.length ? "warn" : "good") + "'><strong>" + comparison.changes.duration.length + "</strong><span>시수 변경</span></div>" +
+	              "</div>";
+	          }
+	          if (!previousDataLoaded && previousSheetName) {
+	            html += "<div class='review-item'><span class='review-badge rb-check'>비교</span><span class='review-text'>지난주 기준 시트 데이터를 불러오지 못해 대시보드 비교가 제한됩니다.</span></div>";
+	          }
+	          var mergedDetails = dashboardItems.concat(issues);
+	          html += "<div class='review-section-title'><span>상세 확인 목록</span><span>" + mergedDetails.length + "건</span></div>";
+	          if (!mergedDetails.length) {
+	            html += "<div class='review-empty'>발견된 문제가 없습니다.</div>";
+	          } else {
+	            html += "<div class='review-detail-list'>";
+	            mergedDetails.forEach(function(issue) {
+	              var badge = getReviewIssueBadge(issue);
+	              html += "<div class='review-item'><span class='review-badge " + badge.cls + "'>" + badge.text + "</span><span class='review-text'>" + escapeHtml(issue.msg) + "</span></div>";
+	            });
+	            html += "</div>";
+	          }
+	          html += "</div>";
+	          reviewList.innerHTML = html;
+	        }
+	        var currentSnapshot = buildReviewSnapshot(lastData);
+	        currentSnapshot.allStudentNamesCount = getReviewObjectKeys(currentSnapshot.allStudentNames).length;
+	        var previousSheetName = getReviewPreviousWeekSheetName();
+	        var teacherName = getActiveTeacherName();
+	        var previousPromise = previousSheetName
+	          ? callServer(teacherName ? "getTeacherGridData" : "getFixedGridData", teacherName ? [previousSheetName, teacherName, true] : [previousSheetName, true]).catch(function() { return null; })
+	          : Promise.resolve(null);
+	        previousPromise.then(function(previousData) {
+	          var issues = [];
+	          var comparison = null;
+	          addCurrentSnapshotIssues(currentSnapshot, issues);
+	          if (previousData && previousData.grid) {
+	            var previousSnapshot = buildReviewSnapshot(previousData);
+	            previousSnapshot.allStudentNamesCount = getReviewObjectKeys(previousSnapshot.allStudentNames).length;
+	            comparison = buildReviewComparison(currentSnapshot, previousSnapshot);
+	            addPreviousWeekIssues(currentSnapshot, previousSnapshot, previousSheetName, issues);
+	          } else if (previousSheetName) {
+	            issues.push({ type: 'check', msg: `지난주 기준 시트(${previousSheetName}) 데이터를 불러오지 못했습니다.` });
+	          } else {
+	            issues.push({ type: 'check', msg: "지난주 같은 요일 시간표를 찾지 못해 누락 학생 비교를 건너뛰었습니다." });
+	          }
+	          renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, !!(previousData && previousData.grid));
+	        });
       }
       
       function closeReviewModal() {
