@@ -1241,6 +1241,7 @@
       let visitorLookupMatchCache = Object.create(null);
       let visitorLookupShellKey = "";
       let visitorLookupStudyRefreshing = false;
+      let visitorLookupDateRolloverLastCheckMs = 0;
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -2085,6 +2086,7 @@
         visitorLookupSelectedIndex = 0;
         visitorLookupLastKeyword = "";
         visitorLookupTab = "today";
+        visitorLookupDateRolloverLastCheckMs = 0;
         availableTeacherNames = [];
         accessMode = "";
         clientCache = {};
@@ -2153,6 +2155,39 @@
         var key = (now.getMonth() + 1) + "-" + now.getDate();
         var list = map && map[key];
         return getPreferredSheetNameForDate(list);
+      }
+      function getSheetDateKey(sheetName) {
+        var m = String(sheetName || "").match(/^(\d{1,2})\/(\d{1,2})/);
+        if (!m) return "";
+        return parseInt(m[1], 10) + "-" + parseInt(m[2], 10);
+      }
+      function getTodayDateKey(now) {
+        var d = now instanceof Date ? now : new Date();
+        return (d.getMonth() + 1) + "-" + d.getDate();
+      }
+      function getLookupTodaySheetName() {
+        var lookupSheetMap = buildSheetMapFromNames((availableSheets || []).filter(function(name) { return !isCopySheetName(name); }));
+        return getTodaySheetNameFromMap(lookupSheetMap) || getTodaySheetNameFromMap(sheetMap);
+      }
+      function checkVisitorLookupDateRollover(now) {
+        if (!isLookupViewActive()) return;
+        var currentMs = Date.now();
+        if (currentMs - visitorLookupDateRolloverLastCheckMs < 60000) return;
+        visitorLookupDateRolloverLastCheckMs = currentMs;
+        var todayKey = getTodayDateKey(now);
+        if (!todayKey || getSheetDateKey(currentSheetName) === todayKey) return;
+        var targetSheet = getLookupTodaySheetName();
+        if (!targetSheet || targetSheet === currentSheetName || getSheetDateKey(targetSheet) !== todayKey) return;
+        clearVisitorLookupReturnTimer();
+        visitorLookupShowFullDay = false;
+        visitorLookupSelectedIndex = 0;
+        visitorLookupLastKeyword = "";
+        visitorLookupTab = "today";
+        visitorLookupShellKey = "";
+        var searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = "";
+        document.body.classList.remove('visitor-lookup-show-full');
+        loadData(targetSheet, true);
       }
       function getPreferredSheetNameForDate(list) {
         if (!list || !list.length) return "";
@@ -2477,7 +2512,7 @@
       }
       function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= 10 && hour < 22) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(); timeLeft = 1800; } } else { document.getElementById('loadingText').textContent = "업데이트 대기중 (야간)"; document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
       function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; document.getElementById('loadingText').textContent = "다음 업데이트까지 " + min + "분 " + sec + "초"; }
-      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var Y=now.getFullYear(); var M=String(now.getMonth()+1).padStart(2,'0'); var D=String(now.getDate()).padStart(2,'0'); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+Y+"."+M+"."+D+" ("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; updateTimelinePosition(); }
+      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var Y=now.getFullYear(); var M=String(now.getMonth()+1).padStart(2,'0'); var D=String(now.getDate()).padStart(2,'0'); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+Y+"."+M+"."+D+" ("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); updateTimelinePosition(); }
       
       function updateTimelinePosition() {
          if (!document.getElementById('timelineToggle').checked) return;
