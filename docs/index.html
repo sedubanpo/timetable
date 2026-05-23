@@ -1242,6 +1242,7 @@
       let visitorLookupShellKey = "";
       let visitorLookupStudyRefreshing = false;
       let visitorLookupDateRolloverLastCheckMs = 0;
+      const VISITOR_LOOKUP_DATE_ROLLOVER_INTERVAL_MS = 6 * 60 * 60 * 1000;
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -2172,7 +2173,7 @@
       function checkVisitorLookupDateRollover(now) {
         if (!isLookupViewActive()) return;
         var currentMs = Date.now();
-        if (currentMs - visitorLookupDateRolloverLastCheckMs < 60000) return;
+        if (currentMs - visitorLookupDateRolloverLastCheckMs < VISITOR_LOOKUP_DATE_ROLLOVER_INTERVAL_MS) return;
         visitorLookupDateRolloverLastCheckMs = currentMs;
         var todayKey = getTodayDateKey(now);
         if (!todayKey || getSheetDateKey(currentSheetName) === todayKey) return;
