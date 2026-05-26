@@ -530,6 +530,15 @@
       .student-preview-heading-teacher { font-size:0.90rem; font-weight:500; color:rgba(51,65,85,0.92); max-width:48%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .student-preview-heading-line { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
       .student-preview-inline-type { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; font-size:0.70rem; font-weight:700; color:#0369a1; background:rgba(186,230,253,0.48); border:1px solid rgba(56,189,248,0.52); }
+      .student-preview-card-meta-line { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:2px; position:relative; z-index:3; }
+      .student-preview-building-badge { display:inline-flex; align-items:center; justify-content:center; min-width:34px; border-radius:999px; padding:4px 9px; font-size:0.72rem; font-weight:900; letter-spacing:0; box-shadow:0 5px 12px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.45); }
+      .student-preview-building-main { color:#1e3a8a; background:rgba(219,234,254,0.86); border:1px solid rgba(96,165,250,0.72); }
+      .student-preview-building-2 { color:#065f46; background:rgba(209,250,229,0.88); border:1px solid rgba(52,211,153,0.72); }
+      .student-preview-building-3 { color:#6d28d9; background:rgba(237,233,254,0.90); border:1px solid rgba(167,139,250,0.76); }
+      .student-preview-room-label { display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:0.72rem; font-weight:800; color:#334155; background:rgba(255,255,255,0.74); border:1px solid rgba(203,213,225,0.86); }
+      .student-preview-class-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:4px 9px; font-size:0.72rem; font-weight:900; color:#0369a1; background:rgba(224,242,254,0.82); border:1px solid rgba(125,211,252,0.78); }
+      .student-preview-class-badge.type-special { color:#7c2d12; background:rgba(255,237,213,0.90); border-color:rgba(251,146,60,0.78); }
+      .student-preview-class-badge.type-one { color:#5b21b6; background:rgba(237,233,254,0.90); border-color:rgba(167,139,250,0.78); }
       .student-preview-chipline { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:0; }
       .student-preview-chipline:last-child { margin-bottom: 0; }
       .student-preview-badge { display:inline-flex; align-items:center; border-radius:999px; padding:3px 9px; font-size:0.70rem; font-weight:600; letter-spacing:0; border:1px solid rgba(203,213,225,0.95); box-shadow: inset 0 1px 0 rgba(255,255,255,0.26); color:#334155; background: rgba(255,255,255,0.66); }
@@ -2993,6 +3002,11 @@
           note: noteText,
           full: text
         };
+	      }
+      function detectStudentCardClassType(text) {
+        var t = String(text || "");
+        if (t.includes("당취보충") || t.includes("일반보충") || (t.includes("보충") && !t.includes("보강"))) return "보충";
+        return detectClassType(t);
       }
       function buildStudentImageMap() {
         studentImageScheduleMap = {};
@@ -3007,7 +3021,7 @@
             var teacherItem = items.find(function(v){ return String(v || "").includes("T"); });
             var teacherName = teacherItem ? extractTeacherName(teacherItem) : "";
             var subject = teacherItem ? getSubjectName(String(teacherItem)) : "";
-            var classType = teacherItem ? detectClassType(String(teacherItem)) : "";
+	            var classType = teacherItem ? detectStudentCardClassType(String(teacherItem)) : "";
             items.forEach(function(text){
               var raw = String(text || "");
               if (!raw || raw.includes("T")) return;
@@ -3596,7 +3610,50 @@
           timelineRows: timelineRows,
           metaLine: (currentSheetName || "") + (metaSchool ? " · " + metaSchool : ""),
           hideNote: hideNote
-        };
+	        };
+	      }
+      function getStudentCardRoomMeta(room) {
+        var text = String(room || "").trim();
+        var building = "1관";
+        var buildingClass = "student-preview-building-main";
+        if (/2관/.test(text)) {
+          building = "2관";
+          buildingClass = "student-preview-building-2";
+        } else if (/3관/.test(text)) {
+          building = "3관";
+          buildingClass = "student-preview-building-3";
+        }
+        var roomLabel = text.replace(/^(2관|3관)\s*/, "").trim();
+        if (!roomLabel) roomLabel = text || "강의실";
+        return { building: building, buildingClass: buildingClass, room: roomLabel, full: text || roomLabel };
+      }
+      function getStudentCardClassBadgeClass(classType) {
+        var t = String(classType || "");
+        if (/보강|보충|특강|직보/.test(t)) return "type-special";
+        if (/1:1|2:1/.test(t)) return "type-one";
+        return "";
+      }
+      function getStudentCardRoomBadgeHtml(room) {
+        if (!room) return "";
+        var meta = getStudentCardRoomMeta(room);
+        return "<span class='student-preview-building-badge " + meta.buildingClass + "'>" + meta.building + "</span>" +
+          "<span class='student-preview-room-label'>" + meta.room + "</span>";
+      }
+      function getStudentCardClassBadgeHtml(classType) {
+        if (!classType) return "";
+        var cls = getStudentCardClassBadgeClass(classType);
+        return "<span class='student-preview-class-badge" + (cls ? " " + cls : "") + "'>" + classType + "</span>";
+      }
+      function getStudentCardExportBuildingStyle(building) {
+        if (building === "2관") return "color:#065f46; background:#d1fae5; border:1px solid #34d399;";
+        if (building === "3관") return "color:#6d28d9; background:#ede9fe; border:1px solid #a78bfa;";
+        return "color:#1e3a8a; background:#dbeafe; border:1px solid #60a5fa;";
+      }
+      function getStudentCardExportClassStyle(classType) {
+        var t = String(classType || "");
+        if (/보강|보충|특강|직보/.test(t)) return "color:#7c2d12; background:#ffedd5; border:1px solid #fb923c;";
+        if (/1:1|2:1/.test(t)) return "color:#5b21b6; background:#ede9fe; border:1px solid #a78bfa;";
+        return "color:#0369a1; background:#e0f2fe; border:1px solid #7dd3fc;";
       }
       function renderStudentCardRowsHtml(timelineRows) {
         return timelineRows.map(function(m){
@@ -3618,12 +3675,13 @@
                 "<div class='student-preview-time-wrap'><div class='student-preview-time'>" + m.start + "-" + m.end + "시</div><div class='student-preview-time-duration'>" + durationBadge + "</div></div>" +
                 "<div><div class='student-preview-selfstudy-void'></div></div></div>";
           }
-          var heading = "<div class='student-preview-heading-line'><span class='student-preview-heading-subject'>" + subjectText + "</span>" +
-                        (teacherName ? "<span class='student-preview-heading-teacher'>" + teacherName + "</span>" : "") +
-                        (m.classType ? "<span class='student-preview-inline-type'>" + m.classType + "</span>" : "") + "</div>";
-          return "<div class='student-preview-row " + themeClass + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-              "<div class='student-preview-time-wrap'><div class='student-preview-time'>" + m.start + "-" + m.end + "시</div><div class='student-preview-time-duration'>" + durationBadge + "</div></div>" +
-              "<div><div class='student-preview-detail'>" + (m.room ? "<div class='student-preview-room-ghost'>" + m.room + "</div>" : "") + "<div class='student-preview-subject-art'>" + getSubjectArtText(themeClass, subjectText) + "</div>" + heading + "</div>" + note + "</div></div>";
+	          var metaLine = "<div class='student-preview-card-meta-line'>" + getStudentCardRoomBadgeHtml(m.room) + getStudentCardClassBadgeHtml(m.classType) + "</div>";
+	          var heading = "<div class='student-preview-heading-line'><span class='student-preview-heading-subject'>" + subjectText + "</span>" +
+	                        (teacherName ? "<span class='student-preview-heading-teacher'>" + teacherName + "</span>" : "") +
+	                        "</div>";
+	          return "<div class='student-preview-row " + themeClass + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
+	              "<div class='student-preview-time-wrap'><div class='student-preview-time'>" + m.start + "-" + m.end + "시</div><div class='student-preview-time-duration'>" + durationBadge + "</div></div>" +
+	              "<div><div class='student-preview-detail'>" + (m.room ? "<div class='student-preview-room-ghost'>" + m.room + "</div>" : "") + "<div class='student-preview-subject-art'>" + getSubjectArtText(themeClass, subjectText) + "</div>" + metaLine + heading + "</div>" + note + "</div></div>";
         }).join("");
       }
       function renderStudentImagePreview(name) {
@@ -3679,21 +3737,31 @@
             : /과학|물리|화학|생명|지구/.test(subjectText) ? (themeStyle = "background:linear-gradient(180deg,#f0fdf4,#dcfce7); border:1px solid #bbf7d0;", accentStyle = "color:#059669;")
             : /사회|한국사|역사|사탐/.test(subjectText) ? (themeStyle = "background:linear-gradient(180deg,#fff1f2,#ffe4e6); border:1px solid #fecdd3;", accentStyle = "color:#e11d48;")
             : null;
-          var noteHtml = item.note ? "<div style='margin-top:8px; padding:7px 9px; border-radius:10px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; font-weight:700; line-height:1.5;'>" + item.note + "</div>" : "";
-          if (item.isBreak) {
-            return "<div style='margin-top:12px; padding:14px 16px; border-radius:22px; background:linear-gradient(180deg,#f8fafc,#eef2f7); border:1px solid #d8e0ea;'>" +
-              "<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'><div style='font-size:17px; font-weight:900; color:#1e293b;'>" + item.start + "-" + item.end + "시</div><div style='font-size:12px; font-weight:800; color:#64748b; background:#ffffff; border:1px solid #cbd5e1; border-radius:999px; padding:5px 10px;'>" + duration + "시간</div></div>" +
-              "<div style='margin-top:10px; min-height:34px; border-radius:14px; background:#dbe2ea;'></div></div>";
+	          var noteHtml = item.note ? "<div style='margin-top:8px; padding:7px 9px; border-radius:10px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; font-weight:700; line-height:1.5;'>" + item.note + "</div>" : "";
+	          var roomMeta = item.room ? getStudentCardRoomMeta(item.room) : null;
+	          var roomBadgeHtml = roomMeta
+	            ? "<div style='display:inline-flex; align-items:center; gap:5px;'>" +
+	                "<span style='display:inline-flex; align-items:center; justify-content:center; min-width:36px; border-radius:999px; padding:5px 10px; font-size:13px; font-weight:900; " + getStudentCardExportBuildingStyle(roomMeta.building) + "'>" + roomMeta.building + "</span>" +
+	                "<span style='display:inline-flex; align-items:center; border-radius:999px; padding:5px 10px; font-size:13px; font-weight:800; color:#334155; background:rgba(255,255,255,0.78); border:1px solid #cbd5e1;'>" + roomMeta.room + "</span>" +
+	              "</div>"
+	            : "";
+	          var classBadgeHtml = item.classType
+	            ? "<span style='display:inline-flex; align-items:center; border-radius:999px; padding:5px 10px; font-size:13px; font-weight:900; " + getStudentCardExportClassStyle(item.classType) + "'>" + item.classType + "</span>"
+	            : "";
+	          if (item.isBreak) {
+	            return "<div style='margin-top:12px; padding:14px 16px; border-radius:22px; background:linear-gradient(180deg,#f8fafc,#eef2f7); border:1px solid #d8e0ea;'>" +
+	              "<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'><div style='font-size:17px; font-weight:900; color:#1e293b;'>" + item.start + "-" + item.end + "시</div><div style='font-size:12px; font-weight:800; color:#64748b; background:#ffffff; border:1px solid #cbd5e1; border-radius:999px; padding:5px 10px;'>" + duration + "시간</div></div>" +
+	              "<div style='margin-top:10px; min-height:34px; border-radius:14px; background:#dbe2ea;'></div></div>";
           }
           return "<div style='margin-top:12px; padding:14px 16px; border-radius:22px; position:relative; overflow:hidden;" + themeStyle + "'>" +
-            "<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'><div style='font-size:17px; font-weight:900; color:#0f172a;'>" + item.start + "-" + item.end + "시</div><div style='font-size:12px; font-weight:800; color:#1d4ed8; background:#eff6ff; border:1px solid #93c5fd; border-radius:999px; padding:5px 10px;'>" + duration + "시간</div></div>" +
-            "<div style='margin-top:12px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;'>" +
-              "<div style='min-width:0;'>" +
-                "<div style='font-size:19px; font-weight:900; " + accentStyle + "'>" + subjectText + (teacherName ? "<span style='margin-left:10px; font-size:16px; font-weight:700; color:#475569;'>" + teacherName + "</span>" : "") + "</div>" +
-                (item.classType ? "<div style='margin-top:8px; display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; background:#e0f2fe; color:#0369a1; font-size:12px; font-weight:800; border:1px solid #7dd3fc;'>" + item.classType + "</div>" : "") +
-              "</div>" +
-              (item.room ? "<div style='font-size:14px; font-weight:900; color:rgba(71,85,105,0.34); white-space:nowrap; align-self:center;'>" + item.room + "</div>" : "") +
-            "</div>" +
+	            "<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'><div style='font-size:17px; font-weight:900; color:#0f172a;'>" + item.start + "-" + item.end + "시</div><div style='font-size:12px; font-weight:800; color:#1d4ed8; background:#eff6ff; border:1px solid #93c5fd; border-radius:999px; padding:5px 10px;'>" + duration + "시간</div></div>" +
+	            "<div style='margin-top:12px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;'>" +
+	              "<div style='min-width:0;'>" +
+	                "<div style='display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-bottom:8px;'>" + roomBadgeHtml + classBadgeHtml + "</div>" +
+	                "<div style='font-size:19px; font-weight:900; " + accentStyle + "'>" + subjectText + (teacherName ? "<span style='margin-left:10px; font-size:16px; font-weight:700; color:#475569;'>" + teacherName + "</span>" : "") + "</div>" +
+	              "</div>" +
+	              (item.room ? "<div style='font-size:14px; font-weight:900; color:rgba(71,85,105,0.34); white-space:nowrap; align-self:center;'>" + item.room + "</div>" : "") +
+	            "</div>" +
             noteHtml +
           "</div>";
         }).join("");
