@@ -1882,11 +1882,18 @@
       function isCopySheetName(name) {
         return String(name || "").indexOf("사본") !== -1;
       }
+      function isLookupHiddenSheetName(name) {
+        var text = String(name || "");
+        return /사본|임시|테스트|검토용|원본/.test(text);
+      }
       function shouldHideTeacherCopySheet(name) {
         return isTeacherViewActive() && isCopySheetName(name);
       }
       function shouldHideLookupCopySheet(name) {
-        return isLookupViewActive() && isCopySheetName(name);
+        return isLookupViewActive() && isLookupHiddenSheetName(name);
+      }
+      function getLookupSelectableSheetNames() {
+        return (availableSheets || []).filter(function(name) { return !isLookupHiddenSheetName(name); });
       }
       function getSheetSelectorNames() {
         var source = availableSheets;
@@ -2079,8 +2086,12 @@
           } else {
             closeAuthModal();
             clientCache = {};
-            if (authState.isLookup) accessMode = "lookup";
-            if (currentSheetName) loadData(currentSheetName, true);
+            if (authState.isLookup) {
+              accessMode = "lookup";
+              startAppAfterAuth();
+            } else if (currentSheetName) {
+              loadData(currentSheetName, true);
+            }
           }
           applyRoleUi();
           stopLoginProgress(fromGate ? 'gate' : 'auth', true);
@@ -2176,7 +2187,7 @@
         return (d.getMonth() + 1) + "-" + d.getDate();
       }
       function getLookupTodaySheetName() {
-        var lookupSheetMap = buildSheetMapFromNames((availableSheets || []).filter(function(name) { return !isCopySheetName(name); }));
+        var lookupSheetMap = buildSheetMapFromNames(getLookupSelectableSheetNames());
         return getTodaySheetNameFromMap(lookupSheetMap) || getTodaySheetNameFromMap(sheetMap);
       }
       function checkVisitorLookupDateRollover(now) {
@@ -2206,6 +2217,7 @@
       }
       function getCalendarSheetMap() {
         if (isTeacherViewActive() && teacherCalendarReady) return teacherCalendarSheetMap;
+        if (isLookupViewActive()) return buildSheetMapFromNames(getLookupSelectableSheetNames());
         return sheetMap;
       }
       function getNavigableSheetNames() {
@@ -2556,7 +2568,7 @@
           populateMainSheetSelector(currentSheetName); 
           sheetMap = buildSheetMapFromNames(availableSheets);
           if (authState.isLookup) {
-            var lookupSheetMap = buildSheetMapFromNames((availableSheets || []).filter(function(name) { return !isCopySheetName(name); }));
+            var lookupSheetMap = buildSheetMapFromNames(getLookupSelectableSheetNames());
             var lookupTodaySheet = getTodaySheetNameFromMap(lookupSheetMap) || getTodaySheetNameFromMap(sheetMap);
             if (lookupTodaySheet) currentSheetName = lookupTodaySheet;
           }
@@ -2565,15 +2577,12 @@
           
           currentDate = new Date(targetYear, targetMonth, 1);
           applyRoleUi();
-          if (authState.isLookup && currentSheetName) {
-            loadData(currentSheetName, true);
-          }
           if (isTeacherViewActive()) updateTeacherCalendarAvailability(true);
           else renderCalendar(); 
         }catch(e){console.error(e);} 
       }
       function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
-      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ var filtered=s.filter(function(name){return !isCopySheetName(name);}); if(filtered.length)s=filtered; } if(s.length===1)loadData(s[0],true,true); else showVersionModal(s); }
+      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ s=s.filter(function(name){return !isLookupHiddenSheetName(name);}); if(!s.length)return; } if(s.length===1)loadData(s[0],true,true); else showVersionModal(s); }
       function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
