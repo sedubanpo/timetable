@@ -1271,7 +1271,7 @@
         authDomain: "fir-lms-prod.firebaseapp.com",
         projectId: "fir-lms-prod"
       };
-      const LIVE_FIREBASE_AUTH_ENABLED = false;
+      const LIVE_FIREBASE_AUTH_ENABLED = true;
       let liveFirebaseAuthPromise = null;
       function getApiBaseUrl() {
         return String(window.SEDU_API_BASE_URL || localStorage.getItem("sedu_api_base_url") || API_BASE_DEFAULT).trim();
