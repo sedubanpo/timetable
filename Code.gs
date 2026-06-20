@@ -354,12 +354,34 @@ function asRecord_(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function readFirebaseTeacherNames_() {
+function readFirebaseTeacherNames_(loginId) {
   try {
-    return (getTeacherAuthData_(false).teacherNames || []).slice();
+    return getLegacyTeacherNamesForAuth_(loginId);
   } catch (e) {
     return [];
   }
+}
+
+function getLegacyTeacherNamesForAuth_(loginId) {
+  var cache = CacheService.getScriptCache();
+  var normalizedLoginId = normalizeLoginId_(loginId);
+  var cacheKey = "LEGACY_TEACHER_NAMES_FOR_AUTH_V2_" + (normalizedLoginId || "ALL");
+  var cached = cache.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+  var ss = SpreadsheetApp.openById(AUTH_SPREADSHEET_ID);
+  var sheet = ss.getSheetByName("Teachers");
+  if (!sheet) sheet = ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var teacherNames = [];
+  for (var i = 1; i < data.length; i++) {
+    var dbId = String(data[i][0] || "").replace(/[^0-9]/g, "");
+    if (dbId.length === 8) dbId = "010" + dbId;
+    var name = String(data[i][1] || "").trim();
+    if (name && teacherNames.indexOf(name) === -1) teacherNames.push(name);
+    if (normalizedLoginId && dbId === normalizedLoginId) break;
+  }
+  cache.put(cacheKey, JSON.stringify(teacherNames), 300);
+  return teacherNames;
 }
 
 function authenticateFirebaseTeacher_(idToken) {
@@ -418,7 +440,7 @@ function authenticateFirebaseTeacher_(idToken) {
     isMaster: isMaster,
     isLookup: false,
     role: isMaster ? "ADMIN" : "TEACHER",
-    teacherNames: readFirebaseTeacherNames_()
+    teacherNames: readFirebaseTeacherNames_(normalizedLoginId)
   };
 }
 
