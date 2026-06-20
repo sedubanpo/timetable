@@ -1266,8 +1266,92 @@
       let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], loading: false, editingId: "", popupKey: "" };
       let operationMemoPollTimer = null;
       const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycbztGbkhmKvr23Yx8tSNcgK-Y-WzSCbOoFtc8QSaqYS5XvnAhp1kheu84VNmwr_hWQm9EQ/exec";
+      const LIVE_FIREBASE_CONFIG = {
+        apiKey: "AIzaSyCFM21ZxgwIYwmjRPaAOp5bL9Kprqiyppg",
+        authDomain: "fir-lms-prod.firebaseapp.com",
+        projectId: "fir-lms-prod"
+      };
+      const LIVE_FIREBASE_AUTH_ENABLED = false;
+      let liveFirebaseAuthPromise = null;
       function getApiBaseUrl() {
         return String(window.SEDU_API_BASE_URL || localStorage.getItem("sedu_api_base_url") || API_BASE_DEFAULT).trim();
+      }
+      function loadLiveExternalScriptOnce(src, test) {
+        if (test()) return Promise.resolve();
+        return new Promise(function(resolve, reject) {
+          var existing = document.querySelector('script[src="' + src + '"]');
+          if (existing) {
+            existing.addEventListener("load", resolve, { once: true });
+            existing.addEventListener("error", function() { reject(new Error("Firebase SDK를 불러오지 못했습니다.")); }, { once: true });
+            return;
+          }
+          var script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = function() { reject(new Error("Firebase SDK를 불러오지 못했습니다.")); };
+          document.head.appendChild(script);
+        });
+      }
+      function getLiveFirebaseAuth() {
+        if (liveFirebaseAuthPromise) return liveFirebaseAuthPromise;
+        liveFirebaseAuthPromise = loadLiveExternalScriptOnce("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js", function() {
+          return !!(window.firebase && firebase.initializeApp);
+        }).then(function() {
+          return loadLiveExternalScriptOnce("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js", function() {
+            return !!(window.firebase && firebase.auth);
+          });
+        }).then(function() {
+          var app;
+          try { app = firebase.app("sedu-live-timetable"); }
+          catch (e) { app = firebase.initializeApp(LIVE_FIREBASE_CONFIG, "sedu-live-timetable"); }
+          return app.auth();
+        }).catch(function(error) {
+          liveFirebaseAuthPromise = null;
+          throw error;
+        });
+        return liveFirebaseAuthPromise;
+      }
+      function canonicalFirebaseLoginId(value) {
+        var digits = String(value || "").replace(/\D+/g, "");
+        if (digits.length === 8) return "010" + digits;
+        if (digits.length === 10 && digits.charAt(0) !== "0") return "0" + digits;
+        return digits;
+      }
+      function firebaseEmailForLoginId(loginId) {
+        return canonicalFirebaseLoginId(loginId) + "@sedu-auth.local";
+      }
+      function buildFirebasePasswordCandidates(password) {
+        var raw = String(password || "").trim();
+        var canonical = canonicalFirebaseLoginId(raw);
+        return [raw, canonical].filter(function(item, idx, arr) {
+          return item && item.length >= 6 && arr.indexOf(item) === idx;
+        });
+      }
+      function signInLiveFirebase(loginId, password) {
+        var email = firebaseEmailForLoginId(loginId);
+        var candidates = buildFirebasePasswordCandidates(password);
+        if (!email || !candidates.length) return Promise.reject(new Error("Firebase 로그인 정보가 부족합니다."));
+        return getLiveFirebaseAuth().then(function(auth) {
+          return candidates.reduce(function(chain, candidate) {
+            return chain.catch(function() {
+              return auth.signInWithEmailAndPassword(email, candidate);
+            });
+          }, Promise.reject(new Error("Firebase login start")));
+        }).then(function(credential) {
+          return credential.user.getIdToken();
+        });
+      }
+      function resolveLiveFirebaseIdToken(loginId, password) {
+        var enabled = LIVE_FIREBASE_AUTH_ENABLED ||
+          window.SEDU_FIREBASE_AUTH_ENABLED === true ||
+          localStorage.getItem("sedu_firebase_auth_enabled") === "1";
+        if (!enabled) return Promise.resolve("");
+        if (canonicalFirebaseLoginId(loginId) === "2371") return Promise.resolve("");
+        return signInLiveFirebase(loginId, password).catch(function(error) {
+          if (window.console && console.warn) console.warn("Firebase login fallback:", error);
+          return "";
+        });
       }
       function initOperationMemoFeature() {
         var cfg = window.SEDU_OPERATION_MEMO_CONFIG || null;
@@ -1736,7 +1820,7 @@
           });
         }
         if (method === "authenticateTeacher") {
-          return apiJsonp({ action: "auth", id: a[0] || "", pw: a[1] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
+          return apiJsonp({ action: "auth", id: a[0] || "", pw: a[1] || "", idToken: a[2] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
             if (!res || !res.ok) return { ok: false, message: (res && res.error) || "로그인 실패" };
             return res;
           });
@@ -2047,7 +2131,9 @@
           : !!document.getElementById('rememberLoginToggleAuth').checked;
         if (!loginId || !password) { alert("아이디와 비밀번호를 입력하세요."); return; }
         startLoginProgress(fromGate ? 'gate' : 'auth');
-        callServer("authenticateTeacher", [normalizedLoginId, password]).then(function(res) {
+        resolveLiveFirebaseIdToken(normalizedLoginId, password).then(function(idToken) {
+          return callServer("authenticateTeacher", [normalizedLoginId, password, idToken]);
+        }).then(function(res) {
           if (!res || !res.ok) {
             stopLoginProgress(fromGate ? 'gate' : 'auth', false);
             alert((res && res.message) || "로그인에 실패했습니다.");

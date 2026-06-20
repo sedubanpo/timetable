@@ -4,6 +4,8 @@ var MASTER_LOGIN_ID = "010-4232-7428";
 var AUTH_CACHE_KEY = "TEACHER_AUTH_V2";
 var LOOKUP_LOGIN_ID = "2371";
 var LOOKUP_LOGIN_PASSWORD = "2371";
+var FIREBASE_PROJECT_ID = "fir-lms-prod";
+var FIREBASE_API_KEY = "AIzaSyCFM21ZxgwIYwmjRPaAOp5bL9Kprqiyppg";
 
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -40,6 +42,17 @@ function handleApiRequest_(params) {
     if (action === "auth") {
       var loginId = String(params.id || "").trim();
       var password = String(params.pw || "");
+      var idToken = String(params.idToken || "").trim();
+      if (idToken) {
+        try {
+          return jsonOutput_(authenticateFirebaseTeacher_(idToken), params);
+        } catch (firebaseErr) {
+          var firebaseMessage = firebaseErr && firebaseErr.message ? firebaseErr.message : String(firebaseErr || "");
+          if (!loginId || !password || /^FIREBASE_BLOCKED:/.test(firebaseMessage)) {
+            return jsonOutput_({ ok: false, error: firebaseMessage || "FIREBASE_AUTH_FAILED" }, params);
+          }
+        }
+      }
       if (!loginId || !password) return jsonOutput_({ ok: false, error: "AUTH_REQUIRED" }, params);
       return jsonOutput_(authenticateTeacher(loginId, password), params);
     }
@@ -288,6 +301,125 @@ function getTeacherAuthData_(forceRefresh) {
   var result = { byId: byId, teacherNames: teacherNames };
   cache.put(AUTH_CACHE_KEY, JSON.stringify(result), 300);
   return result;
+}
+
+function parseFirestoreValue_(value) {
+  if (!value || typeof value !== "object") return undefined;
+  if (Object.prototype.hasOwnProperty.call(value, "stringValue")) return String(value.stringValue || "");
+  if (Object.prototype.hasOwnProperty.call(value, "booleanValue")) return value.booleanValue === true;
+  if (Object.prototype.hasOwnProperty.call(value, "integerValue")) return Number(value.integerValue || 0);
+  if (Object.prototype.hasOwnProperty.call(value, "doubleValue")) return Number(value.doubleValue || 0);
+  if (Object.prototype.hasOwnProperty.call(value, "timestampValue")) return String(value.timestampValue || "");
+  if (Object.prototype.hasOwnProperty.call(value, "nullValue")) return null;
+  if (value.arrayValue) {
+    var items = (value.arrayValue && value.arrayValue.values) || [];
+    return items.map(function(item) { return parseFirestoreValue_(item); });
+  }
+  if (value.mapValue) return parseFirestoreFields_((value.mapValue && value.mapValue.fields) || {});
+  return undefined;
+}
+
+function parseFirestoreFields_(fields) {
+  var result = {};
+  fields = fields || {};
+  Object.keys(fields).forEach(function(key) {
+    result[key] = parseFirestoreValue_(fields[key]);
+  });
+  return result;
+}
+
+function fetchFirebaseDocument_(idToken, collection, docId) {
+  if (!docId) return {};
+  var url = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(FIREBASE_PROJECT_ID) +
+    "/databases/(default)/documents/" + encodeURIComponent(collection) + "/" + encodeURIComponent(docId);
+  var response = UrlFetchApp.fetch(url, {
+    method: "get",
+    headers: { Authorization: "Bearer " + idToken },
+    muteHttpExceptions: true
+  });
+  var code = response.getResponseCode();
+  if (code === 404) return {};
+  if (code < 200 || code >= 300) {
+    throw new Error("FIREBASE_PROFILE_FETCH_FAILED");
+  }
+  var payload = JSON.parse(response.getContentText() || "{}");
+  return parseFirestoreFields_(payload.fields || {});
+}
+
+function asString_(value) {
+  return String(value == null ? "" : value).trim();
+}
+
+function asRecord_(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function readFirebaseTeacherNames_() {
+  try {
+    return (getTeacherAuthData_(false).teacherNames || []).slice();
+  } catch (e) {
+    return [];
+  }
+}
+
+function authenticateFirebaseTeacher_(idToken) {
+  var lookupUrl = "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(FIREBASE_API_KEY);
+  var response = UrlFetchApp.fetch(lookupUrl, {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify({ idToken: idToken }),
+    muteHttpExceptions: true
+  });
+  var code = response.getResponseCode();
+  var body = response.getContentText() || "{}";
+  if (code < 200 || code >= 300) {
+    throw new Error("FIREBASE_AUTH_FAILED");
+  }
+  var lookup = JSON.parse(body);
+  var user = lookup && lookup.users && lookup.users[0];
+  if (!user || !user.localId) throw new Error("FIREBASE_AUTH_FAILED");
+  if (user.disabled === true) throw new Error("FIREBASE_BLOCKED: 비활성화된 Firebase 계정입니다.");
+
+  var uid = String(user.localId || "").trim();
+  var email = String(user.email || "").trim();
+  var userDoc = fetchFirebaseDocument_(idToken, "users", uid);
+  var profileDoc = fetchFirebaseDocument_(idToken, "userProfiles", uid);
+  var accessDoc = fetchFirebaseDocument_(idToken, "userAppAccess", uid);
+  var apps = asRecord_(accessDoc.apps);
+  var permissions = asRecord_(accessDoc.permissions);
+  var rawRole = asString_(userDoc.role || profileDoc.role || accessDoc.role || "INSTRUCTOR").toUpperCase();
+  var status = asString_(userDoc.status || profileDoc.status || "ACTIVE").toUpperCase();
+
+  if (status === "DISABLED" || rawRole === "DISABLED") {
+    throw new Error("FIREBASE_BLOCKED: 비활성화된 계정입니다.");
+  }
+  if (Object.prototype.hasOwnProperty.call(apps, "liveTimetable") && apps.liveTimetable === false) {
+    throw new Error("FIREBASE_BLOCKED: 라이브 시간표 접근 권한이 없습니다.");
+  }
+
+  var loginId = asString_(userDoc.loginId || profileDoc.instructorId || "");
+  if (!loginId && email.indexOf("@sedu-auth.local") > -1) loginId = email.split("@")[0];
+  var teacherName = asString_(userDoc.name || profileDoc.displayName || accessDoc.instructorName || "");
+  if (!teacherName && email) teacherName = email.split("@")[0];
+  var normalizedLoginId = normalizeLoginId_(loginId);
+  var isMaster = rawRole === "ADMIN" ||
+    permissions.canManageAccounts === true ||
+    permissions.canManageSchedules === true ||
+    normalizeLoginId_(normalizedLoginId) === normalizeLoginId_(MASTER_LOGIN_ID);
+
+  return {
+    ok: true,
+    success: true,
+    authSource: "firebase",
+    firebaseUid: uid,
+    loginId: normalizedLoginId || uid,
+    teacherName: teacherName,
+    name: teacherName,
+    isMaster: isMaster,
+    isLookup: false,
+    role: isMaster ? "ADMIN" : "TEACHER",
+    teacherNames: readFirebaseTeacherNames_()
+  };
 }
 
 function authenticateTeacher(id, password) {
