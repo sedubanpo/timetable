@@ -821,13 +821,23 @@
       .teacher-log-rank-name { color:#0f172a; font-size:0.88rem; font-weight:900; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
       .teacher-log-rank-count { color:#475569; font-size:0.8rem; font-weight:900; text-align:right; }
       .teacher-room-summary { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+      .teacher-room-dashboard-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; }
       .teacher-room-card { border:1px solid #dbe7ff; border-radius:18px; background:#ffffff; overflow:hidden; box-shadow:0 12px 30px rgba(30,58,138,0.05); }
       .teacher-room-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:14px 16px; background:linear-gradient(180deg,#f8fbff,#f2f7ff); border-bottom:1px solid #e6efff; }
       .teacher-room-card-name { color:#0f172a; font-size:1rem; font-weight:900; }
       .teacher-room-card-meta { color:#64748b; font-size:0.76rem; font-weight:800; text-align:right; }
+      .teacher-room-primary { margin:12px 14px 0; border-radius:14px; padding:12px 13px; border:1px solid #bfdbfe; background:#eff6ff; }
+      .teacher-room-primary-label { color:#64748b; font-size:0.72rem; font-weight:900; margin-bottom:4px; }
+      .teacher-room-primary-value { color:#0f172a; font-size:1rem; font-weight:900; }
+      .teacher-room-primary-meta { color:#475569; font-size:0.76rem; font-weight:800; margin-top:3px; }
       .teacher-room-chip-list { display:flex; flex-wrap:wrap; gap:7px; padding:12px 14px 14px; }
       .teacher-room-stat-chip { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:6px 10px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; font-size:0.76rem; font-weight:900; }
-      .teacher-room-building { background:#ecfdf5; border-color:#a7f3d0; color:#047857; }
+      .teacher-room-building-main { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+      .teacher-room-building-2 { background:#ecfdf5; border-color:#a7f3d0; color:#047857; }
+      .teacher-room-building-3 { background:#fff7ed; border-color:#fed7aa; color:#c2410c; }
+      .teacher-room-summary .teacher-room-building-main { border-left:5px solid #3b82f6; }
+      .teacher-room-summary .teacher-room-building-2 { border-left:5px solid #10b981; }
+      .teacher-room-summary .teacher-room-building-3 { border-left:5px solid #f97316; }
       .teacher-log-current-panel { border:1px solid #c7d7ff; border-radius:18px; background:#fff; box-shadow:0 12px 30px rgba(30,58,138,0.06); overflow:hidden; margin-bottom:14px; }
       .teacher-log-current-head { display:flex; justify-content:space-between; gap:12px; padding:16px 18px; background:linear-gradient(180deg,#eff6ff,#f8fbff); border-bottom:1px solid #dbe7ff; flex-wrap:wrap; }
       .teacher-log-current-title { color:#15327d; font-size:1.02rem; font-weight:900; }
@@ -913,6 +923,7 @@
         .teacher-log-time { text-align:left; }
         .teacher-log-analytics-grid { grid-template-columns:1fr; }
         .teacher-room-summary { grid-template-columns:1fr; }
+        .teacher-room-dashboard-grid { grid-template-columns:1fr; }
         .visitor-lookup-head-main { width:100%; }
         .visitor-lookup-head-side { width:100%; justify-content:flex-start; }
         .visitor-lookup-head { padding:22px 18px; }
@@ -4393,11 +4404,45 @@
           return parseTeacherLogTargetDate(a, reference) - parseTeacherLogTargetDate(b, reference);
         });
       }
+      function getTeacherRoomStatsStorageKey(sheets) {
+        var reference = getTeacherLogReferenceDate();
+        var monthKey = reference.getFullYear() + "-" + String(reference.getMonth() + 1).padStart(2, "0");
+        return "sedu_teacher_room_stats_v2::" + monthKey + "::" + (sheets || []).join("|");
+      }
+      function readTeacherRoomStatsFromStorage(sheets) {
+        try {
+          var raw = localStorage.getItem(getTeacherRoomStatsStorageKey(sheets));
+          if (!raw) return null;
+          var parsed = JSON.parse(raw);
+          if (!parsed || !parsed.stats || !Array.isArray(parsed.sheets)) return null;
+          if (parsed.sheets.join("|") !== (sheets || []).join("|")) return null;
+          return parsed.stats;
+        } catch (e) {
+          return null;
+        }
+      }
+      function writeTeacherRoomStatsToStorage(sheets, stats) {
+        try {
+          localStorage.setItem(getTeacherRoomStatsStorageKey(sheets), JSON.stringify({
+            savedAt: Date.now(),
+            sheets: sheets || [],
+            stats: stats
+          }));
+        } catch (e) {}
+      }
       function getTeacherRoomMetaFromHeader(roomName) {
         var raw = String(roomName || "").trim();
         if (raw.indexOf("2관") > -1) return { building: "2관", room: raw.replace(/^2관\s*/, "") || raw };
         if (raw.indexOf("3관") > -1) return { building: "3관", room: raw.replace(/^3관\s*/, "") || raw };
         return { building: "본관", room: raw || "미확인" };
+      }
+      function getTeacherRoomBuildingClass(building) {
+        if (building === "2관") return "teacher-room-building-2";
+        if (building === "3관") return "teacher-room-building-3";
+        return "teacher-room-building-main";
+      }
+      function formatTeacherRoomHours(value) {
+        return (parseInt(value, 10) || 0) + "시간";
       }
       function getTeacherRoomSheetData(sheetName) {
         if (sheetName === currentSheetName && lastData && lastData.grid) return Promise.resolve(lastData);
@@ -4468,6 +4513,14 @@
           if (teacherDashboardActiveTab === "rooms") renderTeacherRoomStats();
           return;
         }
+        if (!force) {
+          var stored = readTeacherRoomStatsFromStorage(sheets);
+          if (stored && stored.sheetCount === sheets.length) {
+            teacherRoomStatsCache = stored;
+            if (teacherDashboardActiveTab === "rooms") renderTeacherRoomStats();
+            return;
+          }
+        }
         teacherRoomStatsLoading = true;
         var bucket = {};
         var index = 0;
@@ -4478,18 +4531,22 @@
               var item = bucket[name];
               item.dateCount = Object.keys(item.dates).length;
               item.buildingList = Object.keys(item.buildings).sort(function(a, b) { return item.buildings[b] - item.buildings[a]; });
+              item.primaryBuilding = item.buildingList[0] || "";
               item.roomList = Object.keys(item.rooms).map(function(room) {
-                return { room: room, count: item.rooms[room] };
+                var building = room.split(" ")[0] || "";
+                return { room: room, building: building, count: item.rooms[room] };
               }).sort(function(a, b) {
                 if (b.count !== a.count) return b.count - a.count;
                 return a.room.localeCompare(b.room, "ko");
               });
+              item.primaryRoom = item.roomList[0] || null;
               return item;
             }).sort(function(a, b) {
               if (b.totalSlots !== a.totalSlots) return b.totalSlots - a.totalSlots;
               return a.teacherName.localeCompare(b.teacherName, "ko");
             });
             teacherRoomStatsCache = stats;
+            writeTeacherRoomStatsToStorage(sheets, stats);
             teacherRoomStatsLoading = false;
             if (teacherDashboardActiveTab === "rooms") renderTeacherRoomStats();
             return;
@@ -4515,7 +4572,7 @@
           return [item.teacherName].concat(item.roomList.map(function(room) { return room.room; })).join(" ").toLowerCase().indexOf(keyword) > -1;
         });
         var totalSlots = teachers.reduce(function(sum, item) { return sum + item.totalSlots; }, 0);
-        if (weekLabel) weekLabel.textContent = (stats.monthLabel || "이번 달") + " · " + stats.sheetCount + "일 · 강사 " + teachers.length + "명 · 배정 " + totalSlots + "칸";
+        if (weekLabel) weekLabel.textContent = (stats.monthLabel || "이번 달") + " · " + stats.sheetCount + "일 · 강사 " + teachers.length + "명 · 배정 " + formatTeacherRoomHours(totalSlots);
         if (!stats.sheetCount) {
           list.innerHTML = "<div class='teacher-empty'>이번 달로 인식되는 시간표 시트를 찾지 못했습니다.</div>";
           list.classList.add('is-ready');
@@ -4529,13 +4586,18 @@
         });
         var cards = teachers.map(function(item) {
           var rooms = item.roomList.slice(0, 8).map(function(room) {
-            var building = room.room.split(" ")[0];
-            return "<span class='teacher-room-stat-chip" + (/관$/.test(building) ? " teacher-room-building" : "") + "'>" + escapeTeacherLogHtml(room.room) + " · " + room.count + "칸</span>";
+            return "<span class='teacher-room-stat-chip " + getTeacherRoomBuildingClass(room.building) + "'>" + escapeTeacherLogHtml(room.room) + " · " + formatTeacherRoomHours(room.count) + "</span>";
           }).join("");
+          var primary = item.primaryRoom;
           return "<article class='teacher-room-card'>" +
             "<div class='teacher-room-card-head'>" +
               "<div><div class='teacher-room-card-name'>" + escapeTeacherLogHtml(item.teacherName) + "</div><div class='teacher-log-summary-note'>" + item.buildingList.map(escapeTeacherLogHtml).join(" · ") + "</div></div>" +
-              "<div class='teacher-room-card-meta'>총 " + item.totalSlots + "칸<br>" + item.dateCount + "일 배정</div>" +
+              "<div class='teacher-room-card-meta'>총 " + formatTeacherRoomHours(item.totalSlots) + "<br>" + item.dateCount + "일 배정</div>" +
+            "</div>" +
+            "<div class='teacher-room-primary " + getTeacherRoomBuildingClass(primary ? primary.building : item.primaryBuilding) + "'>" +
+              "<div class='teacher-room-primary-label'>주 사용 관-강의실</div>" +
+              "<div class='teacher-room-primary-value'>" + escapeTeacherLogHtml(primary ? primary.room : "배정 없음") + "</div>" +
+              "<div class='teacher-room-primary-meta'>" + (primary ? formatTeacherRoomHours(primary.count) + " · 전체의 " + Math.round((primary.count / Math.max(1, item.totalSlots)) * 100) + "%" : "-") + "</div>" +
             "</div>" +
             "<div class='teacher-room-chip-list'>" + (rooms || "<span class='teacher-room-stat-chip'>강의실 없음</span>") + "</div>" +
           "</article>";
@@ -4543,11 +4605,11 @@
         list.innerHTML =
           "<div class='teacher-room-summary'>" +
             "<div class='teacher-log-summary-card'><div class='teacher-log-summary-label'>집계 월</div><div class='teacher-log-summary-value'>" + escapeTeacherLogHtml(stats.monthLabel) + "</div><div class='teacher-log-summary-note'>시간표 " + stats.sheetCount + "일 기준</div></div>" +
-            "<div class='teacher-log-summary-card'><div class='teacher-log-summary-label'>본관 배정</div><div class='teacher-log-summary-value'>" + (buildingTotals["본관"] || 0) + "칸</div><div class='teacher-log-summary-note'>1~9강의실</div></div>" +
-            "<div class='teacher-log-summary-card'><div class='teacher-log-summary-label'>2관 배정</div><div class='teacher-log-summary-value'>" + (buildingTotals["2관"] || 0) + "칸</div><div class='teacher-log-summary-note'>2관 강의실</div></div>" +
-            "<div class='teacher-log-summary-card'><div class='teacher-log-summary-label'>3관 배정</div><div class='teacher-log-summary-value'>" + (buildingTotals["3관"] || 0) + "칸</div><div class='teacher-log-summary-note'>3관 강의실</div></div>" +
+            "<div class='teacher-log-summary-card teacher-room-building-main'><div class='teacher-log-summary-label'>본관 배정</div><div class='teacher-log-summary-value'>" + formatTeacherRoomHours(buildingTotals["본관"] || 0) + "</div><div class='teacher-log-summary-note'>1~9강의실</div></div>" +
+            "<div class='teacher-log-summary-card teacher-room-building-2'><div class='teacher-log-summary-label'>2관 배정</div><div class='teacher-log-summary-value'>" + formatTeacherRoomHours(buildingTotals["2관"] || 0) + "</div><div class='teacher-log-summary-note'>2관 강의실</div></div>" +
+            "<div class='teacher-log-summary-card teacher-room-building-3'><div class='teacher-log-summary-label'>3관 배정</div><div class='teacher-log-summary-value'>" + formatTeacherRoomHours(buildingTotals["3관"] || 0) + "</div><div class='teacher-log-summary-note'>3관 강의실</div></div>" +
           "</div>" +
-          "<div class='teacher-room-summary'>" + (cards || "<div class='teacher-empty'>검색 결과가 없습니다.</div>") + "</div>";
+          "<div class='teacher-room-dashboard-grid'>" + (cards || "<div class='teacher-empty'>검색 결과가 없습니다.</div>") + "</div>";
         requestAnimationFrame(function() { list.classList.add('is-ready'); });
       }
       function renderTeacherLogLoading(mode) {
