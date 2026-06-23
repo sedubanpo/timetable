@@ -3884,7 +3884,7 @@
           else if (!typeText) typeText = duration + "시간";
           if (isSelfStudyVisual) {
             return "<div class='student-preview-row" + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-                "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>시</div><div class='student-preview-time'>" + m.start + ":00 - " + m.end + ":00</div></div>" +
+                "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>시</div><div class='student-preview-time'>" + m.start + ":00&nbsp;-&nbsp;" + m.end + ":00</div></div>" +
                 "<div class='student-preview-cell student-preview-cell-subject'>자습</div>" +
                 "<div class='student-preview-cell student-preview-cell-teacher'>-</div>" +
                 "<div class='student-preview-cell student-preview-cell-type'>" + duration + "시간</div>" +
@@ -3892,7 +3892,7 @@
                 "<div class='student-preview-cell student-preview-cell-room'>-</div></div>";
           }
 	          return "<div class='student-preview-row " + themeClass + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-	              "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>" + timeIcon + "</div><div class='student-preview-time'>" + m.start + ":00 - " + m.end + ":00</div></div>" +
+	              "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>" + timeIcon + "</div><div class='student-preview-time'>" + m.start + ":00&nbsp;-&nbsp;" + m.end + ":00</div></div>" +
 	              "<div class='student-preview-cell student-preview-cell-subject student-preview-heading-subject'>" + subjectText + "</div>" +
 	              "<div class='student-preview-cell student-preview-cell-teacher'>" + (teacherName || "-") + "</div>" +
 	              "<div class='student-preview-cell student-preview-cell-type'>" + getStudentCardClassBadgeHtml(typeText) + "</div>" +
