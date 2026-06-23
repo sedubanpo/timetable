@@ -1221,10 +1221,10 @@
           <button class="empty-btn" onclick="toggleEmptyMode()" title="빈 강의실 보기">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg><span>빈강의실</span>
           </button>
-          <button class="capture-btn" onclick="captureScreen()" title="이미지 저장">
+          <button class="capture-btn" onclick="captureScreen()" title="이미지 저장" style="display:none;">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l.74 2.228a1 1 0 00.948.684h6.168a2 2 0 011.992 2.181l-.637 7A2 2 0 0115.445 20H4.555a2 2 0 01-1.992-1.819l-.637-7a1.99 1.99 0 01.316-1.318A2 2 0 013 9.5V5z" clip-rule="evenodd" /></svg><span>저장</span>
           </button>
-          <button class="capture-btn" onclick="copyCurrentScheduleImage()" title="현재 화면 이미지 복사" style="background:#0ea5e9;">
+          <button class="capture-btn" onclick="copyCurrentScheduleImage()" title="현재 화면 이미지 복사" style="background:#0ea5e9; display:none;">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M8 2a2 2 0 00-2 2v1H5a2 2 0 00-2 2v8a2 2 0 002 2h7a2 2 0 002-2v-1h1a2 2 0 002-2V4a2 2 0 00-2-2H8zm4 5v8H5V7h7zm3-3v8h-1V7a2 2 0 00-2-2H8V4h7z"/></svg><span>이미지 복사</span>
           </button>
           <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="학생별 시간표 카드 생성">
@@ -1233,10 +1233,10 @@
           <button class="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 (F11)">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>전체화면</span>
           </button>
-          <button class="msg-gen-btn" onclick="generateArrivalMessage()">
+          <button class="msg-gen-btn" onclick="generateArrivalMessage()" style="display:none;">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></svg><span>등원안내</span>
           </button>
-          <button class="msg-simple-btn" onclick="openSelectionModal()">
+          <button class="msg-simple-btn" onclick="openSelectionModal()" style="display:none;">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>상세안내</span>
           </button>
           <button class="absence-notice-btn" onclick="openAbsenceNoticeModal()">
