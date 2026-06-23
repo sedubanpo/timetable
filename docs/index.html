@@ -505,38 +505,55 @@
       #studentImagePreview { max-width:none; margin:0; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
       #studentImagePreview th, #studentImagePreview td { border:1px solid #e5e7eb; padding:8px; font-size:0.9rem; text-align:left; }
-      .student-preview-shell { --si-bg:#f6f9ff; --si-surface:rgba(255,255,255,0.56); --si-border:rgba(226,232,240,0.9); --si-text:#0f172a; --si-muted:#64748b; --si-accent:#3b82f6; position: relative; overflow: hidden; max-width: 420px; margin: 0 auto; background: linear-gradient(165deg, rgba(248,251,255,0.95), rgba(239,245,255,0.88)); border: 1px solid rgba(191,219,254,0.72); border-radius: 28px; padding: 18px; box-shadow: 0 18px 40px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-      .student-preview-shell::before { content:""; position:absolute; width:62%; height:240px; top:-120px; left:-70px; background: radial-gradient(circle at center, rgba(255,255,255,0.56) 0%, rgba(255,255,255,0) 72%); pointer-events:none; }
-      .student-preview-shell::after { content: ""; position: absolute; right: calc(var(--wm-size, 220px) * -0.34); bottom: calc(var(--wm-size, 220px) * -0.26); width: var(--wm-size, 220px); height: var(--wm-size, 220px); background-image: url('https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png'); background-size: contain; background-repeat: no-repeat; opacity: 0.14; pointer-events: none; }
-      .student-preview-header { position:relative; z-index:2; display:grid; grid-template-columns: 56px 1fr; gap:12px; align-items:center; margin-bottom:14px; padding:10px 12px; border-radius:18px; background: rgba(255,255,255,0.44); border:1px solid rgba(226,232,240,0.86); }
-      .student-preview-avatar { position:relative; width:56px; height:56px; border-radius:50%; overflow:hidden; border:2px solid rgba(226,232,240,0.9); background: linear-gradient(145deg,#e2e8f0,#cbd5e1); box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; }
-      .student-preview-avatar img { width:72%; height:72%; object-fit:contain; object-position:center; display:block; filter: saturate(0) brightness(0.45) contrast(1.45) hue-rotate(196deg); }
+      .student-preview-shell { --si-bg:#061f4e; --si-text:#0f172a; --si-muted:#64748b; position: relative; overflow: hidden; max-width: 460px; margin: 0 auto; background: radial-gradient(circle at 12% 10%, rgba(37,99,235,0.40), transparent 28%), linear-gradient(160deg, #063b83 0%, #061f4e 52%, #04152f 100%); border: 1px solid rgba(191,219,254,0.32); border-radius: 30px; padding: 18px 16px 16px; box-shadow: 0 24px 52px rgba(15,23,42,0.20), inset 0 1px 0 rgba(255,255,255,0.14); }
+      .student-preview-shell::before { content:""; position:absolute; width:280px; height:280px; right:-120px; top:-120px; border-radius:50%; border:1px solid rgba(125,211,252,0.22); box-shadow:0 0 0 12px rgba(125,211,252,0.04), 0 0 0 24px rgba(125,211,252,0.03); pointer-events:none; }
+      .student-preview-shell::after { content: ""; position: absolute; right: -78px; bottom: 260px; width: 270px; height: 270px; background-image: url('https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png'); background-size: contain; background-repeat: no-repeat; opacity: 0.055; pointer-events: none; filter: brightness(0) invert(1); }
+      .student-preview-hero { position:relative; z-index:2; text-align:center; color:#ffffff; padding: 2px 6px 16px; }
+      .student-preview-logo { width:62px; height:62px; border-radius:18px; background:rgba(255,255,255,0.96); display:flex; align-items:center; justify-content:center; margin:0 auto 10px; box-shadow:0 14px 26px rgba(2,6,23,0.18); }
+      .student-preview-logo img { width:76%; height:76%; object-fit:contain; display:block; }
+      .student-preview-kicker { color:#bfdbfe; font-size:0.82rem; font-weight:800; margin-bottom:2px; }
+      .student-preview-title { font-size: 1.82rem; font-weight: 950; color: #ffffff; margin: 0; letter-spacing: 0; line-height:1.08; }
+      .student-preview-title .student-preview-title-accent { color:#9bd8ff; }
+      .student-preview-date { display:inline-flex; align-items:center; justify-content:center; gap:6px; margin-top:11px; padding:7px 13px; border-radius:999px; color:#ffffff; background:rgba(255,255,255,0.12); border:1px solid rgba(219,234,254,0.22); font-size: 0.88rem; font-weight: 900; }
+      .student-preview-studentbar { position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 4px 12px; padding:12px 14px; border-radius:18px; background: #f8fbff; border:1px solid #dbe7f7; box-shadow:0 12px 24px rgba(15,23,42,0.10); }
+      .student-preview-studentname { color:#0f172a; font-size:1.13rem; font-weight:950; }
+      .student-preview-school { color:#64748b; font-size:0.78rem; font-weight:800; margin-top:2px; }
       .student-preview-avatar-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
       .student-preview-meta { min-width:0; }
-      .student-preview-title { font-size: 1.28rem; font-weight: 700; color: #0f172a; margin: 0; letter-spacing: -0.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .student-preview-date { display:flex; align-items:center; gap:6px; margin-top:3px; font-size: 0.82rem; color: rgba(15,23,42,0.70); font-weight: 500; }
       .student-preview-sendline,
       .student-preview-send-badge,
       .student-preview-send-meta { display:none !important; }
-      .student-preview-status-chip { display:inline-flex; align-items:center; border-radius:999px; padding:3px 8px; font-size:0.68rem; font-weight:600; color:#334155; background:rgba(255,255,255,0.7); border:1px solid rgba(203,213,225,0.9); }
-      .student-preview-row { position:relative; z-index:2; display:flex; flex-direction:column; gap:10px; margin-top: 10px; padding: 12px; border-radius: 22px; border: 1px solid rgba(226,232,240,0.9); background: linear-gradient(142deg, rgba(255,255,255,0.55), rgba(255,255,255,0.34)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 8px 22px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.52); overflow:hidden; }
+      .student-preview-status-chip { color:#1d4ed8; font-size:0.78rem; font-weight:950; white-space:nowrap; }
+      .student-preview-schedule-card { position:relative; z-index:2; border-radius:24px; background:#ffffff; padding:12px; box-shadow:0 18px 42px rgba(15,23,42,0.18); border:1px solid rgba(219,234,254,0.92); }
+      .student-preview-table-head { display:grid; grid-template-columns: 92px minmax(54px,0.78fr) minmax(58px,0.82fr) minmax(62px,0.82fr) minmax(54px,0.66fr) minmax(62px,0.82fr); gap:6px; align-items:center; padding:10px 12px; border-radius:14px; background:#083b86; color:#ffffff; font-size:0.72rem; font-weight:900; text-align:center; }
+      .student-preview-row { position:relative; z-index:2; display:grid; grid-template-columns: 92px minmax(54px,0.78fr) minmax(58px,0.82fr) minmax(62px,0.82fr) minmax(54px,0.66fr) minmax(62px,0.82fr); gap:6px; align-items:center; margin-top: 10px; padding: 12px; border-radius: 16px; border: 1px solid rgba(226,232,240,0.9); background: linear-gradient(142deg, rgba(255,255,255,0.74), rgba(255,255,255,0.52)); box-shadow: 0 8px 18px rgba(15,23,42,0.05); overflow:hidden; }
       .student-preview-row::before { display:none; }
-      .student-preview-time-wrap { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
-      .student-preview-time { white-space: nowrap; font-size: 1.02rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; line-height: 1.15; }
+      .student-preview-time-wrap { display:grid; grid-template-columns:28px 1fr; align-items:center; gap:8px; min-width:0; }
+      .student-preview-time-icon { width:28px; height:28px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#ffffff; background:#4c87df; font-size:0.82rem; font-weight:900; }
+      .student-preview-time { white-space: nowrap; font-size: 0.86rem; font-weight: 950; color: #0f172a; letter-spacing: 0; line-height: 1.15; }
       .student-preview-time-duration { margin-top:0; }
-      .student-preview-detail { position:relative; display:flex; flex-direction:column; gap:6px; font-size: 0.92rem; color: #1e293b; min-width:0; padding-left:0; padding-right:84px; }
+      .student-preview-detail { display:contents; font-size: 0.92rem; color: #1e293b; min-width:0; }
+      .student-preview-cell { min-width:0; text-align:center; font-weight:900; color:#0f172a; position:relative; z-index:2; }
+      .student-preview-cell-subject { font-size:1rem; }
+      .student-preview-cell-teacher { font-size:0.88rem; color:#1e293b; }
+      .student-preview-cell-type { font-size:0.86rem; }
+      .student-preview-cell-building { font-size:0.78rem; line-height:1.18; color:#063684; }
+      .student-preview-building-mini { display:block; width:20px; height:24px; margin:0 auto 3px; position:relative; border:2px solid #063684; border-radius:3px 3px 1px 1px; box-sizing:border-box; }
+      .student-preview-building-mini::before { content:""; position:absolute; left:5px; top:-7px; width:7px; height:7px; border-radius:1px; background:#063684; }
+      .student-preview-building-mini::after { content:""; position:absolute; left:4px; top:6px; width:3px; height:3px; background:#063684; box-shadow:8px 0 0 #063684, 0 7px 0 #063684, 8px 7px 0 #063684; }
+      .student-preview-cell-room { font-size:0.88rem; }
       .student-preview-heading { display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; min-width:0; }
-      .student-preview-heading-subject { font-size:0.98rem; font-weight:600; color:#1d4ed8; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:48%; }
-      .student-preview-heading-teacher { font-size:0.90rem; font-weight:500; color:rgba(51,65,85,0.92); max-width:48%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .student-preview-heading-subject { font-size:1.05rem; font-weight:950; color:#1d4ed8; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:56%; }
+      .student-preview-heading-teacher { font-size:0.92rem; font-weight:800; color:rgba(51,65,85,0.92); max-width:42%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .student-preview-heading-line { display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
       .student-preview-inline-type { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:3px 8px; font-size:0.70rem; font-weight:700; color:#0369a1; background:rgba(186,230,253,0.48); border:1px solid rgba(56,189,248,0.52); }
       .student-preview-card-meta-line { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:2px; position:relative; z-index:3; }
-      .student-preview-building-badge { display:inline-flex; align-items:center; justify-content:center; min-width:34px; border-radius:999px; padding:4px 9px; font-size:0.72rem; font-weight:900; letter-spacing:0; box-shadow:0 5px 12px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.45); }
-      .student-preview-building-main { color:#1e3a8a; background:rgba(219,234,254,0.86); border:1px solid rgba(96,165,250,0.72); }
-      .student-preview-building-2 { color:#065f46; background:rgba(209,250,229,0.88); border:1px solid rgba(52,211,153,0.72); }
-      .student-preview-building-3 { color:#6d28d9; background:rgba(237,233,254,0.90); border:1px solid rgba(167,139,250,0.76); }
-      .student-preview-room-label { display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:0.72rem; font-weight:800; color:#334155; background:rgba(255,255,255,0.74); border:1px solid rgba(203,213,225,0.86); }
-      .student-preview-class-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:4px 9px; font-size:0.72rem; font-weight:900; color:#0369a1; background:rgba(224,242,254,0.82); border:1px solid rgba(125,211,252,0.78); }
+      .student-preview-building-badge { font-weight:950; color:#063684; }
+      .student-preview-building-main,
+      .student-preview-building-2,
+      .student-preview-building-3 { background:transparent; border:0; box-shadow:none; }
+      .student-preview-room-label { font-weight:950; color:#0f172a; }
+      .student-preview-class-badge { display:inline-flex; align-items:center; justify-content:center; min-width:36px; border-radius:8px; padding:4px 8px; font-size:0.78rem; font-weight:950; color:#0369a1; background:rgba(224,242,254,0.72); border:1px solid rgba(125,211,252,0.68); }
       .student-preview-class-badge.type-special { color:#7c2d12; background:rgba(255,237,213,0.90); border-color:rgba(251,146,60,0.78); }
       .student-preview-class-badge.type-one { color:#5b21b6; background:rgba(237,233,254,0.90); border-color:rgba(167,139,250,0.78); }
       .student-preview-chipline { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:0; }
@@ -551,13 +568,27 @@
       .student-preview-duration.duration-sci { color:#065f46; background: rgba(187,247,208,0.52); border-color:rgba(74,222,128,0.62); }
       .student-preview-duration.duration-social { color:#9f1239; background: rgba(251,207,232,0.52); border-color:rgba(244,114,182,0.60); }
       .student-preview-duration.duration-default { color:#334155; background: rgba(226,232,240,0.58); border-color:rgba(148,163,184,0.62); }
-      .student-preview-note-box { margin-top:4px; padding:6px 8px; border-radius:10px; border:1px solid rgba(251,146,60,0.24); background: rgba(255,247,237,0.42); color:#9a3412; font-size:0.73rem; font-weight:600; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-      .student-preview-room-ghost { position:absolute; right:0; top:0; font-size:1.05rem; font-weight:800; color:rgba(30,41,59,0.18); letter-spacing:-0.01em; pointer-events:none; white-space:nowrap; z-index:0; }
+      .student-preview-note-box { grid-column:2 / 7; margin-top:6px; padding:6px 9px; border-radius:8px; border:1px solid rgba(251,146,60,0.38); background: rgba(255,247,237,0.70); color:#9a3412; font-size:0.70rem; font-weight:800; line-height:1.35; display:block; overflow:hidden; text-align:left; }
+      .student-preview-room-ghost { position:absolute; right:0; top:0; font-size:1.02rem; font-weight:950; color:rgba(30,41,59,0.16); letter-spacing:0; pointer-events:none; white-space:nowrap; z-index:0; }
       .student-preview-heading-line, .student-preview-note-box { position:relative; z-index:2; }
-      .student-preview-subject-art { position:absolute; right:78px; top:6px; font-size:1.55rem; font-weight:700; letter-spacing:0.08em; color:rgba(100,116,139,0.16); pointer-events:none; white-space:nowrap; z-index:0; user-select:none; }
-      .student-preview-policy { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(203,213,225,0.85); font-size: 0.72rem; line-height: 1.55; color: #6b7280; }
-      .student-preview-policy-title { font-weight: 800; color: #475569; margin-bottom: 4px; }
+      .student-preview-subject-art { position:absolute; right:78px; top:6px; font-size:1.36rem; font-weight:800; letter-spacing:0; color:rgba(100,116,139,0.13); pointer-events:none; white-space:nowrap; z-index:0; user-select:none; }
+      .student-preview-policy { position:relative; z-index:2; margin-top: 12px; padding: 12px 14px; border-radius:20px; border: 1px solid rgba(191,219,254,0.86); background:#ffffff; font-size: 0.70rem; line-height: 1.48; color: #334155; box-shadow:0 14px 28px rgba(15,23,42,0.10); }
+      .student-preview-policy-title { font-weight: 950; color: #073b86; margin-bottom: 6px; font-size:0.82rem; }
+      .student-preview-policy-line { display:grid; grid-template-columns:26px 1fr; gap:8px; align-items:start; padding:7px 0; border-top:1px dashed #dbe7ff; }
+      .student-preview-policy-line:first-of-type { border-top:0; padding-top:0; }
+      .student-preview-policy-icon { width:26px; height:26px; border-radius:999px; background:#083b86; color:#ffffff; display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:900; }
+      .student-preview-building-guide { position:relative; z-index:2; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-top:12px; }
+      .student-preview-building-card { min-width:0; border-radius:16px; padding:10px 7px 9px; text-align:center; border:1px solid rgba(255,255,255,0.22); background:rgba(255,255,255,0.10); color:#b9c7da; box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); }
+      .student-preview-building-card.active { color:#ffffff; background:linear-gradient(180deg, rgba(96,165,250,0.58), rgba(37,99,235,0.38)); border-color:#bfe3ff; box-shadow:0 0 0 2px rgba(147,197,253,0.18), 0 0 22px rgba(96,165,250,0.48), inset 0 1px 0 rgba(255,255,255,0.28); }
+      .student-preview-building-card-name { display:inline-flex; align-items:center; justify-content:center; min-width:54px; border-radius:999px; padding:4px 10px; background:rgba(255,255,255,0.14); font-size:0.82rem; font-weight:950; }
+      .student-preview-building-icon { margin:9px auto 7px; width:44px; height:38px; position:relative; opacity:.62; }
+      .student-preview-building-card.active .student-preview-building-icon { opacity:1; }
+      .student-preview-building-icon::before { content:""; position:absolute; left:9px; right:9px; top:0; bottom:0; border-radius:4px 4px 2px 2px; background:linear-gradient(180deg,#dff1ff,#94ccff); box-shadow:-13px 15px 0 -3px rgba(223,241,255,0.72), 13px 18px 0 -6px rgba(223,241,255,0.58); }
+      .student-preview-building-icon::after { content:""; position:absolute; left:17px; top:9px; width:4px; height:4px; background:#1671d6; box-shadow:10px 0 0 #1671d6, 0 10px 0 #1671d6, 10px 10px 0 #1671d6, 0 20px 0 #1671d6, 10px 20px 0 #1671d6; }
+      .student-preview-building-card-address { font-size:0.62rem; font-weight:850; line-height:1.25; word-break:keep-all; }
       .student-export-host { position:fixed; left:-10000px; top:0; pointer-events:none; opacity:0; }
+      .student-card-preview-frame { width:100%; overflow:auto; display:flex; justify-content:center; align-items:flex-start; padding:8px 0 2px; }
+      .student-card-preview-frame > div { flex:0 0 auto; }
       .late-night-toggle-row td { padding: 10px 12px; background: #f8fafc; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1; }
       .late-night-toggle-btn { width: 100%; border: 1px solid #cbd5e1; background: linear-gradient(180deg, #ffffff, #eef4ff); color: #1e3a8a; border-radius: 12px; padding: 9px 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer; }
       .teacher-log-box { width: 980px; max-width: 96%; max-height: 88vh; overflow: auto; text-align: left; padding-bottom: 22px; }
@@ -1014,8 +1045,6 @@
             <span>비고 숨김</span>
           </label>
           <button id="studentImageRefreshBtn" class="attendance-time-btn" onclick="refreshStudentImageDashboard()">새로고침</button>
-          <button id="studentImageCopyBtn" class="msg-copy-btn" style="margin-top:0;" onclick="copyStudentScheduleImage()">카드 복사</button>
-          <button class="msg-copy-btn" style="margin-top:0;" onclick="downloadStudentScheduleImage()">카드 저장</button>
           <button id="studentCardSentToggleBtn" class="msg-copy-btn is-muted" style="margin-top:0;" onclick="toggleSelectedStudentCardSent()">발송 완료 표시</button>
         </div>
         <div class="student-dashboard-layout">
@@ -1032,7 +1061,7 @@
             <div class="student-preview-panel-head">
               <div>
                 <div class="student-preview-panel-title">시간표 카드 미리보기</div>
-                <div class="student-preview-panel-sub">선택한 학생의 내일 시간표를 바로 확인하고 복사할 수 있습니다.</div>
+                <div class="student-preview-panel-sub">선택한 학생의 시간표 카드를 이 영역에서 바로 확인합니다.</div>
               </div>
               <div class="student-preview-panel-meta">Windows 11 카카오톡 붙여넣기용</div>
             </div>
@@ -1255,7 +1284,6 @@
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
-      let studentCardCaptureCache = {};
       let studentImageRefreshPendingSelection = "";
       let studentCardHideNote = false;
       let teacherViewLogsCache = [];
@@ -3395,16 +3423,9 @@
         var record = getStudentCardStatusRecord(name);
         return record.sent ? "발송 완료" : "미발송";
       }
-      function getStudentCardCaptureKey(name) {
-        return String(currentSheetName || "") + "||" + String(name || "") + "||" + (studentCardHideNote ? "hide-note" : "show-note");
-      }
-      function resetStudentCardCaptureCache() {
-        studentCardCaptureCache = {};
-      }
       function toggleStudentCardHideNote() {
         var toggle = document.getElementById('studentImageHideNoteToggle');
         studentCardHideNote = !!(toggle && toggle.checked);
-        resetStudentCardCaptureCache();
         if (selectedStudentForImage) renderStudentImagePreview(selectedStudentForImage);
       }
       function refreshStudentImageListSelectionState() {
@@ -3424,8 +3445,6 @@
       }
       function syncStudentCardActionButtons() {
         var toggleBtn = document.getElementById('studentCardSentToggleBtn');
-        var copyBtn = document.getElementById('studentImageCopyBtn');
-        if (copyBtn) copyBtn.disabled = !selectedStudentForImage;
         if (!toggleBtn) return;
         if (!selectedStudentForImage) {
           toggleBtn.disabled = true;
@@ -3665,10 +3684,54 @@
       function getStudentCardPolicyHtml() {
         return "<div class='student-preview-policy'>" +
           "<div class='student-preview-policy-title'>학원 안내사항</div>" +
-          "<div>수업 전날 오후 8시 이후 취소된 당일취소 수업은 수강료가 정상 책정됩니다.</div>" +
-          "<div>사전에 말씀해 주신 결석예고 수업은 수강료가 책정되지 않습니다.</div>" +
-          "<div>당일취소 및 결석예고 수업은 모두 2주 이내 보강이 가능하며, 기존 정규 수업 시간 외 별도 시간으로 진행됩니다.</div>" +
+          "<div class='student-preview-policy-line'><span class='student-preview-policy-icon'>!</span><span>수업 전날 오후 8시 이후 취소된 당일취소 수업은 수강료가 정상 책정됩니다.</span></div>" +
+          "<div class='student-preview-policy-line'><span class='student-preview-policy-icon'>✓</span><span>사전에 말씀해 주신 결석예고 수업은 수강료가 책정되지 않습니다.</span></div>" +
+          "<div class='student-preview-policy-line'><span class='student-preview-policy-icon'>↺</span><span>당일취소 및 결석예고 수업은 모두 2주 이내 보강이 가능하며, 기존 정규 수업 시간 외 별도 시간으로 진행됩니다.</span></div>" +
         "</div>";
+      }
+      function getStudentCardModeLabel() {
+        var d = parseTeacherLogTargetDate(currentSheetName, new Date());
+        if (!d) return "오늘";
+        var today = new Date();
+        var startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        var startTarget = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        var diff = Math.round((startTarget - startToday) / 86400000);
+        if (diff === 1) return "내일";
+        if (diff === 0) return "오늘";
+        return "해당일";
+      }
+      function getStudentCardDateText(model) {
+        var meta = String((model && model.metaLine) || currentSheetName || "").split(" · ")[0].trim();
+        return meta || String(currentSheetName || "");
+      }
+      function getStudentCardSchoolText(model) {
+        var meta = String((model && model.metaLine) || "");
+        var parts = meta.split(" · ");
+        return parts.length > 1 ? parts.slice(1).join(" · ") : "";
+      }
+      function getStudentCardUsedBuildingMap(timelineRows) {
+        var used = {};
+        (timelineRows || []).forEach(function(item) {
+          if (!item || item.isBreak || !item.room) return;
+          var meta = getStudentCardRoomMeta(item.room);
+          used[meta.building] = true;
+        });
+        return used;
+      }
+      function getStudentCardBuildingGuideHtml(timelineRows) {
+        var used = getStudentCardUsedBuildingMap(timelineRows);
+        var buildings = [
+          { name: "본관", address: "덕성빌딩 5층" },
+          { name: "2관", address: "반포쇼핑타운 2동 5층" },
+          { name: "3관", address: "반포쇼핑타운 3동 4층" }
+        ];
+        return "<div class='student-preview-building-guide'>" + buildings.map(function(item) {
+          return "<div class='student-preview-building-card" + (used[item.name] ? " active" : "") + "'>" +
+            "<div class='student-preview-building-card-name'>" + item.name + "</div>" +
+            "<div class='student-preview-building-icon'></div>" +
+            "<div class='student-preview-building-card-address'>" + item.address + "</div>" +
+          "</div>";
+        }).join("") + "</div>";
       }
       function buildStudentCardViewModel(name) {
         var studentName = String(name || "").trim();
@@ -3709,7 +3772,7 @@
 	      }
       function getStudentCardRoomMeta(room) {
         var text = String(room || "").trim();
-        var building = "1관";
+        var building = "본관";
         var buildingClass = "student-preview-building-main";
         if (/2관/.test(text)) {
           building = "2관";
@@ -3755,7 +3818,7 @@
           var duration = Math.max(1, m.end - m.start);
           var isMutedClass = /자습|자기주도학습|테스트/.test(String(m.title || "")) || /자습|자기주도학습|테스트/.test(String(m.classType || ""));
           var isSelfStudyVisual = m.isBreak || /자습|자기주도학습/.test(String(m.title || "")) || /자습|자기주도학습/.test(String(m.classType || ""));
-          var note = m.note ? "<div class='student-preview-note-box'>" + m.note + "</div>" : "";
+          var note = m.note ? "<div class='student-preview-note-box'>비고 · " + m.note + "</div>" : "";
           var subjectText = m.title || "";
           var teacherName = "";
           var teacherMatch = subjectText.match(/^(.*)\((.*)T\)$/);
@@ -3764,19 +3827,29 @@
             teacherName = teacherMatch[2] + "T";
           }
           var themeClass = getStudentPreviewThemeClass(subjectText, m.classType);
-          var durationBadge = "<span class='student-preview-badge student-preview-duration " + getDurationThemeClass(themeClass) + "'>" + duration + "시간</span>";
+          var roomMeta = m.room ? getStudentCardRoomMeta(m.room) : null;
+          var timeIcon = themeClass === "theme-kor" ? "국" : (themeClass === "theme-math" ? "수" : (themeClass === "theme-eng" ? "영" : (themeClass === "theme-sci" ? "과" : "시")));
+          var typeText = m.classType || "";
+          if (typeText && !/시간/.test(typeText)) typeText += " · " + duration + "시간";
+          else if (!typeText) typeText = duration + "시간";
           if (isSelfStudyVisual) {
             return "<div class='student-preview-row" + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-                "<div class='student-preview-time-wrap'><div class='student-preview-time'>" + m.start + "-" + m.end + "시</div><div class='student-preview-time-duration'>" + durationBadge + "</div></div>" +
-                "<div><div class='student-preview-selfstudy-void'></div></div></div>";
+                "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>시</div><div class='student-preview-time'>" + m.start + ":00<br>- " + m.end + ":00</div></div>" +
+                "<div class='student-preview-cell student-preview-cell-subject'>자습</div>" +
+                "<div class='student-preview-cell student-preview-cell-teacher'>-</div>" +
+                "<div class='student-preview-cell student-preview-cell-type'>" + duration + "시간</div>" +
+                "<div class='student-preview-cell student-preview-cell-building'>-</div>" +
+                "<div class='student-preview-cell student-preview-cell-room'>-</div></div>";
           }
-	          var metaLine = "<div class='student-preview-card-meta-line'>" + getStudentCardRoomBadgeHtml(m.room) + getStudentCardClassBadgeHtml(m.classType) + "</div>";
-	          var heading = "<div class='student-preview-heading-line'><span class='student-preview-heading-subject'>" + subjectText + "</span>" +
-	                        (teacherName ? "<span class='student-preview-heading-teacher'>" + teacherName + "</span>" : "") +
-	                        "</div>";
 	          return "<div class='student-preview-row " + themeClass + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-	              "<div class='student-preview-time-wrap'><div class='student-preview-time'>" + m.start + "-" + m.end + "시</div><div class='student-preview-time-duration'>" + durationBadge + "</div></div>" +
-	              "<div><div class='student-preview-detail'>" + (m.room ? "<div class='student-preview-room-ghost'>" + m.room + "</div>" : "") + "<div class='student-preview-subject-art'>" + getSubjectArtText(themeClass, subjectText) + "</div>" + metaLine + heading + "</div>" + note + "</div></div>";
+	              "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>" + timeIcon + "</div><div class='student-preview-time'>" + m.start + ":00<br>- " + m.end + ":00</div></div>" +
+	              "<div class='student-preview-cell student-preview-cell-subject student-preview-heading-subject'>" + subjectText + "</div>" +
+	              "<div class='student-preview-cell student-preview-cell-teacher'>" + (teacherName || "-") + "</div>" +
+	              "<div class='student-preview-cell student-preview-cell-type'>" + getStudentCardClassBadgeHtml(typeText) + "</div>" +
+	              "<div class='student-preview-cell student-preview-cell-building'><span class='student-preview-building-mini'></span>" + (roomMeta ? roomMeta.building : "-") + "</div>" +
+	              "<div class='student-preview-cell student-preview-cell-room'>" + (roomMeta ? roomMeta.room : "-") + "</div>" +
+	              note +
+	            "</div>";
         }).join("");
       }
       function renderStudentImagePreview(name) {
@@ -3790,32 +3863,42 @@
           syncStudentCardActionButtons();
           return;
         }
-        var wmSize = Math.min(760, 270 + (model.timelineRows.length * 42));
-        var avatarUrl = getStudentAvatarUrl(name);
-        var initials = buildStudentInitials(name);
-
-        preview.innerHTML =
-          "<div class='student-preview-shell' style='--wm-size:" + wmSize + "px; --si-bg:" + STUDENT_IMAGE_PALETTE.bg + "; --si-surface:" + STUDENT_IMAGE_PALETTE.surface + "; --si-border:" + STUDENT_IMAGE_PALETTE.line + "; --si-text:" + STUDENT_IMAGE_PALETTE.text + "; --si-muted:" + STUDENT_IMAGE_PALETTE.muted + "; --si-accent:" + STUDENT_IMAGE_PALETTE.accent + ";'>" +
-            "<div class='student-preview-header'>" +
-              "<div class='student-preview-avatar'>" +
-                (avatarUrl
-                  ? "<img src='" + avatarUrl + "' alt='avatar' crossorigin='anonymous' onerror='this.style.display=\"none\";'>"
-                  : "<span class='student-preview-avatar-fallback'>" + initials + "</span>") +
-              "</div>" +
-              "<div class='student-preview-meta'>" +
-                "<h3 class='student-preview-title'>" + name + " 학생 시간표 카드</h3>" +
-                "<div class='student-preview-date'><span>" + model.metaLine + "</span></div>" +
-              "</div>" +
-            "</div>" +
-            renderStudentCardRowsHtml(model.timelineRows) +
-            getStudentCardPolicyHtml() +
-          "</div>";
+        preview.innerHTML = "<div class='student-card-preview-frame'>" + buildStudentExportHtml(name) + "</div>";
         refreshStudentImageListSelectionState();
-        prewarmStudentCardCapture(name);
         syncStudentCardActionButtons();
       }
       function buildStudentExportHtml(name) {
         var model = buildStudentCardViewModel(name);
+        var modeLabel = getStudentCardModeLabel();
+        var dateText = getStudentCardDateText(model);
+        var schoolText = getStudentCardSchoolText(model);
+        var usedBuildings = getStudentCardUsedBuildingMap(model.timelineRows);
+        var activeLessonCount = model.timelineRows.filter(function(v){ return !v.isBreak; }).length;
+        function exportTheme(subjectText) {
+          if (/국어|언매|화작/.test(subjectText)) return { bg:"linear-gradient(90deg,#fff8ed,#fff2df)", border:"#fed7aa", accent:"#c2410c", soft:"#ffedd5" };
+          if (/영어|eng/i.test(subjectText)) return { bg:"linear-gradient(90deg,#f7f1ff,#f0e9ff)", border:"#ddd6fe", accent:"#6d28d9", soft:"#ede9fe" };
+          if (/수학|수i|sui|수ii|suii|미적|기하|확통/.test(subjectText)) return { bg:"linear-gradient(90deg,#effdf7,#e1f8ee)", border:"#bbf7d0", accent:"#047857", soft:"#d1fae5" };
+          if (/과학|물리|화학|생명|지구/.test(subjectText)) return { bg:"linear-gradient(90deg,#eff6ff,#e3efff)", border:"#bfdbfe", accent:"#1d4ed8", soft:"#dbeafe" };
+          if (/사회|한국사|역사|사탐/.test(subjectText)) return { bg:"linear-gradient(90deg,#fff1f2,#ffe4e6)", border:"#fecdd3", accent:"#be123c", soft:"#ffe4e6" };
+          return { bg:"linear-gradient(90deg,#f8fbff,#eef4ff)", border:"#d7e6ff", accent:"#2563eb", soft:"#dbeafe" };
+        }
+        function exportMiniBuildingIcon(color, opacity) {
+          var c = color || "#063684";
+          var o = opacity == null ? 1 : opacity;
+          return "<svg width='42' height='42' viewBox='0 0 42 42' aria-hidden='true' style='display:block;margin:0 auto 4px;opacity:" + o + ";'>" +
+            "<rect x='11' y='9' width='20' height='27' rx='2' fill='none' stroke='" + c + "' stroke-width='3'/>" +
+            "<rect x='17' y='4' width='8' height='7' rx='1' fill='" + c + "'/>" +
+            "<rect x='16' y='16' width='4' height='4' fill='" + c + "'/><rect x='23' y='16' width='4' height='4' fill='" + c + "'/>" +
+            "<rect x='16' y='24' width='4' height='4' fill='" + c + "'/><rect x='23' y='24' width='4' height='4' fill='" + c + "'/>" +
+            "<rect x='20' y='31' width='4' height='5' fill='" + c + "'/>" +
+          "</svg>";
+        }
+        function exportTimeCell(start, end, label, color) {
+          return "<div style='display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:center;'>" +
+            "<div style='width:46px;height:46px;border-radius:999px;background:" + color + ";color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:950;'>" + label + "</div>" +
+            "<div style='font-size:24px;line-height:1.2;font-weight:950;color:#061638;'>" + start + ":00<br>- " + end + ":00</div>" +
+          "</div>";
+        }
         var rows = model.timelineRows.map(function(item) {
           var duration = Math.max(1, item.end - item.start);
           var subjectText = item.title || "";
@@ -3825,127 +3908,67 @@
             subjectText = teacherMatch[1];
             teacherName = teacherMatch[2] + "T";
           }
-          var themeStyle = "background:linear-gradient(180deg,#ffffff,#f8fbff); border:1px solid #d7e6ff;";
-          var accentStyle = "color:#2563eb;";
-          var text = /국어|언매|화작/.test(subjectText) ? (themeStyle = "background:linear-gradient(180deg,#fff7ed,#ffedd5); border:1px solid #fed7aa;", accentStyle = "color:#c2410c;")
-            : /영어|eng/i.test(subjectText) ? (themeStyle = "background:linear-gradient(180deg,#faf5ff,#ede9fe); border:1px solid #ddd6fe;", accentStyle = "color:#7c3aed;")
-            : /과학|물리|화학|생명|지구/.test(subjectText) ? (themeStyle = "background:linear-gradient(180deg,#f0fdf4,#dcfce7); border:1px solid #bbf7d0;", accentStyle = "color:#059669;")
-            : /사회|한국사|역사|사탐/.test(subjectText) ? (themeStyle = "background:linear-gradient(180deg,#fff1f2,#ffe4e6); border:1px solid #fecdd3;", accentStyle = "color:#e11d48;")
-            : null;
-	          var noteHtml = item.note ? "<div style='margin-top:8px; padding:7px 9px; border-radius:10px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px; font-weight:700; line-height:1.5;'>" + item.note + "</div>" : "";
-	          var roomMeta = item.room ? getStudentCardRoomMeta(item.room) : null;
-	          var roomBadgeHtml = roomMeta
-	            ? "<div style='display:inline-flex; align-items:center; gap:5px;'>" +
-	                "<span style='display:inline-flex; align-items:center; justify-content:center; min-width:36px; border-radius:999px; padding:5px 10px; font-size:13px; font-weight:900; " + getStudentCardExportBuildingStyle(roomMeta.building) + "'>" + roomMeta.building + "</span>" +
-	                "<span style='display:inline-flex; align-items:center; border-radius:999px; padding:5px 10px; font-size:13px; font-weight:800; color:#334155; background:rgba(255,255,255,0.78); border:1px solid #cbd5e1;'>" + roomMeta.room + "</span>" +
-	              "</div>"
-	            : "";
-	          var classBadgeHtml = item.classType
-	            ? "<span style='display:inline-flex; align-items:center; border-radius:999px; padding:5px 10px; font-size:13px; font-weight:900; " + getStudentCardExportClassStyle(item.classType) + "'>" + item.classType + "</span>"
-	            : "";
-	          if (item.isBreak) {
-	            return "<div style='margin-top:12px; padding:14px 16px; border-radius:22px; background:linear-gradient(180deg,#f8fafc,#eef2f7); border:1px solid #d8e0ea;'>" +
-	              "<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'><div style='font-size:17px; font-weight:900; color:#1e293b;'>" + item.start + "-" + item.end + "시</div><div style='font-size:12px; font-weight:800; color:#64748b; background:#ffffff; border:1px solid #cbd5e1; border-radius:999px; padding:5px 10px;'>" + duration + "시간</div></div>" +
-	              "<div style='margin-top:10px; min-height:34px; border-radius:14px; background:#dbe2ea;'></div></div>";
+          var theme = exportTheme(subjectText);
+          var noteHtml = item.note ? "<div style='grid-column:2 / 7; margin-top:8px; padding:8px 11px; border-radius:8px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:18px; font-weight:850; line-height:1.35; text-align:left;'>비고 · " + item.note + "</div>" : "";
+          var roomMeta = item.room ? getStudentCardRoomMeta(item.room) : null;
+          var timeIcon = /국어|언매|화작/.test(subjectText) ? "국" : (/수학|수i|sui|수ii|suii|미적|기하|확통/.test(subjectText) ? "수" : (/영어|eng/i.test(subjectText) ? "영" : (/과학|물리|화학|생명|지구/.test(subjectText) ? "과" : "시")));
+          var typeText = item.classType || "";
+          if (typeText && !/시간/.test(typeText)) typeText += " · " + duration + "시간";
+          else if (!typeText) typeText = duration + "시간";
+          if (item.isBreak) {
+            return "<div style='margin-top:14px; display:grid; grid-template-columns:188px 136px 138px 152px 104px 132px; gap:10px; align-items:center; padding:18px 18px; border-radius:20px; background:linear-gradient(90deg,#f8fafc,#eef2f7); border:1px solid #d8e0ea;'>" +
+              exportTimeCell(item.start, item.end, "시", "#64748b") +
+              "<div style='text-align:center;font-size:25px;font-weight:950;color:#475569;'>자습</div><div style='text-align:center;font-size:23px;font-weight:850;color:#64748b;'>-</div><div style='text-align:center;font-size:22px;font-weight:850;color:#64748b;'>" + duration + "시간</div><div style='text-align:center;font-size:22px;font-weight:850;color:#64748b;'>-</div><div style='text-align:center;font-size:22px;font-weight:850;color:#64748b;'>-</div></div>";
           }
-          return "<div style='margin-top:12px; padding:14px 16px; border-radius:22px; position:relative; overflow:hidden;" + themeStyle + "'>" +
-	            "<div style='display:flex; align-items:center; justify-content:space-between; gap:12px;'><div style='font-size:17px; font-weight:900; color:#0f172a;'>" + item.start + "-" + item.end + "시</div><div style='font-size:12px; font-weight:800; color:#1d4ed8; background:#eff6ff; border:1px solid #93c5fd; border-radius:999px; padding:5px 10px;'>" + duration + "시간</div></div>" +
-	            "<div style='margin-top:12px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;'>" +
-	              "<div style='min-width:0;'>" +
-	                "<div style='display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-bottom:8px;'>" + roomBadgeHtml + classBadgeHtml + "</div>" +
-	                "<div style='font-size:19px; font-weight:900; " + accentStyle + "'>" + subjectText + (teacherName ? "<span style='margin-left:10px; font-size:16px; font-weight:700; color:#475569;'>" + teacherName + "</span>" : "") + "</div>" +
-	              "</div>" +
-	              (item.room ? "<div style='font-size:14px; font-weight:900; color:rgba(71,85,105,0.34); white-space:nowrap; align-self:center;'>" + item.room + "</div>" : "") +
-	            "</div>" +
+          return "<div style='margin-top:14px; display:grid; grid-template-columns:188px 136px 138px 152px 104px 132px; gap:10px; align-items:center; padding:18px 18px; border-radius:20px; position:relative; overflow:hidden; background:" + theme.bg + "; border:1px solid " + theme.border + ";'>" +
+            exportTimeCell(item.start, item.end, timeIcon, theme.accent) +
+            "<div style='text-align:center;font-size:27px;line-height:1.15;font-weight:950;color:" + theme.accent + ";'>" + subjectText + "</div>" +
+            "<div style='text-align:center;font-size:24px;line-height:1.15;font-weight:850;color:#0f172a;'>" + (teacherName || "-") + "</div>" +
+            "<div style='text-align:center;font-size:22px;line-height:1.2;font-weight:900;color:#0f172a;'>" + typeText + "</div>" +
+            "<div style='text-align:center;font-size:21px;line-height:1.18;font-weight:950;color:#063684;'>" + exportMiniBuildingIcon("#063684", 1) + (roomMeta ? roomMeta.building : "-") + "</div>" +
+            "<div style='text-align:center;font-size:24px;line-height:1.2;font-weight:950;color:#061638;'>" + (roomMeta ? roomMeta.room : "-") + "</div>" +
             noteHtml +
           "</div>";
         }).join("");
-        return "<div style='width:880px; box-sizing:border-box; padding:26px; background:linear-gradient(180deg,#edf5ff 0%, #f8fbff 100%); font-family:\"Noto Sans KR\",\"Malgun Gothic\",sans-serif;'>" +
-          "<div style='position:relative; overflow:hidden; border-radius:34px; border:1px solid #cfe0ff; background:linear-gradient(180deg,#ffffff 0%, #f6faff 100%); box-shadow:0 24px 60px rgba(59,130,246,0.12); padding:24px;'>" +
-            "<div style='position:absolute; right:-60px; bottom:-80px; width:360px; height:360px; border-radius:50%; background:radial-gradient(circle at center, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.05) 48%, rgba(96,165,250,0) 74%);'></div>" +
-            "<div style='position:relative; z-index:2; border-radius:26px; background:#ffffff; border:1px solid #dbe7f7; padding:18px 20px; display:grid; grid-template-columns:74px 1fr; gap:16px; align-items:center;'>" +
-              "<div style='width:74px; height:74px; border-radius:50%; background:linear-gradient(145deg,#eef4ff,#dbeafe); border:2px solid #dbe4f0; display:flex; align-items:center; justify-content:center; overflow:hidden;'><img src='" + getStudentAvatarUrl(name) + "' alt='logo' crossorigin='anonymous' style='width:76%; height:76%; object-fit:contain;'></div>" +
-              "<div>" +
-                "<div style='font-size:28px; font-weight:900; color:#0f172a; letter-spacing:-0.03em;'>" + name + " 학생 시간표 카드</div>" +
-                "<div style='margin-top:6px; font-size:17px; font-weight:700; color:#475569;'>" + model.metaLine + "</div>" +
-              "</div>" +
+        function exportBuildingCard(name, address) {
+          var active = !!usedBuildings[name];
+          return "<div style='min-width:0; border-radius:22px; padding:18px 14px 16px; text-align:center; border:" + (active ? "3px solid #bfe3ff" : "1px solid rgba(170,190,220,.50)") + "; background:" + (active ? "linear-gradient(180deg,rgba(96,165,250,.62),rgba(37,99,235,.38))" : "rgba(255,255,255,.11)") + "; color:" + (active ? "#ffffff" : "#aebbd0") + "; box-shadow:" + (active ? "0 0 0 3px rgba(147,197,253,.18),0 0 28px rgba(96,165,250,.50)" : "inset 0 1px 0 rgba(255,255,255,.08)") + ";'>" +
+            "<div style='font-size:26px; font-weight:950; line-height:1;'>" + name + "</div>" +
+            "<div style='margin:15px auto 8px; width:78px; height:70px; display:flex; align-items:center; justify-content:center;'>" + exportMiniBuildingIcon(active ? "#dff1ff" : "#8fa0b8", active ? 1 : .58) + "</div>" +
+            "<div style='font-size:20px; line-height:1.25; font-weight:900; word-break:keep-all;'>" + address + "</div>" +
+          "</div>";
+        }
+        return "<div style='width:1080px; box-sizing:border-box; padding:72px 30px 44px; position:relative; overflow:hidden; background:radial-gradient(circle at 10% 9%, rgba(37,99,235,.48), transparent 28%), linear-gradient(160deg,#063b83 0%,#061f4e 54%,#04152f 100%); font-family:\"Noto Sans KR\",\"Apple SD Gothic Neo\",\"Malgun Gothic\",sans-serif; color:#061638;'>" +
+          "<div style='position:absolute; right:-34px; top:-22px; width:310px; height:310px; border-radius:50%; border:1px solid rgba(125,211,252,.22); box-shadow:0 0 0 10px rgba(125,211,252,.035),0 0 0 20px rgba(125,211,252,.03),0 0 0 30px rgba(125,211,252,.025);'></div>" +
+          "<div style='position:absolute; left:-120px; top:-90px; width:360px; height:360px; border-radius:50%; border:1px solid rgba(125,211,252,.12);'></div>" +
+          "<div style='position:relative; min-height:250px; color:#ffffff;'>" +
+            "<div style='position:absolute; left:34px; top:8px; width:128px; height:128px; border-radius:34px; background:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 22px 42px rgba(2,6,23,.22);'><img src='" + getStudentAvatarUrl(name) + "' crossorigin='anonymous' style='width:78%; height:78%; object-fit:contain;'></div>" +
+            "<div style='text-align:center; padding-top:8px;'>" +
+              "<div style='font-size:33px; font-weight:650; color:#e5f1ff;'>" + modeLabel + "의 수업을 확인하세요!</div>" +
+              "<div style='margin-top:12px; font-size:74px; line-height:1.05; font-weight:950; letter-spacing:0;'>" + modeLabel + " <span style='color:#9bd8ff;'>진행 예정</span> 수업</div>" +
+              "<div style='display:flex; align-items:center; justify-content:center; gap:24px; margin-top:30px; color:#ffffff; font-size:34px; font-weight:950;'><span style='display:block;width:185px;height:2px;background:rgba(255,255,255,.55);'></span><span>▣ " + dateText + "</span><span style='display:block;width:185px;height:2px;background:rgba(255,255,255,.55);'></span></div>" +
             "</div>" +
-            "<div style='position:relative; z-index:2; margin-top:18px;'>" + rows + "</div>" +
-            "<div style='position:relative; z-index:2; margin-top:16px; padding:16px 18px; border-radius:24px; border:1px solid #d6e6ff; background:linear-gradient(180deg,#f8fbff,#eef5ff);'>" + getStudentCardPolicyHtml() + "</div>" +
+          "</div>" +
+          "<div style='margin-top:34px; border-radius:36px; background:#ffffff; padding:26px; border:1px solid #d2e2f6; box-shadow:0 28px 70px rgba(2,6,23,.25);'>" +
+            "<div style='display:flex; align-items:center; justify-content:space-between; gap:18px; padding:20px 24px; border-radius:24px; background:#f8fbff; border:1px solid #dbe7f7;'>" +
+              "<div><div style='font-size:38px; font-weight:950; color:#0f172a;'>" + name + "</div>" + (schoolText ? "<div style='margin-top:5px; font-size:22px; font-weight:850; color:#64748b;'>" + schoolText + "</div>" : "") + "</div>" +
+              "<div style='color:#1d4ed8; font-size:24px; font-weight:950;'>" + activeLessonCount + "개 수업</div>" +
+            "</div>" +
+            "<div style='margin-top:22px; display:grid; grid-template-columns:188px 136px 138px 152px 104px 132px; gap:10px; padding:15px 18px; border-radius:16px; background:#083b86; color:#ffffff; font-size:23px; font-weight:950; text-align:center;'><div>시간</div><div>과목</div><div>강사</div><div>수업유형</div><div>관</div><div>강의실</div></div>" +
+            rows +
+            "<div style='margin-top:22px; padding:20px 24px; border-radius:24px; border:1px solid #b8cfeb; background:#fbfdff;'>" +
+              "<div style='font-size:25px; font-weight:950; color:#073b86; margin-bottom:10px;'>학원 안내사항</div>" +
+              "<div style='display:grid; grid-template-columns:42px 1fr; gap:12px; align-items:start; padding:10px 0; border-top:0;'><div style='width:42px;height:42px;border-radius:999px;background:#083b86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:950;'>!</div><div style='font-size:23px;line-height:1.45;font-weight:750;color:#1e293b;'>수업 전날 오후 8시 이후 취소된 당일취소 수업은 수강료가 정상 책정됩니다.</div></div>" +
+              "<div style='display:grid; grid-template-columns:42px 1fr; gap:12px; align-items:start; padding:10px 0; border-top:1px dashed #dbe7ff;'><div style='width:42px;height:42px;border-radius:999px;background:#083b86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:950;'>✓</div><div style='font-size:23px;line-height:1.45;font-weight:750;color:#1e293b;'>사전에 말씀해 주신 결석예고 수업은 수강료가 책정되지 않습니다.</div></div>" +
+              "<div style='display:grid; grid-template-columns:42px 1fr; gap:12px; align-items:start; padding:10px 0 0; border-top:1px dashed #dbe7ff;'><div style='width:42px;height:42px;border-radius:999px;background:#083b86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:950;'>↺</div><div style='font-size:23px;line-height:1.45;font-weight:750;color:#1e293b;'>당일취소 및 결석예고 수업은 모두 2주 이내 보강 가능하며, 기존 정규 수업 시간 외 별도 시간으로 진행됩니다.</div></div>" +
+            "</div>" +
+          "</div>" +
+          "<div style='display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px;'>" +
+            exportBuildingCard("본관", "덕성빌딩 5층") +
+            exportBuildingCard("2관", "반포쇼핑타운 2동 5층") +
+            exportBuildingCard("3관", "반포쇼핑타운 3동 4층") +
           "</div>" +
         "</div>";
-      }
-      function captureStudentScheduleCanvas(name) {
-        var studentName = String(name || selectedStudentForImage || "").trim();
-        if (!studentName) return Promise.reject(new Error("학생을 먼저 선택하세요."));
-        var host = document.createElement('div');
-        host.className = 'student-export-host';
-        host.innerHTML = buildStudentExportHtml(studentName);
-        document.body.appendChild(host);
-        return waitForImagesInElement(host, 1800).then(function() {
-          var exportNode = host.firstElementChild;
-          return html2canvas(exportNode, {
-            scale: Math.max(2, window.devicePixelRatio || 1),
-            backgroundColor: "#edf5ff",
-            useCORS: true,
-            imageTimeout: 1800
-          });
-        }).finally(function() {
-          if (host && host.parentNode) host.parentNode.removeChild(host);
-        });
-      }
-      function buildStudentCardCaptureBlob(name, forceRefresh) {
-        var studentName = String(name || "").trim();
-        if (!studentName) return Promise.reject(new Error("학생을 먼저 선택하세요."));
-        var cacheKey = getStudentCardCaptureKey(studentName);
-        if (!forceRefresh && studentCardCaptureCache[cacheKey]) return studentCardCaptureCache[cacheKey];
-        var blobPromise = captureStudentScheduleCanvas(studentName).then(function(canvas) {
-          return new Promise(function(resolve, reject) {
-            canvas.toBlob(function(blob) {
-              if (!blob) { reject(new Error("이미지 변환 실패")); return; }
-              resolve(blob);
-            }, "image/png");
-          });
-        });
-        studentCardCaptureCache[cacheKey] = blobPromise;
-        blobPromise.catch(function() {
-          if (studentCardCaptureCache[cacheKey] === blobPromise) delete studentCardCaptureCache[cacheKey];
-        });
-        return blobPromise;
-      }
-      function prewarmStudentCardCapture(name) {
-        var studentName = String(name || "").trim();
-        if (!studentName) return;
-        buildStudentCardCaptureBlob(studentName, false).catch(function(){});
-      }
-      function downloadStudentScheduleImage() {
-        if (!selectedStudentForImage) { alert("학생을 먼저 선택하세요."); return; }
-        captureStudentScheduleCanvas(selectedStudentForImage).then(function(canvas){
-          var a = document.createElement('a');
-          a.href = canvas.toDataURL("image/png");
-          a.download = "시간표카드_" + selectedStudentForImage + ".png";
-          a.click();
-        }).catch(function(){
-          alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
-        });
-      }
-      function copyStudentScheduleImage() {
-        if (!selectedStudentForImage) { alert("학생을 먼저 선택하세요."); return; }
-        if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) {
-          alert("현재 브라우저에서는 이미지 클립보드 복사가 지원되지 않습니다. 카드 저장을 사용해주세요.");
-          return;
-        }
-        var studentName = selectedStudentForImage;
-        buildStudentCardCaptureBlob(studentName, false).then(function(blob) {
-          return navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        }).then(function() {
-          prewarmStudentCardCapture(studentName);
-          return markStudentCardSentStatus(studentName, true, { silent: true });
-        }).then(function() {
-          alert("시간표 카드가 클립보드에 복사되었고 발송 완료로 표시되었습니다.");
-        }).catch(function() {
-          alert("카드 복사 중 오류가 발생했습니다. 다시 시도해주세요.");
-        });
       }
       function toggleLateNightRows(data) {
         if (lateNightCollapsed) {
