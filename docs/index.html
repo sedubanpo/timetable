@@ -151,6 +151,7 @@
       .nav-btn-today { color: var(--accent); border-color: var(--accent); }
       .action-group { display: flex; gap: 6px; margin-left: auto; }
       .fullscreen-btn, .msg-gen-btn, .msg-simple-btn, .capture-btn, .empty-btn, .review-btn, .excel-btn, .absence-notice-btn, .attendance-report-btn, .operation-memo-btn { border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+      .admin-toolbar-hidden { display:none !important; }
       .fullscreen-btn { background: #333; color: white; }
       .msg-gen-btn { background: var(--accent); color: white; }
       .msg-simple-btn { background: var(--secondary); color: white; }
@@ -505,7 +506,7 @@
       #studentImagePreview { max-width:none; margin:0; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
       #studentImagePreview th, #studentImagePreview td { border:1px solid #e5e7eb; padding:8px; font-size:0.9rem; text-align:left; }
-      .student-preview-shell { --si-bg:#061f4e; --si-text:#0f172a; --si-muted:#64748b; position: relative; overflow: hidden; max-width: 460px; margin: 0 auto; background: radial-gradient(circle at 12% 10%, rgba(37,99,235,0.40), transparent 28%), linear-gradient(160deg, #063b83 0%, #061f4e 52%, #04152f 100%); border: 1px solid rgba(191,219,254,0.32); border-radius: 30px; padding: 18px 16px 16px; box-shadow: 0 24px 52px rgba(15,23,42,0.20), inset 0 1px 0 rgba(255,255,255,0.14); }
+      .student-preview-shell { --si-bg:#061f4e; --si-text:#0f172a; --si-muted:#64748b; position: relative; overflow: hidden; max-width: 520px; margin: 0 auto; background: radial-gradient(circle at 12% 10%, rgba(37,99,235,0.40), transparent 28%), linear-gradient(160deg, #063b83 0%, #061f4e 52%, #04152f 100%); border: 1px solid rgba(191,219,254,0.32); border-radius: 30px; padding: 18px 16px 16px; box-shadow: 0 24px 52px rgba(15,23,42,0.20), inset 0 1px 0 rgba(255,255,255,0.14); }
       .student-preview-shell::before { content:""; position:absolute; width:280px; height:280px; right:-120px; top:-120px; border-radius:50%; border:1px solid rgba(125,211,252,0.22); box-shadow:0 0 0 12px rgba(125,211,252,0.04), 0 0 0 24px rgba(125,211,252,0.03); pointer-events:none; }
       .student-preview-shell::after { content: ""; position: absolute; right: -78px; bottom: 260px; width: 270px; height: 270px; background-image: url('https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png'); background-size: contain; background-repeat: no-repeat; opacity: 0.055; pointer-events: none; filter: brightness(0) invert(1); }
       .student-preview-hero { position:relative; z-index:2; text-align:center; color:#ffffff; padding: 2px 6px 16px; }
@@ -525,12 +526,12 @@
       .student-preview-send-meta { display:none !important; }
       .student-preview-status-chip { color:#1d4ed8; font-size:0.78rem; font-weight:950; white-space:nowrap; }
       .student-preview-schedule-card { position:relative; z-index:2; border-radius:24px; background:#ffffff; padding:12px; box-shadow:0 18px 42px rgba(15,23,42,0.18); border:1px solid rgba(219,234,254,0.92); }
-      .student-preview-table-head { display:grid; grid-template-columns: 92px minmax(54px,0.78fr) minmax(58px,0.82fr) minmax(62px,0.82fr) minmax(54px,0.66fr) minmax(62px,0.82fr); gap:6px; align-items:center; padding:10px 12px; border-radius:14px; background:#083b86; color:#ffffff; font-size:0.72rem; font-weight:900; text-align:center; }
-      .student-preview-row { position:relative; z-index:2; display:grid; grid-template-columns: 92px minmax(54px,0.78fr) minmax(58px,0.82fr) minmax(62px,0.82fr) minmax(54px,0.66fr) minmax(62px,0.82fr); gap:6px; align-items:center; margin-top: 10px; padding: 12px; border-radius: 16px; border: 1px solid rgba(226,232,240,0.9); background: linear-gradient(142deg, rgba(255,255,255,0.74), rgba(255,255,255,0.52)); box-shadow: 0 8px 18px rgba(15,23,42,0.05); overflow:hidden; }
+      .student-preview-table-head { display:grid; grid-template-columns: 108px minmax(58px,0.78fr) minmax(64px,0.82fr) minmax(74px,0.82fr) minmax(58px,0.66fr) minmax(68px,0.82fr); gap:6px; align-items:center; padding:10px 12px; border-radius:14px; background:#083b86; color:#ffffff; font-size:0.72rem; font-weight:900; text-align:center; }
+      .student-preview-row { position:relative; z-index:2; display:grid; grid-template-columns: 108px minmax(58px,0.78fr) minmax(64px,0.82fr) minmax(74px,0.82fr) minmax(58px,0.66fr) minmax(68px,0.82fr); gap:6px; align-items:center; margin-top: 10px; padding: 12px; border-radius: 16px; border: 1px solid rgba(226,232,240,0.9); background: linear-gradient(142deg, rgba(255,255,255,0.74), rgba(255,255,255,0.52)); box-shadow: 0 8px 18px rgba(15,23,42,0.05); overflow:hidden; }
       .student-preview-row::before { display:none; }
       .student-preview-time-wrap { display:grid; grid-template-columns:28px 1fr; align-items:center; gap:8px; min-width:0; }
       .student-preview-time-icon { width:28px; height:28px; border-radius:999px; display:flex; align-items:center; justify-content:center; color:#ffffff; background:#4c87df; font-size:0.82rem; font-weight:900; }
-      .student-preview-time { white-space: nowrap; font-size: 0.86rem; font-weight: 950; color: #0f172a; letter-spacing: 0; line-height: 1.15; }
+      .student-preview-time { white-space: nowrap; font-size: 0.78rem; font-weight: 950; color: #0f172a; letter-spacing: 0; line-height: 1.15; }
       .student-preview-time-duration { margin-top:0; }
       .student-preview-detail { display:contents; font-size: 0.92rem; color: #1e293b; min-width:0; }
       .student-preview-cell { min-width:0; text-align:center; font-weight:900; color:#0f172a; position:relative; z-index:2; }
@@ -580,11 +581,18 @@
       .student-preview-building-guide { position:relative; z-index:2; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-top:12px; }
       .student-preview-building-card { min-width:0; border-radius:16px; padding:10px 7px 9px; text-align:center; border:1px solid rgba(255,255,255,0.22); background:rgba(255,255,255,0.10); color:#b9c7da; box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); }
       .student-preview-building-card.active { color:#ffffff; background:linear-gradient(180deg, rgba(96,165,250,0.58), rgba(37,99,235,0.38)); border-color:#bfe3ff; box-shadow:0 0 0 2px rgba(147,197,253,0.18), 0 0 22px rgba(96,165,250,0.48), inset 0 1px 0 rgba(255,255,255,0.28); }
+      .student-preview-building-card.building-main.active { color:#dbeafe; border-color:#93c5fd; box-shadow:0 0 0 2px rgba(147,197,253,0.18), 0 0 22px rgba(59,130,246,0.48), inset 0 1px 0 rgba(255,255,255,0.28); }
+      .student-preview-building-card.building-2.active { color:#d1fae5; background:linear-gradient(180deg, rgba(16,185,129,0.58), rgba(6,95,70,0.36)); border-color:#6ee7b7; box-shadow:0 0 0 2px rgba(110,231,183,0.16), 0 0 22px rgba(16,185,129,0.42), inset 0 1px 0 rgba(255,255,255,0.25); }
+      .student-preview-building-card.building-3.active { color:#ffedd5; background:linear-gradient(180deg, rgba(249,115,22,0.56), rgba(154,52,18,0.34)); border-color:#fdba74; box-shadow:0 0 0 2px rgba(253,186,116,0.16), 0 0 22px rgba(249,115,22,0.40), inset 0 1px 0 rgba(255,255,255,0.24); }
       .student-preview-building-card-name { display:inline-flex; align-items:center; justify-content:center; min-width:54px; border-radius:999px; padding:4px 10px; background:rgba(255,255,255,0.14); font-size:0.82rem; font-weight:950; }
       .student-preview-building-icon { margin:9px auto 7px; width:44px; height:38px; position:relative; opacity:.62; }
       .student-preview-building-card.active .student-preview-building-icon { opacity:1; }
       .student-preview-building-icon::before { content:""; position:absolute; left:9px; right:9px; top:0; bottom:0; border-radius:4px 4px 2px 2px; background:linear-gradient(180deg,#dff1ff,#94ccff); box-shadow:-13px 15px 0 -3px rgba(223,241,255,0.72), 13px 18px 0 -6px rgba(223,241,255,0.58); }
       .student-preview-building-icon::after { content:""; position:absolute; left:17px; top:9px; width:4px; height:4px; background:#1671d6; box-shadow:10px 0 0 #1671d6, 0 10px 0 #1671d6, 10px 10px 0 #1671d6, 0 20px 0 #1671d6, 10px 20px 0 #1671d6; }
+      .student-preview-building-card.building-2 .student-preview-building-icon::before { background:linear-gradient(180deg,#d1fae5,#6ee7b7); }
+      .student-preview-building-card.building-2 .student-preview-building-icon::after { background:#059669; box-shadow:10px 0 0 #059669, 0 10px 0 #059669, 10px 10px 0 #059669, 0 20px 0 #059669, 10px 20px 0 #059669; }
+      .student-preview-building-card.building-3 .student-preview-building-icon::before { background:linear-gradient(180deg,#ffedd5,#fdba74); }
+      .student-preview-building-card.building-3 .student-preview-building-icon::after { background:#ea580c; box-shadow:10px 0 0 #ea580c, 0 10px 0 #ea580c, 10px 10px 0 #ea580c, 0 20px 0 #ea580c, 10px 20px 0 #ea580c; }
       .student-preview-building-card-address { font-size:0.62rem; font-weight:850; line-height:1.25; word-break:keep-all; }
       .student-export-host { position:fixed; left:-10000px; top:0; pointer-events:none; opacity:0; }
       .student-card-preview-frame { width:100%; overflow:visible; display:flex; justify-content:center; align-items:flex-start; padding:8px 0 2px; }
@@ -1232,10 +1240,10 @@
           <button class="empty-btn" onclick="toggleEmptyMode()" title="빈 강의실 보기">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg><span>빈강의실</span>
           </button>
-          <button class="capture-btn" onclick="captureScreen()" title="이미지 저장" style="display:none;">
+          <button class="capture-btn admin-toolbar-hidden" onclick="captureScreen()" title="이미지 저장">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l.74 2.228a1 1 0 00.948.684h6.168a2 2 0 011.992 2.181l-.637 7A2 2 0 0115.445 20H4.555a2 2 0 01-1.992-1.819l-.637-7a1.99 1.99 0 01.316-1.318A2 2 0 013 9.5V5z" clip-rule="evenodd" /></svg><span>저장</span>
           </button>
-          <button class="capture-btn" onclick="copyCurrentScheduleImage()" title="현재 화면 이미지 복사" style="background:#0ea5e9; display:none;">
+          <button class="capture-btn admin-toolbar-hidden" onclick="copyCurrentScheduleImage()" title="현재 화면 이미지 복사" style="background:#0ea5e9;">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M8 2a2 2 0 00-2 2v1H5a2 2 0 00-2 2v8a2 2 0 002 2h7a2 2 0 002-2v-1h1a2 2 0 002-2V4a2 2 0 00-2-2H8zm4 5v8H5V7h7zm3-3v8h-1V7a2 2 0 00-2-2H8V4h7z"/></svg><span>이미지 복사</span>
           </button>
           <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="학생별 시간표 카드 생성">
@@ -1244,10 +1252,10 @@
           <button class="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 (F11)">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>전체화면</span>
           </button>
-          <button class="msg-gen-btn" onclick="generateArrivalMessage()" style="display:none;">
+          <button class="msg-gen-btn admin-toolbar-hidden" onclick="generateArrivalMessage()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></svg><span>등원안내</span>
           </button>
-          <button class="msg-simple-btn" onclick="openSelectionModal()" style="display:none;">
+          <button class="msg-simple-btn admin-toolbar-hidden" onclick="openSelectionModal()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>상세안내</span>
           </button>
           <button class="absence-notice-btn" onclick="openAbsenceNoticeModal()">
@@ -2429,6 +2437,10 @@
         });
       }
       function applyRoleUi() {
+        function setToolbarButtonDisplay(btn, value) {
+          if (!btn || btn.classList.contains('admin-toolbar-hidden')) return;
+          btn.style.display = value;
+        }
         var roleBadge = document.getElementById('roleBadge');
         var loginBtn = document.getElementById('teacherLoginBtn');
         var logoutBtn = document.getElementById('teacherLogoutBtn');
@@ -2463,11 +2475,11 @@
           loginBtn.style.display = '';
           logoutBtn.style.display = 'none';
           searchInput.placeholder = "🔍 학생/강사 검색";
-          if (reviewBtn) reviewBtn.style.display = '';
-          if (excelBtn) excelBtn.style.display = '';
-          if (msgGenBtn) msgGenBtn.style.display = '';
-          if (msgSimpleBtn) msgSimpleBtn.style.display = '';
-          if (emptyBtn) emptyBtn.style.display = '';
+          setToolbarButtonDisplay(reviewBtn, '');
+          setToolbarButtonDisplay(excelBtn, '');
+          setToolbarButtonDisplay(msgGenBtn, '');
+          setToolbarButtonDisplay(msgSimpleBtn, '');
+          setToolbarButtonDisplay(emptyBtn, '');
           if (privacyControl) privacyControl.style.display = '';
           if (hide9Control) hide9Control.style.display = '';
           if (studentImageBtn) studentImageBtn.style.display = '';
@@ -2506,11 +2518,11 @@
           roleBadge.style.display = 'none';
           teacherSel.style.display = 'none';
           logoutBtn.style.display = 'none';
-          if (reviewBtn) reviewBtn.style.display = 'none';
-          if (excelBtn) excelBtn.style.display = 'none';
-          if (msgGenBtn) msgGenBtn.style.display = 'none';
-          if (msgSimpleBtn) msgSimpleBtn.style.display = 'none';
-          if (emptyBtn) emptyBtn.style.display = 'none';
+          setToolbarButtonDisplay(reviewBtn, 'none');
+          setToolbarButtonDisplay(excelBtn, 'none');
+          setToolbarButtonDisplay(msgGenBtn, 'none');
+          setToolbarButtonDisplay(msgSimpleBtn, 'none');
+          setToolbarButtonDisplay(emptyBtn, 'none');
           if (privacyControl) privacyControl.style.display = 'none';
           if (hide9Control) hide9Control.style.display = 'none';
           if (studentImageBtn) studentImageBtn.style.display = 'none';
@@ -2555,21 +2567,21 @@
           else roleBadge.textContent = accessMode === "teacher" ? "관리자·강사 모드" : "관리자·전체 모드";
           populateTeacherSelector();
           teacherSel.style.display = '';
-          if (reviewBtn) reviewBtn.style.display = '';
-          if (excelBtn) excelBtn.style.display = '';
-          if (msgGenBtn) msgGenBtn.style.display = '';
-          if (msgSimpleBtn) msgSimpleBtn.style.display = '';
-          if (emptyBtn) emptyBtn.style.display = '';
+          setToolbarButtonDisplay(reviewBtn, '');
+          setToolbarButtonDisplay(excelBtn, '');
+          setToolbarButtonDisplay(msgGenBtn, '');
+          setToolbarButtonDisplay(msgSimpleBtn, '');
+          setToolbarButtonDisplay(emptyBtn, '');
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = '';
           if (operationMemoBtn) operationMemoBtn.style.display = operationMemoState.configured ? '' : 'none';
         } else {
           roleBadge.textContent = "강사 모드: " + authState.teacherName;
           teacherSel.style.display = 'none';
-          if (reviewBtn) reviewBtn.style.display = 'none';
-          if (excelBtn) excelBtn.style.display = 'none';
-          if (msgGenBtn) msgGenBtn.style.display = 'none';
-          if (msgSimpleBtn) msgSimpleBtn.style.display = 'none';
-          if (emptyBtn) emptyBtn.style.display = 'none';
+          setToolbarButtonDisplay(reviewBtn, 'none');
+          setToolbarButtonDisplay(excelBtn, 'none');
+          setToolbarButtonDisplay(msgGenBtn, 'none');
+          setToolbarButtonDisplay(msgSimpleBtn, 'none');
+          setToolbarButtonDisplay(emptyBtn, 'none');
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
           if (operationMemoBtn) operationMemoBtn.style.display = 'none';
         }
@@ -3759,12 +3771,12 @@
       function getStudentCardBuildingGuideHtml(timelineRows) {
         var used = getStudentCardUsedBuildingMap(timelineRows);
         var buildings = [
-          { name: "본관", address: "덕성빌딩 5층" },
-          { name: "2관", address: "반포쇼핑타운 2동 5층" },
-          { name: "3관", address: "반포쇼핑타운 3동 4층" }
+          { name: "본관", address: "덕성빌딩 5층", cls: "building-main" },
+          { name: "2관", address: "반포쇼핑타운 2동 5층", cls: "building-2" },
+          { name: "3관", address: "반포쇼핑타운 3동 4층", cls: "building-3" }
         ];
         return "<div class='student-preview-building-guide'>" + buildings.map(function(item) {
-          return "<div class='student-preview-building-card" + (used[item.name] ? " active" : "") + "'>" +
+          return "<div class='student-preview-building-card " + item.cls + (used[item.name] ? " active" : "") + "'>" +
             "<div class='student-preview-building-card-name'>" + item.name + "</div>" +
             "<div class='student-preview-building-icon'></div>" +
             "<div class='student-preview-building-card-address'>" + item.address + "</div>" +
@@ -3872,7 +3884,7 @@
           else if (!typeText) typeText = duration + "시간";
           if (isSelfStudyVisual) {
             return "<div class='student-preview-row" + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-                "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>시</div><div class='student-preview-time'>" + m.start + ":00<br>- " + m.end + ":00</div></div>" +
+                "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>시</div><div class='student-preview-time'>" + m.start + ":00 - " + m.end + ":00</div></div>" +
                 "<div class='student-preview-cell student-preview-cell-subject'>자습</div>" +
                 "<div class='student-preview-cell student-preview-cell-teacher'>-</div>" +
                 "<div class='student-preview-cell student-preview-cell-type'>" + duration + "시간</div>" +
@@ -3880,7 +3892,7 @@
                 "<div class='student-preview-cell student-preview-cell-room'>-</div></div>";
           }
 	          return "<div class='student-preview-row " + themeClass + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-	              "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>" + timeIcon + "</div><div class='student-preview-time'>" + m.start + ":00<br>- " + m.end + ":00</div></div>" +
+	              "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>" + timeIcon + "</div><div class='student-preview-time'>" + m.start + ":00 - " + m.end + ":00</div></div>" +
 	              "<div class='student-preview-cell student-preview-cell-subject student-preview-heading-subject'>" + subjectText + "</div>" +
 	              "<div class='student-preview-cell student-preview-cell-teacher'>" + (teacherName || "-") + "</div>" +
 	              "<div class='student-preview-cell student-preview-cell-type'>" + getStudentCardClassBadgeHtml(typeText) + "</div>" +
