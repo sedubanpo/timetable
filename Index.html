@@ -2752,7 +2752,6 @@
           if (isStudentImageModalOpen()) {
             var pendingSelection = studentImageRefreshPendingSelection || selectedStudentForImage || "";
             buildStudentImageMap();
-            resetStudentCardCaptureCache();
             if (pendingSelection && studentImageScheduleMap[pendingSelection]) selectedStudentForImage = pendingSelection;
             else if (pendingSelection && !studentImageScheduleMap[pendingSelection]) selectedStudentForImage = "";
             filterStudentImageList();
@@ -3173,7 +3172,6 @@
       function openStudentImageModal() {
         if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
         buildStudentImageMap();
-        resetStudentCardCaptureCache();
         studentCardHideNote = false;
         document.getElementById('studentImageModal').style.display = 'flex';
         document.getElementById('studentImageSearch').value = "";
