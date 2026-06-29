@@ -6471,7 +6471,7 @@
 	          var mediumCount = issues.filter(function(issue) { return getReviewSeverity(issue) === 'medium'; }).length;
 	          var actionCards = buildReviewActionCards(issues, dashboardItems);
 	          var currentOnlyIssues = issues.filter(function(issue) { return issue.type !== 'missing'; });
-	          var sendBlockingCount = highCount + (tags.checkNeeded || []).length + (comparison ? comparison.missing.length : 0);
+	          var sendBlockingCount = highCount;
 	          var html = "";
 	          html += "<div class='review-tabs'>" +
 	            "<button type='button' class='review-tab active' data-review-tab='overview' onclick=\"setReviewTab('overview')\">요약</button>" +
