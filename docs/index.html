@@ -6215,12 +6215,16 @@
 	                  var teacherLabel = getTeacherLabel(teacherItem);
 	                  var subjectLabel = getSubjectName(String(teacherItem || "") + " " + txt);
 	                  detail.totalCount++;
-	                  detail.occurrences.push({ hour: h, room: colName, status: statusLabel, teacher: teacherLabel, subject: subjectLabel });
+	                  detail.occurrences.push({ hour: h, room: colName, status: statusLabel, teacher: teacherLabel, subject: subjectLabel, school: parsedStudent.school || "" });
 	                  detail.hours[h] = true;
 	                  detail.rooms[colName] = true;
 	                  detail.statuses[statusLabel] = true;
 	                  if (teacherLabel) detail.teachers[teacherLabel] = true;
 	                  if (subjectLabel) detail.subjects[subjectLabel] = true;
+	                  if (parsedStudent.school) {
+	                    if (!detail.schools) detail.schools = {};
+	                    detail.schools[parsedStudent.school] = true;
+	                  }
 	                  snapshot.statusCounts[statusLabel] = (snapshot.statusCounts[statusLabel] || 0) + 1;
 	                  snapshot.allStudentNames[extractedName] = true;
 	                  if (!snapshot.studentOccurrences[extractedName]) snapshot.studentOccurrences[extractedName] = [];
@@ -6334,6 +6338,8 @@
 	          if(type === 'duration') return { cls: 'rb-single', text: '시수' };
 	          if(type === 'status') return { cls: 'rb-check', text: '상태' };
 	          if(type === 'subject') return { cls: 'rb-teacher', text: '과목' };
+	          if(type === 'external-jikbo-missing' || type === 'external-jikbo-unresolved') return { cls: 'rb-missing', text: '직보' };
+	          if(type === 'external-pattern-missing') return { cls: 'rb-check', text: '패턴' };
 	          return { cls: 'rb-capacity', text: '정원' };
 	        }
 	        function addCurrentSnapshotIssues(snapshot, issues) {
@@ -6373,12 +6379,17 @@
 	        function getReviewSeverity(issue) {
 	          var type = issue && issue.type;
 	          if (type === 'duplicate' || type === 'capacity' || type === 'teacher' || type === 'check' || type === 'missing') return 'high';
+	          if (type === 'external-jikbo-missing') return 'high';
 	          if (type === 'single' || type === 'time' || type === 'duration' || type === 'status') return 'medium';
+	          if (type === 'external-jikbo-unresolved' || type === 'external-pattern-missing') return 'medium';
 	          return 'info';
 	        }
 	        function getReviewActionTitle(issue) {
 	          var type = issue && issue.type;
 	          if (type === 'missing') return '지난주 대비 누락 학생 확인';
+	          if (type === 'external-jikbo-missing') return 'S-LMS 직보 확정 학생 누락 확인';
+	          if (type === 'external-jikbo-unresolved') return 'S-LMS 직보 미정 상태 확인';
+	          if (type === 'external-pattern-missing') return 'Supabase 시수 패턴상 누락 후보 확인';
 	          if (type === 'duplicate') return '동시간대 중복 배정 확인';
 	          if (type === 'teacher') return '강사/학생 표시 불일치 확인';
 	          if (type === 'capacity') return '수업 유형별 정원 확인';
@@ -6451,7 +6462,384 @@
 	            return "<span class='review-chip'>" + escapeHtml(text) + "</span>";
 	          }).join("") + "</div>";
 	        }
-	        function renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, previousDataLoaded) {
+	        function formatReviewDateKey(date) {
+	          if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+	          return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+	        }
+	        function addReviewDateDays(dateKey, days) {
+	          var m = String(dateKey || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	          if (!m) return "";
+	          var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+	          d.setDate(d.getDate() + Number(days || 0));
+	          return formatReviewDateKey(d);
+	        }
+	        function normalizeReviewDateKey(value) {
+	          if (value instanceof Date) return formatReviewDateKey(value);
+	          var text = String(value || "").trim();
+	          if (!text) return "";
+	          var iso = text.match(/(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
+	          if (iso) return iso[1] + "-" + String(Number(iso[2])).padStart(2, "0") + "-" + String(Number(iso[3])).padStart(2, "0");
+	          var md = text.match(/^(\d{1,2})[-.\/](\d{1,2})/);
+	          if (md) {
+	            var base = parseTeacherLogTargetDate(currentSheetName, new Date()) || new Date();
+	            return base.getFullYear() + "-" + String(Number(md[1])).padStart(2, "0") + "-" + String(Number(md[2])).padStart(2, "0");
+	          }
+	          return "";
+	        }
+	        function normalizeReviewExternalName(value) {
+	          return normalizeReviewNameToken(value).replace(/[Bb]$/, function(match) { return match === "B" ? "b" : match; });
+	        }
+	        function parseFirestoreRestValue(value) {
+	          if (!value || typeof value !== "object") return undefined;
+	          if (Object.prototype.hasOwnProperty.call(value, "stringValue")) return String(value.stringValue || "");
+	          if (Object.prototype.hasOwnProperty.call(value, "booleanValue")) return value.booleanValue === true;
+	          if (Object.prototype.hasOwnProperty.call(value, "integerValue")) return Number(value.integerValue || 0);
+	          if (Object.prototype.hasOwnProperty.call(value, "doubleValue")) return Number(value.doubleValue || 0);
+	          if (Object.prototype.hasOwnProperty.call(value, "timestampValue")) return String(value.timestampValue || "");
+	          if (Object.prototype.hasOwnProperty.call(value, "nullValue")) return null;
+	          if (value.arrayValue) return ((value.arrayValue && value.arrayValue.values) || []).map(parseFirestoreRestValue);
+	          if (value.mapValue) return parseFirestoreRestFields((value.mapValue && value.mapValue.fields) || {});
+	          return undefined;
+	        }
+	        function parseFirestoreRestFields(fields) {
+	          var out = {};
+	          Object.keys(fields || {}).forEach(function(key) { out[key] = parseFirestoreRestValue(fields[key]); });
+	          return out;
+	        }
+	        function parseFirestoreRestDocument(doc) {
+	          var item = parseFirestoreRestFields((doc && doc.fields) || {});
+	          var name = String((doc && doc.name) || "");
+	          item.__id = name.split("/").pop() || "";
+	          return item;
+	        }
+	        function withReviewTimeout(promise, ms, label) {
+	          return Promise.race([
+	            promise,
+	            new Promise(function(_, reject) {
+	              setTimeout(function() { reject(new Error(label + " 시간 초과")); }, ms || 8000);
+	            })
+	          ]);
+	        }
+	        function fetchReviewFirestoreCollection(collectionName, idToken, maxRows) {
+	          if (!idToken) return Promise.reject(new Error("Firebase 로그인 토큰 없음"));
+	          var projectId = (LIVE_FIREBASE_CONFIG && LIVE_FIREBASE_CONFIG.projectId) || "fir-lms-prod";
+	          var base = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(projectId) +
+	            "/databases/(default)/documents/" + encodeURIComponent(collectionName);
+	          var limit = Math.max(1, Number(maxRows || 800));
+	          function loadPage(pageToken, acc) {
+	            var url = base + "?pageSize=300" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
+	            return fetch(url, { headers: { "Authorization": "Bearer " + idToken, "Accept": "application/json" } }).then(function(res) {
+	              if (!res.ok) throw new Error("Firebase " + collectionName + " 조회 실패(" + res.status + ")");
+	              return res.json();
+	            }).then(function(payload) {
+	              var rows = acc.concat(((payload && payload.documents) || []).map(parseFirestoreRestDocument));
+	              if (payload && payload.nextPageToken && rows.length < limit) return loadPage(payload.nextPageToken, rows);
+	              return rows.slice(0, limit);
+	            });
+	          }
+	          return withReviewTimeout(loadPage("", []), 8500, "Firebase " + collectionName);
+	        }
+	        function getReviewSupabaseConfig() {
+	          var reviewCfg = window.SEDU_REVIEW_CONTEXT_CONFIG || {};
+	          var sb = reviewCfg.supabase || {};
+	          return {
+	            url: String(sb.url || "").replace(/\/+$/, ""),
+	            anonKey: String(sb.anonKey || ""),
+	            table: String(sb.attendanceTable || "attendance_logs")
+	          };
+	        }
+	        function reviewJsonpRequest(url, params, timeoutMs) {
+	          return new Promise(function(resolve, reject) {
+	            var cbName = "__seduReviewCb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+	            var query = new URLSearchParams(params || {});
+	            query.set("callback", cbName);
+	            var script = document.createElement("script");
+	            var done = false;
+	            var timer = setTimeout(function() {
+	              if (done) return;
+	              done = true;
+	              cleanup();
+	              reject(new Error("강사 포털 시수 API 시간 초과"));
+	            }, timeoutMs || 25000);
+	            function cleanup() {
+	              clearTimeout(timer);
+	              if (script.parentNode) script.parentNode.removeChild(script);
+	              try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+	            }
+	            window[cbName] = function(data) {
+	              if (done) return;
+	              done = true;
+	              cleanup();
+	              resolve(data || {});
+	            };
+	            script.onerror = function() {
+	              if (done) return;
+	              done = true;
+	              cleanup();
+	              reject(new Error("강사 포털 시수 API 네트워크 오류"));
+	            };
+	            script.src = url + (url.indexOf("?") > -1 ? "&" : "?") + query.toString();
+	            document.head.appendChild(script);
+	          });
+	        }
+	        function fetchReviewTeacherPortalAttendanceRows(targetDateKey) {
+	          var m = String(targetDateKey || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	          if (!m) return Promise.reject(new Error("시수 조회 날짜 오류"));
+	          var apiUrl = String(window.SEDU_TEACHER_PORTAL_API_URL || "https://script.google.com/macros/s/AKfycbyKiyCs2lYmGVAb1XVgqbd0rwkNcIw36gl06juaXNrV-0cxbSx8ZVP8XI9JC1vGViBmLg/exec");
+	          var year = Number(m[1]);
+	          var month = Number(m[2]);
+	          var day = Number(m[3]);
+	          var payloads = [{ year: year, month: month }];
+	          if (day <= 7) {
+	            var prev = new Date(year, month - 2, 1, 12, 0, 0);
+	            payloads.push({ year: prev.getFullYear(), month: prev.getMonth() + 1 });
+	          }
+	          return Promise.all(payloads.map(function(payload) {
+	            return reviewJsonpRequest(apiUrl, {
+	              action: "getSupabaseAccessAttendanceOverview",
+	              payload: JSON.stringify(payload)
+	            }, 30000).then(function(data) {
+	              if (!data || data.success === false) throw new Error((data && data.message) || "강사 포털 시수 조회 실패");
+	              return Array.isArray(data.allRows) ? data.allRows : [];
+	            });
+	          })).then(function(rowGroups) {
+	            return rowGroups.reduce(function(acc, rows) { return acc.concat(rows || []); }, []).map(function(row) {
+	                return {
+	                  class_date: row.date || row.class_date || "",
+	                  student_name: row.student || row.student_name || "",
+	                  student_school: row.school || row.student_school || "",
+	                  student_grade: row.grade || row.student_grade || "",
+	                  teacher_name: row.teacher || row.teacher_name || "",
+	                  category: row.category || row.lesson || "",
+	                  subject: row.subject || row.category || "",
+	                  lesson_type: row.lessonType || row.lesson_type || "",
+	                  status: row.status || "",
+	                  start_time_text: row.start || row.start_time_text || "",
+	                  end_time_text: row.end || row.end_time_text || "",
+	                  hours: row.hours || 0,
+	                  note: row.note || "",
+	                  updated_at: row.updatedAt || row.updated_at || ""
+	                };
+	              });
+	          });
+	        }
+	        function fetchReviewDirectSupabaseAttendanceRows(targetDateKey) {
+	          var cfg = getReviewSupabaseConfig();
+	          if (!cfg.url || !cfg.anonKey || !targetDateKey) return Promise.reject(new Error("Supabase 설정 없음"));
+	          var sinceKey = addReviewDateDays(targetDateKey, -35);
+	          var select = "class_date,student_name,student_school,student_grade,teacher_name,category,subject,lesson_type,status,start_time_text,end_time_text,hours,note,updated_at";
+	          var query = encodeURIComponent(cfg.table) +
+	            "?select=" + encodeURIComponent(select) +
+	            "&class_date=gte." + encodeURIComponent(sinceKey) +
+	            "&class_date=lte." + encodeURIComponent(targetDateKey) +
+	            "&order=class_date.desc&limit=1200";
+	          return withReviewTimeout(fetch(cfg.url + "/rest/v1/" + query, {
+	            headers: {
+	              "apikey": cfg.anonKey,
+	              "Authorization": "Bearer " + cfg.anonKey,
+	              "Accept": "application/json"
+	            }
+	          }).then(function(res) {
+	            if (!res.ok) throw new Error("Supabase 시수 조회 실패(" + res.status + ")");
+	            return res.json();
+	          }).then(function(rows) {
+	            return Array.isArray(rows) ? rows : [];
+	          }), 8500, "Supabase 시수");
+	        }
+	        function fetchReviewAttendanceRows(targetDateKey) {
+	          return fetchReviewTeacherPortalAttendanceRows(targetDateKey).catch(function(portalErr) {
+	            var cfg = getReviewSupabaseConfig();
+	            if (cfg.url && cfg.anonKey) return fetchReviewDirectSupabaseAttendanceRows(targetDateKey);
+	            throw portalErr;
+	          });
+	        }
+	        function getReviewStatusStudentName(item) {
+	          return String(item.studentName || item.student_name || item.name || item.displayName || item.student || "").trim();
+	        }
+	        function getReviewStatusDateKeys(item) {
+	          var keys = [];
+	          ["jikboDate", "actualDate", "substituteDate", "date", "targetDate", "classDate", "examDate"].forEach(function(key) {
+	            var normalized = normalizeReviewDateKey(item && item[key]);
+	            if (normalized && keys.indexOf(normalized) === -1) keys.push(normalized);
+	          });
+	          return keys;
+	        }
+	        function getReviewEventDateKey(item) {
+	          return normalizeReviewDateKey(item.examDate || item.date || item.startDate || item.start || item.eventDate || item.targetDate || item.day);
+	        }
+	        function isReviewExamEvent(item) {
+	          var text = [item.title, item.name, item.summary, item.schedule, item.subject, item.type, item.memo, item.description].map(function(v) {
+	            return String(v || "");
+	          }).join(" ");
+	          return /(시험|중간|기말|고사|수행|내신)/.test(text);
+	        }
+	        function getReviewCurrentStudentMap(snapshot) {
+	          var map = {};
+	          Object.keys((snapshot && snapshot.studentDetails) || {}).forEach(function(name) {
+	            map[normalizeReviewExternalName(name)] = snapshot.studentDetails[name] || {};
+	          });
+	          return map;
+	        }
+	        function isReviewCountableAttendance(row) {
+	          var status = String((row && row.status) || "");
+	          var hours = Number((row && row.hours) || 0);
+	          if (!row || !row.student_name || !row.teacher_name || !normalizeReviewDateKey(row.class_date)) return false;
+	          if (/(결석|취소|삭제|예고|휴강)/.test(status)) return false;
+	          return hours > 0;
+	        }
+	        function buildReviewExternalSummary(raw, currentSnapshot, targetDateKey) {
+	          var currentMap = getReviewCurrentStudentMap(currentSnapshot);
+	          var nextDateKey = addReviewDateDays(targetDateKey, 1);
+	          var statuses = Array.isArray(raw.statuses) ? raw.statuses : [];
+	          var events = Array.isArray(raw.events) ? raw.events : [];
+	          var attendanceRows = Array.isArray(raw.attendanceRows) ? raw.attendanceRows : [];
+	          var relevantStatuses = statuses.filter(function(item) {
+	            return getReviewStatusDateKeys(item).indexOf(targetDateKey) !== -1;
+	          }).map(function(item) {
+	            var studentName = getReviewStatusStudentName(item);
+	            var stateText = String(item.progressStatus || item.status || item.state || item.result || "");
+	            var subject = String(item.subject || item.jikboSubject || item.subjectName || "");
+	            return Object.assign({}, item, { __studentName: studentName, __stateText: stateText, __subject: subject });
+	          });
+	          var confirmedStatuses = relevantStatuses.filter(function(item) {
+	            return /(확정|대체|진행|완료|참여)/.test(item.__stateText) && !/(취소|제외|불가)/.test(item.__stateText);
+	          });
+	          var unresolvedStatuses = relevantStatuses.filter(function(item) {
+	            return /(미정|대기|확인|보류|미진행|미확정)/.test(item.__stateText || "") || !item.__stateText;
+	          });
+	          var confirmedMissing = confirmedStatuses.filter(function(item) {
+	            var key = normalizeReviewExternalName(item.__studentName);
+	            return key && !currentMap[key];
+	          }).slice(0, 12);
+	          var examEvents = events.filter(function(item) {
+	            if (!isReviewExamEvent(item)) return false;
+	            var key = getReviewEventDateKey(item);
+	            return key === targetDateKey || key === nextDateKey;
+	          }).slice(0, 12);
+	          var targetDate = targetDateKey ? new Date(Number(targetDateKey.slice(0, 4)), Number(targetDateKey.slice(5, 7)) - 1, Number(targetDateKey.slice(8, 10)), 12, 0, 0) : null;
+	          var targetDay = targetDate ? targetDate.getDay() : -1;
+	          var attendanceByStudent = {};
+	          attendanceRows.filter(isReviewCountableAttendance).forEach(function(row) {
+	            var rowKey = normalizeReviewDateKey(row.class_date);
+	            if (!rowKey || rowKey >= targetDateKey) return;
+	            var rowDate = new Date(Number(rowKey.slice(0, 4)), Number(rowKey.slice(5, 7)) - 1, Number(rowKey.slice(8, 10)), 12, 0, 0);
+	            if (rowDate.getDay() !== targetDay) return;
+	            var name = normalizeReviewExternalName(row.student_name);
+	            if (!name) return;
+	            if (!attendanceByStudent[name]) attendanceByStudent[name] = [];
+	            attendanceByStudent[name].push(row);
+	          });
+	          var patternMissing = Object.keys(attendanceByStudent).filter(function(name) {
+	            return attendanceByStudent[name].length >= 2 && !currentMap[name];
+	          }).map(function(name) {
+	            var rows = attendanceByStudent[name];
+	            var latest = rows[0] || {};
+	            return {
+	              studentName: latest.student_name || name,
+	              count: rows.length,
+	              teacherName: latest.teacher_name || "",
+	              subject: latest.subject || latest.category || "",
+	              time: [latest.start_time_text, latest.end_time_text].filter(Boolean).join("~"),
+	              note: latest.note || ""
+	            };
+	          }).slice(0, 12);
+	          return {
+	            loading: false,
+	            targetDateKey: targetDateKey,
+	            errors: raw.errors || [],
+	            sourceCounts: {
+	              events: events.length,
+	              statuses: statuses.length,
+	              attendanceRows: attendanceRows.length
+	            },
+	            confirmedMissing: confirmedMissing,
+	            unresolvedStatuses: unresolvedStatuses.slice(0, 10),
+	            examEvents: examEvents,
+	            patternMissing: patternMissing
+	          };
+	        }
+	        function loadReviewExternalContext(targetDateKey, currentSnapshot) {
+	          if (!targetDateKey) return Promise.resolve({ loading: false, targetDateKey: "", errors: ["점검 대상 날짜를 파악하지 못했습니다."], sourceCounts: {}, confirmedMissing: [], unresolvedStatuses: [], examEvents: [], patternMissing: [] });
+	          window.seduReviewContextCache = window.seduReviewContextCache || {};
+	          var cacheKey = "review:" + targetDateKey;
+	          var cached = window.seduReviewContextCache[cacheKey];
+	          if (cached && Date.now() - cached.savedAt < 5 * 60 * 1000) {
+	            return Promise.resolve(buildReviewExternalSummary(cached.payload, currentSnapshot, targetDateKey));
+	          }
+	          var raw = { events: [], statuses: [], attendanceRows: [], errors: [] };
+	          var firebasePromise = getLiveFirebaseAuth().then(function(auth) {
+	            var user = auth.currentUser;
+	            if (!user) throw new Error("Firebase 로그인 세션 없음");
+	            return user.getIdToken();
+	          }).then(function(idToken) {
+	            return Promise.all([
+	              fetchReviewFirestoreCollection("events", idToken, 900).then(function(rows) { raw.events = rows; }),
+	              fetchReviewFirestoreCollection("jikboStatuses", idToken, 900).then(function(rows) { raw.statuses = rows; })
+	            ]);
+	          }).catch(function(err) {
+	            raw.errors.push(err && err.message ? err.message : String(err || "Firebase 조회 실패"));
+	          });
+	          var supabasePromise = fetchReviewAttendanceRows(targetDateKey).then(function(rows) {
+	            raw.attendanceRows = rows;
+	          }).catch(function(err) {
+	            raw.errors.push(err && err.message ? err.message : String(err || "Supabase 조회 실패"));
+	          });
+	          return Promise.all([firebasePromise, supabasePromise]).then(function() {
+	            window.seduReviewContextCache[cacheKey] = { savedAt: Date.now(), payload: raw };
+	            return buildReviewExternalSummary(raw, currentSnapshot, targetDateKey);
+	          });
+	        }
+	        function buildReviewExternalIssues(externalReview) {
+	          if (!externalReview || externalReview.loading) return [];
+	          var list = [];
+	          (externalReview.confirmedMissing || []).forEach(function(item) {
+	            list.push({
+	              type: "external-jikbo-missing",
+	              msg: "S-LMS 직보 확정 학생 '" + (item.__studentName || "이름없음") + "'이 현재 시간표에 보이지 않습니다." + (item.__subject ? " 과목: " + item.__subject : "")
+	            });
+	          });
+	          (externalReview.unresolvedStatuses || []).forEach(function(item) {
+	            var name = item.__studentName || "이름없음";
+	            list.push({
+	              type: "external-jikbo-unresolved",
+	              msg: "S-LMS 직보 상태가 아직 미정/확인 단계입니다: " + name + (item.__subject ? " · " + item.__subject : "")
+	            });
+	          });
+	          (externalReview.patternMissing || []).forEach(function(item) {
+	            list.push({
+	              type: "external-pattern-missing",
+	              msg: "Supabase 최근 시수 패턴상 '" + item.studentName + "' 학생이 같은 요일에 " + item.count + "회 이상 수업했지만 현재표에는 없습니다." + (item.teacherName ? " 최근 강사: " + item.teacherName : "")
+	            });
+	          });
+	          return list;
+	        }
+	        function renderReviewExternalPanel(externalReview) {
+	          if (!externalReview) return "<div class='review-empty'>S-LMS/Firebase/Supabase 연동 결과를 준비하고 있습니다.</div>";
+	          if (externalReview.loading) return "<div class='review-empty'>S-LMS 학교 일정·직보 상태와 Supabase 시수 패턴을 불러오는 중입니다...</div>";
+	          var counts = externalReview.sourceCounts || {};
+	          var html = "<div class='review-source-note'>연동 결과: Firebase 학교일정 " + (counts.events || 0) + "건, 직보상태 " + (counts.statuses || 0) + "건, Supabase 최근 시수 " + (counts.attendanceRows || 0) + "건" +
+	            ((externalReview.errors || []).length ? "<br>제한: " + escapeHtml((externalReview.errors || []).join(" / ")) : "") + "</div>";
+	          html += "<div class='review-section-title'><span>S-LMS 직보 확정 누락 후보</span><span>" + (externalReview.confirmedMissing || []).length + "명</span></div>";
+	          html += renderReviewIssueList(buildReviewExternalIssues({ loading: false, confirmedMissing: externalReview.confirmedMissing || [], unresolvedStatuses: [], patternMissing: [] }), "확정 직보 학생 중 현재표 누락 후보가 없습니다.");
+	          html += "<div class='review-section-title'><span>S-LMS 미정·확인 필요 직보</span><span>" + (externalReview.unresolvedStatuses || []).length + "명</span></div>";
+	          html += renderReviewIssueList(buildReviewExternalIssues({ loading: false, confirmedMissing: [], unresolvedStatuses: externalReview.unresolvedStatuses || [], patternMissing: [] }), "미정 또는 확인 필요 직보 상태가 없습니다.");
+	          html += "<div class='review-section-title'><span>Supabase 시수 패턴 누락 후보</span><span>" + (externalReview.patternMissing || []).length + "명</span></div>";
+	          html += renderReviewIssueList(buildReviewExternalIssues({ loading: false, confirmedMissing: [], unresolvedStatuses: [], patternMissing: externalReview.patternMissing || [] }), "최근 같은 요일 시수 패턴 대비 누락 후보가 없습니다.");
+	          html += "<div class='review-section-title'><span>학교 시험 일정 신호</span><span>" + (externalReview.examEvents || []).length + "건</span></div>";
+	          if ((externalReview.examEvents || []).length) {
+	            html += "<div class='review-chip-row'>" + externalReview.examEvents.map(function(item) {
+	              var label = [normalizeReviewDateKey(getReviewEventDateKey(item)), item.school || item.schoolName || item.targetSchool || "", item.grade || item.targetGrade || "", item.subject || item.title || item.name || "시험 일정"].filter(Boolean).join(" · ");
+	              return "<span class='review-chip'>" + escapeHtml(label) + "</span>";
+	            }).join("") + "</div>";
+	          } else {
+	            html += "<div class='review-empty'>대상일 또는 다음날에 연결된 시험 일정 신호가 없습니다.</div>";
+	          }
+	          return html;
+	        }
+	        function renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, previousDataLoaded, externalReview) {
+	          var selectedTab = (reviewList.querySelector('.review-tab.active') || {}).getAttribute ? (reviewList.querySelector('.review-tab.active') || {}).getAttribute('data-review-tab') : 'overview';
+	          var externalIssues = buildReviewExternalIssues(externalReview);
+	          var allIssues = (issues || []).concat(externalIssues);
 	          var dashboardItems = buildReviewDashboardItems(comparison);
 	          var changeCount = comparison ? (
 	            comparison.missing.length +
@@ -6463,13 +6851,13 @@
 	            comparison.changes.teacher.length +
 	            comparison.changes.subject.length
 	          ) : 0;
-	          var issueCount = issues.length + changeCount;
+	          var issueCount = allIssues.length + changeCount;
 	          var matchPercent = comparison ? comparison.studentMatchPercent : 0;
 	          var positionPercent = comparison ? comparison.positionMatchPercent : 0;
 	          var tags = currentSnapshot.operationalTags || {};
-	          var highCount = issues.filter(function(issue) { return getReviewSeverity(issue) === 'high'; }).length;
-	          var mediumCount = issues.filter(function(issue) { return getReviewSeverity(issue) === 'medium'; }).length;
-	          var actionCards = buildReviewActionCards(issues, dashboardItems);
+	          var highCount = allIssues.filter(function(issue) { return getReviewSeverity(issue) === 'high'; }).length;
+	          var mediumCount = allIssues.filter(function(issue) { return getReviewSeverity(issue) === 'medium'; }).length;
+	          var actionCards = buildReviewActionCards(allIssues, dashboardItems);
 	          var currentOnlyIssues = issues.filter(function(issue) { return issue.type !== 'missing'; });
 	          var sendBlockingCount = highCount;
 	          var html = "";
@@ -6526,7 +6914,7 @@
 	          html += renderReviewIssueList(currentOnlyIssues, "현재표 자체 오류가 발견되지 않았습니다.");
 	          html += "</section>";
 	          html += "<section class='review-panel' data-review-panel='exam'>";
-	          html += "<p class='review-submenu-copy'>시험기간 변칙 편성을 설명할 수 있는 키워드를 현재 시간표에서 먼저 모아 보여줍니다. S-LMS 학교 일정·직보 데이터가 연결되면 확정 직보/미정 직보/대체진행까지 같은 영역에 표시할 수 있습니다.</p>";
+	          html += "<p class='review-submenu-copy'>현재 시간표 키워드와 S-LMS 학교 일정·직보 상태, Supabase 최근 시수 패턴을 함께 보며 시험기간 변칙 편성을 판단합니다.</p>";
 	          html += "<div class='review-signal-grid'>" +
 	            renderReviewSignalCard("직보·시험성 입력", (tags.jikboLike || []).length, "직보/시험/내신/기말 등") +
 	            renderReviewSignalCard("오늘만·특강", (tags.oneOff || []).length, "평소 패턴과 달라도 정상일 수 있음") +
@@ -6537,7 +6925,7 @@
 	            "</div>";
 	          html += "<div class='review-section-title'><span>시험·직보 관련 입력 위치</span><span>" + ((tags.jikboLike || []).length + (tags.oneOff || []).length + (tags.supplement || []).length) + "개</span></div>";
 	          html += renderReviewTagChips([].concat(tags.jikboLike || [], tags.oneOff || [], tags.supplement || []));
-	          html += "<div class='review-source-note'>다음 단계 연동 대상: S-LMS Firebase의 학교 일정, 직보 과목 사전, 학생별 직보 상태와 Supabase 시수 패턴. 현재 배포에서는 라이브 시간표 내부 입력값 기준으로 먼저 분리 표시합니다.</div>";
+	          html += renderReviewExternalPanel(externalReview);
 	          html += "</section>";
 	          html += "<section class='review-panel' data-review-panel='send'>";
 	          html += "<p class='review-submenu-copy'>등원 안내/시간표 카드 발송 전에 처리해야 할 위험 신호를 모아 확인합니다.</p>";
@@ -6551,11 +6939,13 @@
 	          html += "</section>";
 	          html += "</div>";
 	          reviewList.innerHTML = html;
-	          setReviewTab('overview');
+	          setReviewTab(selectedTab || 'overview');
 	        }
 	        var currentSnapshot = buildReviewSnapshot(lastData);
 	        currentSnapshot.allStudentNamesCount = getReviewObjectKeys(currentSnapshot.allStudentNames).length;
 	        var previousSheetName = getReviewPreviousWeekSheetName();
+	        var targetDateObj = parseTeacherLogTargetDate(currentSheetName, new Date());
+	        var targetDateKey = formatReviewDateKey(targetDateObj);
 	        var teacherName = getActiveTeacherName();
 	        var previousPromise = previousSheetName
 	          ? callServer(teacherName ? "getTeacherGridData" : "getFixedGridData", teacherName ? [previousSheetName, teacherName, true] : [previousSheetName, true]).catch(function() { return null; })
@@ -6574,7 +6964,22 @@
 	          } else {
 	            issues.push({ type: 'check', msg: "지난주 같은 요일 시간표를 찾지 못해 누락 학생 비교를 건너뛰었습니다." });
 	          }
-	          renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, !!(previousData && previousData.grid));
+	          var loadingExternalReview = { loading: true, targetDateKey: targetDateKey };
+	          renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, !!(previousData && previousData.grid), loadingExternalReview);
+	          loadReviewExternalContext(targetDateKey, currentSnapshot).then(function(externalReview) {
+	            renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, !!(previousData && previousData.grid), externalReview);
+	          }).catch(function(err) {
+	            renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, !!(previousData && previousData.grid), {
+	              loading: false,
+	              targetDateKey: targetDateKey,
+	              errors: [err && err.message ? err.message : String(err || "외부 데이터 조회 실패")],
+	              sourceCounts: {},
+	              confirmedMissing: [],
+	              unresolvedStatuses: [],
+	              examEvents: [],
+	              patternMissing: []
+	            });
+	          });
 	        });
       }
       
