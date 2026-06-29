@@ -131,12 +131,43 @@
       .rb-teacher { background: #00897b; }
       .review-text { font-size: 0.9rem; color: #333; line-height: 1.4; }
       .review-empty { text-align: center; padding: 20px; color: #4caf50; font-weight: bold; }
+      .review-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:12px; }
+      .review-modal-title { font-size:1.22rem; font-weight:950; color:#0f172a; letter-spacing:0; }
+      .review-modal-sub { margin-top:4px; font-size:0.82rem; line-height:1.4; color:#64748b; font-weight:700; }
+      .review-close-btn { border:1px solid #dbeafe; background:#f8fbff; color:#1d4ed8; border-radius:10px; padding:8px 12px; font-weight:900; cursor:pointer; white-space:nowrap; }
+      .review-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 12px; }
+      .review-tab { border:1px solid #dbeafe; background:#fff; color:#334155; border-radius:999px; padding:8px 12px; font-size:0.8rem; font-weight:900; cursor:pointer; }
+      .review-tab.active { background:#0f3f85; color:#fff; border-color:#0f3f85; box-shadow:0 8px 18px rgba(15,63,133,0.16); }
+      .review-panel { display:none; }
+      .review-panel.active { display:block; }
+      .review-priority-grid { display:grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr); gap:12px; align-items:start; }
+      .review-action-stack { display:flex; flex-direction:column; gap:8px; }
+      .review-action-card { display:flex; align-items:flex-start; gap:10px; padding:12px; border-radius:12px; border:1px solid #e2e8f0; background:#fff; }
+      .review-action-card.high { border-color:#fecaca; background:#fff1f2; }
+      .review-action-card.medium { border-color:#fed7aa; background:#fff7ed; }
+      .review-action-card.info { border-color:#bfdbfe; background:#eff6ff; }
+      .review-action-card.good { border-color:#bbf7d0; background:#f0fdf4; }
+      .review-action-rank { flex:0 0 30px; width:30px; height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:#0f3f85; color:#fff; font-weight:950; font-size:0.82rem; }
+      .review-action-title { font-size:0.9rem; font-weight:950; color:#0f172a; line-height:1.35; }
+      .review-action-meta { margin-top:3px; font-size:0.78rem; font-weight:750; color:#64748b; line-height:1.35; }
+      .review-mini-note { padding:13px; border:1px solid #dbeafe; border-radius:12px; background:#f8fbff; color:#475569; font-size:0.8rem; line-height:1.45; font-weight:700; }
+      .review-signal-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:10px; }
+      .review-signal-card { padding:12px; border:1px solid #e2e8f0; border-radius:12px; background:#fff; min-height:82px; }
+      .review-signal-label { font-size:0.76rem; font-weight:900; color:#64748b; }
+      .review-signal-value { margin-top:8px; font-size:1.45rem; font-weight:950; color:#0f172a; }
+      .review-signal-help { margin-top:4px; color:#64748b; font-size:0.76rem; font-weight:750; line-height:1.35; }
+      .review-submenu-copy { margin:0 0 10px; color:#475569; font-size:0.82rem; line-height:1.45; font-weight:700; }
+      .review-chip-row { display:flex; flex-wrap:wrap; gap:6px; }
+      .review-chip { display:inline-flex; align-items:center; border-radius:999px; padding:5px 9px; background:#eef2ff; color:#334155; font-size:0.74rem; font-weight:850; border:1px solid #dbeafe; }
+      .review-source-note { margin-top:10px; padding:10px 12px; border-radius:12px; background:#f8fafc; border:1px dashed #cbd5e1; color:#64748b; font-size:0.78rem; font-weight:750; line-height:1.45; }
       @media (max-width: 900px) {
         .review-box { width: calc(100vw - 18px); padding: 16px; }
         .review-dashboard-head { flex-direction: column; }
         .review-dashboard-score { width: 100%; text-align:left; }
         .review-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .review-change-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .review-priority-grid { grid-template-columns: 1fr; }
+        .review-signal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
       .ticker-wrap { width: 100%; background: #333; overflow: hidden; height: 30px; line-height: 30px; cursor: pointer; flex-shrink: 0; }
       .ticker { display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker 30s linear infinite; color: #fff; font-size: 0.85rem; font-weight: 500; }
@@ -1054,9 +1085,14 @@
     </div>
     <div id="reviewModal">
       <div class="review-box">
-        <div class="modal-title" style="margin-bottom: 10px;">📋 시간표 검토 대시보드</div>
+        <div class="review-modal-head">
+          <div>
+            <div class="review-modal-title">내일 시간표 점검</div>
+            <div class="review-modal-sub">누락, 변동, 현재표 오류, 시험·직보 가능성, 발송 준비 상태를 실무 흐름에 맞춰 확인합니다.</div>
+          </div>
+          <button type="button" class="review-close-btn" onclick="closeReviewModal()">닫기</button>
+        </div>
         <div class="review-list" id="reviewResultList"></div>
-        <div class="close-modal" onclick="closeReviewModal()">닫기</div>
       </div>
     </div>
     <div id="authModal">
@@ -1234,8 +1270,8 @@
           <button class="excel-btn" onclick="exportScheduleToExcel()" title="시수 저장 (엑셀)">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg><span>시수 저장</span>
           </button>
-          <button class="review-btn" onclick="runScheduleReview()" title="시간표 검토">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>검토</span>
+          <button class="review-btn" onclick="runScheduleReview()" title="내일 시간표 점검">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>내일 시간표 점검</span>
           </button>
           <button class="empty-btn" onclick="toggleEmptyMode()" title="빈 강의실 보기">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg><span>빈강의실</span>
@@ -6113,6 +6149,15 @@
 	            studentOccurrences: {},
 	            studentDetails: {},
 	            statusCounts: {},
+	            operationalTags: {
+	              jikboLike: [],
+	              oneOff: [],
+	              supplement: [],
+	              absence: [],
+	              cancellation: [],
+	              selfStudy: [],
+	              checkNeeded: []
+	            },
 	            totalActiveSlots: 0,
 	            issues: []
 	          };
@@ -6153,6 +6198,14 @@
               var lessonType = detectClassType(teacherItem);
               items.forEach(function(text) {
                 var txt = String(text || "");
+                var combinedText = String(teacherItem || "") + " " + txt;
+                var tagTarget = { hour: h, room: colName, text: txt };
+                if (/(직보|시험|기말|중간|내신|전날|전일)/.test(combinedText)) snapshot.operationalTags.jikboLike.push(tagTarget);
+                if (/(오늘만|이번주만|첫수업|신규|특강)/.test(combinedText)) snapshot.operationalTags.oneOff.push(tagTarget);
+                if (/(보강|보충|당취보충)/.test(combinedText)) snapshot.operationalTags.supplement.push(tagTarget);
+                if (/(결석예고|휴강)/.test(combinedText)) snapshot.operationalTags.absence.push(tagTarget);
+                if (/(당일취소|당취)/.test(combinedText)) snapshot.operationalTags.cancellation.push(tagTarget);
+                if (/(자습|자기주도|자율학습)/.test(combinedText)) snapshot.operationalTags.selfStudy.push(tagTarget);
                 if (txt.includes("T")) return;
 	                var extractedName = extractReviewStudentName(txt);
 	                if (extractedName) {
@@ -6187,6 +6240,7 @@
 	                }
               });
               if (hasCheckNeeded) {
+                snapshot.operationalTags.checkNeeded.push({ hour: h, room: colName, text: items.join(" ") });
                 snapshot.issues.push({ type: 'check', msg: `[${h}:00] ${colName} - 확인필요 표시가 남아 있습니다. 확정 여부를 확인하세요.` });
               }
               if (cellStudents.length && !teacherItem) {
@@ -6316,6 +6370,87 @@
             });
           });
         }
+	        function getReviewSeverity(issue) {
+	          var type = issue && issue.type;
+	          if (type === 'duplicate' || type === 'capacity' || type === 'teacher' || type === 'check' || type === 'missing') return 'high';
+	          if (type === 'single' || type === 'time' || type === 'duration' || type === 'status') return 'medium';
+	          return 'info';
+	        }
+	        function getReviewActionTitle(issue) {
+	          var type = issue && issue.type;
+	          if (type === 'missing') return '지난주 대비 누락 학생 확인';
+	          if (type === 'duplicate') return '동시간대 중복 배정 확인';
+	          if (type === 'teacher') return '강사/학생 표시 불일치 확인';
+	          if (type === 'capacity') return '수업 유형별 정원 확인';
+	          if (type === 'check') return '확인필요 표시 정리';
+	          if (type === 'single') return '1시간 배정 학생 확인';
+	          if (type === 'time') return '시간 변경 학생 확인';
+	          if (type === 'duration') return '시수 변경 학생 확인';
+	          if (type === 'room') return '강의실 변경 학생 확인';
+	          if (type === 'new') return '신규/추가 학생 확인';
+	          return '검토 신호 확인';
+	        }
+	        function summarizeReviewTagItems(list, limit) {
+	          return (list || []).slice(0, limit || 6).map(function(item) {
+	            var text = String(item.text || '').replace(/\s+/g, ' ').trim();
+	            if (text.length > 26) text = text.slice(0, 26) + "...";
+	            return item.hour + ":00 " + item.room + (text ? " · " + text : "");
+	          });
+	        }
+	        function renderReviewIssueList(items, emptyText) {
+	          var list = items || [];
+	          if (!list.length) return "<div class='review-empty'>" + escapeHtml(emptyText || "확인할 항목이 없습니다.") + "</div>";
+	          var html = "<div class='review-detail-list'>";
+	          list.forEach(function(issue) {
+	            var badge = getReviewIssueBadge(issue);
+	            html += "<div class='review-item'><span class='review-badge " + badge.cls + "'>" + badge.text + "</span><span class='review-text'>" + escapeHtml(issue.msg) + "</span></div>";
+	          });
+	          html += "</div>";
+	          return html;
+	        }
+	        function buildReviewActionCards(issues, dashboardItems) {
+	          var source = (issues || []).concat(dashboardItems || []);
+	          var severityOrder = { high: 0, medium: 1, info: 2 };
+	          var cards = source.map(function(issue) {
+	            return {
+	              severity: getReviewSeverity(issue),
+	              title: getReviewActionTitle(issue),
+	              meta: issue.msg || ''
+	            };
+	          }).sort(function(a, b) {
+	            return severityOrder[a.severity] - severityOrder[b.severity];
+	          });
+	          if (!cards.length) {
+	            cards.push({
+	              severity: 'good',
+	              title: '즉시 처리할 점검 신호가 없습니다.',
+	              meta: '현재표 자체 오류와 지난주 기준 주요 변동이 안정적으로 보입니다.'
+	            });
+	          }
+	          return cards.slice(0, 7);
+	        }
+	        function renderReviewActionCards(cards) {
+	          var html = "<div class='review-action-stack'>";
+	          (cards || []).forEach(function(card, index) {
+	            html += "<div class='review-action-card " + escapeHtml(card.severity || 'info') + "'>" +
+	              "<div class='review-action-rank'>" + (index + 1) + "</div>" +
+	              "<div><div class='review-action-title'>" + escapeHtml(card.title || '') + "</div>" +
+	              "<div class='review-action-meta'>" + escapeHtml(card.meta || '') + "</div></div>" +
+	              "</div>";
+	          });
+	          html += "</div>";
+	          return html;
+	        }
+	        function renderReviewSignalCard(label, value, help) {
+	          return "<div class='review-signal-card'><div class='review-signal-label'>" + escapeHtml(label) + "</div><div class='review-signal-value'>" + escapeHtml(String(value)) + "</div><div class='review-signal-help'>" + escapeHtml(help || "") + "</div></div>";
+	        }
+	        function renderReviewTagChips(items) {
+	          var summaries = summarizeReviewTagItems(items, 10);
+	          if (!summaries.length) return "<div class='review-empty'>시간표 입력값 안에서 관련 키워드가 발견되지 않았습니다.</div>";
+	          return "<div class='review-chip-row'>" + summaries.map(function(text) {
+	            return "<span class='review-chip'>" + escapeHtml(text) + "</span>";
+	          }).join("") + "</div>";
+	        }
 	        function renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, previousDataLoaded) {
 	          var dashboardItems = buildReviewDashboardItems(comparison);
 	          var changeCount = comparison ? (
@@ -6331,21 +6466,41 @@
 	          var issueCount = issues.length + changeCount;
 	          var matchPercent = comparison ? comparison.studentMatchPercent : 0;
 	          var positionPercent = comparison ? comparison.positionMatchPercent : 0;
+	          var tags = currentSnapshot.operationalTags || {};
+	          var highCount = issues.filter(function(issue) { return getReviewSeverity(issue) === 'high'; }).length;
+	          var mediumCount = issues.filter(function(issue) { return getReviewSeverity(issue) === 'medium'; }).length;
+	          var actionCards = buildReviewActionCards(issues, dashboardItems);
+	          var currentOnlyIssues = issues.filter(function(issue) { return issue.type !== 'missing'; });
+	          var sendBlockingCount = highCount + (tags.checkNeeded || []).length + (comparison ? comparison.missing.length : 0);
 	          var html = "";
+	          html += "<div class='review-tabs'>" +
+	            "<button type='button' class='review-tab active' data-review-tab='overview' onclick=\"setReviewTab('overview')\">요약</button>" +
+	            "<button type='button' class='review-tab' data-review-tab='changes' onclick=\"setReviewTab('changes')\">누락·변동</button>" +
+	            "<button type='button' class='review-tab' data-review-tab='current' onclick=\"setReviewTab('current')\">현재표 오류</button>" +
+	            "<button type='button' class='review-tab' data-review-tab='exam' onclick=\"setReviewTab('exam')\">시험·직보 점검</button>" +
+	            "<button type='button' class='review-tab' data-review-tab='send' onclick=\"setReviewTab('send')\">발송 준비</button>" +
+	            "</div>";
 	          html += "<div class='review-dashboard'>";
+	          html += "<section class='review-panel active' data-review-panel='overview'>";
 	          html += "<div class='review-dashboard-head'>" +
-	            "<div><div class='review-dashboard-title'>" + escapeHtml(currentSheetName || "현재 시간표") + " 검토</div>" +
+	            "<div><div class='review-dashboard-title'>" + escapeHtml(currentSheetName || "현재 시간표") + " 내일 시간표 점검</div>" +
 	            "<div class='review-dashboard-sub'>" + (previousSheetName ? "지난주 기준: " + escapeHtml(previousSheetName) : "지난주 같은 요일 기준 시트를 찾지 못했습니다.") + "</div></div>" +
 	            "<div class='review-dashboard-score'><strong>" + (comparison ? matchPercent + "%" : "-") + "</strong><span>지난주 학생 일치율</span><div class='review-meter'><div class='review-meter-fill' style='width:" + (comparison ? matchPercent : 0) + "%'></div></div></div>" +
 	            "</div>";
 	          html += "<div class='review-kpi-grid'>" +
-	            "<div class='review-kpi'><div class='review-kpi-label'>위치 일치율</div><div class='review-kpi-value'>" + (comparison ? positionPercent + "%" : "-") + "</div><div class='review-kpi-note'>시간+강의실 기준</div></div>" +
+	            "<div class='review-kpi'><div class='review-kpi-label'>즉시 확인</div><div class='review-kpi-value'>" + highCount + "건</div><div class='review-kpi-note'>누락·중복·강사표시·확인필요</div></div>" +
+	            "<div class='review-kpi'><div class='review-kpi-label'>주의 확인</div><div class='review-kpi-value'>" + mediumCount + "건</div><div class='review-kpi-note'>1시간/시간/시수/상태 변동</div></div>" +
 	            "<div class='review-kpi'><div class='review-kpi-label'>현재 학생</div><div class='review-kpi-value'>" + (currentSnapshot.allStudentNamesCount || 0) + "명</div><div class='review-kpi-note'>시간표 입력 기준</div></div>" +
-	            "<div class='review-kpi'><div class='review-kpi-label'>수업 슬롯</div><div class='review-kpi-value'>" + (currentSnapshot.totalActiveSlots || 0) + "칸</div><div class='review-kpi-note'>결석예고/휴강 제외</div></div>" +
 	            "<div class='review-kpi'><div class='review-kpi-label'>검토 신호</div><div class='review-kpi-value'>" + issueCount + "건</div><div class='review-kpi-note'>" + (changeCount ? "주간 변동 " + changeCount + "건 포함" : "현재표 자체 검토 포함") + "</div></div>" +
 	            "</div>";
+	          html += "<div class='review-priority-grid'><div>" +
+	            "<div class='review-section-title'><span>실무자 우선 처리</span><span>" + actionCards.length + "개</span></div>" +
+	            renderReviewActionCards(actionCards) +
+	            "</div><div class='review-mini-note'><strong>점검 기준</strong><br>빨간 항목은 발송 전 반드시 확인하고, 주황 항목은 시험기간·직보·오늘만 수업 여부를 감안해 판단하세요. 데이터가 불러와지지 않아도 기존 시간표 검토는 계속 동작합니다.</div></div>";
+	          html += "</section>";
+	          html += "<section class='review-panel' data-review-panel='changes'>";
+	          html += "<p class='review-submenu-copy'>지난주 같은 요일과 비교해 학생 누락, 신규, 시간·강의실·시수 변경을 확인합니다.</p>";
 	          if (comparison) {
-	            html += "<div class='review-section-title'><span>주요 변동 항목</span><span>" + changeCount + "건</span></div>";
 	            html += "<div class='review-change-grid'>" +
 	              "<div class='review-change-pill " + (comparison.missing.length ? "warn" : "good") + "'><strong>" + comparison.missing.length + "</strong><span>지난주 대비 누락</span></div>" +
 	              "<div class='review-change-pill " + (comparison.added.length ? "info" : "good") + "'><strong>" + comparison.added.length + "</strong><span>이번주 신규</span></div>" +
@@ -6357,20 +6512,46 @@
 	          if (!previousDataLoaded && previousSheetName) {
 	            html += "<div class='review-item'><span class='review-badge rb-check'>비교</span><span class='review-text'>지난주 기준 시트 데이터를 불러오지 못해 대시보드 비교가 제한됩니다.</span></div>";
 	          }
-	          var mergedDetails = dashboardItems.concat(issues);
-	          html += "<div class='review-section-title'><span>확인 요약 목록</span><span>" + mergedDetails.length + "개 항목</span></div>";
-	          if (!mergedDetails.length) {
-	            html += "<div class='review-empty'>발견된 문제가 없습니다.</div>";
-	          } else {
-	            html += "<div class='review-detail-list'>";
-	            mergedDetails.forEach(function(issue) {
-	              var badge = getReviewIssueBadge(issue);
-	              html += "<div class='review-item'><span class='review-badge " + badge.cls + "'>" + badge.text + "</span><span class='review-text'>" + escapeHtml(issue.msg) + "</span></div>";
-	            });
-	            html += "</div>";
-	          }
+	          html += "<div class='review-section-title'><span>변동 상세</span><span>" + dashboardItems.length + "개 항목</span></div>";
+	          html += renderReviewIssueList(dashboardItems, "지난주 대비 주요 변동이 없습니다.");
+	          html += "</section>";
+	          html += "<section class='review-panel' data-review-panel='current'>";
+	          html += "<p class='review-submenu-copy'>현재 열려 있는 시간표 자체에서 중복, 강사 누락, 수업 유형 정원, 1시간 배정, 확인필요 표시를 확인합니다.</p>";
+	          html += "<div class='review-signal-grid'>" +
+	            renderReviewSignalCard("위치 일치율", comparison ? positionPercent + "%" : "-", "지난주 시간+강의실 기준") +
+	            renderReviewSignalCard("수업 슬롯", currentSnapshot.totalActiveSlots || 0, "결석예고/휴강 제외") +
+	            renderReviewSignalCard("확인필요", (tags.checkNeeded || []).length, "발송 전 정리 권장") +
+	            "</div>";
+	          html += "<div class='review-section-title'><span>현재표 확인 항목</span><span>" + currentOnlyIssues.length + "개</span></div>";
+	          html += renderReviewIssueList(currentOnlyIssues, "현재표 자체 오류가 발견되지 않았습니다.");
+	          html += "</section>";
+	          html += "<section class='review-panel' data-review-panel='exam'>";
+	          html += "<p class='review-submenu-copy'>시험기간 변칙 편성을 설명할 수 있는 키워드를 현재 시간표에서 먼저 모아 보여줍니다. S-LMS 학교 일정·직보 데이터가 연결되면 확정 직보/미정 직보/대체진행까지 같은 영역에 표시할 수 있습니다.</p>";
+	          html += "<div class='review-signal-grid'>" +
+	            renderReviewSignalCard("직보·시험성 입력", (tags.jikboLike || []).length, "직보/시험/내신/기말 등") +
+	            renderReviewSignalCard("오늘만·특강", (tags.oneOff || []).length, "평소 패턴과 달라도 정상일 수 있음") +
+	            renderReviewSignalCard("보강·보충", (tags.supplement || []).length, "정규 누락 경고 완화 후보") +
+	            renderReviewSignalCard("결석예고·휴강", (tags.absence || []).length, "발송/시수 처리 확인") +
+	            renderReviewSignalCard("당일취소", (tags.cancellation || []).length, "안내 문구와 시수 처리 확인") +
+	            renderReviewSignalCard("자습", (tags.selfStudy || []).length, "수업 사이 공백/대기 관리") +
+	            "</div>";
+	          html += "<div class='review-section-title'><span>시험·직보 관련 입력 위치</span><span>" + ((tags.jikboLike || []).length + (tags.oneOff || []).length + (tags.supplement || []).length) + "개</span></div>";
+	          html += renderReviewTagChips([].concat(tags.jikboLike || [], tags.oneOff || [], tags.supplement || []));
+	          html += "<div class='review-source-note'>다음 단계 연동 대상: S-LMS Firebase의 학교 일정, 직보 과목 사전, 학생별 직보 상태와 Supabase 시수 패턴. 현재 배포에서는 라이브 시간표 내부 입력값 기준으로 먼저 분리 표시합니다.</div>";
+	          html += "</section>";
+	          html += "<section class='review-panel' data-review-panel='send'>";
+	          html += "<p class='review-submenu-copy'>등원 안내/시간표 카드 발송 전에 처리해야 할 위험 신호를 모아 확인합니다.</p>";
+	          html += "<div class='review-signal-grid'>" +
+	            renderReviewSignalCard("발송 전 차단 후보", sendBlockingCount, "누락/확인필요/강사표시 오류 중심") +
+	            renderReviewSignalCard("1시간 배정", issues.filter(function(issue) { return issue.type === 'single'; }).length, "의도된 단시간 수업인지 확인") +
+	            renderReviewSignalCard("결석·취소 입력", ((tags.absence || []).length + (tags.cancellation || []).length), "카드/안내 문구 확인") +
+	            "</div>";
+	          html += "<div class='review-section-title'><span>발송 전 우선 처리</span><span>" + actionCards.length + "개</span></div>";
+	          html += renderReviewActionCards(actionCards);
+	          html += "</section>";
 	          html += "</div>";
 	          reviewList.innerHTML = html;
+	          setReviewTab('overview');
 	        }
 	        var currentSnapshot = buildReviewSnapshot(lastData);
 	        currentSnapshot.allStudentNamesCount = getReviewObjectKeys(currentSnapshot.allStudentNames).length;
@@ -6399,6 +6580,17 @@
       
       function closeReviewModal() {
         document.getElementById('reviewModal').style.display = 'none';
+      }
+      function setReviewTab(tabName) {
+        var root = document.getElementById('reviewResultList');
+        if (!root) return;
+        var target = tabName || 'overview';
+        root.querySelectorAll('.review-tab').forEach(function(button) {
+          button.classList.toggle('active', button.getAttribute('data-review-tab') === target);
+        });
+        root.querySelectorAll('.review-panel').forEach(function(panel) {
+          panel.classList.toggle('active', panel.getAttribute('data-review-panel') === target);
+        });
       }
       function renderTableItem(itemDiv, text) { 
         var rawText = String(text || "");
