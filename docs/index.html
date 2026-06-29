@@ -169,6 +169,71 @@
         .review-priority-grid { grid-template-columns: 1fr; }
         .review-signal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
+      #reviewModal { padding: 14px; box-sizing: border-box; }
+      .review-box { width: min(1540px, calc(100vw - 28px)); height: min(920px, calc(100vh - 28px)); max-height: calc(100vh - 28px); padding: 20px; border-radius: 18px; box-sizing: border-box; }
+      .review-modal-head { margin-bottom: 10px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+      .review-list { flex: 1; min-height: 0; max-height: none; margin-top: 0; padding: 0; border: 0; background: transparent; overflow-y: auto; }
+      .review-tabs { position: sticky; top: 0; z-index: 5; padding: 8px 0 10px; margin: 0; background: #fff; border-bottom: 1px solid #e2e8f0; }
+      .review-dashboard { gap: 12px; padding-top: 12px; }
+      .review-dashboard-head { border-radius: 12px; background: linear-gradient(135deg, #eef6ff 0%, #ffffff 58%, #f0fdf4 100%); }
+      .review-dashboard-title { font-size: 1.15rem; }
+      .review-kpi-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      .review-kpi { min-height: 84px; border-radius: 10px; }
+      .review-kpi.danger { border-color: #fecaca; background: #fff1f2; }
+      .review-kpi.warn { border-color: #fed7aa; background: #fff7ed; }
+      .review-kpi.info { border-color: #bfdbfe; background: #eff6ff; }
+      .review-kpi.good { border-color: #bbf7d0; background: #f0fdf4; }
+      .review-kpi-value { font-size: 1.5rem; }
+      .review-overview-board { display: grid; grid-template-columns: minmax(340px, 0.9fr) minmax(460px, 1.35fr) minmax(320px, 0.85fr); gap: 12px; align-items: start; }
+      .review-board-column { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+      .review-board-card { border: 1px solid #dbeafe; border-radius: 12px; background: #fff; padding: 14px; min-width: 0; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04); }
+      .review-board-card.soft { background: #f8fbff; }
+      .review-board-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #0f172a; font-size: 0.98rem; font-weight: 950; }
+      .review-board-sub { margin-top: 4px; color: #64748b; font-size: 0.78rem; font-weight: 750; line-height: 1.4; }
+      .review-group-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .review-group-card { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 12px; min-height: 164px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+      .review-group-card:hover { border-color: #93c5fd; transform: translateY(-1px); box-shadow: 0 12px 24px rgba(37, 99, 235, 0.10); }
+      .review-group-card.danger { border-color: #fecaca; background: #fff7f7; }
+      .review-group-card.warn { border-color: #fed7aa; background: #fffaf2; }
+      .review-group-card.info { border-color: #bfdbfe; background: #f8fbff; }
+      .review-group-card.good { border-color: #bbf7d0; background: #f7fff9; }
+      .review-group-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+      .review-group-title { color: #0f172a; font-size: 0.92rem; font-weight: 950; line-height: 1.25; }
+      .review-group-count { flex: 0 0 auto; min-width: 38px; border-radius: 999px; padding: 5px 9px; text-align: center; background: #0f3f85; color: #fff; font-weight: 950; font-size: 0.8rem; }
+      .review-group-desc { color: #64748b; font-size: 0.75rem; font-weight: 760; line-height: 1.35; }
+      .review-mini-list { display: flex; flex-direction: column; gap: 5px; margin-top: auto; min-width: 0; }
+      .review-mini-row { color: #334155; font-size: 0.74rem; font-weight: 760; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .review-mini-row::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 999px; background: #94a3b8; margin-right: 6px; vertical-align: 1px; }
+      .review-data-grid { display: grid; gap: 8px; }
+      .review-data-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 10px 11px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+      .review-data-label { color: #475569; font-size: 0.78rem; font-weight: 850; line-height: 1.3; }
+      .review-data-value { color: #0f172a; font-size: 1rem; font-weight: 950; }
+      .review-data-row.loading { background: #f8fafc; }
+      .review-data-row.warn { border-color: #fed7aa; background: #fffbeb; }
+      .review-action-stack.compact .review-action-card { padding: 10px; border-radius: 10px; }
+      .review-action-stack.compact .review-action-meta { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      .review-ops-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+      .review-ops-chip { border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; padding: 10px; min-width: 0; }
+      .review-ops-chip strong { display: block; color: #0f172a; font-size: 1.05rem; font-weight: 950; }
+      .review-ops-chip span { display: block; margin-top: 3px; color: #64748b; font-size: 0.72rem; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .review-workflow-note { border: 1px solid #c7d2fe; border-radius: 12px; background: #eef2ff; color: #334155; padding: 12px; font-size: 0.8rem; font-weight: 760; line-height: 1.45; }
+      .review-workflow-note strong { color: #1e3a8a; }
+      @media (max-width: 1180px) {
+        .review-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .review-overview-board { grid-template-columns: 1fr; }
+        .review-board-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .review-board-column.primary { display: flex; }
+      }
+      @media (max-width: 760px) {
+        #reviewModal { padding: 8px; }
+        .review-box { width: calc(100vw - 16px); height: calc(100vh - 16px); padding: 14px; border-radius: 14px; }
+        .review-modal-head { flex-direction: column; }
+        .review-close-btn { width: 100%; }
+        .review-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 8px; }
+        .review-tab { flex: 0 0 auto; }
+        .review-kpi-grid, .review-group-grid, .review-board-column, .review-ops-strip { grid-template-columns: 1fr; }
+        .review-signal-grid { grid-template-columns: 1fr; }
+      }
       .ticker-wrap { width: 100%; background: #333; overflow: hidden; height: 30px; line-height: 30px; cursor: pointer; flex-shrink: 0; }
       .ticker { display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker 30s linear infinite; color: #fff; font-size: 0.85rem; font-weight: 500; }
       @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
@@ -6196,6 +6261,8 @@
                 return String(text || "").includes("T");
               }) || "";
               var lessonType = detectClassType(teacherItem);
+              var cellTextForContext = items.join(" ");
+              var isSelfStudyCell = /(자습|자기주도|자율학습)/.test(cellTextForContext);
               items.forEach(function(text) {
                 var txt = String(text || "");
                 var combinedText = String(teacherItem || "") + " " + txt;
@@ -6247,7 +6314,7 @@
                 snapshot.operationalTags.checkNeeded.push({ hour: h, room: colName, text: items.join(" ") });
                 snapshot.issues.push({ type: 'check', msg: `[${h}:00] ${colName} - 확인필요 표시가 남아 있습니다. 확정 여부를 확인하세요.` });
               }
-              if (cellStudents.length && !teacherItem) {
+              if (cellStudents.length && !teacherItem && !isSelfStudyCell) {
                 snapshot.issues.push({ type: 'teacher', msg: `[${h}:00] ${colName} - 학생은 있으나 담당 강사 표시가 없습니다 (${cellStudents.join(", ")})` });
               }
               if (teacherItem && lessonType && !cellAllStudents.length && !String(teacherItem || "").includes("휴강")) {
@@ -6440,8 +6507,9 @@
 	          }
 	          return cards.slice(0, 7);
 	        }
-	        function renderReviewActionCards(cards) {
-	          var html = "<div class='review-action-stack'>";
+	        function renderReviewActionCards(cards, options) {
+	          var opts = options || {};
+	          var html = "<div class='review-action-stack" + (opts.compact ? " compact" : "") + "'>";
 	          (cards || []).forEach(function(card, index) {
 	            html += "<div class='review-action-card " + escapeHtml(card.severity || 'info') + "'>" +
 	              "<div class='review-action-rank'>" + (index + 1) + "</div>" +
@@ -6451,6 +6519,51 @@
 	          });
 	          html += "</div>";
 	          return html;
+	        }
+	        function renderReviewMiniRows(items, emptyText, limit) {
+	          var list = (items || []).slice(0, limit || 4);
+	          if (!list.length) return "<div class='review-mini-row'>" + escapeHtml(emptyText || "확인할 항목이 없습니다.") + "</div>";
+	          return list.map(function(item) {
+	            var text = String((item && item.msg) || item || "").replace(/\s+/g, " ").trim();
+	            return "<div class='review-mini-row' title='" + escapeHtml(text) + "'>" + escapeHtml(text) + "</div>";
+	          }).join("");
+	        }
+	        function renderReviewGroupCard(tabName, title, count, tone, desc, items, emptyText) {
+	          var c = Number(count || 0);
+	          return "<button type='button' class='review-group-card " + escapeHtml(tone || "info") + "' onclick=\"setReviewTab('" + escapeHtml(tabName || "overview") + "')\">" +
+	            "<div class='review-group-head'><div><div class='review-group-title'>" + escapeHtml(title || "") + "</div>" +
+	            "<div class='review-group-desc'>" + escapeHtml(desc || "") + "</div></div><div class='review-group-count'>" + c + "</div></div>" +
+	            "<div class='review-mini-list'>" + renderReviewMiniRows(items || [], emptyText || "현재 특이 신호가 없습니다.", 4) + "</div>" +
+	            "</button>";
+	        }
+	        function renderReviewOpsStrip(tags) {
+	          tags = tags || {};
+	          var items = [
+	            ["직보·시험", (tags.jikboLike || []).length, "시험기간 변칙"],
+	            ["오늘만·특강", (tags.oneOff || []).length, "일회성 수업"],
+	            ["보강·보충", (tags.supplement || []).length, "정규와 구분"],
+	            ["결석·취소", ((tags.absence || []).length + (tags.cancellation || []).length), "카드/시수 확인"]
+	          ];
+	          return "<div class='review-ops-strip'>" + items.map(function(item) {
+	            return "<div class='review-ops-chip'><strong>" + item[1] + "</strong><span>" + escapeHtml(item[0] + " · " + item[2]) + "</span></div>";
+	          }).join("") + "</div>";
+	        }
+	        function renderReviewDataSourceCards(externalReview) {
+	          if (!externalReview || externalReview.loading) {
+	            return "<div class='review-data-grid'>" +
+	              "<div class='review-data-row loading'><div class='review-data-label'>S-LMS/Firebase</div><div class='review-data-value'>조회중</div></div>" +
+	              "<div class='review-data-row loading'><div class='review-data-label'>강사 포털 Supabase 시수</div><div class='review-data-value'>조회중</div></div>" +
+	              "</div>";
+	          }
+	          var counts = externalReview.sourceCounts || {};
+	          var hasErrors = (externalReview.errors || []).length > 0;
+	          return "<div class='review-data-grid'>" +
+	            "<div class='review-data-row " + (hasErrors ? "warn" : "") + "'><div class='review-data-label'>S-LMS 학교일정/직보상태</div><div class='review-data-value'>" + ((counts.events || 0) + (counts.statuses || 0)) + "</div></div>" +
+	            "<div class='review-data-row'><div class='review-data-label'>강사 포털 Supabase 최근 시수</div><div class='review-data-value'>" + (counts.attendanceRows || 0) + "</div></div>" +
+	            "<div class='review-data-row'><div class='review-data-label'>확정 직보 누락 후보</div><div class='review-data-value'>" + ((externalReview.confirmedMissing || []).length) + "</div></div>" +
+	            "<div class='review-data-row'><div class='review-data-label'>시수 패턴 누락 후보</div><div class='review-data-value'>" + ((externalReview.patternMissing || []).length) + "</div></div>" +
+	            (hasErrors ? "<div class='review-source-note'>제한: " + escapeHtml((externalReview.errors || []).join(" / ")) + "</div>" : "") +
+	            "</div>";
 	        }
 	        function renderReviewSignalCard(label, value, help) {
 	          return "<div class='review-signal-card'><div class='review-signal-label'>" + escapeHtml(label) + "</div><div class='review-signal-value'>" + escapeHtml(String(value)) + "</div><div class='review-signal-help'>" + escapeHtml(help || "") + "</div></div>";
@@ -6859,6 +6972,13 @@
 	          var mediumCount = allIssues.filter(function(issue) { return getReviewSeverity(issue) === 'medium'; }).length;
 	          var actionCards = buildReviewActionCards(allIssues, dashboardItems);
 	          var currentOnlyIssues = issues.filter(function(issue) { return issue.type !== 'missing'; });
+	          var missingIssues = issues.filter(function(issue) { return issue.type === 'missing'; });
+	          var externalJikboIssues = externalIssues.filter(function(issue) { return issue.type === 'external-jikbo-missing' || issue.type === 'external-jikbo-unresolved'; });
+	          var externalPatternIssues = externalIssues.filter(function(issue) { return issue.type === 'external-pattern-missing'; });
+	          var scheduleChangeItems = dashboardItems.filter(function(item) { return item.type !== 'missing'; });
+	          var sendPrepIssues = allIssues.filter(function(issue) {
+	            return getReviewSeverity(issue) === 'high' || issue.type === 'single' || issue.type === 'external-jikbo-missing';
+	          });
 	          var sendBlockingCount = highCount;
 	          var html = "";
 	          html += "<div class='review-tabs'>" +
@@ -6876,15 +6996,52 @@
 	            "<div class='review-dashboard-score'><strong>" + (comparison ? matchPercent + "%" : "-") + "</strong><span>지난주 학생 일치율</span><div class='review-meter'><div class='review-meter-fill' style='width:" + (comparison ? matchPercent : 0) + "%'></div></div></div>" +
 	            "</div>";
 	          html += "<div class='review-kpi-grid'>" +
-	            "<div class='review-kpi'><div class='review-kpi-label'>즉시 확인</div><div class='review-kpi-value'>" + highCount + "건</div><div class='review-kpi-note'>누락·중복·강사표시·확인필요</div></div>" +
-	            "<div class='review-kpi'><div class='review-kpi-label'>주의 확인</div><div class='review-kpi-value'>" + mediumCount + "건</div><div class='review-kpi-note'>1시간/시간/시수/상태 변동</div></div>" +
-	            "<div class='review-kpi'><div class='review-kpi-label'>현재 학생</div><div class='review-kpi-value'>" + (currentSnapshot.allStudentNamesCount || 0) + "명</div><div class='review-kpi-note'>시간표 입력 기준</div></div>" +
-	            "<div class='review-kpi'><div class='review-kpi-label'>검토 신호</div><div class='review-kpi-value'>" + issueCount + "건</div><div class='review-kpi-note'>" + (changeCount ? "주간 변동 " + changeCount + "건 포함" : "현재표 자체 검토 포함") + "</div></div>" +
+	            "<div class='review-kpi danger'><div class='review-kpi-label'>즉시 확인</div><div class='review-kpi-value'>" + highCount + "건</div><div class='review-kpi-note'>발송 전 우선 처리</div></div>" +
+	            "<div class='review-kpi warn'><div class='review-kpi-label'>주의 확인</div><div class='review-kpi-value'>" + mediumCount + "건</div><div class='review-kpi-note'>변칙 여부 판단</div></div>" +
+	            "<div class='review-kpi info'><div class='review-kpi-label'>현재 학생</div><div class='review-kpi-value'>" + (currentSnapshot.allStudentNamesCount || 0) + "명</div><div class='review-kpi-note'>시간표 입력 기준</div></div>" +
+	            "<div class='review-kpi'><div class='review-kpi-label'>주간 변동</div><div class='review-kpi-value'>" + changeCount + "건</div><div class='review-kpi-note'>지난주 같은 요일 대비</div></div>" +
+	            "<div class='review-kpi info'><div class='review-kpi-label'>외부 신호</div><div class='review-kpi-value'>" + externalIssues.length + "건</div><div class='review-kpi-note'>S-LMS/시수 패턴</div></div>" +
+	            "<div class='review-kpi " + (sendBlockingCount ? "danger" : "good") + "'><div class='review-kpi-label'>발송 차단 후보</div><div class='review-kpi-value'>" + sendBlockingCount + "건</div><div class='review-kpi-note'>카드 발송 전 정리</div></div>" +
 	            "</div>";
-	          html += "<div class='review-priority-grid'><div>" +
-	            "<div class='review-section-title'><span>실무자 우선 처리</span><span>" + actionCards.length + "개</span></div>" +
-	            renderReviewActionCards(actionCards) +
-	            "</div><div class='review-mini-note'><strong>점검 기준</strong><br>빨간 항목은 발송 전 반드시 확인하고, 주황 항목은 시험기간·직보·오늘만 수업 여부를 감안해 판단하세요. 데이터가 불러와지지 않아도 기존 시간표 검토는 계속 동작합니다.</div></div>";
+	          html += "<div class='review-overview-board'>" +
+	            "<div class='review-board-column primary'>" +
+	              "<div class='review-board-card'>" +
+	                "<div class='review-board-title'><span>실무자 우선 처리 큐</span><span>" + actionCards.length + "개</span></div>" +
+	                "<div class='review-board-sub'>위에서부터 처리하면 발송 전 위험을 가장 빠르게 줄일 수 있습니다.</div>" +
+	                renderReviewActionCards(actionCards, { compact: true }) +
+	              "</div>" +
+	              "<div class='review-workflow-note'><strong>권장 흐름</strong><br>1. 강사/학생 표시 오류와 확정 직보 누락을 먼저 정리합니다.<br>2. 지난주 대비 누락은 시험기간·오늘만 수업 여부를 확인합니다.<br>3. 발송 준비 탭에서 1시간 배정과 결석·취소 문구를 마무리합니다.</div>" +
+	            "</div>" +
+	            "<div class='review-board-column'>" +
+	              "<div class='review-board-card soft'>" +
+	                "<div class='review-board-title'><span>분류별 점검 보드</span><span>" + issueCount + "건</span></div>" +
+	                "<div class='review-board-sub'>업무 성격별로 나누어 확인합니다. 카드를 누르면 해당 탭으로 이동합니다.</div>" +
+	                "<div class='review-group-grid'>" +
+	                  renderReviewGroupCard('current', '현재표 구조 오류', currentOnlyIssues.length, currentOnlyIssues.length ? 'danger' : 'good', '중복, 강사 누락, 확인필요, 정원 오류', currentOnlyIssues, '현재표 자체 오류가 없습니다.') +
+	                  renderReviewGroupCard('changes', '지난주 대비 누락', missingIssues.length, missingIssues.length ? 'danger' : 'good', '지난주에는 있었지만 현재표에 없는 학생', missingIssues, '지난주 대비 누락 후보가 없습니다.') +
+	                  renderReviewGroupCard('changes', '시간·시수·강의실 변동', scheduleChangeItems.length, scheduleChangeItems.length ? 'warn' : 'good', '정규 패턴에서 달라진 학생', scheduleChangeItems, '주요 변동 신호가 없습니다.') +
+	                  renderReviewGroupCard('exam', '시험·직보/외부 데이터', externalIssues.length + (tags.jikboLike || []).length, (externalIssues.length || (tags.jikboLike || []).length) ? 'info' : 'good', 'S-LMS 직보, 시험 일정, 시수 패턴', externalJikboIssues.concat(externalPatternIssues), '연동 기반 위험 신호가 없습니다.') +
+	                "</div>" +
+	              "</div>" +
+	              "<div class='review-board-card'>" +
+	                "<div class='review-board-title'><span>시험기간 운영 신호</span><span>" + (((tags.jikboLike || []).length + (tags.oneOff || []).length + (tags.supplement || []).length + (tags.absence || []).length + (tags.cancellation || []).length)) + "개</span></div>" +
+	                "<div class='review-board-sub'>기말고사 기간에는 누락처럼 보이는 항목도 직보·오늘만·보강일 수 있습니다.</div>" +
+	                renderReviewOpsStrip(tags) +
+	              "</div>" +
+	            "</div>" +
+	            "<div class='review-board-column'>" +
+	              "<div class='review-board-card'>" +
+	                "<div class='review-board-title'><span>연동 데이터 상태</span><span>Live</span></div>" +
+	                "<div class='review-board-sub'>S-LMS와 강사 포털 시수표에서 가져온 보조 판단 근거입니다.</div>" +
+	                renderReviewDataSourceCards(externalReview) +
+	              "</div>" +
+	              "<div class='review-board-card'>" +
+	                "<div class='review-board-title'><span>발송 전 체크</span><span>" + sendPrepIssues.length + "건</span></div>" +
+	                "<div class='review-board-sub'>시간표 카드 발송 전에 다시 확인할 항목입니다.</div>" +
+	                "<div class='review-mini-list'>" + renderReviewMiniRows(sendPrepIssues, '발송 전 차단 후보가 없습니다.', 8) + "</div>" +
+	              "</div>" +
+	            "</div>" +
+	          "</div>";
 	          html += "</section>";
 	          html += "<section class='review-panel' data-review-panel='changes'>";
 	          html += "<p class='review-submenu-copy'>지난주 같은 요일과 비교해 학생 누락, 신규, 시간·강의실·시수 변경을 확인합니다.</p>";
