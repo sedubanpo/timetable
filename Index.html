@@ -218,11 +218,62 @@
       .review-ops-chip span { display: block; margin-top: 3px; color: #64748b; font-size: 0.72rem; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .review-workflow-note { border: 1px solid #c7d2fe; border-radius: 12px; background: #eef2ff; color: #334155; padding: 12px; font-size: 0.8rem; font-weight: 760; line-height: 1.45; }
       .review-workflow-note strong { color: #1e3a8a; }
+      .review-exam-subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+      .review-exam-subtab { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 999px; padding: 8px 12px; font-size: 0.8rem; font-weight: 950; cursor: pointer; }
+      .review-exam-subtab.active { background: #111827; border-color: #111827; color: #fff; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14); }
+      .review-exam-panel { display: none; }
+      .review-exam-panel.active { display: block; }
+      .review-exam-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: start; }
+      .review-teacher-sidebar { border: 1px solid #dbeafe; border-radius: 12px; background: #fff; padding: 12px; max-height: 640px; overflow: auto; }
+      .review-teacher-sidebar-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin-bottom: 10px; color: #0f172a; font-size: 0.9rem; font-weight: 950; }
+      .review-teacher-group { margin-top: 12px; }
+      .review-teacher-group:first-child { margin-top: 0; }
+      .review-teacher-group-title { color: #64748b; font-size: 0.74rem; font-weight: 950; letter-spacing: 0; margin-bottom: 6px; }
+      .review-teacher-button { width: 100%; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 10px; padding: 10px; margin-bottom: 6px; text-align: left; cursor: pointer; transition: border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+      .review-teacher-button.active { background: #eff6ff; border-color: #60a5fa; box-shadow: inset 3px 0 0 #2563eb; }
+      .review-teacher-name { display: flex; justify-content: space-between; gap: 8px; color: #0f172a; font-size: 0.84rem; font-weight: 950; }
+      .review-teacher-meta { margin-top: 4px; color: #64748b; font-size: 0.72rem; font-weight: 780; line-height: 1.35; }
+      .review-teacher-board { min-width: 0; border: 1px solid #dbeafe; border-radius: 12px; background: #fff; padding: 12px; }
+      .review-teacher-schedule-panel { display: none; }
+      .review-teacher-schedule-panel.active { display: block; }
+      .review-teacher-board-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+      .review-teacher-board-title { color: #0f172a; font-size: 1rem; font-weight: 950; }
+      .review-teacher-board-sub { margin-top: 4px; color: #64748b; font-size: 0.76rem; font-weight: 760; line-height: 1.4; }
+      .review-teacher-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+      .review-teacher-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 8px; background: #eef2ff; border: 1px solid #dbeafe; color: #334155; font-size: 0.72rem; font-weight: 900; }
+      .review-teacher-badge.warn { background: #fff1f2; border-color: #fecaca; color: #be123c; }
+      .review-week-shell { overflow: auto; border: 1px solid #e2e8f0; border-radius: 12px; }
+      .review-week-table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: #fff; }
+      .review-week-table th, .review-week-table td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+      .review-week-table th:last-child, .review-week-table td:last-child { border-right: 0; }
+      .review-week-table tr:last-child td { border-bottom: 0; }
+      .review-week-time-head, .review-week-time-cell { width: 74px; background: #f8fafc; color: #1e3a8a; text-align: center; font-size: 0.72rem; font-weight: 950; line-height: 1.35; }
+      .review-week-date-head { height: 48px; background: #f8fbff; color: #0f172a; text-align: center; font-size: 0.78rem; font-weight: 950; }
+      .review-week-date-head span { display: block; margin-top: 2px; color: #64748b; font-size: 0.7rem; font-weight: 850; }
+      .review-week-date-head.today { background: #eff6ff; box-shadow: inset 0 -3px 0 #2563eb; }
+      .review-week-cell { min-height: 92px; padding: 6px; background: #fff; }
+      .review-jikbo-card { border: 1px solid #fde68a; background: #fffbeb; border-radius: 8px; padding: 7px; margin-bottom: 5px; color: #0f172a; line-height: 1.3; box-shadow: 0 4px 12px rgba(251, 191, 36, 0.12); }
+      .review-jikbo-time { color: #1d4ed8; font-size: 0.68rem; font-weight: 950; }
+      .review-jikbo-title { margin-top: 2px; font-size: 0.76rem; font-weight: 950; }
+      .review-jikbo-meta { margin-top: 2px; color: #475569; font-size: 0.68rem; font-weight: 800; }
+      .review-jikbo-card.missing { border-color: #fecaca; background: #fff1f2; }
+      .review-student-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .review-student-card { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 12px; min-width: 0; }
+      .review-student-card.missing { border-color: #fecaca; background: #fff7f7; }
+      .review-student-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+      .review-student-name { color: #0f172a; font-size: 0.92rem; font-weight: 950; line-height: 1.25; }
+      .review-student-subject { margin-top: 3px; color: #475569; font-size: 0.76rem; font-weight: 850; }
+      .review-student-status { flex: 0 0 auto; border-radius: 999px; padding: 5px 8px; background: #dcfce7; color: #166534; font-size: 0.7rem; font-weight: 950; }
+      .review-student-card.missing .review-student-status { background: #fee2e2; color: #be123c; }
+      .review-student-meta { display: grid; gap: 4px; margin-top: 10px; color: #334155; font-size: 0.76rem; font-weight: 780; line-height: 1.35; }
       @media (max-width: 1180px) {
         .review-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .review-overview-board { grid-template-columns: 1fr; }
         .review-board-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .review-board-column.primary { display: flex; }
+        .review-exam-layout { grid-template-columns: 1fr; }
+        .review-teacher-sidebar { max-height: none; }
+        .review-student-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
       @media (max-width: 760px) {
         #reviewModal { padding: 8px; }
@@ -233,6 +284,11 @@
         .review-tab { flex: 0 0 auto; }
         .review-kpi-grid, .review-group-grid, .review-board-column, .review-ops-strip { grid-template-columns: 1fr; }
         .review-signal-grid { grid-template-columns: 1fr; }
+        .review-exam-subtabs { overflow-x: auto; flex-wrap: nowrap; }
+        .review-exam-subtab { flex: 0 0 auto; }
+        .review-teacher-board-head { flex-direction: column; }
+        .review-teacher-badges { justify-content: flex-start; }
+        .review-student-grid { grid-template-columns: 1fr; }
       }
       .ticker-wrap { width: 100%; background: #333; overflow: hidden; height: 30px; line-height: 30px; cursor: pointer; flex-shrink: 0; }
       .ticker { display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker 30s linear infinite; color: #fff; font-size: 0.85rem; font-weight: 500; }
@@ -6810,12 +6866,13 @@
 	            return getReviewStatusDateKeys(item).indexOf(targetDateKey) !== -1;
 	          }).map(function(item) {
 	            var studentName = getReviewStatusStudentName(item);
-	            var stateText = String(item.progressStatus || item.status || item.state || item.result || "");
-	            var subject = String(item.subject || item.jikboSubject || item.subjectName || "");
-	            return Object.assign({}, item, { __studentName: studentName, __stateText: stateText, __subject: subject });
+	            var stateText = String(item.progressStatus || item.jikboStatus || item.confirmStatus || item.status || item.state || item.result || "");
+	            var subject = String(item.subjectName || item.subject || item.jikboSubject || item.subject_name || item.courseSubject || "");
+	            var teacherName = String(item.progressInstructorName || item.instructorName || item.teacherName || item.assignedTeacher || item.teacher || item.instructorLabel || "");
+	            return Object.assign({}, item, { __studentName: studentName, __stateText: stateText, __subject: subject, __teacherName: teacherName });
 	          });
 	          var confirmedStatuses = relevantStatuses.filter(function(item) {
-	            return /(확정|대체|진행|완료|참여)/.test(item.__stateText) && !/(취소|제외|불가)/.test(item.__stateText);
+	            return (/(확정|대체|진행|완료|참여|assigned)/i.test(item.__stateText) || !!item.__teacherName) && !/(미정|미확정|대기|보류|취소|제외|불가)/.test(item.__stateText);
 	          });
 	          var unresolvedStatuses = relevantStatuses.filter(function(item) {
 	            return /(미정|대기|확인|보류|미진행|미확정)/.test(item.__stateText || "") || !item.__stateText;
@@ -6866,13 +6923,16 @@
 	              attendanceRows: attendanceRows.length
 	            },
 	            confirmedMissing: confirmedMissing,
+	            relevantStatuses: relevantStatuses,
+	            confirmedStatuses: confirmedStatuses,
 	            unresolvedStatuses: unresolvedStatuses.slice(0, 10),
+	            allUnresolvedStatuses: unresolvedStatuses,
 	            examEvents: examEvents,
 	            patternMissing: patternMissing
 	          };
 	        }
 	        function loadReviewExternalContext(targetDateKey, currentSnapshot) {
-	          if (!targetDateKey) return Promise.resolve({ loading: false, targetDateKey: "", errors: ["점검 대상 날짜를 파악하지 못했습니다."], sourceCounts: {}, confirmedMissing: [], unresolvedStatuses: [], examEvents: [], patternMissing: [] });
+	          if (!targetDateKey) return Promise.resolve({ loading: false, targetDateKey: "", errors: ["점검 대상 날짜를 파악하지 못했습니다."], sourceCounts: {}, confirmedMissing: [], relevantStatuses: [], confirmedStatuses: [], unresolvedStatuses: [], allUnresolvedStatuses: [], examEvents: [], patternMissing: [] });
 	          window.seduReviewContextCache = window.seduReviewContextCache || {};
 	          var cacheKey = "review:" + targetDateKey;
 	          var cached = window.seduReviewContextCache[cacheKey];
@@ -6886,8 +6946,8 @@
 	            return user.getIdToken();
 	          }).then(function(idToken) {
 	            return Promise.all([
-	              fetchReviewFirestoreCollection("events", idToken, 900).then(function(rows) { raw.events = rows; }),
-	              fetchReviewFirestoreCollection("jikboStatuses", idToken, 900).then(function(rows) { raw.statuses = rows; })
+	              fetchReviewFirestoreCollection("events", idToken, 1500).then(function(rows) { raw.events = rows; }),
+	              fetchReviewFirestoreCollection("jikboStatuses", idToken, 2500).then(function(rows) { raw.statuses = rows; })
 	            ]);
 	          }).catch(function(err) {
 	            raw.errors.push(err && err.message ? err.message : String(err || "Firebase 조회 실패"));
@@ -6947,6 +7007,271 @@
 	          } else {
 	            html += "<div class='review-empty'>대상일 또는 다음날에 연결된 시험 일정 신호가 없습니다.</div>";
 	          }
+	          return html;
+	        }
+	        function getReviewStatusTeacherName(item) {
+	          return String((item && (item.__teacherName || item.progressInstructorName || item.instructorName || item.teacherName || item.assignedTeacher || item.teacher || item.instructorLabel)) || "").trim();
+	        }
+	        function getReviewStatusSubject(item) {
+	          return String((item && (item.__subject || item.subjectName || item.subject || item.jikboSubject || item.subject_name || item.courseSubject)) || "과목 미지정").trim();
+	        }
+	        function getReviewStatusSchool(item) {
+	          return String((item && (item.school || item.schoolName || item.targetSchool || item.studentSchool || item.student_school)) || "").trim();
+	        }
+	        function getReviewStatusGrade(item) {
+	          return String((item && (item.grade || item.studentGrade || item.targetGrade || item.student_grade)) || "").trim();
+	        }
+	        function getReviewStatusScheduleDate(item) {
+	          var keys = getReviewStatusDateKeys(item);
+	          return normalizeReviewDateKey(item && (item.actualDate || item.scheduleDate || item.substituteDate || item.dateKey || item.jikboDate || item.classDate)) || keys[0] || "";
+	        }
+	        function parseReviewTimeMinutes(value) {
+	          var text = String(value || "").trim();
+	          if (!text) return null;
+	          var match = text.match(/(오전|오후|AM|PM)?\s*(\d{1,2})\s*:\s*(\d{2})/i);
+	          if (!match) return null;
+	          var marker = String(match[1] || "").toLowerCase();
+	          var hour = Number(match[2]);
+	          var minute = Number(match[3]);
+	          if (isNaN(hour) || isNaN(minute)) return null;
+	          if ((marker === "오후" || marker === "pm") && hour < 12) hour += 12;
+	          if ((marker === "오전" || marker === "am") && hour === 12) hour = 0;
+	          return Math.max(0, Math.min(24 * 60, hour * 60 + minute));
+	        }
+	        function formatReviewMinutes(minutes) {
+	          var safe = Math.max(0, Math.min(24 * 60, Number(minutes || 0)));
+	          return String(Math.floor(safe / 60)).padStart(2, "0") + ":" + String(safe % 60).padStart(2, "0");
+	        }
+	        function getReviewStatusStartMinutes(item) {
+	          return parseReviewTimeMinutes(item && (item.startTime || item.confirmedTime || item.start_time || item.start_time_text || item.start || item.timeStart));
+	        }
+	        function getReviewStatusEndMinutes(item) {
+	          return parseReviewTimeMinutes(item && (item.endTime || item.end_time || item.end_time_text || item.end || item.timeEnd));
+	        }
+	        function getReviewStatusTimeRange(item) {
+	          var start = getReviewStatusStartMinutes(item);
+	          var end = getReviewStatusEndMinutes(item);
+	          if (start === null) return "시간 미정";
+	          if (end === null || end <= start) end = start + 60;
+	          return formatReviewMinutes(start) + "-" + formatReviewMinutes(end);
+	        }
+	        function getReviewSubjectGroup(subject) {
+	          var text = String(subject || "");
+	          if (/국어|문학|언어|화법/.test(text)) return "국어";
+	          if (/수학|미적|확률|기하|대수/.test(text)) return "수학";
+	          if (/영어/.test(text)) return "영어";
+	          if (/과학|물리|화학|생명|지구|통합과학/.test(text)) return "과학";
+	          if (/사회|역사|한국사|윤리|정치|법|경제|세계|지리|동아시아|통합사회/.test(text)) return "사회";
+	          return "기타";
+	        }
+	        function getReviewWeekStartKey(dateKey) {
+	          var m = String(dateKey || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	          if (!m) return "";
+	          var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+	          var offset = d.getDay() === 0 ? -6 : 1 - d.getDay();
+	          d.setDate(d.getDate() + offset);
+	          return formatReviewDateKey(d);
+	        }
+	        function getReviewWeekDateKeys(dateKey) {
+	          var start = getReviewWeekStartKey(dateKey);
+	          var keys = [];
+	          for (var i = 0; i < 7; i++) keys.push(addReviewDateDays(start, i));
+	          return keys;
+	        }
+	        function formatReviewWeekDayLabel(dateKey) {
+	          var m = String(dateKey || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	          if (!m) return { weekday: "", date: "" };
+	          var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+	          var weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+	          return { weekday: weekdays[d.getDay()], date: Number(m[2]) + "/" + Number(m[3]) };
+	        }
+	        function isReviewStatusInHourSlot(item, dateKey, slotStart) {
+	          if (getReviewStatusScheduleDate(item) !== dateKey) return false;
+	          var start = getReviewStatusStartMinutes(item);
+	          if (start === null) return false;
+	          var end = getReviewStatusEndMinutes(item);
+	          if (end === null || end <= start) end = start + 60;
+	          return start < slotStart + 60 && end > slotStart;
+	        }
+	        function getReviewHourRows(items) {
+	          var starts = [];
+	          var ends = [];
+	          (items || []).forEach(function(item) {
+	            var start = getReviewStatusStartMinutes(item);
+	            if (start === null) return;
+	            var end = getReviewStatusEndMinutes(item);
+	            if (end === null || end <= start) end = start + 60;
+	            starts.push(Math.floor(start / 60) * 60);
+	            ends.push(Math.ceil(end / 60) * 60);
+	          });
+	          if (!starts.length) {
+	            for (var fallback = 13 * 60; fallback < 22 * 60; fallback += 60) starts.push(fallback), ends.push(fallback + 60);
+	          }
+	          var minStart = Math.max(8 * 60, Math.min.apply(null, starts));
+	          var maxEnd = Math.min(24 * 60, Math.max.apply(null, ends));
+	          var rows = [];
+	          for (var cursor = minStart; cursor < maxEnd; cursor += 60) rows.push(cursor);
+	          return rows;
+	        }
+	        function buildReviewExamTimetableModel(externalReview, targetDateKey, currentSnapshot) {
+	          var currentMap = getReviewCurrentStudentMap(currentSnapshot);
+	          var confirmed = ((externalReview && externalReview.confirmedStatuses) || []).filter(function(item) {
+	            return getReviewStatusTeacherName(item) && getReviewStatusStudentName(item);
+	          });
+	          var targetItems = confirmed.filter(function(item) {
+	            return getReviewStatusDateKeys(item).indexOf(targetDateKey) !== -1;
+	          });
+	          var weekMap = {};
+	          getReviewWeekDateKeys(targetDateKey).forEach(function(key) { weekMap[key] = true; });
+	          var byTeacher = {};
+	          targetItems.forEach(function(item) {
+	            var teacherName = getReviewStatusTeacherName(item);
+	            if (!teacherName) return;
+	            var subjectGroup = getReviewSubjectGroup(getReviewStatusSubject(item));
+	            var teacherKey = normalizeReviewExternalName(teacherName);
+	            if (!byTeacher[teacherKey]) byTeacher[teacherKey] = { key: "", mapKey: teacherKey, name: teacherName, group: subjectGroup, targetItems: [], weekItems: [] };
+	            byTeacher[teacherKey].targetItems.push(item);
+	          });
+	          confirmed.forEach(function(item) {
+	            var teacherName = getReviewStatusTeacherName(item);
+	            var teacherKey = normalizeReviewExternalName(teacherName);
+	            if (!byTeacher[teacherKey]) return;
+	            if (weekMap[getReviewStatusScheduleDate(item)]) byTeacher[teacherKey].weekItems.push(item);
+	          });
+	          var teachers = Object.keys(byTeacher).map(function(key) { return byTeacher[key]; }).sort(function(a, b) {
+	            var groupOrder = { "국어": 0, "수학": 1, "영어": 2, "과학": 3, "사회": 4, "기타": 5 };
+	            return (groupOrder[a.group] - groupOrder[b.group]) || String(a.name).localeCompare(String(b.name), "ko");
+	          });
+	          teachers.forEach(function(teacher, index) {
+	            teacher.key = "teacher-" + index;
+	            teacher.weekItems.sort(function(a, b) {
+	              return String(getReviewStatusScheduleDate(a)).localeCompare(String(getReviewStatusScheduleDate(b))) ||
+	                String(getReviewStatusTimeRange(a)).localeCompare(String(getReviewStatusTimeRange(b))) ||
+	                String(getReviewStatusStudentName(a)).localeCompare(String(getReviewStatusStudentName(b)), "ko");
+	            });
+	          });
+	          var groups = {};
+	          teachers.forEach(function(teacher) {
+	            if (!groups[teacher.group]) groups[teacher.group] = [];
+	            groups[teacher.group].push(teacher);
+	          });
+	          var students = targetItems.map(function(item) {
+	            var studentName = getReviewStatusStudentName(item);
+	            var currentKey = normalizeReviewExternalName(studentName);
+	            return { item: item, studentName: studentName, inCurrent: !!currentMap[currentKey] };
+	          }).sort(function(a, b) {
+	            return (a.inCurrent === b.inCurrent ? 0 : a.inCurrent ? 1 : -1) ||
+	              String(getReviewStatusTimeRange(a.item)).localeCompare(String(getReviewStatusTimeRange(b.item))) ||
+	              String(a.studentName).localeCompare(String(b.studentName), "ko");
+	          });
+	          return { teachers: teachers, groups: groups, students: students, targetItems: targetItems, weekKeys: getReviewWeekDateKeys(targetDateKey), currentMap: currentMap };
+	        }
+	        function renderReviewJikboCard(item, model) {
+	          var studentName = getReviewStatusStudentName(item) || "학생 미지정";
+	          var currentKey = normalizeReviewExternalName(studentName);
+	          var missingClass = model && model.currentMap && !model.currentMap[currentKey] ? " missing" : "";
+	          var schoolLine = [getReviewStatusSchool(item), getReviewStatusGrade(item) ? getReviewStatusGrade(item) + "학년" : "", studentName].filter(Boolean).join(" · ");
+	          return "<div class='review-jikbo-card" + missingClass + "'>" +
+	            "<div class='review-jikbo-time'>" + escapeHtml(getReviewStatusTimeRange(item)) + "</div>" +
+	            "<div class='review-jikbo-title'>" + escapeHtml(schoolLine || studentName) + "</div>" +
+	            "<div class='review-jikbo-meta'>" + escapeHtml(getReviewStatusSubject(item)) + " · " + escapeHtml(String(item.__stateText || item.progressStatus || item.status || "확정")) + "</div>" +
+	            (item.note ? "<div class='review-jikbo-meta'>비고: " + escapeHtml(item.note) + "</div>" : "") +
+	            "</div>";
+	        }
+	        function renderReviewTeacherWeekTable(teacher, model, targetDateKey) {
+	          var weekItems = teacher.weekItems || [];
+	          var hourRows = getReviewHourRows(weekItems);
+	          var html = "<div class='review-week-shell'><table class='review-week-table'><thead><tr><th class='review-week-time-head'>시간<br>구간</th>";
+	          (model.weekKeys || []).forEach(function(dateKey) {
+	            var label = formatReviewWeekDayLabel(dateKey);
+	            html += "<th class='review-week-date-head" + (dateKey === targetDateKey ? " today" : "") + "'><strong>" + escapeHtml(label.weekday) + "</strong><span>" + escapeHtml(label.date) + "</span></th>";
+	          });
+	          html += "</tr></thead><tbody>";
+	          hourRows.forEach(function(slotStart) {
+	            html += "<tr><td class='review-week-time-cell'>" + escapeHtml(formatReviewMinutes(slotStart)) + "<br>" + escapeHtml(formatReviewMinutes(slotStart + 60)) + "</td>";
+	            (model.weekKeys || []).forEach(function(dateKey) {
+	              var cellItems = weekItems.filter(function(item) { return isReviewStatusInHourSlot(item, dateKey, slotStart); });
+	              html += "<td class='review-week-cell'>" + cellItems.map(function(item) { return renderReviewJikboCard(item, model); }).join("") + "</td>";
+	            });
+	            html += "</tr>";
+	          });
+	          html += "</tbody></table></div>";
+	          return html;
+	        }
+	        function renderReviewTeacherPanel(model, externalReview) {
+	          if (!externalReview) return "<div class='review-empty'>S-LMS 직보 데이터를 준비하고 있습니다.</div>";
+	          if (externalReview.loading) return "<div class='review-empty'>S-LMS 직보 데이터를 불러오는 중입니다...</div>";
+	          if (!model.teachers.length) return "<div class='review-empty'>점검 날짜에 확정된 강사별 직보 시간표가 없습니다.</div>" + renderReviewExternalPanel(externalReview);
+	          var groupOrder = ["국어", "수학", "영어", "과학", "사회", "기타"];
+	          var html = "<div class='review-exam-layout'><aside class='review-teacher-sidebar'>";
+	          html += "<div class='review-teacher-sidebar-head'><span>과목별 강사</span><span>" + model.teachers.length + "명</span></div>";
+	          groupOrder.forEach(function(group) {
+	            var teachers = model.groups[group] || [];
+	            if (!teachers.length) return;
+	            html += "<div class='review-teacher-group'><div class='review-teacher-group-title'>" + escapeHtml(group) + "</div>";
+	            teachers.forEach(function(teacher, index) {
+	              var firstTime = teacher.targetItems.map(getReviewStatusTimeRange).filter(Boolean).sort()[0] || "시간 미정";
+	              html += "<button type='button' class='review-teacher-button" + (teacher === model.teachers[0] ? " active" : "") + "' data-review-teacher-key='" + escapeHtml(teacher.key) + "' onclick=\"selectReviewTeacher('" + escapeHtml(teacher.key) + "')\">" +
+	                "<span class='review-teacher-name'><strong>" + escapeHtml(teacher.name) + "</strong><span>" + teacher.targetItems.length + "건</span></span>" +
+	                "<span class='review-teacher-meta'>" + escapeHtml(firstTime) + " · 주간 " + teacher.weekItems.length + "건</span>" +
+	                "</button>";
+	            });
+	            html += "</div>";
+	          });
+	          html += "</aside><div class='review-teacher-board'>";
+	          model.teachers.forEach(function(teacher, index) {
+	            var missingCount = teacher.targetItems.filter(function(item) {
+	              return !model.currentMap[normalizeReviewExternalName(getReviewStatusStudentName(item))];
+	            }).length;
+	            html += "<div class='review-teacher-schedule-panel" + (index === 0 ? " active" : "") + "' data-review-teacher-panel='" + escapeHtml(teacher.key) + "'>";
+	            html += "<div class='review-teacher-board-head'><div><div class='review-teacher-board-title'>" + escapeHtml(teacher.name) + " 강사 시험 시간표</div>" +
+	              "<div class='review-teacher-board-sub'>S-LMS 직보 진행일 기준 주간표입니다. 점검 날짜 확정 직보만 좌측 강사 목록에 반영됩니다.</div></div>" +
+	              "<div class='review-teacher-badges'><span class='review-teacher-badge'>선택일 " + teacher.targetItems.length + "건</span><span class='review-teacher-badge'>주간 " + teacher.weekItems.length + "건</span>" +
+	              "<span class='review-teacher-badge" + (missingCount ? " warn" : "") + "'>현재표 누락 " + missingCount + "건</span></div></div>";
+	            html += renderReviewTeacherWeekTable(teacher, model, externalReview.targetDateKey);
+	            html += "</div>";
+	          });
+	          html += "</div></div>";
+	          return html;
+	        }
+	        function renderReviewStudentPanel(model, externalReview) {
+	          if (!externalReview) return "<div class='review-empty'>S-LMS 직보 데이터를 준비하고 있습니다.</div>";
+	          if (externalReview.loading) return "<div class='review-empty'>S-LMS 직보 데이터를 불러오는 중입니다...</div>";
+	          var students = model.students || [];
+	          var missingCount = students.filter(function(entry) { return !entry.inCurrent; }).length;
+	          var html = "<div class='review-section-title'><span>확정 직보 학생</span><span>" + students.length + "명 · 누락 " + missingCount + "명</span></div>";
+	          if (!students.length) return html + "<div class='review-empty'>점검 날짜에 현재 시간표로 들어가야 하는 확정 직보 학생이 없습니다.</div>";
+	          html += "<div class='review-student-grid'>";
+	          students.forEach(function(entry) {
+	            var item = entry.item;
+	            var schoolLine = [getReviewStatusSchool(item), getReviewStatusGrade(item) ? getReviewStatusGrade(item) + "학년" : ""].filter(Boolean).join(" · ");
+	            html += "<div class='review-student-card" + (entry.inCurrent ? "" : " missing") + "'>" +
+	              "<div class='review-student-head'><div><div class='review-student-name'>" + escapeHtml(entry.studentName || "학생 미지정") + "</div>" +
+	              "<div class='review-student-subject'>" + escapeHtml(getReviewStatusSubject(item)) + "</div></div>" +
+	              "<span class='review-student-status'>" + (entry.inCurrent ? "현재표 있음" : "현재표 누락") + "</span></div>" +
+	              "<div class='review-student-meta'>" +
+	              "<span>강사: " + escapeHtml(getReviewStatusTeacherName(item) || "미배정") + "</span>" +
+	              "<span>시간: " + escapeHtml(getReviewStatusTimeRange(item)) + "</span>" +
+	              (schoolLine ? "<span>학교: " + escapeHtml(schoolLine) + "</span>" : "") +
+	              (item.note ? "<span>비고: " + escapeHtml(item.note) + "</span>" : "") +
+	              "</div></div>";
+	          });
+	          html += "</div>";
+	          return html;
+	        }
+	        function renderReviewExamTimetableDashboard(externalReview, tags, currentSnapshot) {
+	          var model = buildReviewExamTimetableModel(externalReview || {}, (externalReview && externalReview.targetDateKey) || "", currentSnapshot);
+	          var counts = (externalReview && externalReview.sourceCounts) || {};
+	          var html = "<div class='review-source-note'>연동 결과: Firebase 학교일정 " + (counts.events || 0) + "건, 직보상태 " + (counts.statuses || 0) + "건, 강사 포털 최근 시수 " + (counts.attendanceRows || 0) + "건" +
+	            ((externalReview && externalReview.errors || []).length ? "<br>제한: " + escapeHtml((externalReview.errors || []).join(" / ")) : "") + "</div>";
+	          html += "<div class='review-exam-subtabs'>" +
+	            "<button type='button' class='review-exam-subtab active' data-review-exam-subtab='teachers' onclick=\"setReviewExamSubtab('teachers')\">강사별 시험 시간표</button>" +
+	            "<button type='button' class='review-exam-subtab' data-review-exam-subtab='students' onclick=\"setReviewExamSubtab('students')\">학생별 시험 시간표</button>" +
+	            "</div>";
+	          html += "<section class='review-exam-panel active' data-review-exam-panel='teachers'>" + renderReviewTeacherPanel(model, externalReview) + "</section>";
+	          html += "<section class='review-exam-panel' data-review-exam-panel='students'>" + renderReviewStudentPanel(model, externalReview) + "</section>";
+	          html += "<div class='review-section-title'><span>시간표 입력 키워드</span><span>" + ((tags.jikboLike || []).length + (tags.oneOff || []).length + (tags.supplement || []).length) + "개</span></div>";
+	          html += renderReviewTagChips([].concat(tags.jikboLike || [], tags.oneOff || [], tags.supplement || []));
 	          return html;
 	        }
 	        function renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, previousDataLoaded, externalReview) {
@@ -7080,9 +7405,8 @@
 	            renderReviewSignalCard("당일취소", (tags.cancellation || []).length, "안내 문구와 시수 처리 확인") +
 	            renderReviewSignalCard("자습", (tags.selfStudy || []).length, "수업 사이 공백/대기 관리") +
 	            "</div>";
-	          html += "<div class='review-section-title'><span>시험·직보 관련 입력 위치</span><span>" + ((tags.jikboLike || []).length + (tags.oneOff || []).length + (tags.supplement || []).length) + "개</span></div>";
-	          html += renderReviewTagChips([].concat(tags.jikboLike || [], tags.oneOff || [], tags.supplement || []));
-	          html += renderReviewExternalPanel(externalReview);
+	          html += "<div class='review-section-title'><span>시험·직보 시간표 점검</span><span>" + ((externalReview && externalReview.confirmedStatuses || []).length) + "건</span></div>";
+	          html += renderReviewExamTimetableDashboard(externalReview, tags, currentSnapshot);
 	          html += "</section>";
 	          html += "<section class='review-panel' data-review-panel='send'>";
 	          html += "<p class='review-submenu-copy'>등원 안내/시간표 카드 발송 전에 처리해야 할 위험 신호를 모아 확인합니다.</p>";
@@ -7132,7 +7456,10 @@
 	              errors: [err && err.message ? err.message : String(err || "외부 데이터 조회 실패")],
 	              sourceCounts: {},
 	              confirmedMissing: [],
+	              relevantStatuses: [],
+	              confirmedStatuses: [],
 	              unresolvedStatuses: [],
+	              allUnresolvedStatuses: [],
 	              examEvents: [],
 	              patternMissing: []
 	            });
@@ -7152,6 +7479,27 @@
         });
         root.querySelectorAll('.review-panel').forEach(function(panel) {
           panel.classList.toggle('active', panel.getAttribute('data-review-panel') === target);
+        });
+      }
+      function setReviewExamSubtab(tabName) {
+        var root = document.getElementById('reviewResultList');
+        if (!root) return;
+        var target = tabName || 'teachers';
+        root.querySelectorAll('.review-exam-subtab').forEach(function(button) {
+          button.classList.toggle('active', button.getAttribute('data-review-exam-subtab') === target);
+        });
+        root.querySelectorAll('.review-exam-panel').forEach(function(panel) {
+          panel.classList.toggle('active', panel.getAttribute('data-review-exam-panel') === target);
+        });
+      }
+      function selectReviewTeacher(teacherKey) {
+        var root = document.getElementById('reviewResultList');
+        if (!root || !teacherKey) return;
+        root.querySelectorAll('.review-teacher-button').forEach(function(button) {
+          button.classList.toggle('active', button.getAttribute('data-review-teacher-key') === teacherKey);
+        });
+        root.querySelectorAll('.review-teacher-schedule-panel').forEach(function(panel) {
+          panel.classList.toggle('active', panel.getAttribute('data-review-teacher-panel') === teacherKey);
         });
       }
       function renderTableItem(itemDiv, text) { 
