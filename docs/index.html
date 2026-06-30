@@ -6833,6 +6833,14 @@
 	          });
 	          return keys;
 	        }
+	        function getReviewStatusScheduleDateKeys(item) {
+	          var keys = [];
+	          ["actualDate", "scheduleDate", "dateKey", "substituteDate", "jikboDate", "date", "targetDate", "classDate"].forEach(function(key) {
+	            var normalized = normalizeReviewDateKey(item && item[key]);
+	            if (normalized && keys.indexOf(normalized) === -1) keys.push(normalized);
+	          });
+	          return keys;
+	        }
 	        function getReviewEventDateKey(item) {
 	          return normalizeReviewDateKey(item.examDate || item.date || item.startDate || item.start || item.eventDate || item.targetDate || item.day);
 	        }
@@ -6863,7 +6871,7 @@
 	          var events = Array.isArray(raw.events) ? raw.events : [];
 	          var attendanceRows = Array.isArray(raw.attendanceRows) ? raw.attendanceRows : [];
 	          var relevantStatuses = statuses.filter(function(item) {
-	            return getReviewStatusDateKeys(item).indexOf(targetDateKey) !== -1;
+	            return getReviewStatusScheduleDateKeys(item).indexOf(targetDateKey) !== -1;
 	          }).map(function(item) {
 	            var studentName = getReviewStatusStudentName(item);
 	            var stateText = String(item.progressStatus || item.jikboStatus || item.confirmStatus || item.status || item.state || item.result || "");
@@ -7022,7 +7030,7 @@
 	          return String((item && (item.grade || item.studentGrade || item.targetGrade || item.student_grade)) || "").trim();
 	        }
 	        function getReviewStatusScheduleDate(item) {
-	          var keys = getReviewStatusDateKeys(item);
+	          var keys = getReviewStatusScheduleDateKeys(item);
 	          return normalizeReviewDateKey(item && (item.actualDate || item.scheduleDate || item.substituteDate || item.dateKey || item.jikboDate || item.classDate)) || keys[0] || "";
 	        }
 	        function parseReviewTimeMinutes(value) {
@@ -7119,7 +7127,7 @@
 	            return getReviewStatusTeacherName(item) && getReviewStatusStudentName(item);
 	          });
 	          var targetItems = confirmed.filter(function(item) {
-	            return getReviewStatusDateKeys(item).indexOf(targetDateKey) !== -1;
+	            return getReviewStatusScheduleDateKeys(item).indexOf(targetDateKey) !== -1;
 	          });
 	          var weekMap = {};
 	          getReviewWeekDateKeys(targetDateKey).forEach(function(key) { weekMap[key] = true; });
