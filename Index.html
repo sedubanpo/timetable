@@ -17,8 +17,8 @@
       };
     </script>
     <style>
-      :root { --primary: #0f1746; --secondary: #004d40; --accent: #3b82f6; --bg: #f8f9fa; --border: #e5e7eb; --sedu-blue: #024C9B; }
-      body { font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+      :root { --primary: #0f1746; --secondary: #004d40; --accent: #3b82f6; --bg: #f8f9fa; --border: #e5e7eb; --sedu-blue: #024C9B; --status-alert-bg: #fff1f2; --status-alert-border: #fb7185; --status-alert-text: #9f1239; --status-alert-badge: #be123c; --status-alert-on-badge: #ffffff; --press-scale: 0.96; }
+      body { font-family: 'Pretendard', sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
       .icon { width: 18px; height: 18px; vertical-align: text-bottom; fill: currentColor; }
       .watermark-bg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; opacity: 0.08; pointer-events: none; z-index: 0; }
       /* 인트로 */
@@ -64,7 +64,8 @@
       .gate-input::placeholder { color: rgba(255,255,255,0.75); }
       .gate-save-row { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; font-size: 0.86rem; color: rgba(255,255,255,0.95); }
       .gate-save-row input { width: 16px; height: 16px; accent-color: #bfdbfe; cursor: pointer; }
-      .gate-btn { width: 100%; border: 0; border-radius: 12px; padding: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #0b2f79; transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease; }
+      .gate-btn { width: 100%; border: 0; border-radius: 12px; padding: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #0b2f79; transition-property: transform, opacity, box-shadow; transition-duration: 180ms; transition-timing-function: ease; }
+      .gate-btn:not(:disabled):not(.loading):active { transform: scale(var(--press-scale)); }
       .gate-btn.secondary { margin-top: 8px; background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.35); }
       .gate-btn.loading, .auth-btn.loading { opacity: 0.86; cursor: wait; pointer-events: none; box-shadow: 0 10px 24px rgba(59,130,246,0.22); }
       .login-progress { display: none; margin: 12px 0 4px; }
@@ -365,6 +366,8 @@
         white-space: nowrap; overflow: visible; position: relative; z-index: 1;
       }
       .student-item:hover { z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+      .student-item.enrollment-alert { background: var(--status-alert-bg); border: 1px solid var(--status-alert-border); color: var(--status-alert-text); font-weight: 800; }
+      .enrollment-alert-badge { display: inline-block; margin-left: 4px; padding: 2px 4px; border-radius: 3px; background: var(--status-alert-badge); color: var(--status-alert-on-badge); font-size: 0.64rem; font-weight: 800; line-height: 1.2; vertical-align: middle; }
       
       .privacy-active .student-item.is-student { color: transparent !important; text-shadow: none !important; filter: blur(5px); pointer-events: none; }
       .privacy-active .student-item.is-teacher { filter: none !important; opacity: 1 !important; }
@@ -436,7 +439,9 @@
       .loading-text { font-size: 0.9rem; color: #666; font-weight: 600; }
       .digital-clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--primary); font-size: 1.1rem; margin: 0 15px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
       .clock-date { font-size: 0.85rem; color: #666; font-weight: 500; }
-      .clock-time { font-size: 1.2rem; color: var(--primary); letter-spacing: 0.5px; }
+      .clock-time { font-size: 1.2rem; color: var(--primary); letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
+      .auth-btn:not(:disabled):active, .intro-login-btn:not(:disabled):active { transform: scale(var(--press-scale)); }
+      .auth-btn, .intro-login-btn { transition-property: transform, background-color, color, box-shadow, opacity; transition-duration: 160ms; transition-timing-function: ease; }
       .loading-bar-container { flex-grow: 1; max-width: 250px; height: 20px; background: #f3f4f6; border-radius: 10px; overflow: hidden; margin: 0 15px; position: relative; display: flex; align-items: center; }
       .loading-bar-fill { height: 100%; background: var(--accent); width: 100%; transition: width 1s linear; }
       .loading-text-overlay { position: absolute; width: 100%; text-align: center; font-size: 0.7rem; color: #ffffff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
@@ -491,8 +496,8 @@
       .teacher-mobile-toolbar-title { font-size:0.95rem; font-weight:900; color:#0f172a; }
       .teacher-mobile-view-toggle { display:inline-flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:800; color:#475569; }
       .teacher-mobile-view-toggle input { display:none; }
-      .teacher-mobile-view-switch { position:relative; width:54px; height:30px; border-radius:999px; background:linear-gradient(135deg,#d1d5db,#cbd5e1); box-shadow:inset 0 0 0 1px rgba(148,163,184,0.35); transition:all .2s ease; }
-      .teacher-mobile-view-switch::after { content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 4px 10px rgba(15,23,42,0.18); transition:all .2s ease; }
+      .teacher-mobile-view-switch { position:relative; width:54px; height:30px; border-radius:999px; background:linear-gradient(135deg,#d1d5db,#cbd5e1); box-shadow:inset 0 0 0 1px rgba(148,163,184,0.35); transition-property: background, box-shadow; transition-duration:.2s; transition-timing-function:ease; }
+      .teacher-mobile-view-switch::after { content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 4px 10px rgba(15,23,42,0.18); transition-property: transform, background, box-shadow; transition-duration:.2s; transition-timing-function:ease; }
       .teacher-mobile-view-toggle input:checked + .teacher-mobile-view-switch { background:linear-gradient(135deg,#22c55e,#16a34a); }
       .teacher-mobile-view-toggle input:checked + .teacher-mobile-view-switch::after { left:27px; }
       .teacher-simple-hour-card { background:#ffffff; border:1px solid #dbe2ea; border-radius:16px; padding:10px 12px; margin-bottom:10px; box-shadow:0 6px 18px rgba(15,23,42,0.05); }
@@ -504,6 +509,9 @@
       .teacher-simple-student { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:9px 10px; border-radius:12px; background:#f8fafc; border:1px solid #e2e8f0; }
       .teacher-simple-student.is-cancelled { background:#fee2e2; border-color:#fca5a5; }
       .teacher-simple-student.is-notice { background:#e5e7eb; border-color:#cbd5e1; }
+      .teacher-simple-student.enrollment-alert { background: var(--status-alert-bg); border-color: var(--status-alert-border); }
+      .teacher-simple-student .enrollment-alert-badge { margin-left: 0; }
+      .teacher-student-item.enrollment-alert { background: var(--status-alert-bg); border: 1px solid var(--status-alert-border); }
       .teacher-simple-main { min-width:0; display:flex; flex-direction:column; gap:5px; }
       .teacher-simple-name-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0; position:relative; }
       .teacher-simple-name-trigger { display:inline-flex; align-items:center; gap:4px; border:none; background:none; padding:0; margin:0; color:#0f172a; font-size:0.95rem; font-weight:900; cursor:pointer; text-align:left; }
@@ -1497,6 +1505,7 @@
       let lateNightCollapsed = true;
       let lateNightAccessCode = "2371";
       let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], loading: false, editingId: "", popupKey: "" };
+      let studentEnrollmentStatusState = { byName: {}, loadedAt: 0, warningCount: 0, loading: null, error: "" };
       let operationMemoPollTimer = null;
       const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycbztGbkhmKvr23Yx8tSNcgK-Y-WzSCbOoFtc8QSaqYS5XvnAhp1kheu84VNmwr_hWQm9EQ/exec";
       const LIVE_FIREBASE_CONFIG = {
@@ -1544,6 +1553,120 @@
           throw error;
         });
         return liveFirebaseAuthPromise;
+      }
+      function normalizeEnrollmentStudentName(name) {
+        return String(name || "").replace(/[‘’“”'`]/g, "").replace(/[()\[\]{}<>]/g, "").replace(/\s+/g, "").trim().toLowerCase();
+      }
+      function getEnrollmentStatusLabel(student) {
+        var data = student || {};
+        var raw = String(data.status || data.studentStatus || data.state || "").trim();
+        var normalized = raw.toUpperCase().replace(/[\s_-]+/g, "");
+        if (/퇴원/.test(raw) || /WITHDRAWN|GRADUATED|TERMINATED/.test(normalized)) return "퇴원";
+        if (/보류/.test(raw) || /ONHOLD|HOLD|PENDING/.test(normalized)) return "보류";
+        if (/중지|휴원/.test(raw) || /INACTIVE|STOPPED|SUSPENDED|DISABLED/.test(normalized) || data.active === false || data.isActive === false) return "중지";
+        return "";
+      }
+      function buildEnrollmentStatusIndex(rows) {
+        var byName = {};
+        var warningCount = 0;
+        (rows || []).forEach(function(row) {
+          var label = getEnrollmentStatusLabel(row);
+          var key = normalizeEnrollmentStudentName(row && (row.studentName || row.name || row.displayName));
+          if (!label || !key) return;
+          if (!byName[key]) byName[key] = [];
+          byName[key].push({ label: label, school: String(row.school || "").trim(), studentId: String(row.studentId || row.id || "").trim() });
+          warningCount++;
+        });
+        return { byName: byName, warningCount: warningCount };
+      }
+      function getEnrollmentWarningForStudent(name) {
+        var rows = studentEnrollmentStatusState.byName[normalizeEnrollmentStudentName(name)] || [];
+        if (!rows.length) return "";
+        var labels = rows.map(function(item) { return item.label; }).filter(function(label, index, list) { return list.indexOf(label) === index; });
+        if (labels.length === 1) return labels[0];
+        return "등록 상태 확인";
+      }
+      function parseFirestoreRestValue(value) {
+        if (!value || typeof value !== "object") return undefined;
+        if (Object.prototype.hasOwnProperty.call(value, "stringValue")) return String(value.stringValue || "");
+        if (Object.prototype.hasOwnProperty.call(value, "booleanValue")) return value.booleanValue === true;
+        if (Object.prototype.hasOwnProperty.call(value, "integerValue")) return Number(value.integerValue || 0);
+        if (Object.prototype.hasOwnProperty.call(value, "doubleValue")) return Number(value.doubleValue || 0);
+        if (Object.prototype.hasOwnProperty.call(value, "timestampValue")) return String(value.timestampValue || "");
+        if (Object.prototype.hasOwnProperty.call(value, "nullValue")) return null;
+        if (value.arrayValue) return ((value.arrayValue && value.arrayValue.values) || []).map(parseFirestoreRestValue);
+        if (value.mapValue) return parseFirestoreRestFields((value.mapValue && value.mapValue.fields) || {});
+        return undefined;
+      }
+      function parseFirestoreRestFields(fields) {
+        var out = {};
+        Object.keys(fields || {}).forEach(function(key) { out[key] = parseFirestoreRestValue(fields[key]); });
+        return out;
+      }
+      function parseFirestoreRestDocument(doc) {
+        var item = parseFirestoreRestFields((doc && doc.fields) || {});
+        var name = String((doc && doc.name) || "");
+        item.__id = name.split("/").pop() || "";
+        return item;
+      }
+      function withFirestoreTimeout(promise, ms, label) {
+        return Promise.race([
+          promise,
+          new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error(label + " 시간 초과")); }, ms || 8000);
+          })
+        ]);
+      }
+      function fetchEnrollmentStatusStudents(idToken) {
+        var projectId = (LIVE_FIREBASE_CONFIG && LIVE_FIREBASE_CONFIG.projectId) || "fir-lms-prod";
+        var base = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(projectId) + "/databases/(default)/documents/students";
+        function loadPage(pageToken, rows) {
+          var url = base + "?pageSize=300" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
+          return fetch(url, { headers: { "Authorization": "Bearer " + idToken, "Accept": "application/json" } }).then(function(res) {
+            if (!res.ok) throw new Error("Firebase 학생 상태 조회 실패(" + res.status + ")");
+            return res.json();
+          }).then(function(payload) {
+            var nextRows = rows.concat(((payload && payload.documents) || []).map(parseFirestoreRestDocument));
+            if (payload && payload.nextPageToken && nextRows.length < 2500) return loadPage(payload.nextPageToken, nextRows);
+            return nextRows.slice(0, 2500);
+          });
+        }
+        return withFirestoreTimeout(loadPage("", []), 8500, "Firebase 학생 상태");
+      }
+      function loadStudentEnrollmentStatusWarnings(force) {
+        var now = Date.now();
+        if (!force && studentEnrollmentStatusState.loadedAt && now - studentEnrollmentStatusState.loadedAt < 5 * 60 * 1000) return Promise.resolve(false);
+        if (studentEnrollmentStatusState.loading) return studentEnrollmentStatusState.loading;
+        studentEnrollmentStatusState.loading = getLiveFirebaseAuth().then(function(auth) {
+          if (!auth.currentUser) throw new Error("Firebase 로그인 세션 없음");
+          return auth.currentUser.getIdToken();
+        }).then(fetchEnrollmentStatusStudents).then(function(rows) {
+          var index = buildEnrollmentStatusIndex(rows);
+          studentEnrollmentStatusState.byName = index.byName;
+          studentEnrollmentStatusState.warningCount = index.warningCount;
+          studentEnrollmentStatusState.loadedAt = Date.now();
+          studentEnrollmentStatusState.error = "";
+          return true;
+        }).catch(function(error) {
+          studentEnrollmentStatusState.error = error && error.message ? error.message : String(error || "학생 상태 조회 실패");
+          throw error;
+        }).finally(function() {
+          studentEnrollmentStatusState.loading = null;
+        });
+        return studentEnrollmentStatusState.loading;
+      }
+      function applyEnrollmentStatusWarning(itemDiv, rawText) {
+        if (!itemDiv || String(rawText || "").includes("T")) return;
+        var parsed = parseStudentRawText(rawText);
+        var label = getEnrollmentWarningForStudent(parsed.name);
+        if (!label) return;
+        itemDiv.classList.add("enrollment-alert");
+        itemDiv.setAttribute("data-enrollment-status", label);
+        itemDiv.title = "등록 상태 경고: " + label;
+        var badge = document.createElement("span");
+        badge.className = "enrollment-alert-badge";
+        badge.textContent = label;
+        itemDiv.appendChild(badge);
       }
       function canonicalFirebaseLoginId(value) {
         var digits = String(value || "").replace(/\D+/g, "");
@@ -2955,6 +3078,11 @@
           visitorLookupStudyRefreshing = false;
           currentVersion=String(d.version || "").split("_T_")[0]; 
           renderTable(d, isRefresh); 
+          loadStudentEnrollmentStatusWarnings().then(function(updated) {
+            if (updated && lastData === d) renderTable(d, true);
+          }).catch(function(error) {
+            if (window.console && console.warn) console.warn("학생 등록 상태 경고를 불러오지 못했습니다:", error);
+          });
           applyOperationMemoHighlights();
           showOperationMemoPopupIfNeeded();
           syncLookupDimmingState();
@@ -5422,6 +5550,7 @@
                 itemDiv.className = 'student-item'; 
                 itemDiv.dataset.originalText = text; 
                 renderTableItem(itemDiv, text); 
+                applyEnrollmentStatusWarning(itemDiv, text);
                 div.appendChild(itemDiv); 
               });
               td.appendChild(div);
@@ -5534,11 +5663,13 @@
               if (statusClass === "status-cancel") rowClass = " is-cancelled";
               else if (statusClass === "status-notice") rowClass = " is-notice";
               var safeNote = encodeURIComponent(entry.note || "비고 없음");
-              return "<div class='teacher-simple-student" + rowClass + "'>" +
+              var enrollmentLabel = getEnrollmentWarningForStudent(entry.name);
+              return "<div class='teacher-simple-student" + rowClass + (enrollmentLabel ? " enrollment-alert" : "") + "'>" +
                 "<div class='teacher-simple-main'>" +
-                  "<div class='teacher-simple-name-row'>" +
+                "<div class='teacher-simple-name-row'>" +
                     "<button type='button' class='teacher-simple-name-trigger' data-note='" + safeNote + "' onclick='toggleNoteBubble(this, event)'>" + entry.name + "</button>" +
                     (entry.school ? "<span class='teacher-simple-school'>" + entry.school + "</span>" : "") +
+                    (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + enrollmentLabel + "</span>" : "") +
                   "</div>" +
                   "<div class='teacher-simple-inline'>" +
                     (entry.lessonType ? getMobileTypeBadgeHtml(entry.lessonType) : "") +
@@ -5653,13 +5784,15 @@
               var statusText = normalizedStatus || "상태 미입력";
               var statusBadge = "<span class='teacher-status-chip " + getStatusChipClass(statusText) + "'>" + statusText + "</span>";
               var noteText = parsed.note || "비고 없음";
+              var enrollmentLabel = getEnrollmentWarningForStudent(parsed.name);
               var progressBar = "<div class='teacher-progress-wrap'><div class='teacher-progress-track'><div class='teacher-progress-fill' style='width:" + percent + "%;'></div></div><div class='teacher-progress-text'>진행 " + percent + "%</div></div>";
               var alertClass = "";
               if (statusText === "당일취소") alertClass = " is-cancelled";
               else if (statusText === "결석예고" || statusText === "휴강") alertClass = " is-muted-gray";
+              if (enrollmentLabel) alertClass += " enrollment-alert";
               return "<div class='teacher-student-item" + alertClass + "'><div class='teacher-student-head'><div class='teacher-student-name'>" + (parsed.name || "학생") +
                      (parsed.school ? "<span class='teacher-student-school'>" + parsed.school + "</span>" : "") + "</div>" +
-                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + "</div></div>" +
+                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + enrollmentLabel + "</span>" : "") + "</div></div>" +
                      progressBar +
                      "<div class='teacher-student-note-chip'>" + noteText + "</div>" +
                      "</div>";
@@ -6463,6 +6596,7 @@
 	          if(type === 'subject') return { cls: 'rb-teacher', text: '과목' };
 	          if(type === 'external-jikbo-missing' || type === 'external-jikbo-unresolved') return { cls: 'rb-missing', text: '직보' };
 	          if(type === 'external-pattern-missing') return { cls: 'rb-check', text: '패턴' };
+	          if(type === 'enrollment-status') return { cls: 'rb-missing', text: '등록' };
 	          return { cls: 'rb-capacity', text: '정원' };
 	        }
 	        function addCurrentSnapshotIssues(snapshot, issues) {
@@ -6502,7 +6636,7 @@
 	        function getReviewSeverity(issue) {
 	          var type = issue && issue.type;
 	          if (type === 'duplicate' || type === 'capacity' || type === 'teacher' || type === 'check' || type === 'missing') return 'high';
-	          if (type === 'external-jikbo-missing') return 'high';
+	          if (type === 'external-jikbo-missing' || type === 'enrollment-status') return 'high';
 	          if (type === 'single' || type === 'time' || type === 'duration' || type === 'status') return 'medium';
 	          if (type === 'external-jikbo-unresolved' || type === 'external-pattern-missing') return 'medium';
 	          return 'info';
@@ -6513,6 +6647,7 @@
 	          if (type === 'external-jikbo-missing') return 'S-LMS 직보 확정 학생 누락 확인';
 	          if (type === 'external-jikbo-unresolved') return 'S-LMS 직보 미정 상태 확인';
 	          if (type === 'external-pattern-missing') return 'Supabase 시수 패턴상 누락 후보 확인';
+	          if (type === 'enrollment-status') return '중지·보류·퇴원 학생 편성 확인';
 	          if (type === 'duplicate') return '동시간대 중복 배정 확인';
 	          if (type === 'teacher') return '강사/학생 표시 불일치 확인';
 	          if (type === 'capacity') return '수업 유형별 정원 확인';
@@ -6864,7 +6999,15 @@
 	          if (/(결석|취소|삭제|예고|휴강)/.test(status)) return false;
 	          return hours > 0;
 	        }
-	        function buildReviewExternalSummary(raw, currentSnapshot, targetDateKey) {
+        function buildReviewEnrollmentStatusWarnings(currentSnapshot) {
+          return Object.keys((currentSnapshot && currentSnapshot.studentDetails) || {}).map(function(name) {
+            var label = getEnrollmentWarningForStudent(name);
+            return label ? { studentName: name, status: label } : null;
+          }).filter(Boolean).sort(function(a, b) {
+            return String(a.studentName).localeCompare(String(b.studentName), "ko");
+          });
+        }
+        function buildReviewExternalSummary(raw, currentSnapshot, targetDateKey) {
 	          var currentMap = getReviewCurrentStudentMap(currentSnapshot);
 	          var nextDateKey = addReviewDateDays(targetDateKey, 1);
 	          var statuses = Array.isArray(raw.statuses) ? raw.statuses : [];
@@ -6921,14 +7064,16 @@
 	              note: latest.note || ""
 	            };
 	          }).slice(0, 12);
+	          var enrollmentWarnings = buildReviewEnrollmentStatusWarnings(currentSnapshot);
 	          return {
 	            loading: false,
 	            targetDateKey: targetDateKey,
 	            errors: raw.errors || [],
 	            sourceCounts: {
-	              events: events.length,
-	              statuses: statuses.length,
-	              attendanceRows: attendanceRows.length
+              events: events.length,
+              statuses: statuses.length,
+              attendanceRows: attendanceRows.length,
+              enrollmentWarnings: enrollmentWarnings.length
 	            },
 	            confirmedMissing: confirmedMissing,
 	            relevantStatuses: relevantStatuses,
@@ -6936,7 +7081,8 @@
 	            unresolvedStatuses: unresolvedStatuses.slice(0, 10),
 	            allUnresolvedStatuses: unresolvedStatuses,
 	            examEvents: examEvents,
-	            patternMissing: patternMissing
+            patternMissing: patternMissing,
+            enrollmentWarnings: enrollmentWarnings
 	          };
 	        }
 	        function loadReviewExternalContext(targetDateKey, currentSnapshot) {
@@ -6947,7 +7093,7 @@
 	          if (cached && Date.now() - cached.savedAt < 5 * 60 * 1000) {
 	            return Promise.resolve(buildReviewExternalSummary(cached.payload, currentSnapshot, targetDateKey));
 	          }
-	          var raw = { events: [], statuses: [], attendanceRows: [], errors: [] };
+          var raw = { events: [], statuses: [], attendanceRows: [], errors: [] };
 	          var firebasePromise = getLiveFirebaseAuth().then(function(auth) {
 	            var user = auth.currentUser;
 	            if (!user) throw new Error("Firebase 로그인 세션 없음");
@@ -6960,12 +7106,15 @@
 	          }).catch(function(err) {
 	            raw.errors.push(err && err.message ? err.message : String(err || "Firebase 조회 실패"));
 	          });
-	          var supabasePromise = fetchReviewAttendanceRows(targetDateKey).then(function(rows) {
-	            raw.attendanceRows = rows;
-	          }).catch(function(err) {
-	            raw.errors.push(err && err.message ? err.message : String(err || "Supabase 조회 실패"));
-	          });
-	          return Promise.all([firebasePromise, supabasePromise]).then(function() {
+          var supabasePromise = fetchReviewAttendanceRows(targetDateKey).then(function(rows) {
+            raw.attendanceRows = rows;
+          }).catch(function(err) {
+            raw.errors.push(err && err.message ? err.message : String(err || "Supabase 조회 실패"));
+          });
+          var enrollmentPromise = loadStudentEnrollmentStatusWarnings().catch(function(err) {
+            raw.errors.push(err && err.message ? err.message : String(err || "Firebase 학생 상태 조회 실패"));
+          });
+          return Promise.all([firebasePromise, supabasePromise, enrollmentPromise]).then(function() {
 	            window.seduReviewContextCache[cacheKey] = { savedAt: Date.now(), payload: raw };
 	            return buildReviewExternalSummary(raw, currentSnapshot, targetDateKey);
 	          });
@@ -6986,12 +7135,18 @@
 	              msg: "S-LMS 직보 상태가 아직 미정/확인 단계입니다: " + name + (item.__subject ? " · " + item.__subject : "")
 	            });
 	          });
-	          (externalReview.patternMissing || []).forEach(function(item) {
+          (externalReview.patternMissing || []).forEach(function(item) {
 	            list.push({
 	              type: "external-pattern-missing",
 	              msg: "Supabase 최근 시수 패턴상 '" + item.studentName + "' 학생이 같은 요일에 " + item.count + "회 이상 수업했지만 현재표에는 없습니다." + (item.teacherName ? " 최근 강사: " + item.teacherName : "")
-	            });
-	          });
+            });
+          });
+          (externalReview.enrollmentWarnings || []).forEach(function(item) {
+            list.push({
+              type: "enrollment-status",
+              msg: "현재 시간표에 등록 상태가 '" + item.status + "'인 학생이 포함되어 있습니다: " + item.studentName
+            });
+          });
 	          return list;
 	        }
 	        function renderReviewExternalPanel(externalReview) {
@@ -7270,7 +7425,7 @@
 	        function renderReviewExamTimetableDashboard(externalReview, tags, currentSnapshot) {
 	          var model = buildReviewExamTimetableModel(externalReview || {}, (externalReview && externalReview.targetDateKey) || "", currentSnapshot);
 	          var counts = (externalReview && externalReview.sourceCounts) || {};
-	          var html = "<div class='review-source-note'>연동 결과: Firebase 학교일정 " + (counts.events || 0) + "건, 직보상태 " + (counts.statuses || 0) + "건, 강사 포털 최근 시수 " + (counts.attendanceRows || 0) + "건" +
+	          var html = "<div class='review-source-note'>연동 결과: Firebase 학교일정 " + (counts.events || 0) + "건, 직보상태 " + (counts.statuses || 0) + "건, 등록 상태 경고 " + (counts.enrollmentWarnings || 0) + "명, 강사 포털 최근 시수 " + (counts.attendanceRows || 0) + "건" +
 	            ((externalReview && externalReview.errors || []).length ? "<br>제한: " + escapeHtml((externalReview.errors || []).join(" / ")) : "") + "</div>";
 	          html += "<div class='review-exam-subtabs'>" +
 	            "<button type='button' class='review-exam-subtab active' data-review-exam-subtab='teachers' onclick=\"setReviewExamSubtab('teachers')\">강사별 시험 시간표</button>" +
@@ -7278,6 +7433,8 @@
 	            "</div>";
 	          html += "<section class='review-exam-panel active' data-review-exam-panel='teachers'>" + renderReviewTeacherPanel(model, externalReview) + "</section>";
 	          html += "<section class='review-exam-panel' data-review-exam-panel='students'>" + renderReviewStudentPanel(model, externalReview) + "</section>";
+	          html += "<div class='review-section-title'><span>중지·보류·퇴원 학생 경고</span><span>" + ((externalReview && externalReview.enrollmentWarnings || []).length) + "명</span></div>";
+	          html += renderReviewIssueList(buildReviewExternalIssues({ loading: false, enrollmentWarnings: (externalReview && externalReview.enrollmentWarnings) || [] }), "현재 시간표에 등록 상태 경고 학생이 없습니다.");
 	          html += "<div class='review-section-title'><span>시간표 입력 키워드</span><span>" + ((tags.jikboLike || []).length + (tags.oneOff || []).length + (tags.supplement || []).length) + "개</span></div>";
 	          html += renderReviewTagChips([].concat(tags.jikboLike || [], tags.oneOff || [], tags.supplement || []));
 	          return html;
@@ -7304,7 +7461,8 @@
 	          var highCount = allIssues.filter(function(issue) { return getReviewSeverity(issue) === 'high'; }).length;
 	          var mediumCount = allIssues.filter(function(issue) { return getReviewSeverity(issue) === 'medium'; }).length;
 	          var actionCards = buildReviewActionCards(allIssues, dashboardItems);
-	          var currentOnlyIssues = issues.filter(function(issue) { return issue.type !== 'missing'; });
+	          var enrollmentIssues = externalIssues.filter(function(issue) { return issue.type === 'enrollment-status'; });
+	          var currentOnlyIssues = issues.filter(function(issue) { return issue.type !== 'missing'; }).concat(enrollmentIssues);
 	          var missingIssues = issues.filter(function(issue) { return issue.type === 'missing'; });
 	          var externalJikboIssues = externalIssues.filter(function(issue) { return issue.type === 'external-jikbo-missing' || issue.type === 'external-jikbo-unresolved'; });
 	          var externalPatternIssues = externalIssues.filter(function(issue) { return issue.type === 'external-pattern-missing'; });
@@ -7350,7 +7508,7 @@
 	                "<div class='review-board-title'><span>분류별 점검 보드</span><span>" + issueCount + "건</span></div>" +
 	                "<div class='review-board-sub'>업무 성격별로 나누어 확인합니다. 카드를 누르면 해당 탭으로 이동합니다.</div>" +
 	                "<div class='review-group-grid'>" +
-	                  renderReviewGroupCard('current', '현재표 구조 오류', currentOnlyIssues.length, currentOnlyIssues.length ? 'danger' : 'good', '중복, 강사 누락, 확인필요, 정원 오류', currentOnlyIssues, '현재표 자체 오류가 없습니다.') +
+	                  renderReviewGroupCard('current', '현재표 위험 신호', currentOnlyIssues.length, currentOnlyIssues.length ? 'danger' : 'good', '중복, 강사 누락, 등록 상태, 확인필요, 정원 오류', currentOnlyIssues, '현재표 자체 위험 신호가 없습니다.') +
 	                  renderReviewGroupCard('changes', '지난주 대비 누락', missingIssues.length, missingIssues.length ? 'danger' : 'good', '지난주에는 있었지만 현재표에 없는 학생', missingIssues, '지난주 대비 누락 후보가 없습니다.') +
 	                  renderReviewGroupCard('changes', '시간·시수·강의실 변동', scheduleChangeItems.length, scheduleChangeItems.length ? 'warn' : 'good', '정규 패턴에서 달라진 학생', scheduleChangeItems, '주요 변동 신호가 없습니다.') +
 	                  renderReviewGroupCard('exam', '시험·직보/외부 데이터', externalIssues.length + (tags.jikboLike || []).length, (externalIssues.length || (tags.jikboLike || []).length) ? 'info' : 'good', 'S-LMS 직보, 시험 일정, 시수 패턴', externalJikboIssues.concat(externalPatternIssues), '연동 기반 위험 신호가 없습니다.') +
