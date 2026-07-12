@@ -1636,8 +1636,10 @@
             return res.json();
           }).then(function(payload) {
             var nextRows = rows.concat(((payload && payload.documents) || []).map(parseFirestoreRestDocument));
-            if (payload && payload.nextPageToken && nextRows.length < 2500) return loadPage(payload.nextPageToken, nextRows);
-            return nextRows.slice(0, 2500);
+            // 학생명 기준으로 상태를 대조하므로, 과거 중지 레코드만 먼저 읽고
+            // 현재 등록 레코드가 다음 페이지에 남는 일이 없도록 전체 페이지를 조회한다.
+            if (payload && payload.nextPageToken) return loadPage(payload.nextPageToken, nextRows);
+            return nextRows;
           });
         }
         return withFirestoreTimeout(loadPage("", []), 8500, "Firebase 학생 상태");
