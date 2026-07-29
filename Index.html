@@ -17,7 +17,7 @@
       };
     </script>
     <style>
-      :root { --primary: #0f1746; --secondary: #004d40; --accent: #3b82f6; --bg: #f8f9fa; --border: #e5e7eb; --sedu-blue: #024C9B; --status-alert-bg: #fff1f2; --status-alert-border: #fb7185; --status-alert-text: #9f1239; --status-alert-badge: #be123c; --status-alert-on-badge: #ffffff; --press-scale: 0.96; }
+      :root { --primary: #0f1746; --secondary: #004d40; --accent: #3b82f6; --bg: #f8f9fa; --border: #e5e7eb; --sedu-blue: #024C9B; --status-alert-bg: #fff1f2; --status-alert-border: #fb7185; --status-alert-text: #9f1239; --status-alert-badge: #be123c; --status-alert-on-badge: #ffffff; --schedule-anomaly-bg: #fee2e2; --schedule-anomaly-border: rgba(248, 113, 113, 0.78); --schedule-anomaly-text: #7f1d1d; --press-scale: 0.96; }
       body { font-family: 'Pretendard', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; margin: 0; padding: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
       h1, h2, h3, .gate-title, .intro-title, .review-modal-title, .visitor-lookup-title { text-wrap: balance; }
       .gate-sub, .auth-help, .guide-item, .review-modal-sub, .visitor-lookup-sub { text-wrap: pretty; }
@@ -370,6 +370,8 @@
       }
       .student-item:hover { z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
       .student-item.enrollment-alert { background: var(--status-alert-bg); border: 1px solid var(--status-alert-border); color: var(--status-alert-text); font-weight: 800; }
+      .student-item.schedule-anomaly { background-color: var(--schedule-anomaly-bg) !important; color: var(--schedule-anomaly-text) !important; box-shadow: inset 0 0 0 1px var(--schedule-anomaly-border); }
+      .student-item.schedule-anomaly .school-text { color: #991b1b !important; }
       .enrollment-alert-badge { display: inline-block; margin-left: 4px; padding: 2px 4px; border-radius: 3px; background: var(--status-alert-badge); color: var(--status-alert-on-badge); font-size: 0.64rem; font-weight: 800; line-height: 1.2; vertical-align: middle; }
       
       .privacy-active .student-item.is-student { color: transparent !important; text-shadow: none !important; filter: blur(5px); pointer-events: none; }
@@ -1861,10 +1863,13 @@
       }
       function clearOperationMemoHighlights() {
         document.querySelectorAll('.operation-memo-hit').forEach(function(el) {
+          var baseTitle = el.getAttribute('data-operation-memo-base-title') || "";
           el.classList.remove('operation-memo-hit');
           el.classList.remove('operation-memo-school-hit');
           el.removeAttribute('data-operation-memo');
-          el.removeAttribute('title');
+          el.removeAttribute('data-operation-memo-base-title');
+          if (baseTitle) el.setAttribute('title', baseTitle);
+          else el.removeAttribute('title');
         });
         document.querySelectorAll('.operation-memo-student-badge').forEach(function(el) { el.remove(); });
       }
@@ -1926,8 +1931,10 @@
           }).join(" / ");
           itemEl.classList.add('operation-memo-hit');
           if (memos.some(function(m) { return getOperationMemoKind(m) === "school"; })) itemEl.classList.add('operation-memo-school-hit');
+          var baseTitle = itemEl.getAttribute('title') || "";
+          itemEl.setAttribute('data-operation-memo-base-title', baseTitle);
           itemEl.setAttribute('data-operation-memo', summary);
-          itemEl.setAttribute('title', summary);
+          itemEl.setAttribute('title', (baseTitle ? baseTitle + " · " : "") + "운영 메모: " + summary);
           if (!itemEl.querySelector('.operation-memo-student-badge')) {
             var badge = document.createElement('span');
             var hasSchool = memos.some(function(m) { return getOperationMemoKind(m) === "school"; });
@@ -3489,6 +3496,119 @@
           full: text
         };
 	      }
+      function normalizeScheduleStudentSchool(school) {
+        return String(school || "")
+          .replace(/[‘’“”'`]/g, "")
+          .replace(/[()\[\]{}<>]/g, "")
+          .replace(/\s+/g, "")
+          .trim()
+          .toLowerCase();
+      }
+      function getScheduleStudentIdentity(rawText) {
+        var raw = String(rawText || "");
+        if (!raw || raw.includes("T")) return "";
+        var parsed = parseStudentRawText(raw);
+        var status = normalizeStatusLabel(parsed.status || "");
+        if (!parsed.name || !parsed.school || shouldHideStatus(status) || isAbsenceNoticeStatus(status)) return "";
+        var nameKey = normalizeEnrollmentStudentName(parsed.name);
+        var schoolKey = normalizeScheduleStudentSchool(parsed.school);
+        return nameKey && schoolKey ? nameKey + "||" + schoolKey : "";
+      }
+      function getScheduleAnomalyLocationKey(identity, hour, columnIndex) {
+        return identity + "::" + hour + "::" + columnIndex;
+      }
+      function addScheduleAnomalyReason(index, locationKey, reason) {
+        if (!index.byLocation[locationKey]) index.byLocation[locationKey] = [];
+        if (index.byLocation[locationKey].indexOf(reason) === -1) index.byLocation[locationKey].push(reason);
+      }
+      function getScheduleLessonSignature(items, roomName) {
+        var teacherItem = (items || []).find(function(item) {
+          return String(item || "").includes("T");
+        });
+        if (teacherItem) {
+          var teacherKey = normalizeEnrollmentStudentName(extractTeacherName(teacherItem)) || normalizeEnrollmentStudentName(teacherItem);
+          return [
+            teacherKey,
+            normalizeScheduleStudentSchool(getSubjectName(String(teacherItem || ""))),
+            normalizeScheduleStudentSchool(detectClassType(String(teacherItem || "")))
+          ].join("||");
+        }
+        return "room||" + normalizeScheduleStudentSchool(roomName);
+      }
+      function buildStudentScheduleAnomalyIndex(data) {
+        var index = { byLocation: {}, duplicateGroups: 0, gapStudents: 0 };
+        var students = {};
+        var headers = (data && data.headers) || [];
+        var grid = (data && data.grid) || {};
+        for (var hour = 9; hour <= 23; hour++) {
+          var row = grid[hour] || [];
+          for (var columnIndex = 0; columnIndex < headers.length; columnIndex++) {
+            if (String(headers[columnIndex] || "").includes("휴강")) continue;
+            var items = row[columnIndex] || [];
+            var lessonSignature = getScheduleLessonSignature(items, headers[columnIndex]);
+            items.forEach(function(rawText) {
+              var identity = getScheduleStudentIdentity(rawText);
+              if (!identity) return;
+              if (!students[identity]) students[identity] = { occurrences: [], byHour: {}, byLesson: {} };
+              var occurrence = { hour: hour, columnIndex: columnIndex, lessonSignature: lessonSignature };
+              students[identity].occurrences.push(occurrence);
+              if (!students[identity].byHour[hour]) students[identity].byHour[hour] = [];
+              students[identity].byHour[hour].push(occurrence);
+              if (!students[identity].byLesson[lessonSignature]) students[identity].byLesson[lessonSignature] = [];
+              students[identity].byLesson[lessonSignature].push(occurrence);
+            });
+          }
+        }
+        Object.keys(students).forEach(function(identity) {
+          var student = students[identity];
+          var hours = Object.keys(student.byHour).map(Number).sort(function(a, b) { return a - b; });
+          hours.forEach(function(hour) {
+            var sameHour = student.byHour[hour];
+            if (sameHour.length < 2) return;
+            index.duplicateGroups += 1;
+            sameHour.forEach(function(occurrence) {
+              addScheduleAnomalyReason(index, getScheduleAnomalyLocationKey(identity, occurrence.hour, occurrence.columnIndex), "동일 시간대 중복 입력");
+            });
+          });
+          var hasGap = false;
+          Object.keys(student.byLesson).forEach(function(lessonSignature) {
+            var lessonOccurrences = student.byLesson[lessonSignature];
+            var lessonHours = lessonOccurrences.map(function(occurrence) {
+              return occurrence.hour;
+            }).filter(function(hour, position, list) {
+              return list.indexOf(hour) === position;
+            }).sort(function(a, b) {
+              return a - b;
+            });
+            var lessonHasGap = lessonHours.some(function(hour, position) {
+              return position > 0 && hour - lessonHours[position - 1] > 1;
+            });
+            if (!lessonHasGap) return;
+            hasGap = true;
+            lessonOccurrences.forEach(function(occurrence) {
+              addScheduleAnomalyReason(index, getScheduleAnomalyLocationKey(identity, occurrence.hour, occurrence.columnIndex), "수업 시간 중간 공백 확인");
+            });
+          });
+          if (!hasGap) return;
+          index.gapStudents += 1;
+        });
+        return index;
+      }
+      function getStudentScheduleAnomalyReasons(index, rawText, hour, columnIndex) {
+        if (!index || !index.byLocation) return [];
+        var identity = getScheduleStudentIdentity(rawText);
+        if (!identity) return [];
+        return index.byLocation[getScheduleAnomalyLocationKey(identity, hour, columnIndex)] || [];
+      }
+      function applyStudentScheduleAnomalyWarning(itemDiv, rawText, hour, columnIndex, index) {
+        if (!itemDiv) return;
+        var reasons = getStudentScheduleAnomalyReasons(index, rawText, hour, columnIndex);
+        if (!reasons.length) return;
+        var warningText = reasons.join(" · ");
+        itemDiv.classList.add("schedule-anomaly");
+        itemDiv.setAttribute("data-schedule-warning", warningText);
+        itemDiv.title = (itemDiv.title ? itemDiv.title + " · " : "") + "시간표 입력 경고: " + warningText;
+      }
       function detectStudentCardClassType(text) {
         var t = String(text || "");
         if (t.includes("당취보충") || t.includes("일반보충") || (t.includes("보충") && !t.includes("보강"))) return "보충";
@@ -5508,6 +5628,7 @@
         
         var hide9am = document.getElementById('hide9amToggle').checked;
         var teacherView = isTeacherViewActive();
+        var scheduleAnomalyIndex = teacherView ? null : buildStudentScheduleAnomalyIndex(data);
         var lateNightRows = [];
         // 숨길 열 계산
         var hiddenIndices = new Set();
@@ -5607,6 +5728,7 @@
                 itemDiv.dataset.originalText = text; 
                 renderTableItem(itemDiv, text); 
                 applyEnrollmentStatusWarning(itemDiv, text);
+                applyStudentScheduleAnomalyWarning(itemDiv, text, h, i, scheduleAnomalyIndex);
                 div.appendChild(itemDiv); 
               });
               td.appendChild(div);

@@ -98,11 +98,64 @@ const highlighted = { innerHTML: "", classList: { add() {} } };
 assert.doesNotThrow(() => sandbox.highlightItem(highlighted, "김[학생 강남고1", "["));
 assert(highlighted.innerHTML.includes("highlight-text"), "special-character search should highlight");
 
+const anomalyData = {
+  headers: ["1강의실", "2강의실", "3강의실", "4강의실"],
+  grid: {
+    9: [["개별 수학 박강사T", "박학생 반포고1 정규", "최학생 반포고2 정규"], [], [], []],
+    10: [
+      ["개별 수학 박강사T", "박학생 반포고1 정규", "결석학생 서초고2 결석예고"],
+      ["개별 영어 김강사T", "김학생 세화고1 정규"],
+      ["1:1 국어 이강사T", "김학생 세화고1 보강", "김학생 다른고1 정규", "결석학생 서초고2 결석예고"],
+      []
+    ],
+    11: [["개별 수학 박강사T", "박학생 반포고1 정규"], [], [], ["개별 과학 이강사T", "이학생 서문여고2 정규"]],
+    13: [[], ["개별 영어 김강사T", "최학생 반포고2 정규"], [], ["개별 과학 이강사T", "이학생 서문여고2 정규"]]
+  }
+};
+const anomalyIndex = sandbox.buildStudentScheduleAnomalyIndex(anomalyData);
+assert.strictEqual(anomalyIndex.duplicateGroups, 1, "same name and school in one hour should form one duplicate group");
+assert.strictEqual(anomalyIndex.gapStudents, 1, "non-consecutive hours should form one gap warning");
+assert(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "김학생 세화고1 정규", 10, 1).includes("동일 시간대 중복 입력"));
+assert(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "김학생 세화고1 보강", 10, 2).includes("동일 시간대 중복 입력"));
+assert.deepStrictEqual(
+  Array.from(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "김학생 다른고1 정규", 10, 2)),
+  [],
+  "same name with a different school/grade must not be grouped"
+);
+assert(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "이학생 서문여고2 정규", 11, 3).includes("수업 시간 중간 공백 확인"));
+assert(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "이학생 서문여고2 정규", 13, 3).includes("수업 시간 중간 공백 확인"));
+assert.deepStrictEqual(
+  Array.from(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "박학생 반포고1 정규", 10, 0)),
+  [],
+  "continuous lessons must not be warned"
+);
+assert.deepStrictEqual(
+  Array.from(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "최학생 반포고2 정규", 13, 1)),
+  [],
+  "separate lessons with different teachers/subjects must not be treated as an internal gap"
+);
+assert.deepStrictEqual(
+  Array.from(sandbox.getStudentScheduleAnomalyReasons(anomalyIndex, "결석학생 서초고2 결석예고", 10, 0)),
+  [],
+  "absence notices must not create schedule anomalies"
+);
+const anomalyClasses = [];
+const anomalyElement = {
+  title: "등록 상태 경고: 중지",
+  classList: { add(name) { anomalyClasses.push(name); } },
+  setAttribute(name, value) { this[name] = value; }
+};
+sandbox.applyStudentScheduleAnomalyWarning(anomalyElement, "김학생 세화고1 정규", 10, 1, anomalyIndex);
+assert(anomalyClasses.includes("schedule-anomaly"), "anomaly element must receive the warning class");
+assert(anomalyElement.title.includes("동일 시간대 중복 입력"), "anomaly tooltip must explain the warning");
+assert(anomalyElement.title.includes("등록 상태 경고: 중지"), "schedule warning must preserve enrollment warning text");
+
 assert(index.includes('withFirestoreTimeout(loadPage("", []), 20000'), "enrollment timeout regression");
 assert(index.includes("isMobile !== lastResponsiveMobile"), "resize breakpoint guard missing");
 assert(index.includes("escapeHtml(entry.name)"), "mobile teacher names must be escaped");
 assert(index.includes("escapeHtml(parsed.name || \"학생\")"), "detailed mobile teacher names must be escaped");
 assert(index.includes("absence-card-title'>\" + escapeHtml(name)"), "absence preview names must be escaped");
+assert(index.includes("data-operation-memo-base-title"), "operation memo refresh must preserve schedule warning titles");
 
 const legacyNames = extractFunction(server, "getLegacyTeacherNamesForAuth_");
 assert(!/\bbreak\s*;/.test(legacyNames), "teacher list must scan every row");
