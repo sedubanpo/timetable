@@ -18,7 +18,9 @@
     </script>
     <style>
       :root { --primary: #0f1746; --secondary: #004d40; --accent: #3b82f6; --bg: #f8f9fa; --border: #e5e7eb; --sedu-blue: #024C9B; --status-alert-bg: #fff1f2; --status-alert-border: #fb7185; --status-alert-text: #9f1239; --status-alert-badge: #be123c; --status-alert-on-badge: #ffffff; --press-scale: 0.96; }
-      body { font-family: 'Pretendard', sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+      body { font-family: 'Pretendard', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; margin: 0; padding: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+      h1, h2, h3, .gate-title, .intro-title, .review-modal-title, .visitor-lookup-title { text-wrap: balance; }
+      .gate-sub, .auth-help, .guide-item, .review-modal-sub, .visitor-lookup-sub { text-wrap: pretty; }
       .icon { width: 18px; height: 18px; vertical-align: text-bottom; fill: currentColor; }
       .watermark-bg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; opacity: 0.08; pointer-events: none; z-index: 0; }
       /* 인트로 */
@@ -32,7 +34,7 @@
       .cal-nav-btn { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 5px 12px; cursor: pointer; font-weight:bold; color:#555; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
       .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
       .day-name { font-size: 0.85rem; color: #888; padding-bottom: 10px; font-weight: 600; }
-      .day-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1rem; color: #ddd; cursor: default; transition:0.2s; }
+      .day-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1rem; color: #ddd; cursor: default; transition-property: transform, color, background-color, border-color, box-shadow; transition-duration: 0.2s; transition-timing-function: ease; }
       .day-active { color: #333; cursor: pointer; background: white; border: 1px solid #eee; font-weight: 600; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
       .day-active:hover { background: #eef2ff; border-color: var(--accent); color: var(--primary); transform: translateY(-2px); }
       .day-today { border: 2px solid var(--primary) !important; color: var(--primary) !important; background-color: #f0f4ff !important; font-weight: 900 !important; }
@@ -56,15 +58,15 @@
       .role-badge { background: #eef2ff; color: #1e3a8a; border: 1px solid #c7d2fe; border-radius: 999px; padding: 6px 10px; font-size: 0.78rem; font-weight: 700; }
       .intro-login-btn { margin-top: 14px; width: 100%; border: 1px solid #c7d2fe; background: #eef2ff; color: #1e3a8a; border-radius: 10px; padding: 10px; font-weight: 800; cursor: pointer; }
       #loginGate { position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 20% 20%, #1e40af 0%, #0b2f79 55%, #0b1f4a 100%); }
-      .gate-glass { width: 420px; max-width: 92%; border-radius: 22px; padding: 24px; background: rgba(255,255,255,0.15); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.35); box-shadow: 0 20px 50px rgba(3, 10, 30, 0.35); color: #fff; }
+      .gate-glass { width: min(420px, calc(100% - 32px)); box-sizing: border-box; border-radius: 22px; padding: 24px; background: rgba(255,255,255,0.15); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.35); box-shadow: 0 20px 50px rgba(3, 10, 30, 0.35); color: #fff; }
       .gate-logo { width: 120px; display:block; margin: 0 auto 14px; filter: brightness(0) invert(1); opacity: 0.95; }
       .gate-title { font-size: 1.45rem; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 8px; }
       .gate-sub { font-size: 0.9rem; color: rgba(255,255,255,0.9); margin-bottom: 16px; }
       .gate-input { width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.2); color: #fff; padding: 12px; margin-bottom: 10px; font-size: 0.95rem; outline: none; }
       .gate-input::placeholder { color: rgba(255,255,255,0.75); }
-      .gate-save-row { display: flex; align-items: center; gap: 8px; margin: 2px 0 12px; font-size: 0.86rem; color: rgba(255,255,255,0.95); }
+      .gate-save-row { display: flex; align-items: center; gap: 8px; min-height: 40px; margin: 2px 0 12px; font-size: 0.86rem; color: rgba(255,255,255,0.95); }
       .gate-save-row input { width: 16px; height: 16px; accent-color: #bfdbfe; cursor: pointer; }
-      .gate-btn { width: 100%; border: 0; border-radius: 12px; padding: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #0b2f79; transition-property: transform, opacity, box-shadow; transition-duration: 180ms; transition-timing-function: ease; }
+      .gate-btn { width: 100%; min-height: 44px; border: 0; border-radius: 12px; padding: 12px; font-size: 0.95rem; font-weight: 800; cursor: pointer; background: #ffffff; color: #0b2f79; transition-property: transform, opacity, box-shadow; transition-duration: 180ms; transition-timing-function: ease; }
       .gate-btn:not(:disabled):not(.loading):active { transform: scale(var(--press-scale)); }
       .gate-btn.secondary { margin-top: 8px; background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.35); }
       .gate-btn.loading, .auth-btn.loading { opacity: 0.86; cursor: wait; pointer-events: none; box-shadow: 0 10px 24px rgba(59,130,246,0.22); }
@@ -84,9 +86,9 @@
       .review-box { background: white; width: min(1120px, calc(100vw - 40px)); max-height: 88vh; padding: 24px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; text-align: left;}
       .msg-box { background: white; width: 500px; max-height: 85vh; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
       .msg-textarea { flex-grow: 1; width: 100%; height: 300px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 0.9rem; resize: none; margin-top: 15px; background: #f9fafb; overflow-y: auto;}
-      .msg-copy-btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 1rem; transition: 0.2s; }
+      .msg-copy-btn { background: var(--accent); color: white; border: none; padding: 12px; min-height: 44px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 1rem; transition-property: transform, background-color, box-shadow; transition-duration: 0.2s; transition-timing-function: ease; }
       .version-list { display: flex; flex-direction: column; gap: 10px; }
-      .version-btn { padding: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; font-weight: 600; cursor: pointer; color: #333; transition: 0.2s; }
+      .version-btn { padding: 12px; min-height: 44px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; font-weight: 600; cursor: pointer; color: #333; transition-property: transform, background-color, border-color, box-shadow; transition-duration: 0.2s; transition-timing-function: ease; }
       .close-modal { margin-top: 15px; font-size: 0.85rem; color: #888; cursor: pointer; text-decoration: underline; text-align: center; display: block;}
       
       .select-container { text-align: left; margin-top:10px; max-height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px; }
@@ -299,11 +301,12 @@
       .top-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(5px); padding: 8px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-shrink: 0; z-index: 100; flex-wrap: wrap;}
       .header-logo-img { height: 24px; cursor: pointer; margin-right: 5px;}
       .nav-group { display: flex; gap: 4px; margin-right: 10px; }
-      .nav-btn { background: white; border: 1px solid #ccc; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; color: #555; font-weight: 600; transition: 0.2s; }
+      .nav-btn { background: white; border: 1px solid #ccc; padding: 6px 10px; min-height: 40px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; color: #555; font-weight: 600; transition-property: transform, background-color, border-color, color, box-shadow; transition-duration: 0.2s; transition-timing-function: ease; }
       .nav-btn:hover { background: #f3f4f6; border-color: var(--primary); color: var(--primary); }
       .nav-btn-today { color: var(--accent); border-color: var(--accent); }
       .action-group { display: flex; gap: 6px; margin-left: auto; }
-      .fullscreen-btn, .msg-gen-btn, .msg-simple-btn, .capture-btn, .empty-btn, .review-btn, .excel-btn, .absence-notice-btn, .attendance-report-btn, .operation-memo-btn { border: none; padding: 8px 14px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+      .fullscreen-btn, .msg-gen-btn, .msg-simple-btn, .capture-btn, .empty-btn, .review-btn, .excel-btn, .absence-notice-btn, .attendance-report-btn, .operation-memo-btn { border: none; padding: 8px 14px; min-height: 40px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition-property: transform, opacity, background-color, box-shadow; transition-duration: 0.2s; transition-timing-function: ease; }
+      .nav-btn:not(:disabled):active, .refresh-btn:not(:disabled):active, .fullscreen-btn:not(:disabled):active, .msg-gen-btn:not(:disabled):active, .msg-simple-btn:not(:disabled):active, .capture-btn:not(:disabled):active, .empty-btn:not(:disabled):active, .review-btn:not(:disabled):active, .excel-btn:not(:disabled):active, .absence-notice-btn:not(:disabled):active, .attendance-report-btn:not(:disabled):active, .operation-memo-btn:not(:disabled):active { transform: scale(var(--press-scale)); }
       .admin-toolbar-hidden { display:none !important; }
       .fullscreen-btn { background: #333; color: white; }
       .msg-gen-btn { background: var(--accent); color: white; }
@@ -319,16 +322,16 @@
       .search-input { width: 100%; padding: 8px 8px 8px 10px; border: 1px solid #ccc; border-radius: 6px; outline: none; }
       .sheet-select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; max-width: 150px;}
       .refresh-container { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-      .refresh-btn { background: white; border: 1px solid #ccc; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; color: #555; }
+      .refresh-btn { background: white; border: 1px solid #ccc; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition-property: transform, color, background-color, border-color, box-shadow; transition-duration: 0.3s; transition-timing-function: ease; color: #555; }
       .refresh-btn svg { width: 18px; height: 18px; }
       .spinning svg { animation: spin 1s linear infinite; }
       @keyframes spin { 100% { transform: rotate(360deg); } }
       .update-alert-dot { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border: 2px solid white; border-radius: 50%; display: none; animation: pulse 2s infinite; z-index: 202; }
       .update-tooltip { position: absolute; top: 45px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; z-index: 201; }
       .update-tooltip::after { content: ""; position: absolute; top: -4px; left: 50%; transform: translateX(-50%); border-width: 0 5px 6px 5px; border-style: solid; border-color: transparent transparent #ef4444 transparent; }
-      .toggle-wrapper { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #555; cursor: pointer;}
-      .toggle-switch { position: relative; width: 36px; height: 20px; background: #ccc; border-radius: 20px; transition: 0.3s; }
-      .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+      .toggle-wrapper { display: flex; align-items: center; gap: 6px; min-height: 40px; font-size: 0.8rem; font-weight: 600; color: #555; cursor: pointer;}
+      .toggle-switch { position: relative; width: 36px; height: 20px; background: #ccc; border-radius: 20px; transition-property: background-color, box-shadow; transition-duration: 0.3s; transition-timing-function: ease; }
+      .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition-property: transform, background-color, box-shadow; transition-duration: 0.3s; transition-timing-function: ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
       input[type="checkbox"]:checked + .toggle-switch { background: var(--primary); }
       input[type="checkbox"]:checked + .toggle-switch::after { transform: translateX(16px); }
       .toggle-input { display: none; }
@@ -355,7 +358,7 @@
       #liveTimeline { position: absolute; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, rgba(56,189,248,0.52), rgba(37,99,235,0.58)); z-index: 50; pointer-events: none; display: none; box-shadow: 0 0 10px rgba(59,130,246,0.18); backdrop-filter: blur(1px); }
       #liveTimeline::before { content: ""; position: absolute; left: -6px; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: rgba(37,99,235,0.72); border: 2px solid rgba(219,234,254,0.72); transform: translateY(-50%); box-shadow: 0 0 0 3px rgba(96,165,250,0.10); }
       #liveTimeline::after { content: "NOW"; position: absolute; right: 8px; top: -14px; background: linear-gradient(135deg, rgba(37,99,235,0.82), rgba(29,78,216,0.82)); color: rgba(255,255,255,0.96); font-size: 10px; font-weight: 800; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 999px; box-shadow: 0 6px 14px rgba(37,99,235,0.16); }
-      .empty-mode-active .cell-inner { opacity: 0.1; transition: 0.3s; }
+      .empty-mode-active .cell-inner { opacity: 0.1; transition-property: opacity; transition-duration: 0.3s; transition-timing-function: ease; }
       .empty-mode-active td:not(:has(.student-item)) { background-color: #e8f5e9 !important; opacity: 1 !important; border: 2px dashed #4caf50; }
       .empty-mode-active td:has(.student-item) { background-color: #eee !important; }
       .cell-inner { padding: 2px; display: flex; flex-direction: column; gap: 2px; min-height: 100%; overflow: visible; }
@@ -1162,6 +1165,9 @@
         .student-preview-badge { font-size: 0.68rem; padding: 3px 8px; }
         .student-preview-duration { font-size: 0.66rem; }
       }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      }
     </style>
   </head>
   <body>
@@ -1462,6 +1468,8 @@
       let isHolidayCollapsed = false;
       let collapsedColumns = new Set();
       let lastScrollPosition = 0;
+      let lastResponsiveMobile = window.innerWidth <= 768;
+      let responsiveResizeFrame = null;
       let authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "" };
       let availableTeacherNames = [];
       let accessMode = "";
@@ -1642,7 +1650,7 @@
             return nextRows;
           });
         }
-        return withFirestoreTimeout(loadPage("", []), 8500, "Firebase 학생 상태");
+        return withFirestoreTimeout(loadPage("", []), 20000, "Firebase 학생 상태");
       }
       function loadStudentEnrollmentStatusWarnings(force) {
         var now = Date.now();
@@ -2264,7 +2272,14 @@
         document.addEventListener('click', function(){ closeAllNoteBubbles(); });
       };
       window.addEventListener('resize', function() {
-        if (lastData) renderTable(lastData, true);
+        if (responsiveResizeFrame) cancelAnimationFrame(responsiveResizeFrame);
+        responsiveResizeFrame = requestAnimationFrame(function() {
+          responsiveResizeFrame = null;
+          var isMobile = window.innerWidth <= 768;
+          if (lastData && isMobile !== lastResponsiveMobile) renderTable(lastData, true);
+          else updateTimelinePosition();
+          lastResponsiveMobile = isMobile;
+        });
       });
       function normalizeLoginId(v) {
         var s = String(v || "").trim();
@@ -3324,7 +3339,8 @@
         var valid = new Set(["정규","보충","보강","자습","오늘만","신규생","첫수업","결석예고","당일취소","휴강","지각","병결","직보","특강"]);
         if (!valid.has(s)) return "";
         var note = noteText || "비고 없음";
-        return "<button type='button' class='status-note-btn " + getStatusButtonClass(s) + "' data-status='" + s + "' data-note='" + encodeURIComponent(note) + "' onclick='toggleNoteBubble(this, event)'>" + s + "</button>";
+        var encodedNote = encodeURIComponent(note).replace(/'/g, "%27");
+        return "<button type='button' class='status-note-btn " + getStatusButtonClass(s) + "' data-status='" + s + "' data-note='" + encodedNote + "' onclick='toggleNoteBubble(this, event)'>" + s + "</button>";
       }
       function toggleNoteBubble(btn, ev) {
         if (ev) ev.stopPropagation();
@@ -3620,7 +3636,7 @@
           var row = document.createElement('div');
           row.className = 'absence-notice-item';
           row.dataset.name = name;
-          row.innerHTML = "<span>" + name + "</span><span class='absence-badge " + (statusSet.has("당일취소") ? "cancel" : "absent") + "'>" + Array.from(statusSet).join("/") + "</span>";
+          row.innerHTML = "<span>" + escapeHtml(name) + "</span><span class='absence-badge " + (statusSet.has("당일취소") ? "cancel" : "absent") + "'>" + escapeHtml(Array.from(statusSet).join("/")) + "</span>";
           row.onclick = function(){ renderAbsenceNoticePreview(name); };
           list.appendChild(row);
         });
@@ -3697,17 +3713,17 @@
             "<div class='absence-card-slot-time'>" + timeText + "<small>" + durationText + "</small></div>" +
             "<div class='absence-card-slot-cell'>" +
               "<div class='absence-card-slot-top'>" +
-                "<div><div class='absence-card-slot-title'>" + cls + "</div><div class='absence-card-slot-sub'>" + v.room + "</div></div>" +
-                "<div class='absence-card-status " + statusClass + "'>" + v.status + "</div>" +
+                "<div><div class='absence-card-slot-title'>" + escapeHtml(cls) + "</div><div class='absence-card-slot-sub'>" + escapeHtml(v.room) + "</div></div>" +
+                "<div class='absence-card-status " + statusClass + "'>" + escapeHtml(v.status) + "</div>" +
               "</div>" +
-              (v.note ? "<div class='absence-card-slot-note'>" + v.note + "</div>" : "") +
+              (v.note ? "<div class='absence-card-slot-note'>" + escapeHtml(v.note) + "</div>" : "") +
             "</div>" +
           "</div>";
         }).join("");
         preview.innerHTML =
-          "<div class='absence-card-title'>" + name + " 학생 학부모님 안내</div>" +
-          "<p class='absence-card-sub'>" + sheetLabel + schoolText + "</p>" +
-          "<div class='absence-card-point'>" + firstLine + "</div>" +
+          "<div class='absence-card-title'>" + escapeHtml(name) + " 학생 학부모님 안내</div>" +
+          "<p class='absence-card-sub'>" + escapeHtml(sheetLabel + schoolText) + "</p>" +
+          "<div class='absence-card-point'>" + escapeHtml(firstLine) + "</div>" +
           "<div class='absence-card-foot'>대상 시간</div>" +
           "<div class='absence-card-schedule'>" + cardItems + "</div>" +
           "<div class='absence-card-policy'>" +
@@ -5418,7 +5434,36 @@
       function getSubjectName(text) { var m = text.match(/(수학|수I|수II|미적|기하|확통|개별|정규|과학|물리|화학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|컨설팅|클리닉|면접)/); return m ? m[0] : ""; }
       function getSubjectEmoji(subj) { if (subj.match(/(수학|수I|수II|미적|기하|확통|개별|정규)/)) return "📐"; if (subj.match(/(과학|물리|화학|생명|지구과학|물|화|생|지)/)) return "🧪"; if (subj.match(/(국어|언매|화작)/)) return "📚"; if (subj.match(/(영어)/)) return "🅰️"; if (subj.match(/(사회|한국사|역사|사탐)/)) return "🌏"; return "✏️"; }
       function getDistinctColor(str) { var hash = 0; for (var i=0; i<str.length; i++) hash = str.charCodeAt(i) + ((hash<<5)-hash); var hue = (Math.abs(hash)*137.508)%360; return "hsl(" + hue + ", 75%, 93%)"; }
-      function highlightItem(element, text, keyword) { var regex = new RegExp("(" + keyword + ")", 'gi'); var displayText = text; var badgeHtml = ""; if (text.includes("확인필요")) { displayText = text.replace("확인필요", ""); badgeHtml = "<span class='warning-dot'></span>"; } var highlightedText = displayText.replace(regex, "<span class='highlight-text'>$1</span>"); if (text.includes("T")) { var subject = getSubjectName(text); var content = displayText.replace(subject, "").trim(); var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + subject + "</span>" : ""; var hlContent = content.replace(regex, "<span class='highlight-text'>$1</span>"); element.innerHTML = subjBadge + " <span class='teacher-name'>" + hlContent + "</span>" + badgeHtml; } else { var parts = displayText.split(" "); if (parts.length > 1) { var name = parts[0].replace(regex, "<span class='highlight-text'>$1</span>"); var school = parts.slice(1).join(" ").replace(regex, "<span class='highlight-text'>$1</span>"); element.innerHTML = "<span style='font-weight:600'>" + name + "</span> <span class='school-text'>" + school + "</span>" + badgeHtml; } else { element.innerHTML = highlightedText + badgeHtml; } } }
+      function escapeRegExp(value) {
+        return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+      function highlightItem(element, text, keyword) {
+        var rawText = String(text || "");
+        var displayText = rawText.includes("확인필요") ? rawText.replace("확인필요", "") : rawText;
+        var badgeHtml = rawText.includes("확인필요") ? "<span class='warning-dot'></span>" : "";
+        var safeKeyword = escapeHtml(keyword);
+        if (!safeKeyword) {
+          renderTableItem(element, rawText);
+          return;
+        }
+        var regex = new RegExp("(" + escapeRegExp(safeKeyword) + ")", "gi");
+        function mark(value) {
+          return escapeHtml(value).replace(regex, "<span class='highlight-text'>$1</span>");
+        }
+        if (rawText.includes("T")) {
+          var subject = getSubjectName(rawText);
+          var content = displayText.replace(subject, "").trim();
+          var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + escapeHtml(subject) + "</span>" : "";
+          element.innerHTML = subjBadge + " <span class='teacher-name'>" + mark(content) + "</span>" + badgeHtml;
+          return;
+        }
+        var parts = displayText.split(/\s+/);
+        if (parts.length > 1) {
+          element.innerHTML = "<span style='font-weight:600'>" + mark(parts[0]) + "</span> <span class='school-text'>" + mark(parts.slice(1).join(" ")) + "</span>" + badgeHtml;
+        } else {
+          element.innerHTML = mark(displayText) + badgeHtml;
+        }
+      }
       function getTypeBadge(text) {
         var t = detectClassType(text);
         if (!t) return null;
@@ -5673,23 +5718,23 @@
               var rowClass = "";
               if (statusClass === "status-cancel") rowClass = " is-cancelled";
               else if (statusClass === "status-notice") rowClass = " is-notice";
-              var safeNote = encodeURIComponent(entry.note || "비고 없음");
+              var safeNote = encodeURIComponent(entry.note || "비고 없음").replace(/'/g, "%27");
               var enrollmentLabel = getEnrollmentWarningForStudent(entry.name);
               return "<div class='teacher-simple-student" + rowClass + (enrollmentLabel ? " enrollment-alert" : "") + "'>" +
                 "<div class='teacher-simple-main'>" +
                 "<div class='teacher-simple-name-row'>" +
-                    "<button type='button' class='teacher-simple-name-trigger' data-note='" + safeNote + "' onclick='toggleNoteBubble(this, event)'>" + entry.name + "</button>" +
-                    (entry.school ? "<span class='teacher-simple-school'>" + entry.school + "</span>" : "") +
-                    (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + enrollmentLabel + "</span>" : "") +
+                    "<button type='button' class='teacher-simple-name-trigger' data-note='" + safeNote + "' onclick='toggleNoteBubble(this, event)'>" + escapeHtml(entry.name) + "</button>" +
+                    (entry.school ? "<span class='teacher-simple-school'>" + escapeHtml(entry.school) + "</span>" : "") +
+                    (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") +
                   "</div>" +
                   "<div class='teacher-simple-inline'>" +
                     (entry.lessonType ? getMobileTypeBadgeHtml(entry.lessonType) : "") +
-                    (entry.status ? "<span class='teacher-simple-chip " + statusClass + "'>" + statusLabel + "</span>" : "") +
-                    "<span class='teacher-simple-chip subject'>" + entry.subject + "</span>" +
-                    "<span class='teacher-simple-chip room'>" + entry.room + "</span>" +
+                    (entry.status ? "<span class='teacher-simple-chip " + statusClass + "'>" + escapeHtml(statusLabel) + "</span>" : "") +
+                    "<span class='teacher-simple-chip subject'>" + escapeHtml(entry.subject) + "</span>" +
+                    "<span class='teacher-simple-chip room'>" + escapeHtml(entry.room) + "</span>" +
                   "</div>" +
                 "</div>" +
-                "<div class='teacher-simple-teacher'>" + (entry.teacher ? entry.teacher + "T" : "-") + "</div>" +
+                "<div class='teacher-simple-teacher'>" + (entry.teacher ? escapeHtml(entry.teacher) + "T" : "-") + "</div>" +
               "</div>";
             }).join("");
             var simpleCard = document.createElement('div');
@@ -5784,7 +5829,7 @@
           var lessonHtml = lessons.map(function(lesson, idx) {
             var warn = lessons.length > 1 ? " (강의실 " + (idx + 1) + ")" : "";
             var typeBadge = getMobileTypeBadgeHtml(lesson.lessonType);
-            var subjectBadge = lesson.subject ? "<span class='mobile-type-badge mobile-type-blue'>" + lesson.subject + "</span>" : "";
+            var subjectBadge = lesson.subject ? "<span class='mobile-type-badge mobile-type-blue'>" + escapeHtml(lesson.subject) + "</span>" : "";
             var studentHtml = lesson.students.length ? lesson.students.map(function(st){
               var parsed = parseStudentRawText(st);
               var normalizedStatus = normalizeStatusLabel(parsed.status || "");
@@ -5793,7 +5838,7 @@
               var percent = Math.max(0, Math.min(100, Math.round((progress.done / Math.max(1, progress.total)) * 100)));
               var hourBadge = "<span class='teacher-hour-badge'>" + progress.done + "시간/" + progress.total + "시간</span>";
               var statusText = normalizedStatus || "상태 미입력";
-              var statusBadge = "<span class='teacher-status-chip " + getStatusChipClass(statusText) + "'>" + statusText + "</span>";
+              var statusBadge = "<span class='teacher-status-chip " + getStatusChipClass(statusText) + "'>" + escapeHtml(statusText) + "</span>";
               var noteText = parsed.note || "비고 없음";
               var enrollmentLabel = getEnrollmentWarningForStudent(parsed.name);
               var progressBar = "<div class='teacher-progress-wrap'><div class='teacher-progress-track'><div class='teacher-progress-fill' style='width:" + percent + "%;'></div></div><div class='teacher-progress-text'>진행 " + percent + "%</div></div>";
@@ -5801,15 +5846,15 @@
               if (statusText === "당일취소") alertClass = " is-cancelled";
               else if (statusText === "결석예고" || statusText === "휴강") alertClass = " is-muted-gray";
               if (enrollmentLabel) alertClass += " enrollment-alert";
-              return "<div class='teacher-student-item" + alertClass + "'><div class='teacher-student-head'><div class='teacher-student-name'>" + (parsed.name || "학생") +
-                     (parsed.school ? "<span class='teacher-student-school'>" + parsed.school + "</span>" : "") + "</div>" +
-                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + enrollmentLabel + "</span>" : "") + "</div></div>" +
+              return "<div class='teacher-student-item" + alertClass + "'><div class='teacher-student-head'><div class='teacher-student-name'>" + escapeHtml(parsed.name || "학생") +
+                     (parsed.school ? "<span class='teacher-student-school'>" + escapeHtml(parsed.school) + "</span>" : "") + "</div>" +
+                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") + "</div></div>" +
                      progressBar +
-                     "<div class='teacher-student-note-chip'>" + noteText + "</div>" +
+                     "<div class='teacher-student-note-chip'>" + escapeHtml(noteText) + "</div>" +
                      "</div>";
             }).join("") : "<div class='teacher-empty' style='padding:4px 0;'>학생 정보 없음</div>";
             return "<div class='teacher-lesson-row'>" +
-              "<div class='teacher-lesson-head'><div class='teacher-room-chip'>" + lesson.room + warn + "</div>" + typeBadge + subjectBadge + "</div>" +
+              "<div class='teacher-lesson-head'><div class='teacher-room-chip'>" + escapeHtml(lesson.room) + warn + "</div>" + typeBadge + subjectBadge + "</div>" +
               "<div class='teacher-student-list'>" + studentHtml + "</div>" +
             "</div>";
           }).join("");
@@ -7711,16 +7756,16 @@
           var typeInfo = getTypeBadge(displayText); var typeBadgeHtml = "";
           if (typeInfo) { typeBadgeHtml = typeInfo.html; displayText = displayText.replace(typeInfo.keyword, "").trim(); }
           var subject = getSubjectName(displayText); var content = displayText.replace(subject, "").trim(); 
-          var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + subject + "</span>" : ""; 
-          itemDiv.innerHTML = typeBadgeHtml + subjBadge + " <span class='teacher-name'>" + content + "</span>" + allBadges; 
+          var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + escapeHtml(subject) + "</span>" : "";
+          itemDiv.innerHTML = typeBadgeHtml + subjBadge + " <span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
         } else { 
           itemDiv.classList.add("is-student");
           var parsed = parseStudentRawText(rawText);
           var studentName = parsed.name || rawText.split(/\s+/)[0] || "";
           var statusLabel = normalizeStatusLabel(parsed.status || "");
           var noteButton = getStatusButtonHtml(statusLabel, parsed.note);
-          var schoolText = parsed.school ? (" <span class='school-text'>" + parsed.school + "</span>") : "";
-          itemDiv.innerHTML = "<span style='font-weight:600'>" + studentName + "</span>" + schoolText + noteButton + allBadges;
+          var schoolText = parsed.school ? (" <span class='school-text'>" + escapeHtml(parsed.school) + "</span>") : "";
+          itemDiv.innerHTML = "<span style='font-weight:600'>" + escapeHtml(studentName) + "</span>" + schoolText + noteButton + allBadges;
         } 
       }
       // [Excel Export Logic]

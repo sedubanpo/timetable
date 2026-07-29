@@ -364,8 +364,7 @@ function readFirebaseTeacherNames_(loginId) {
 
 function getLegacyTeacherNamesForAuth_(loginId) {
   var cache = CacheService.getScriptCache();
-  var normalizedLoginId = normalizeLoginId_(loginId);
-  var cacheKey = "LEGACY_TEACHER_NAMES_FOR_AUTH_V2_" + (normalizedLoginId || "ALL");
+  var cacheKey = "LEGACY_TEACHER_NAMES_FOR_AUTH_V3_ALL";
   var cached = cache.get(cacheKey);
   if (cached) return JSON.parse(cached);
   var ss = SpreadsheetApp.openById(AUTH_SPREADSHEET_ID);
@@ -374,12 +373,10 @@ function getLegacyTeacherNamesForAuth_(loginId) {
   var data = sheet.getDataRange().getValues();
   var teacherNames = [];
   for (var i = 1; i < data.length; i++) {
-    var dbId = String(data[i][0] || "").replace(/[^0-9]/g, "");
-    if (dbId.length === 8) dbId = "010" + dbId;
     var name = String(data[i][1] || "").trim();
     if (name && teacherNames.indexOf(name) === -1) teacherNames.push(name);
-    if (normalizedLoginId && dbId === normalizedLoginId) break;
   }
+  teacherNames.sort();
   cache.put(cacheKey, JSON.stringify(teacherNames), 300);
   return teacherNames;
 }
@@ -451,6 +448,7 @@ function authenticateTeacher(id, password) {
   if (!sheet) sheet = ss.getSheets()[0];
   var data = sheet.getDataRange().getValues();
   var teacherNames = [];
+  var matchedAccount = null;
 
   // 입력 아이디 정규화 (- 제거, 8자리일 경우 010 추가)
   var inputIdClean = String(id).replace(/[^0-9]/g, "");
@@ -482,20 +480,27 @@ function authenticateTeacher(id, password) {
     // 비밀번호 공란 시 아이디(dbId)로 대체
     if (dbPw === "") dbPw = dbId;
     // 검증 및 권한 부여
-    if (inputIdClean === dbId && verifyTeacherPassword_(inputPw, dbPw, dbId)) {
-      var isMaster = inputIdClean === "01042327428";
-      return {
-        ok: true,
-        success: true,
+    if (!matchedAccount && inputIdClean === dbId && verifyTeacherPassword_(inputPw, dbPw, dbId)) {
+      matchedAccount = {
         loginId: inputIdClean,
-        teacherName: dbName,
-        name: dbName,
-        isMaster: isMaster,
-        isLookup: false,
-        role: isMaster ? "ADMIN" : "TEACHER",
-        teacherNames: teacherNames
+        teacherName: dbName
       };
     }
+  }
+  if (matchedAccount) {
+    var isMaster = inputIdClean === "01042327428";
+    teacherNames.sort();
+    return {
+      ok: true,
+      success: true,
+      loginId: matchedAccount.loginId,
+      teacherName: matchedAccount.teacherName,
+      name: matchedAccount.teacherName,
+      isMaster: isMaster,
+      isLookup: false,
+      role: isMaster ? "ADMIN" : "TEACHER",
+      teacherNames: teacherNames
+    };
   }
   return { ok: false, success: false, message: "아이디 또는 비밀번호가 올바르지 않습니다." };
 }
