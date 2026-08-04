@@ -71,6 +71,22 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(appScript, sandbox, { timeout: 2000 });
+sandbox.nonStudentKeywords = new Set(["자습", "자기주도", "수학", "영어", "국어", "과학"]);
+
+[
+  "normalizeReviewNameToken",
+  "isNonStudentName",
+  "extractReviewStudentName",
+  "buildReviewSnapshot",
+  "getReviewIssueBadge",
+  "getReviewSeverity",
+  "addCurrentSnapshotIssues",
+  "getReviewIssueLocations",
+  "getReviewIssueReason",
+  "renderReviewTimetableIssueCard",
+  "renderReviewIssueList",
+  "renderReviewCurrentTimetable"
+].forEach((name) => vm.runInContext(extractFunction(appScript, name), sandbox));
 
 const enrollment = sandbox.buildEnrollmentStatusIndex([
   { studentName: "김 학생", status: "중지" },
@@ -150,12 +166,47 @@ assert(anomalyClasses.includes("schedule-anomaly"), "anomaly element must receiv
 assert(anomalyElement.title.includes("동일 시간대 중복 입력"), "anomaly tooltip must explain the warning");
 assert(anomalyElement.title.includes("등록 상태 경고: 중지"), "schedule warning must preserve enrollment warning text");
 
+const reviewScheduleData = {
+  headers: ["1강의실", "2강의실", "3강의실", "4강의실"],
+  grid: {
+    14: [
+      ["개별 수학 박선생T", "김학생 세화고1 정규 확인필요"],
+      ["개별 영어 이선생T", "김학생 세화고1 정규"],
+      ["개별 국어 최선생T", "김학생 다른고1 정규"],
+      []
+    ],
+    16: [[], [], [], ["1:1 과학 정선생T"]],
+    18: [["개별 수학 박선생T", "이학생 서초고2 정규"], [], [], []]
+  }
+};
+const reviewSnapshot = sandbox.buildReviewSnapshot(reviewScheduleData);
+const reviewIssues = [];
+sandbox.addCurrentSnapshotIssues(reviewSnapshot, reviewIssues);
+const checkIssue = reviewIssues.find((issue) => issue.type === "check");
+assert(checkIssue, "check-needed issue must be preserved");
+assert.strictEqual(checkIssue.teacher, "박선생T", "check-needed issue must include its teacher");
+assert.strictEqual(checkIssue.subject, "수학", "check-needed issue must include its subject");
+assert.strictEqual(checkIssue.students[0].name, "김학생", "check-needed issue must include its student");
+const duplicateIssues = reviewIssues.filter((issue) => issue.type === "duplicate");
+assert.strictEqual(duplicateIssues.length, 1, "same-name student at another school must not create an extra duplicate issue");
+assert.deepStrictEqual(Array.from(duplicateIssues[0].rooms), ["1강의실", "2강의실"]);
+const singleIssue = reviewIssues.find((issue) => issue.type === "single" && issue.studentName === "이학생");
+assert(singleIssue && singleIssue.teacher === "박선생T", "one-hour issue must retain exact class context");
+const reviewTimetableHtml = sandbox.renderReviewCurrentTimetable(reviewSnapshot, reviewIssues);
+assert(reviewTimetableHtml.includes("aria-label='현재표 오류 시간표'"), "current errors must render as a semantic timetable");
+assert(reviewTimetableHtml.includes("박선생T"), "timetable cards must show the teacher");
+assert(reviewTimetableHtml.includes("수학"), "timetable cards must show the subject");
+assert(reviewTimetableHtml.includes("확인필요 표시"), "timetable cards must explain the check-needed error");
+assert(reviewTimetableHtml.includes("1강의실") && reviewTimetableHtml.includes("14:00"), "timetable must preserve room and time coordinates");
+
 assert(index.includes('withFirestoreTimeout(loadPage("", []), 20000'), "enrollment timeout regression");
 assert(index.includes("isMobile !== lastResponsiveMobile"), "resize breakpoint guard missing");
 assert(index.includes("escapeHtml(entry.name)"), "mobile teacher names must be escaped");
 assert(index.includes("escapeHtml(parsed.name || \"학생\")"), "detailed mobile teacher names must be escaped");
 assert(index.includes("absence-card-title'>\" + escapeHtml(name)"), "absence preview names must be escaped");
 assert(index.includes("data-operation-memo-base-title"), "operation memo refresh must preserve schedule warning titles");
+assert(index.includes('role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle"'), "review modal semantics missing");
+assert(index.includes("button.setAttribute('aria-selected'"), "review tabs must expose selected state");
 
 const legacyNames = extractFunction(server, "getLegacyTeacherNamesForAuth_");
 assert(!/\bbreak\s*;/.test(legacyNames), "teacher list must scan every row");

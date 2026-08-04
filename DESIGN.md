@@ -45,3 +45,9 @@ Primary compact controls use a `--press-scale` value of `0.96` for pointer press
 ## 7. Depth
 
 The timetable uses compact borders as its primary depth system. Enrollment alerts use border and tonal contrast only, with no glow or new shadow.
+
+## 8. Tomorrow review dashboard
+
+The review modal is a dense operational surface, not a separate visual product. Its primary region is an error timetable with the same time × room mental model as the live timetable. Navy headers retain the existing navigation authority; rose surfaces identify immediate errors and amber surfaces identify review-level warnings. Table boundaries remain `1px` dividers because they encode coordinates. Nested issue cards use low-opacity ring and depth shadows rather than another hard container border.
+
+The hierarchy is fixed: summary metrics → current-error timetable → next review stages and source status. Error cards always expose issue type, class type/subject, teacher, affected student, and a corrective reason. At narrow widths the modal and secondary dashboard stack vertically, while the two-dimensional error timetable keeps sticky time/room headers and scrolls inside its named region. Interactive tabs and close controls keep at least a `40px` hit area and use the existing `0.96` press scale.
