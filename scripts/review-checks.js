@@ -258,10 +258,14 @@ const serverSandbox = {
         getSheetByName() {
           const values = [
             ["", "1강의실"],
-            ["오전 8:00 ~ 9:00", "개별 수학 박선생T"],
-            ["", "아침학생 세화고1 정규"],
+            ["오전 8:00", "개별 수학 박선생T"],
+            ["~ 9:00", "아침학생 세화고1 정규"],
+            ["오전 9:00", "개별 영어 최선생T"],
+            ["~ 10:00", "오전학생 세화고2 정규"],
             ["오전 11:00 ~ 오후 12:00", "개별 국어 김선생T"],
             ["", "낮학생 반포고1 정규"],
+            ["오후 8:00", "개별 과학 정선생T"],
+            ["~ 9:00", "저녁학생 서초고2 정규"],
             ["오후 11:00 ~ 오전 12:00", "1:1 영어 이선생T"],
             ["", "야간학생 반포고2 정규"]
           ];
@@ -277,11 +281,15 @@ const serverSandbox = {
   }
 };
 vm.createContext(serverSandbox);
+vm.runInContext(extractFunction(server, "parseScheduleStartHour_"), serverSandbox);
 vm.runInContext(extractFunction(server, "getFixedGridData"), serverSandbox);
 vm.runInContext(extractFunction(server, "toLitePayload_"), serverSandbox);
 const parsedBoundary = serverSandbox.getFixedGridData("8/5(수)", true);
 assert(parsedBoundary.grid[8][0].some((item) => item.includes("아침학생")), "server parser must retain the 08:00 block");
+assert(parsedBoundary.grid[9][0].some((item) => item.includes("오전학생")), "server parser must retain the 09:00 block");
+assert(!parsedBoundary.grid[9][0].some((item) => item.includes("저녁학생")), "an evening range end must not move students into the morning slot");
 assert(parsedBoundary.grid[11][0].some((item) => item.includes("낮학생")), "server parser must use the first meridiem in a mixed AM/PM range");
+assert(parsedBoundary.grid[20][0].some((item) => item.includes("저녁학생")), "server parser must keep evening students with their evening teacher");
 assert(parsedBoundary.grid[23][0].some((item) => item.includes("야간학생")), "server parser must retain the 23:00 block");
 const liteBoundary = serverSandbox.toLitePayload_(parsedBoundary);
 assert(liteBoundary.rows.some((row) => row.hour === 8), "lite API must include 08:00 rows");

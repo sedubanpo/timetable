@@ -732,11 +732,30 @@ function checkDataVersion(sheetName) {
   } catch (e) { return "ERROR"; }
 }
 
+function parseScheduleStartHour_(timeText) {
+  var text = String(timeText || "").trim();
+  var match = text.match(/(\d{1,2})\s*:/);
+  if (!match) return null;
+
+  // 시간 범위의 종료 표시는 별도 행에 "~ 9:00"처럼 들어온다.
+  // 이를 새 시작 시각으로 해석하면 오후 학생이 오전 슬롯으로 이동한다.
+  var rangeMarkerIndex = text.indexOf("~");
+  if (rangeMarkerIndex !== -1 && rangeMarkerIndex < match.index) return null;
+
+  var rawHour = parseInt(match[1], 10);
+  var startContext = text.slice(0, match.index + match[0].length);
+  var amIndex = startContext.lastIndexOf("오전");
+  var pmIndex = startContext.lastIndexOf("오후");
+  if (pmIndex > amIndex && rawHour < 12) rawHour += 12;
+  if (amIndex > pmIndex && rawHour === 12) rawHour = 0;
+  return rawHour;
+}
+
 function getFixedGridData(sheetName, forceRefresh) {
   try {
     var cache = CacheService.getScriptCache();
-    // [중요] 캐시 키 V62: 오전 8시~자정 시간 범위 반영
-    var cacheKey = "SHEET_DATA_V62_" + sheetName;
+    // [중요] 캐시 키 V63: 분리된 종료 시각 행의 오전/오후 오배치 수정
+    var cacheKey = "SHEET_DATA_V63_" + sheetName;
 
     if (!forceRefresh) {
       var cachedJSON = cache.get(cacheKey);
@@ -786,12 +805,8 @@ function getFixedGridData(sheetName, forceRefresh) {
       var row = values[i];
       var timeText = row[0] ? row[0].trim() : "";
       if (timeText.includes(":")) {
-        var match = timeText.match(/(오전|오후)?\s*(\d{1,2}):/);
-        if (match) {
-          var meridiem = match[1] || "";
-          var rawHour = parseInt(match[2], 10);
-          if (meridiem === "오후" && rawHour < 12) rawHour += 12;
-          if (meridiem === "오전" && rawHour === 12) rawHour = 0;
+        var rawHour = parseScheduleStartHour_(timeText);
+        if (rawHour !== null) {
           currentHour = rawHour >= SCHEDULE_START_HOUR && rawHour <= SCHEDULE_END_HOUR ? rawHour : -1;
         }
       }
