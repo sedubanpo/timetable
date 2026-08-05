@@ -1556,6 +1556,8 @@
       let visitorLookupStudyRefreshing = false;
       let visitorLookupDateRolloverLastCheckMs = 0;
       const VISITOR_LOOKUP_DATE_ROLLOVER_INTERVAL_MS = 6 * 60 * 60 * 1000;
+      const SCHEDULE_START_HOUR = 8;
+      const SCHEDULE_END_HOUR = 23;
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
@@ -3066,7 +3068,7 @@
       function updateTimeline() {
          updateTimelinePosition();
       }
-      function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= 10 && hour < 22) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(); timeLeft = 1800; } } else { document.getElementById('loadingText').textContent = "업데이트 대기중 (야간)"; document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
+      function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= SCHEDULE_START_HOUR && hour <= SCHEDULE_END_HOUR) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(); timeLeft = 1800; } } else { document.getElementById('loadingText').textContent = "업데이트 대기중 (운영시간 외)"; document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
       function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; document.getElementById('loadingText').textContent = "다음 업데이트까지 " + min + "분 " + sec + "초"; }
       function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var Y=now.getFullYear(); var M=String(now.getMonth()+1).padStart(2,'0'); var D=String(now.getDate()).padStart(2,'0'); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+Y+"."+M+"."+D+" ("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); updateTimelinePosition(); }
       
@@ -3077,7 +3079,7 @@
          var h = now.getHours();
          var m = now.getMinutes();
          var line = document.getElementById('liveTimeline');
-         if(h < 9 || h > 23) { line.style.display = 'none'; return; }
+         if(h < SCHEDULE_START_HOUR || h > SCHEDULE_END_HOUR) { line.style.display = 'none'; return; }
          
          var table = document.getElementById('scheduleTable');
          var container = document.getElementById('tableContainer');
@@ -3212,7 +3214,7 @@
         var ignoreNames = new Set(["정규","일반보충","당취보충","보충","보강"]);
         var dm=currentSheetName.match(/(\d+\/\d+\([가-힣]\))/); var dd=dm?dm[1]:currentSheetName; 
         
-        for(var h=9;h<=23;h++){ 
+        for(var h=SCHEDULE_START_HOUR;h<=SCHEDULE_END_HOUR;h++){
           var row=lastData.grid[h]||[]; 
           for(var i=0;i<hds.length;i++){ 
             var items=row[i]||[]; var rn=hds[i]; 
@@ -3248,7 +3250,7 @@
         studentScheduleMap = {};
         
         var headers = lastData.headers;
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = lastData.grid[h] || [];
           for (var i = 0; i < headers.length; i++) {
             var items = row[i] || [];
@@ -3595,7 +3597,7 @@
         var students = {};
         var headers = (data && data.headers) || [];
         var grid = (data && data.grid) || {};
-        for (var hour = 9; hour <= 23; hour++) {
+        for (var hour = SCHEDULE_START_HOUR; hour <= SCHEDULE_END_HOUR; hour++) {
           var row = grid[hour] || [];
           for (var columnIndex = 0; columnIndex < headers.length; columnIndex++) {
             if (String(headers[columnIndex] || "").includes("휴강")) continue;
@@ -3672,7 +3674,7 @@
       function buildStudentImageMap() {
         studentImageScheduleMap = {};
         if (!lastData || !lastData.headers) return;
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = (lastData.grid && lastData.grid[h]) || [];
           for (var i = 0; i < lastData.headers.length; i++) {
             var items = row[i] || [];
@@ -3750,7 +3752,7 @@
       function buildAbsenceNoticeMap() {
         absenceNoticeMap = {};
         if (!lastData || !lastData.headers) return;
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = (lastData.grid && lastData.grid[h]) || [];
           for (var i = 0; i < lastData.headers.length; i++) {
             var room = lastData.headers[i];
@@ -4723,7 +4725,7 @@
       function getCurrentScheduleTeacherNames() {
         var names = {};
         if (!lastData || !lastData.grid) return [];
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = lastData.grid[h] || [];
           row.forEach(function(items, index) {
             var roomName = lastData.headers && lastData.headers[index] ? String(lastData.headers[index]) : "";
@@ -4979,7 +4981,7 @@
       function collectTeacherRoomStatsFromGrid(sheetName, data, bucket) {
         if (!data || !data.grid) return;
         var headers = data.headers || [];
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = data.grid[h] || [];
           row.forEach(function(items, index) {
             var roomName = headers[index] ? String(headers[index]) : "";
@@ -5240,11 +5242,11 @@
       function getCurrentReportHour() {
         var now = new Date();
         var h = now.getHours();
-        if (h < 9) h = 9;
-        if (h > 23) h = 23;
+        if (h < SCHEDULE_START_HOUR) h = SCHEDULE_START_HOUR;
+        if (h > SCHEDULE_END_HOUR) h = SCHEDULE_END_HOUR;
         h += attendanceReportHourOffset;
-        if (h < 9) h = 9;
-        if (h > 23) h = 23;
+        if (h < SCHEDULE_START_HOUR) h = SCHEDULE_START_HOUR;
+        if (h > SCHEDULE_END_HOUR) h = SCHEDULE_END_HOUR;
         return h;
       }
       function parseDisplayDateInfo() {
@@ -5572,9 +5574,9 @@
         var nextOffset = attendanceReportHourOffset + Number(delta || 0);
         var now = new Date();
         var base = now.getHours();
-        if (base < 9) base = 9;
-        if (base > 23) base = 23;
-        if (base + nextOffset < 9 || base + nextOffset > 23) return;
+        if (base < SCHEDULE_START_HOUR) base = SCHEDULE_START_HOUR;
+        if (base > SCHEDULE_END_HOUR) base = SCHEDULE_END_HOUR;
+        if (base + nextOffset < SCHEDULE_START_HOUR || base + nextOffset > SCHEDULE_END_HOUR) return;
         attendanceReportHourOffset = nextOffset;
         refreshAttendanceReportModal();
       }
@@ -5652,6 +5654,15 @@
         if (t === "보강") return { html: "<span class='type-badge badge-orange'>보강</span>", keyword: "보강" };
         return null;
       }
+      function hasVisibleScheduleStudentsAtHour(data, hour) {
+        var row = data && data.grid ? (data.grid[hour] || []) : [];
+        return row.some(function(items) {
+          return (items || []).some(function(text) {
+            var raw = String(text || "");
+            return raw && !raw.includes("T") && !shouldHideStudentText(raw);
+          });
+        });
+      }
       
       // [renderTable: 휴강 숨김 & 원장실 조건부 숨김 적용]
       function renderTable(data, isRefresh) {
@@ -5694,7 +5705,7 @@
             }
             if (teacherView) {
                 var hasTeacherData = false;
-                for (var t = 9; t <= 23; t++) {
+                for (var t = SCHEDULE_START_HOUR; t <= SCHEDULE_END_HOUR; t++) {
                   var rr = data.grid[t] || [];
                   var its = rr[index] || [];
                   if (its.length > 0) { hasTeacherData = true; break; }
@@ -5703,7 +5714,7 @@
             }
             if (h === "원장실") {
                 var hasData = false;
-                for (var time = 9; time <= 23; time++) {
+                for (var time = SCHEDULE_START_HOUR; time <= SCHEDULE_END_HOUR; time++) {
                     var row = data.grid[time] || [];
                     var items = row[index] || [];
                     if (items.length > 0) {
@@ -5730,8 +5741,8 @@
         
         var tbody = document.createElement('tbody');
         var targetRow = null; 
-        for (var h=9; h<=23; h++) {
-          if (hide9am && h === 9) continue;
+        for (var h=SCHEDULE_START_HOUR; h<=SCHEDULE_END_HOUR; h++) {
+          if (hide9am && h === 9 && !hasVisibleScheduleStudentsAtHour(data, h)) continue;
           var rowData = data.grid[h] || []; 
           if (rowData.every(function(items){return items.length===0})) continue; 
           
@@ -5853,7 +5864,7 @@
 
         if (teacherMobileSimpleView) {
           var hasSimpleAny = false;
-          for (var sh = 9; sh <= 23; sh++) {
+          for (var sh = SCHEDULE_START_HOUR; sh <= SCHEDULE_END_HOUR; sh++) {
             var simpleRow = (data.grid && data.grid[sh]) || [];
             var entries = [];
             for (var si = 0; si < data.headers.length; si++) {
@@ -5932,7 +5943,7 @@
         }
         var studentLessonHours = {};
         var progressBySlot = {};
-        for (var hh = 9; hh <= 23; hh++) {
+        for (var hh = SCHEDULE_START_HOUR; hh <= SCHEDULE_END_HOUR; hh++) {
           var rr = (data.grid && data.grid[hh]) || [];
           for (var ci = 0; ci < data.headers.length; ci++) {
             var roomName = data.headers[ci];
@@ -5969,7 +5980,7 @@
           }
         });
         var hasAny = false;
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = (data.grid && data.grid[h]) || [];
           var lessons = [];
           for (var i = 0; i < data.headers.length; i++) {
@@ -6066,7 +6077,7 @@
         visitorLookupMatchCache = Object.create(null);
         visitorLookupIndexRows = [];
         if (!lastData || !lastData.headers || !lastData.grid) return visitorLookupIndexRows;
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = lastData.grid[h] || [];
           for (var i = 0; i < lastData.headers.length; i++) {
             var items = row[i] || [];
@@ -6284,7 +6295,7 @@
       function buildVisitorLookupEmptyRooms() {
         if (!lastData || !lastData.headers || !lastData.grid) return { hour: new Date().getHours(), rooms: [], ready: false };
         var hour = new Date().getHours();
-        if (hour < 9 || hour > 23 || !Object.prototype.hasOwnProperty.call(lastData.grid, hour)) {
+        if (hour < SCHEDULE_START_HOUR || hour > SCHEDULE_END_HOUR || !Object.prototype.hasOwnProperty.call(lastData.grid, hour)) {
           return { hour: hour, rooms: [], ready: false };
         }
         var row = lastData.grid[hour] || [];
@@ -6680,7 +6691,7 @@
 	          function getStudentIdentity(name, school) {
 	            return normalizeReviewNameToken(name) + "|" + String(school || "").replace(/\s+/g, "").toLowerCase();
 	          }
-	          for (var h = 9; h <= 23; h++) {
+	          for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
             var row = grid[h] || [];
             if (!snapshot.hourlyStudents[h]) snapshot.hourlyStudents[h] = [];
             for (var i = 0; i < headers.length; i++) {
@@ -8108,7 +8119,7 @@
         var rawEntries = [];
         var headers = lastData.headers || [];
 
-        for (var h = 9; h <= 23; h++) {
+        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
           var row = lastData.grid[h] || [];
           for (var i = 0; i < headers.length; i++) {
             var roomName = String(headers[i] || "").trim();
@@ -8246,8 +8257,9 @@
       }
       
       function formatTime(h) {
-        var ampm = h < 12 ? "오전" : "오후";
-        var hour = h > 12 ? h - 12 : h;
+        var normalized = ((Number(h) % 24) + 24) % 24;
+        var ampm = normalized < 12 ? "오전" : "오후";
+        var hour = normalized % 12 || 12;
         return `${ampm} ${hour}:00`;
       }
     </script>

@@ -6,6 +6,8 @@ var LOOKUP_LOGIN_ID = "2371";
 var LOOKUP_LOGIN_PASSWORD = "2371";
 var FIREBASE_PROJECT_ID = "fir-lms-prod";
 var FIREBASE_API_KEY = "AIzaSyCFM21ZxgwIYwmjRPaAOp5bL9Kprqiyppg";
+var SCHEDULE_START_HOUR = 8;
+var SCHEDULE_END_HOUR = 23;
 
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -124,7 +126,7 @@ function toLitePayload_(payload) {
   var headers = (payload && payload.headers) || [];
   var grid = (payload && payload.grid) || {};
   var rows = [];
-  for (var h = 9; h <= 23; h++) {
+  for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
     var line = grid[h] || [];
     for (var i = 0; i < headers.length; i++) {
       var items = line[i] || [];
@@ -512,7 +514,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     if (!selectedTeacher) return getFixedGridData(sheetName, forceRefresh);
 
     var cache = CacheService.getScriptCache();
-    var cacheKey = "TEACHER_GRID_V4_" + sheetName + "_" + selectedTeacher;
+    var cacheKey = "TEACHER_GRID_V5_" + sheetName + "_" + selectedTeacher;
     if (!forceRefresh) {
       var cached = cache.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -522,7 +524,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     if (!base || base.error) return base;
 
     var filtered = {};
-    for (var h = 9; h <= 23; h++) {
+    for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
       var row = base.grid[h] || [];
       filtered[h] = row.map(function(items) {
         var list = items || [];
@@ -549,7 +551,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
 function teacherGridHasItems_(payload) {
   var headers = (payload && payload.headers) || [];
   var grid = (payload && payload.grid) || {};
-  for (var h = 9; h <= 23; h++) {
+  for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
     var row = grid[h] || [];
     for (var i = 0; i < headers.length; i++) {
       if (row[i] && row[i].length) return true;
@@ -733,8 +735,8 @@ function checkDataVersion(sheetName) {
 function getFixedGridData(sheetName, forceRefresh) {
   try {
     var cache = CacheService.getScriptCache();
-    // [중요] 캐시 키 V61: 강의실별 한 줄 최대 셀 수 제한 반영
-    var cacheKey = "SHEET_DATA_V61_" + sheetName;
+    // [중요] 캐시 키 V62: 오전 8시~자정 시간 범위 반영
+    var cacheKey = "SHEET_DATA_V62_" + sheetName;
 
     if (!forceRefresh) {
       var cachedJSON = cache.get(cacheKey);
@@ -773,7 +775,7 @@ function getFixedGridData(sheetName, forceRefresh) {
     if (classrooms.length > 0) classrooms[classrooms.length - 1].endCol = headerRow.length - 1;
 
     var gridData = {}; 
-    for (var h = 9; h <= 23; h++) gridData[h] = classrooms.map(function() { return []; });
+    for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) gridData[h] = classrooms.map(function() { return []; });
 
     var currentHour = -1; 
     var skipKeywords = ["개학시간표","개학","필드","주말","질문","클리닉","휴식","직전"];
@@ -784,14 +786,16 @@ function getFixedGridData(sheetName, forceRefresh) {
       var row = values[i];
       var timeText = row[0] ? row[0].trim() : "";
       if (timeText.includes(":")) {
-        var match = timeText.match(/(\d+):/);
+        var match = timeText.match(/(오전|오후)?\s*(\d{1,2}):/);
         if (match) {
-          var rawHour = parseInt(match[1]);
-          if (timeText.includes("오후") && rawHour < 12) rawHour += 12;
-          if (!timeText.includes("~")) { if (rawHour >= 23) currentHour = -1; else currentHour = rawHour; }
+          var meridiem = match[1] || "";
+          var rawHour = parseInt(match[2], 10);
+          if (meridiem === "오후" && rawHour < 12) rawHour += 12;
+          if (meridiem === "오전" && rawHour === 12) rawHour = 0;
+          currentHour = rawHour >= SCHEDULE_START_HOUR && rawHour <= SCHEDULE_END_HOUR ? rawHour : -1;
         }
       }
-      if (currentHour >= 9 && currentHour <= 23) {
+      if (currentHour >= SCHEDULE_START_HOUR && currentHour <= SCHEDULE_END_HOUR) {
         classrooms.forEach(function(room, roomIndex) {
           var parts = [];
           var firstNonEmptyCol = -1;

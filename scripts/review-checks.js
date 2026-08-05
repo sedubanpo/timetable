@@ -57,6 +57,7 @@ const sandbox = {
   document: {},
   localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
   console,
+  alert() {},
   setTimeout() { return 1; },
   clearTimeout() {},
   setInterval() { return 1; },
@@ -213,5 +214,80 @@ assert(!/\bbreak\s*;/.test(legacyNames), "teacher list must scan every row");
 assert(legacyNames.includes("teacherNames.sort()"), "teacher list must be stable");
 const legacyAuth = extractFunction(server, "authenticateTeacher");
 assert(legacyAuth.includes("matchedAccount"), "authentication must defer return until all names are collected");
+
+const boundaryGrid = {
+  headers: ["1강의실"],
+  grid: {
+    8: [["개별 수학 박선생T", "아침학생 세화고1 정규"]],
+    9: [["개별 수학 박선생T", "아침학생 세화고1 정규"]],
+    22: [["1:1 영어 이선생T", "야간학생 반포고2 정규"]],
+    23: [["1:1 영어 이선생T", "야간학생 반포고2 정규"]]
+  }
+};
+sandbox.boundaryGrid = boundaryGrid;
+vm.runInContext("lastData = boundaryGrid; currentSheetName = '8/5(수)'; buildStudentImageMap();", sandbox);
+const morningCard = vm.runInContext("buildStudentCardViewModel('아침학생')", sandbox);
+const lateCard = vm.runInContext("buildStudentCardViewModel('야간학생')", sandbox);
+assert.strictEqual(morningCard.timelineRows[0].start, 8, "student card must start an early class at 08:00");
+assert.strictEqual(morningCard.timelineRows[0].end, 10, "student card must merge the 08:00-10:00 class");
+assert.strictEqual(lateCard.timelineRows[0].start, 22, "student card must start a late class at 22:00");
+assert.strictEqual(lateCard.timelineRows[0].end, 24, "student card must include the 23:00-24:00 slot");
+assert.strictEqual(vm.runInContext("formatTime(24)", sandbox), "오전 12:00", "midnight export label must be correct");
+assert.strictEqual(vm.runInContext("hasVisibleScheduleStudentsAtHour(boundaryGrid, 9)", sandbox), true, "a real 09:00 class must override the summary-row hide toggle");
+
+let exportedRows = null;
+sandbox.XLSX = {
+  utils: {
+    json_to_sheet(rows) { exportedRows = rows; return { "!ref": "A1:J3" }; },
+    book_new() { return {}; },
+    book_append_sheet() {}
+  },
+  writeFile() {}
+};
+vm.runInContext("exportScheduleToExcel()", sandbox);
+assert(exportedRows.some((row) => row["이름"] === "아침학생" && row["시작"] === "오전 8:00" && row["종료"] === "오전 10:00" && row["시간"] === 2), "timesheet must include and merge 08:00-10:00");
+assert(exportedRows.some((row) => row["이름"] === "야간학생" && row["시작"] === "오후 10:00" && row["종료"] === "오전 12:00" && row["시간"] === 2), "timesheet must include and merge 22:00-24:00");
+
+const serverSandbox = {
+  SCHEDULE_START_HOUR: 8,
+  SCHEDULE_END_HOUR: 23,
+  CacheService: { getScriptCache() { return { get() { return null; }, put() {} }; } },
+  SpreadsheetApp: {
+    getActiveSpreadsheet() {
+      return {
+        getSheetByName() {
+          const values = [
+            ["", "1강의실"],
+            ["오전 8:00 ~ 9:00", "개별 수학 박선생T"],
+            ["", "아침학생 세화고1 정규"],
+            ["오전 11:00 ~ 오후 12:00", "개별 국어 김선생T"],
+            ["", "낮학생 반포고1 정규"],
+            ["오후 11:00 ~ 오전 12:00", "1:1 영어 이선생T"],
+            ["", "야간학생 반포고2 정규"]
+          ];
+          return {
+            getDataRange() { return { getDisplayValues() { return values; } }; },
+            getLastRow() { return values.length; },
+            getLastColumn() { return values[0].length; },
+            getRange() { return { getDisplayValue() { return ""; } }; }
+          };
+        }
+      };
+    }
+  }
+};
+vm.createContext(serverSandbox);
+vm.runInContext(extractFunction(server, "getFixedGridData"), serverSandbox);
+vm.runInContext(extractFunction(server, "toLitePayload_"), serverSandbox);
+const parsedBoundary = serverSandbox.getFixedGridData("8/5(수)", true);
+assert(parsedBoundary.grid[8][0].some((item) => item.includes("아침학생")), "server parser must retain the 08:00 block");
+assert(parsedBoundary.grid[11][0].some((item) => item.includes("낮학생")), "server parser must use the first meridiem in a mixed AM/PM range");
+assert(parsedBoundary.grid[23][0].some((item) => item.includes("야간학생")), "server parser must retain the 23:00 block");
+const liteBoundary = serverSandbox.toLitePayload_(parsedBoundary);
+assert(liteBoundary.rows.some((row) => row.hour === 8), "lite API must include 08:00 rows");
+assert(liteBoundary.rows.some((row) => row.hour === 23), "lite API must include 23:00 rows");
+
+assert(!/for\s*\(var\s+(?:h|hour|hh|sh|t|time)\s*=\s*9\s*;[^\n]*<=\s*23/.test(index), "client schedule consumers must not retain the old 09:00-23:00 range");
+assert(!/for\s*\(var\s+h\s*=\s*9\s*;[^\n]*<=\s*23/.test(server), "server schedule consumers must not retain the old 09:00-23:00 range");
 
 console.log("review checks passed");

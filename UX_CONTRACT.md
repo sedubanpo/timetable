@@ -40,3 +40,17 @@ The modal owns vertical scrolling. The error timetable owns its two-dimensional 
 ## Evidence limits
 
 Automated fixtures prove grouping, context retention, output structure, and mirror integrity. Browser captures prove rendered geometry for the inspected states, not broad user preference or real-world error prevalence.
+
+## Extended operating-hour addendum
+
+- The daily timetable, student card, timesheet export, teacher/attendance views, review snapshot, and lightweight API share one inclusive source range: 08:00 through 23:00 (the final slot ends at 24:00).
+- The existing `9시 OFF` control may hide a summary-only 09:00 row, but it must never hide a 09:00 row containing an actual student lesson.
+- Consecutive 08:00 and 09:00 entries for the same lesson merge to 08:00–10:00. Consecutive 22:00 and 23:00 entries merge to 22:00–24:00.
+- Midnight is displayed as `오전 12:00` in exported timesheets and student-facing schedule cards.
+- Extending the time range adds rows only when source data exists; it does not change column widths, timetable hierarchy, late-night access control, or responsive scroll ownership.
+
+| Extended-hours contract | Owner | Verification | Evidence |
+| --- | --- | --- | --- |
+| Parse and serve 08:00/23:00 source blocks | `getFixedGridData`, `toLitePayload_` in `Code.gs` | mixed-meridiem and boundary fixtures | `scripts/review-checks.js` |
+| Show early lessons in the daily timetable | `renderTable` in `Index.html` | real-data browser inspection | Superloopy frontend evidence |
+| Include boundary lessons in cards and timesheets | `buildStudentImageMap`, `exportScheduleToExcel` in `Index.html` | merged 08:00–10:00 and 22:00–24:00 assertions | `scripts/review-checks.js` |
