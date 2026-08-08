@@ -331,6 +331,22 @@ assert.strictEqual(lateCard.timelineRows[0].end, 24, "student card must include 
 assert.strictEqual(vm.runInContext("formatTime(24)", sandbox), "오전 12:00", "midnight export label must be correct");
 assert.strictEqual(vm.runInContext("hasVisibleScheduleStudentsAtHour(boundaryGrid, 9)", sandbox), true, "a real 09:00 class must override the summary-row hide toggle");
 
+const automaticMemos = sandbox.buildSlmsOperationMemoItems([
+  { __id: "common", date: "2026-08-18", target: "용강중 공통", eventName: "개학식", eventType: "기타 일정" },
+  { __id: "grade", startDate: "2026-08-17", endDate: "2026-08-19", targetSchool: "서울고", targetGrade: "2학년", title: "개학식" },
+  { __id: "outside", date: "2026-08-20", school: "서초고", grade: "전체", eventName: "개학식" },
+  { __id: "duplicate", date: "2026-08-18", school: "용강중", grade: "전학년", eventName: "개학식", eventType: "기타 일정" }
+], "2026-08-18");
+assert.strictEqual(automaticMemos.length, 2, "same-date S-LMS school events must be included and duplicates removed");
+assert.strictEqual(automaticMemos[0].target_school, "용강중", "automatic memo must retain its school");
+assert.strictEqual(automaticMemos[0].target_grade, "", "common school events must apply to every grade");
+assert.strictEqual(automaticMemos[0].read_only, true, "S-LMS memos must be read-only");
+assert.strictEqual(automaticMemos[1].target_grade, "2", "grade-specific events must retain their numeric grade");
+const retainedAutomatic = sandbox.resolveOperationMemoSourceItems({ items: [], error: new Error("temporary") }, automaticMemos, true);
+assert.strictEqual(retainedAutomatic.length, 2, "a same-date source failure must retain the last successful automatic items");
+assert.strictEqual(sandbox.resolveOperationMemoSourceItems({ items: [], error: new Error("temporary") }, automaticMemos, false).length, 0, "a new date must not leak stale automatic items");
+assert(index.includes("S-LMS 자동") && index.includes("읽기 전용") && index.includes("전학년"), "automatic memo source and coverage labels must remain visible");
+
 let exportedRows = null;
 sandbox.XLSX = {
   utils: {

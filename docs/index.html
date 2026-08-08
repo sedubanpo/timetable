@@ -462,6 +462,12 @@
       .operation-memo-item-title { font-weight:900; margin-bottom:3px; }
       .operation-memo-item-meta { font-size:0.78rem; color:#9f1239; font-weight:700; }
       .operation-memo-item-message { margin-top:5px; font-size:0.86rem; line-height:1.45; color:#4c0519; word-break:keep-all; }
+      .operation-memo-item.is-slms { border-color:#bfdbfe; background:#eff6ff; color:#172554; }
+      .operation-memo-item.is-slms .operation-memo-item-meta, .operation-memo-item.is-slms .operation-memo-item-message { color:#1e3a8a; }
+      .operation-memo-source-summary { margin-top:12px; padding:10px 12px; border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; color:#334155; font-size:0.8rem; line-height:1.45; }
+      .operation-memo-source-summary strong { color:#1e3a8a; }
+      .operation-memo-source-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:0.7rem; font-weight:900; margin-right:5px; }
+      .operation-memo-readonly-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; background:#e2e8f0; color:#475569; font-size:0.7rem; font-weight:800; }
       .operation-memo-item-actions { display:flex; gap:6px; flex-shrink:0; }
       .operation-memo-mini-btn { border:1px solid #fda4af; background:#fff; color:#9f1239; border-radius:8px; padding:5px 8px; font-size:0.76rem; font-weight:800; cursor:pointer; }
       .operation-memo-empty { padding:18px; text-align:center; color:#94a3b8; border:1px dashed #cbd5e1; border-radius:10px; }
@@ -1423,7 +1429,8 @@
     <div id="operationMemoModal">
       <div class="modal-box operation-memo-box">
         <div class="modal-title">운영 메모</div>
-        <div style="color:#64748b; font-size:0.84rem; line-height:1.45; margin-top:6px;">현재 선택한 날짜에만 적용됩니다. 공동 메모는 날짜 상단에 표시되고, 학생/학교 메모는 시간표 항목을 강조합니다.</div>
+        <div style="color:#64748b; font-size:0.84rem; line-height:1.45; margin-top:6px;">수기 메모와 선택 날짜의 S-LMS 학교 일정을 함께 표시합니다. 공통·전학년 일정은 해당 학교 모든 학년에 적용됩니다.</div>
+        <div id="operationMemoSourceSummary" class="operation-memo-source-summary" aria-live="polite"></div>
         <div class="operation-memo-controls">
           <select id="operationMemoTypeInput" class="operation-memo-wide" onchange="syncOperationMemoFormMode()">
             <option value="common">공동 메모</option>
@@ -1588,7 +1595,7 @@
       let teacherRoomStatsLoading = false;
       let lateNightCollapsed = true;
       let lateNightAccessCode = "2371";
-      let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], loading: false, editingId: "", popupKey: "" };
+      let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], manualItems: [], autoItems: [], sourceErrors: {}, slmsEvents: [], slmsLoadedAt: 0, loading: false, editingId: "", popupKey: "" };
       let studentEnrollmentStatusState = { byName: {}, loadedAt: 0, warningCount: 0, loading: null, error: "" };
       let operationMemoPollTimer = null;
       const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycbztGbkhmKvr23Yx8tSNcgK-Y-WzSCbOoFtc8QSaqYS5XvnAhp1kheu84VNmwr_hWQm9EQ/exec";
@@ -1728,6 +1735,23 @@
         }
         return withFirestoreTimeout(loadPage("", []), 20000, "Firebase 학생 상태");
       }
+      function fetchSlmsSchoolEventsCollection(idToken) {
+        if (!idToken) return Promise.reject(new Error("Firebase 로그인 토큰 없음"));
+        var projectId = (LIVE_FIREBASE_CONFIG && LIVE_FIREBASE_CONFIG.projectId) || "fir-lms-prod";
+        var base = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(projectId) + "/databases/(default)/documents/events";
+        function loadPage(pageToken, rows) {
+          var url = base + "?pageSize=300" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
+          return fetch(url, { headers: { "Authorization": "Bearer " + idToken, "Accept": "application/json" } }).then(function(res) {
+            if (!res.ok) throw new Error("Firebase 학교 일정 조회 실패(" + res.status + ")");
+            return res.json();
+          }).then(function(payload) {
+            var nextRows = rows.concat(((payload && payload.documents) || []).map(parseFirestoreRestDocument));
+            if (payload && payload.nextPageToken && nextRows.length < 1500) return loadPage(payload.nextPageToken, nextRows);
+            return nextRows.slice(0, 1500);
+          });
+        }
+        return withFirestoreTimeout(loadPage("", []), 12000, "Firebase 학교 일정");
+      }
       function loadStudentEnrollmentStatusWarnings(force) {
         var now = Date.now();
         if (!force && studentEnrollmentStatusState.loadedAt && now - studentEnrollmentStatusState.loadedAt < 5 * 60 * 1000) return Promise.resolve(false);
@@ -1818,6 +1842,9 @@
       function isOperationMemoAvailable() {
         return !!(operationMemoState.configured && authState.loggedIn && authState.isMaster);
       }
+      function isOperationMemoReadable() {
+        return !!(authState.loggedIn && authState.isMaster);
+      }
       function getOperationMemoDateKey(sheetName) {
         var text = String(sheetName || currentSheetName || "").trim();
         var match = text.match(/(\d{1,2})\/(\d{1,2})/);
@@ -1856,6 +1883,88 @@
         if (type === "common" || type === "school" || type === "student") return type;
         return "student";
       }
+      function isAutomaticOperationMemo(item) {
+        return !!(item && (item.source === "slms-school-event" || item.read_only === true));
+      }
+      function normalizeSlmsOperationMemoDateKey(value) {
+        var text = String(value || "").trim();
+        var iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (iso) return iso[1] + "-" + String(parseInt(iso[2], 10)).padStart(2, "0") + "-" + String(parseInt(iso[3], 10)).padStart(2, "0");
+        var shortDate = text.match(/^(\d{1,2})[./-](\d{1,2})/);
+        if (!shortDate) return "";
+        var year = new Date().getFullYear();
+        return year + "-" + String(parseInt(shortDate[1], 10)).padStart(2, "0") + "-" + String(parseInt(shortDate[2], 10)).padStart(2, "0");
+      }
+      function getSlmsSchoolEventDateRange(item) {
+        var start = normalizeSlmsOperationMemoDateKey(item && (item.date || item.isoDate || item.startDate || item.startIsoDate || item.start || item.eventDate || item.targetDate));
+        var end = normalizeSlmsOperationMemoDateKey(item && (item.endDate || item.endIsoDate || item.end || item.date || item.isoDate || item.startDate || item.startIsoDate || item.start || item.eventDate || item.targetDate));
+        return { start: start, end: end || start };
+      }
+      function parseSlmsSchoolEventTarget(item) {
+        var schoolText = String((item && (item.school || item.schoolName || item.eventSchool || item.targetSchool || item.target)) || "").trim();
+        var gradeText = String((item && (item.grade || item.targetGrade || item.schoolGrade)) || "").trim();
+        var combined = (schoolText + " " + gradeText).trim();
+        var isAllGrades = /공통|전학년|전체/.test(combined);
+        var grade = isAllGrades ? "" : normalizeOperationMemoGrade(gradeText || schoolText);
+        var school = normalizeOperationMemoSchool(schoolText.replace(/공통|전학년|전체/g, "").replace(/\d+\s*학년?/g, "").trim());
+        return {
+          school: school,
+          grade: grade
+        };
+      }
+      function getSlmsSchoolEventMessage(item) {
+        var title = String((item && (item.eventName || item.title || item.name)) || "학교 일정").trim();
+        var category = String((item && (item.eventType || item.category || item.type)) || "").trim();
+        var note = String((item && (item.note || item.description)) || "").trim();
+        return [title, category && category !== title ? category : "", note && note !== title ? note : ""].filter(Boolean).join(" · ");
+      }
+      function buildSlmsOperationMemoItems(events, dateKey) {
+        var seen = {};
+        return (Array.isArray(events) ? events : []).reduce(function(items, event, index) {
+          var range = getSlmsSchoolEventDateRange(event || {});
+          if (!range.start || dateKey < range.start || dateKey > range.end) return items;
+          var target = parseSlmsSchoolEventTarget(event || {});
+          if (!target.school) return items;
+          var message = getSlmsSchoolEventMessage(event || {});
+          var identity = [target.school, target.grade, range.start, range.end, message].join("::");
+          if (seen[identity]) return items;
+          seen[identity] = true;
+          items.push({
+            id: "slms:" + String(event.__id || event.id || identity || index),
+            date_key: dateKey,
+            sheet_name: currentSheetName || "",
+            student_name: target.school + (target.grade ? target.grade : ""),
+            target_school: target.school,
+            target_grade: target.grade,
+            type: "school",
+            message: message,
+            severity: "info",
+            active: true,
+            source: "slms-school-event",
+            read_only: true,
+            updated_at: event.updatedAt || event.updated_at || ""
+          });
+          return items;
+        }, []);
+      }
+      function fetchSlmsOperationMemos(dateKey, options) {
+        var opts = options || {};
+        var cacheFresh = operationMemoState.slmsEvents.length && (Date.now() - operationMemoState.slmsLoadedAt < 300000);
+        var eventsPromise = (!opts.refreshSlms && cacheFresh)
+          ? Promise.resolve(operationMemoState.slmsEvents)
+          : getLiveFirebaseAuth().then(function(auth) {
+              var user = auth && auth.currentUser;
+              if (!user) throw new Error("S-LMS 로그인 정보가 없습니다.");
+              return user.getIdToken().then(function(idToken) {
+                return fetchSlmsSchoolEventsCollection(idToken);
+              });
+            }).then(function(events) {
+              operationMemoState.slmsEvents = Array.isArray(events) ? events : [];
+              operationMemoState.slmsLoadedAt = Date.now();
+              return operationMemoState.slmsEvents;
+            });
+        return eventsPromise.then(function(events) { return buildSlmsOperationMemoItems(events, dateKey); });
+      }
       function getOperationMemoTypeLabel(type) {
         var t = String(type || "");
         if (t === "common") return "공동 메모";
@@ -1891,19 +2000,35 @@
           return Array.isArray(rows) ? rows : [];
         });
       }
+      function resolveOperationMemoSourceItems(result, previousItems, sameDate) {
+        var rows = result && result.error && sameDate ? previousItems : (result && result.items);
+        return (Array.isArray(rows) ? rows : []).filter(function(item) { return item && item.active !== false; });
+      }
+      function renderOperationMemoSourceSummary() {
+        var el = document.getElementById('operationMemoSourceSummary');
+        if (!el) return;
+        var errors = operationMemoState.sourceErrors || {};
+        var status = [];
+        if (errors.slms) status.push("S-LMS 불러오기 실패 · 이전 자료 유지");
+        if (errors.manual) status.push("수기 메모 불러오기 실패 · 이전 자료 유지");
+        el.innerHTML = "<strong>S-LMS 자동 " + (operationMemoState.autoItems || []).length + "건</strong> · 수기 " + (operationMemoState.manualItems || []).length + "건" +
+          (status.length ? "<br><span style='color:#b45309'>" + escapeHtml(status.join(" / ")) + "</span>" : "<br>자동 일정은 S-LMS에서 관리하며 여기서는 읽기 전용입니다.");
+      }
       function startOperationMemoPolling() {
         if (operationMemoPollTimer) clearInterval(operationMemoPollTimer);
         operationMemoPollTimer = null;
-        if (!isOperationMemoAvailable() || !operationMemoState.dateKey) return;
+        if (!isOperationMemoReadable() || !operationMemoState.dateKey) return;
         operationMemoPollTimer = setInterval(function() {
           loadOperationMemosForCurrentSheet(true, { silent: true });
         }, 15000);
       }
       function loadOperationMemosForCurrentSheet(force, options) {
         var opts = options || {};
-        if (!isOperationMemoAvailable()) {
+        if (!isOperationMemoReadable()) {
           operationMemoState.dateKey = "";
           operationMemoState.items = [];
+          operationMemoState.manualItems = [];
+          operationMemoState.autoItems = [];
           clearOperationMemoHighlights();
           renderOperationCommonMemos();
           return Promise.resolve([]);
@@ -1915,10 +2040,19 @@
           return Promise.resolve(operationMemoState.items);
         }
         operationMemoState.loading = true;
-        return fetchOperationMemos(dateKey).then(function(items) {
+        var sameDate = operationMemoState.dateKey === dateKey;
+        var manualPromise = fetchOperationMemos(dateKey).then(function(items) { return { items: items, error: null }; }).catch(function(error) { return { items: [], error: error }; });
+        var slmsPromise = fetchSlmsOperationMemos(dateKey, opts).then(function(items) { return { items: items, error: null }; }).catch(function(error) { return { items: [], error: error }; });
+        return Promise.all([manualPromise, slmsPromise]).then(function(results) {
+          var manualResult = results[0];
+          var slmsResult = results[1];
           operationMemoState.dateKey = dateKey;
-          operationMemoState.items = items.filter(function(item) { return item && item.active !== false; });
+          operationMemoState.manualItems = resolveOperationMemoSourceItems(manualResult, operationMemoState.manualItems, sameDate);
+          operationMemoState.autoItems = resolveOperationMemoSourceItems(slmsResult, operationMemoState.autoItems, sameDate);
+          operationMemoState.sourceErrors = { manual: manualResult.error || null, slms: slmsResult.error || null };
+          operationMemoState.items = operationMemoState.autoItems.concat(operationMemoState.manualItems);
           renderOperationMemoList();
+          renderOperationMemoSourceSummary();
           renderOperationCommonMemos();
           applyOperationMemoHighlights();
           showOperationMemoPopupIfNeeded();
@@ -1926,11 +2060,10 @@
           return operationMemoState.items;
         }).catch(function(err) {
           if (!opts.silent) console.warn(err);
-          operationMemoState.items = [];
-          clearOperationMemoHighlights();
-          renderOperationCommonMemos();
+          operationMemoState.sourceErrors = { unexpected: err };
+          renderOperationMemoSourceSummary();
           renderOperationMemoList();
-          return [];
+          return operationMemoState.items || [];
         }).finally(function() {
           operationMemoState.loading = false;
         });
@@ -1971,7 +2104,7 @@
         var strip = document.getElementById('operationCommonMemoStrip');
         var content = document.getElementById('operationCommonMemoContent');
         if (!strip || !content) return;
-        var items = isOperationMemoAvailable() ? (operationMemoState.items || []).filter(function(item) {
+        var items = isOperationMemoReadable() ? (operationMemoState.items || []).filter(function(item) {
           return getOperationMemoKind(item) === "common" && String(item.message || "").trim();
         }) : [];
         if (!items.length) {
@@ -1986,7 +2119,7 @@
       }
       function applyOperationMemoHighlights() {
         clearOperationMemoHighlights();
-        if (!isOperationMemoAvailable() || !operationMemoState.items.length) return;
+        if (!isOperationMemoReadable() || !operationMemoState.items.length) return;
         var memoMaps = getOperationMemoMaps();
         document.querySelectorAll('.student-item.is-student').forEach(function(itemEl) {
           var raw = itemEl.dataset.originalText || itemEl.textContent || "";
@@ -2013,13 +2146,14 @@
             var badge = document.createElement('span');
             var hasSchool = memos.some(function(m) { return getOperationMemoKind(m) === "school"; });
             badge.className = 'operation-memo-student-badge' + (hasSchool ? ' school' : '');
-            badge.textContent = hasSchool ? '학교메모' : '메모';
+            var hasAutomaticSchool = memos.some(function(m) { return getOperationMemoKind(m) === "school" && isAutomaticOperationMemo(m); });
+            badge.textContent = hasAutomaticSchool ? '학교일정' : (hasSchool ? '학교메모' : '메모');
             itemEl.appendChild(badge);
           }
         });
       }
       function showOperationMemoPopupIfNeeded() {
-        if (!isOperationMemoAvailable() || !operationMemoState.items.length || !operationMemoState.dateKey) return;
+        if (!isOperationMemoReadable() || !operationMemoState.items.length || !operationMemoState.dateKey) return;
         var key = operationMemoState.dateKey + "::" + operationMemoState.items.map(function(v) { return v.id || v.updated_at || v.student_name; }).join("|");
         if (operationMemoState.popupKey === key) return;
         operationMemoState.popupKey = key;
@@ -2028,7 +2162,7 @@
         alertBox.id = 'operationMemoAlert';
         alertBox.className = 'operation-memo-alert';
         var lines = operationMemoState.items.slice(0, 4).map(function(item) {
-          return escapeHtml(getOperationMemoItemTitle(item)) + " - " + escapeHtml(getOperationMemoTypeLabel(item.type)) + (item.message ? " · " + escapeHtml(item.message) : "");
+          return escapeHtml(getOperationMemoItemTitle(item)) + " - " + escapeHtml(isAutomaticOperationMemo(item) ? "S-LMS 학교 일정" : getOperationMemoTypeLabel(item.type)) + (item.message ? " · " + escapeHtml(item.message) : "");
         }).join("<br>");
         alertBox.innerHTML = "<button class='operation-memo-alert-close' onclick='closeOperationMemoAlert()'>×</button><div class='operation-memo-alert-title'>이 날짜에 운영 메모가 있습니다</div><div class='operation-memo-alert-body'>" + lines + (operationMemoState.items.length > 4 ? "<br>외 " + (operationMemoState.items.length - 4) + "건" : "") + "</div>";
         document.body.appendChild(alertBox);
@@ -2041,26 +2175,25 @@
         var list = document.getElementById('operationMemoList');
         if (!list) return;
         var items = operationMemoState.items || [];
-        if (!isOperationMemoAvailable()) {
-          list.innerHTML = "<div class='operation-memo-empty'>운영 메모 저장소가 설정되지 않았습니다.</div>";
-          return;
-        }
         if (!items.length) {
           list.innerHTML = "<div class='operation-memo-empty'>이 날짜의 운영 메모가 없습니다.</div>";
           return;
         }
         list.innerHTML = items.map(function(item) {
           var id = encodeURIComponent(item.id || "");
-          return "<div class='operation-memo-item'>" +
+          var automatic = isAutomaticOperationMemo(item);
+          var sourceMeta = automatic ? "<span class='operation-memo-source-badge'>S-LMS 자동</span><span class='operation-memo-readonly-badge'>읽기 전용</span>" : "<span class='operation-memo-readonly-badge'>수기</span>";
+          var gradeMeta = automatic && !normalizeOperationMemoGrade(item.target_grade) ? " · 전학년" : "";
+          return "<div class='operation-memo-item" + (automatic ? " is-slms" : "") + "'>" +
             "<div class='operation-memo-item-main'>" +
               "<div class='operation-memo-item-title'>" + escapeHtml(getOperationMemoItemTitle(item)) + " · " + escapeHtml(getOperationMemoTypeLabel(item.type)) + "</div>" +
-              "<div class='operation-memo-item-meta'>" + escapeHtml(item.date_key || operationMemoState.dateKey) + (item.updated_at ? " · " + escapeHtml(String(item.updated_at).slice(0, 16).replace('T', ' ')) : "") + "</div>" +
+              "<div class='operation-memo-item-meta'>" + sourceMeta + " " + escapeHtml(item.date_key || operationMemoState.dateKey) + gradeMeta + (item.updated_at ? " · " + escapeHtml(String(item.updated_at).slice(0, 16).replace('T', ' ')) : "") + "</div>" +
               (item.message ? "<div class='operation-memo-item-message'>" + escapeHtml(item.message) + "</div>" : "") +
             "</div>" +
-            "<div class='operation-memo-item-actions'>" +
+            (automatic ? "" : "<div class='operation-memo-item-actions'>" +
               "<button class='operation-memo-mini-btn' onclick='editOperationMemo(\"" + id + "\")'>수정</button>" +
               "<button class='operation-memo-mini-btn' onclick='deleteOperationMemo(\"" + id + "\")'>삭제</button>" +
-            "</div>" +
+            "</div>") +
           "</div>";
         }).join("");
       }
@@ -2075,11 +2208,12 @@
         return item.student_name || "";
       }
       function openOperationMemoModal() {
-        if (!isOperationMemoAvailable()) { alert("운영 메모 저장소 설정 또는 관리자 권한이 필요합니다."); return; }
+        if (!isOperationMemoReadable()) { alert("운영 메모는 관리자 계정에서만 확인할 수 있습니다."); return; }
         operationMemoState.editingId = "";
         resetOperationMemoForm();
         document.getElementById('operationMemoModal').style.display = 'flex';
         renderOperationMemoList();
+        renderOperationMemoSourceSummary();
         loadOperationMemosForCurrentSheet(true, { silent: true });
       }
       function closeOperationMemoModal() {
@@ -2159,7 +2293,7 @@
       }
       function editOperationMemo(encodedId) {
         var item = findOperationMemoById(encodedId);
-        if (!item) return;
+        if (!item || isAutomaticOperationMemo(item)) return;
         operationMemoState.editingId = String(item.id || "");
         document.getElementById('operationMemoTypeInput').value = getOperationMemoKind(item);
         document.getElementById('operationMemoStudentInput').value = getOperationMemoKind(item) === "student" ? (item.student_name || "") : "";
@@ -2171,7 +2305,7 @@
       }
       function deleteOperationMemo(encodedId) {
         var item = findOperationMemoById(encodedId);
-        if (!item || !confirm("이 운영 메모를 삭제할까요?")) return;
+        if (!item || isAutomaticOperationMemo(item) || !confirm("이 운영 메모를 삭제할까요?")) return;
         var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
         operationMemoSupabaseRequest(table + "?id=eq." + encodeURIComponent(item.id), {
           method: "DELETE",
@@ -3178,7 +3312,14 @@
       }
       function loadData(n,r){
         currentSheetName=n; 
-        loadOperationMemosForCurrentSheet(true, { silent: true });
+        operationMemoState.dateKey = "";
+        operationMemoState.items = [];
+        operationMemoState.manualItems = [];
+        operationMemoState.autoItems = [];
+        operationMemoState.sourceErrors = {};
+        closeOperationMemoAlert();
+        clearOperationMemoHighlights();
+        renderOperationCommonMemos();
         document.getElementById('introPage').style.display='none'; 
         document.getElementById('mainPage').style.display='flex'; 
         document.getElementById('mainSheetSelector').value=n; 
@@ -3217,13 +3358,12 @@
           visitorLookupStudyRefreshing = false;
           currentVersion=String(d.version || "").split("_T_")[0]; 
           renderTable(d, isRefresh); 
+          loadOperationMemosForCurrentSheet(true, { silent: true, refreshSlms: !!isRefresh });
           loadStudentEnrollmentStatusWarnings().then(function(updated) {
             if (updated && lastData === d) renderTable(d, true);
           }).catch(function(error) {
             if (window.console && console.warn) console.warn("학생 등록 상태 경고를 불러오지 못했습니다:", error);
           });
-          applyOperationMemoHighlights();
-          showOperationMemoPopupIfNeeded();
           syncLookupDimmingState();
           if (isStudentImageModalOpen()) {
             var pendingSelection = studentImageRefreshPendingSelection || selectedStudentForImage || "";

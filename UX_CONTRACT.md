@@ -54,3 +54,18 @@ Automated fixtures prove grouping, context retention, output structure, and mirr
 | Parse and serve 08:00/23:00 source blocks | `getFixedGridData`, `toLitePayload_` in `Code.gs` | mixed-meridiem and boundary fixtures | `scripts/review-checks.js` |
 | Show early lessons in the daily timetable | `renderTable` in `Index.html` | real-data browser inspection | Superloopy frontend evidence |
 | Include boundary lessons in cards and timesheets | `buildStudentImageMap`, `exportScheduleToExcel` in `Index.html` | merged 08:00–10:00 and 22:00–24:00 assertions | `scripts/review-checks.js` |
+
+## S-LMS school-event operation memo addendum
+
+- In administrator mode, the selected date loads both manually entered operation memos and the authenticated S-LMS `events` collection.
+- Every S-LMS school event whose inclusive start/end range contains the selected date appears as a read-only school memo. The timetable does not copy or write these events into the manual memo store; S-LMS remains the source of truth.
+- A blank grade or a grade marked `공통`, `전학년`, or `전체` applies to every grade at the event school. A numeric grade highlights only matching student rows.
+- Automatic cards identify `S-LMS 자동`, `읽기 전용`, and `전학년` coverage. Manual cards retain edit/delete controls and are identified as `수기`.
+- A failure in either source does not erase the last successfully loaded data from the other source. The modal reports source-specific failure while retaining previous same-date data.
+- Date navigation clears prior-date alerts and highlights before the new timetable renders, then applies automatic school-event highlights only after the new grid is available.
+
+| School-event contract | Owner | Verification | Evidence |
+| --- | --- | --- | --- |
+| Normalize S-LMS date, school, and all-grade targets | `buildSlmsOperationMemoItems` in `Index.html` | synthetic common/grade/range fixtures | `scripts/review-checks.js` |
+| Keep automatic data read-only and source-labelled | `renderOperationMemoList` in `Index.html` | semantic HTML assertions and browser inspection | Superloopy frontend evidence |
+| Preserve successful source data across partial failures | `resolveOperationMemoSourceItems`, `loadOperationMemosForCurrentSheet` in `Index.html` | source-retention fixtures | `scripts/review-checks.js` |
