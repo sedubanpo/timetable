@@ -71,7 +71,9 @@ function handleApiRequest_(params) {
       var logSheet = String(params.sheet || "").trim();
       var logLoginId = String(params.loginId || "").trim();
       if (!logTeacher || !logSheet) return jsonOutput_({ ok: false, error: "LOG_REQUIRED" }, params);
-      logTeacherView_(logTeacher, logSheet, logLoginId);
+      if (!logTeacherView_(logTeacher, logSheet, logLoginId)) {
+        return jsonOutput_({ ok: false, error: "LOG_SAVE_FAILED" }, params);
+      }
       return jsonOutput_({ ok: true }, params);
     }
 

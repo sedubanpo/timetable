@@ -228,11 +228,32 @@ vm.runInContext(`
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/8(토)");
   authState.isMaster = true;
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/9(일)");
+  authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "김광수", loginId: "teacher-2" };
+  recordTeacherViewAfterSuccessfulLoad("김광수", "8/8(토)");
 `, sandbox);
 const teacherViewCalls = JSON.parse(vm.runInContext("JSON.stringify(globalThis.__teacherViewCalls)", sandbox));
-assert.strictEqual(teacherViewCalls.length, 1, "one teacher/sheet view must be logged once per page session");
+assert.strictEqual(teacherViewCalls.length, 2, "each non-admin teacher account must log its own viewed sheet once per page session");
 assert.strictEqual(teacherViewCalls[0].method, "logTeacherView");
 assert.deepStrictEqual(teacherViewCalls[0].args, ["배유진", "8/8(토)", "teacher-1"]);
+assert.deepStrictEqual(teacherViewCalls[1].args, ["김광수", "8/8(토)", "teacher-2"], "view logging must not be limited to one teacher name");
+
+assert(server.includes('if (!logTeacherView_(logTeacher, logSheet, logLoginId))'), "server must expose a failed log write to the client");
+const logApiSandbox = {
+  isApiAuthorized_() { return true; },
+  jsonOutput_(payload) { return payload; },
+  logTeacherView_() { return false; }
+};
+vm.createContext(logApiSandbox);
+vm.runInContext(extractFunction(server, "handleApiRequest_"), logApiSandbox);
+const failedLogResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiRequest_({
+  action: "teacher_view_log", teacher: "배유진", sheet: "8/8(토)", loginId: "teacher-1"
+})));
+assert.deepStrictEqual(failedLogResponse, { ok: false, error: "LOG_SAVE_FAILED" }, "a failed write must make the client retryable");
+logApiSandbox.logTeacherView_ = function() { return true; };
+const savedLogResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiRequest_({
+  action: "teacher_view_log", teacher: "배유진", sheet: "8/8(토)", loginId: "teacher-1"
+})));
+assert.deepStrictEqual(savedLogResponse, { ok: true }, "a successful write must preserve the normal response");
 
 const legacyNames = extractFunction(server, "getLegacyTeacherNamesForAuth_");
 assert(!/\bbreak\s*;/.test(legacyNames), "teacher list must scan every row");
