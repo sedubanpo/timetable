@@ -1896,9 +1896,12 @@
         return year + "-" + String(parseInt(shortDate[1], 10)).padStart(2, "0") + "-" + String(parseInt(shortDate[2], 10)).padStart(2, "0");
       }
       function getSlmsSchoolEventDateRange(item) {
-        var start = normalizeSlmsOperationMemoDateKey(item && (item.date || item.isoDate || item.startDate || item.startIsoDate || item.start || item.eventDate || item.targetDate));
-        var end = normalizeSlmsOperationMemoDateKey(item && (item.endDate || item.endIsoDate || item.end || item.date || item.isoDate || item.startDate || item.startIsoDate || item.start || item.eventDate || item.targetDate));
-        return { start: start, end: end || start };
+        // S-LMS renders events from the normalized ISO fields first. Legacy fields can
+        // remain on migrated documents, so using `date` before `isoDate` can revive an
+        // old date after an event has been edited in S-LMS.
+        var start = normalizeSlmsOperationMemoDateKey(item && (item.isoDate || item.date || item.eventDate || item.startIsoDate || item.startDate || item.start || item.targetDate));
+        var end = normalizeSlmsOperationMemoDateKey(item && (item.endIsoDate || item.endDate || item.vacationEndDate || item.end || item.isoDate || item.date || item.eventDate || item.startIsoDate || item.startDate || item.start || item.targetDate));
+        return { start: start, end: end && end >= start ? end : start };
       }
       function parseSlmsSchoolEventTarget(item) {
         var schoolText = String((item && (item.school || item.schoolName || item.eventSchool || item.targetSchool || item.target)) || "").trim();
@@ -1913,10 +1916,11 @@
         };
       }
       function getSlmsSchoolEventMessage(item) {
-        var title = String((item && (item.eventName || item.title || item.name)) || "학교 일정").trim();
         var category = String((item && (item.eventType || item.category || item.type)) || "").trim();
+        var storedTitle = String((item && (item.title || item.name || item.eventName)) || "").trim();
+        var title = category && !/^(기타\s*일정|학교\s*일정)$/.test(category) ? category : (storedTitle || category || "학교 일정");
         var note = String((item && (item.note || item.description)) || "").trim();
-        return [title, category && category !== title ? category : "", note && note !== title ? note : ""].filter(Boolean).join(" · ");
+        return [title, note && note !== title ? note : ""].filter(Boolean).join(" · ");
       }
       function buildSlmsOperationMemoItems(events, dateKey) {
         var seen = {};

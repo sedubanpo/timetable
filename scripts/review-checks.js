@@ -335,15 +335,19 @@ const automaticMemos = sandbox.buildSlmsOperationMemoItems([
   { __id: "common", date: "2026-08-18", target: "용강중 공통", eventName: "개학식", eventType: "기타 일정" },
   { __id: "grade", startDate: "2026-08-17", endDate: "2026-08-19", targetSchool: "서울고", targetGrade: "2학년", title: "개학식" },
   { __id: "outside", date: "2026-08-20", school: "서초고", grade: "전체", eventName: "개학식" },
-  { __id: "duplicate", date: "2026-08-18", school: "용강중", grade: "전학년", eventName: "개학식", eventType: "기타 일정" }
+  { __id: "duplicate", date: "2026-08-18", school: "용강중", grade: "전학년", eventName: "개학식", eventType: "기타 일정" },
+  { __id: "edited", date: "2026-08-13", isoDate: "2026-08-18", endDate: "2026-08-13", endIsoDate: "", school: "수도여고", grade: "공통", eventName: "여름방학", eventType: "개학식", title: "개학식", note: "" }
 ], "2026-08-18");
-assert.strictEqual(automaticMemos.length, 2, "same-date S-LMS school events must be included and duplicates removed");
+assert.strictEqual(automaticMemos.length, 3, "same-date S-LMS school events must be included and duplicates removed");
 assert.strictEqual(automaticMemos[0].target_school, "용강중", "automatic memo must retain its school");
 assert.strictEqual(automaticMemos[0].target_grade, "", "common school events must apply to every grade");
 assert.strictEqual(automaticMemos[0].read_only, true, "S-LMS memos must be read-only");
 assert.strictEqual(automaticMemos[1].target_grade, "2", "grade-specific events must retain their numeric grade");
+assert.strictEqual(automaticMemos[2].date_key, "2026-08-18", "S-LMS isoDate must override a stale legacy date");
+assert.strictEqual(automaticMemos[2].message, "개학식", "S-LMS eventType must override a stale legacy eventName");
+assert.strictEqual(sandbox.buildSlmsOperationMemoItems([{ date: "2026-08-13", isoDate: "2026-08-18", school: "수도여고", eventName: "여름방학", eventType: "개학식" }], "2026-08-13").length, 0, "an edited S-LMS event must not appear on its stale legacy date");
 const retainedAutomatic = sandbox.resolveOperationMemoSourceItems({ items: [], error: new Error("temporary") }, automaticMemos, true);
-assert.strictEqual(retainedAutomatic.length, 2, "a same-date source failure must retain the last successful automatic items");
+assert.strictEqual(retainedAutomatic.length, 3, "a same-date source failure must retain the last successful automatic items");
 assert.strictEqual(sandbox.resolveOperationMemoSourceItems({ items: [], error: new Error("temporary") }, automaticMemos, false).length, 0, "a new date must not leak stale automatic items");
 assert(index.includes("S-LMS 자동") && index.includes("읽기 전용") && index.includes("전학년"), "automatic memo source and coverage labels must remain visible");
 
