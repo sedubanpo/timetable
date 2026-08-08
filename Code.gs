@@ -8,6 +8,8 @@ var FIREBASE_PROJECT_ID = "fir-lms-prod";
 var FIREBASE_API_KEY = "AIzaSyCFM21ZxgwIYwmjRPaAOp5bL9Kprqiyppg";
 var SCHEDULE_START_HOUR = 8;
 var SCHEDULE_END_HOUR = 23;
+var DASHBOARD_ADMIN_SESSION_PREFIX = "TEACHER_DASHBOARD_ADMIN_SESSION_V1_";
+var DASHBOARD_ADMIN_SESSION_TTL_SECONDS = 21600;
 
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -47,7 +49,7 @@ function handleApiRequest_(params) {
       var idToken = String(params.idToken || "").trim();
       if (idToken) {
         try {
-          return jsonOutput_(authenticateFirebaseTeacher_(idToken), params);
+          return jsonOutput_(attachDashboardAdminSession_(authenticateFirebaseTeacher_(idToken)), params);
         } catch (firebaseErr) {
           var firebaseMessage = firebaseErr && firebaseErr.message ? firebaseErr.message : String(firebaseErr || "");
           if (!loginId || !password || /^FIREBASE_BLOCKED:/.test(firebaseMessage)) {
@@ -56,7 +58,7 @@ function handleApiRequest_(params) {
         }
       }
       if (!loginId || !password) return jsonOutput_({ ok: false, error: "AUTH_REQUIRED" }, params);
-      return jsonOutput_(authenticateTeacher(loginId, password), params);
+      return jsonOutput_(attachDashboardAdminSession_(authenticateTeacher(loginId, password)), params);
     }
 
     if (action === "teacher_sheets") {
@@ -81,6 +83,25 @@ function handleApiRequest_(params) {
       var filterTeacher = String(params.teacher || "").trim();
       var limit = parseInt(String(params.limit || "120"), 10);
       return jsonOutput_({ ok: true, logs: getTeacherViewLogs_(filterTeacher, limit) }, params);
+    }
+
+    if (action === "teacher_view_overrides") {
+      var overrideSessionLoginId = getDashboardAdminSessionLogin_(params.adminToken);
+      if (!overrideSessionLoginId) return jsonOutput_({ ok: false, error: "DASHBOARD_ADMIN_SESSION_REQUIRED" }, params);
+      return jsonOutput_({ ok: true, overrides: getTeacherViewOverrides_() }, params);
+    }
+
+    if (action === "teacher_view_override_set") {
+      var overrideEditorLoginId = getDashboardAdminSessionLogin_(params.adminToken);
+      if (!overrideEditorLoginId) return jsonOutput_({ ok: false, error: "DASHBOARD_ADMIN_SESSION_REQUIRED" }, params);
+      var overrideTeacher = String(params.teacher || "").trim();
+      var overrideSheet = String(params.sheet || "").trim();
+      var overrideState = String(params.state || "").trim().toLowerCase();
+      var overrideCount = parseInt(String(params.count || "0"), 10);
+      if (!overrideTeacher || !overrideSheet) return jsonOutput_({ ok: false, error: "OVERRIDE_REQUIRED" }, params);
+      var override = setTeacherViewOverride_(overrideSheet, overrideTeacher, overrideState, overrideCount, overrideEditorLoginId);
+      if (!override) return jsonOutput_({ ok: false, error: "OVERRIDE_SAVE_FAILED" }, params);
+      return jsonOutput_({ ok: true, override: override }, params);
     }
 
     if (action === "student_card_statuses") {
@@ -170,6 +191,38 @@ function jsonOutput_(obj, params) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function attachDashboardAdminSession_(authResult) {
+  if (!authResult || !authResult.ok || !authResult.isMaster) return authResult;
+  authResult.dashboardAdminToken = issueDashboardAdminSession_(authResult.loginId);
+  return authResult;
+}
+
+function issueDashboardAdminSession_(loginId) {
+  try {
+    var normalizedLoginId = normalizeLoginId_(loginId);
+    if (!normalizedLoginId) return "";
+    var token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+    CacheService.getScriptCache().put(
+      DASHBOARD_ADMIN_SESSION_PREFIX + token,
+      normalizedLoginId,
+      DASHBOARD_ADMIN_SESSION_TTL_SECONDS
+    );
+    return token;
+  } catch (e) {
+    return "";
+  }
+}
+
+function getDashboardAdminSessionLogin_(token) {
+  try {
+    var value = String(token || "").trim();
+    if (!/^[a-f0-9]{64}$/i.test(value)) return "";
+    return String(CacheService.getScriptCache().get(DASHBOARD_ADMIN_SESSION_PREFIX + value) || "").trim();
+  } catch (e) {
+    return "";
+  }
 }
 
 function normalizeLoginId_(value) {
@@ -635,6 +688,100 @@ function getTeacherViewLogs_(teacherName, limit) {
     });
   } catch (e) {
     return [];
+  }
+}
+
+function getTeacherViewOverrideSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("강사열람집계수정");
+  if (!sheet) {
+    sheet = ss.insertSheet("강사열람집계수정");
+    sheet.getRange(1, 1, 1, 6).setValues([["일자시트", "강사명", "상태", "열람횟수", "수정시각", "수정자"]]);
+    if (ss.getSheets().length > 1) sheet.hideSheet();
+  }
+  return sheet;
+}
+
+function normalizeTeacherViewOverrideKey_(sheetName, teacherName) {
+  return String(sheetName || "").trim() + "\u0000" + normalizeTeacherName_(teacherName);
+}
+
+function sanitizeTeacherViewOverrideState_(state) {
+  var value = String(state || "").trim().toLowerCase();
+  return value === "viewed" || value === "missing" || value === "auto" ? value : "";
+}
+
+function getTeacherViewOverrides_() {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("강사열람집계수정");
+    if (!sheet || sheet.getLastRow() <= 1) return [];
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getDisplayValues();
+    var newestByKey = {};
+    rows.forEach(function(row) {
+      var sheetName = String((row && row[0]) || "").trim();
+      var teacherName = String((row && row[1]) || "").trim();
+      var state = sanitizeTeacherViewOverrideState_((row && row[2]) || "");
+      if (!sheetName || !teacherName || !state) return;
+      var count = Math.max(0, Math.min(99, parseInt(String((row && row[3]) || "0"), 10) || 0));
+      newestByKey[normalizeTeacherViewOverrideKey_(sheetName, teacherName)] = {
+        sheetName: sheetName,
+        teacherName: teacherName,
+        state: state,
+        count: state === "viewed" ? Math.max(1, count) : 0,
+        updatedAt: String((row && row[4]) || "").trim(),
+        updatedBy: String((row && row[5]) || "").trim()
+      };
+    });
+    return Object.keys(newestByKey).map(function(key) { return newestByKey[key]; }).filter(function(item) {
+      return item.state !== "auto";
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+function setTeacherViewOverride_(sheetName, teacherName, state, count, editorLoginId) {
+  var targetSheetName = String(sheetName || "").trim();
+  var targetTeacherName = String(teacherName || "").trim();
+  var targetState = sanitizeTeacherViewOverrideState_(state);
+  var targetCount = Math.max(0, Math.min(99, parseInt(count, 10) || 0));
+  if (!targetSheetName || !targetTeacherName || !targetState) return null;
+  if (targetState === "viewed" && targetCount < 1) return null;
+  if (targetState !== "viewed") targetCount = 0;
+
+  var lock = LockService.getDocumentLock();
+  try {
+    lock.waitLock(5000);
+    var sheet = getTeacherViewOverrideSheet_();
+    var lastRow = sheet.getLastRow();
+    var targetKey = normalizeTeacherViewOverrideKey_(targetSheetName, targetTeacherName);
+    var writeRow = 0;
+    if (lastRow > 1) {
+      var rows = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
+      for (var i = rows.length - 1; i >= 0; i--) {
+        if (normalizeTeacherViewOverrideKey_(rows[i][0], rows[i][1]) === targetKey) {
+          writeRow = i + 2;
+          break;
+        }
+      }
+    }
+    if (!writeRow) writeRow = lastRow + 1;
+    var tz = Session.getScriptTimeZone() || "Asia/Seoul";
+    var updatedAt = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss");
+    var editor = normalizeLoginId_(editorLoginId);
+    sheet.getRange(writeRow, 1, 1, 6).setValues([[targetSheetName, targetTeacherName, targetState, targetCount, updatedAt, editor]]);
+    return {
+      sheetName: targetSheetName,
+      teacherName: targetTeacherName,
+      state: targetState,
+      count: targetCount,
+      updatedAt: updatedAt,
+      updatedBy: editor
+    };
+  } catch (e) {
+    return null;
+  } finally {
+    try { lock.releaseLock(); } catch (ignore) {}
   }
 }
 

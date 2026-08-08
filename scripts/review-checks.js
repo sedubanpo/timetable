@@ -237,6 +237,39 @@ assert.strictEqual(teacherViewCalls[0].method, "logTeacherView");
 assert.deepStrictEqual(teacherViewCalls[0].args, ["배유진", "8/8(토)", "teacher-1"]);
 assert.deepStrictEqual(teacherViewCalls[1].args, ["김광수", "8/8(토)", "teacher-2"], "view logging must not be limited to one teacher name");
 
+assert(index.includes('action: "teacher_view_override_set"'), "admin override save API call is missing");
+assert(index.includes("function buildEffectiveTeacherViewLogs(logs, overrides)"), "effective dashboard count helper is missing");
+assert(index.includes("실제 로그로 복원"), "admin dashboard must provide a safe restore action");
+assert(server.includes('DASHBOARD_ADMIN_SESSION_REQUIRED'), "admin override API must reject a missing admin session");
+assert(server.includes('attachDashboardAdminSession_'), "admin login must issue a dashboard edit session");
+
+const sourceLogs = [
+  { viewedAt: "2026-08-08 09:00:00", teacherName: "배유진", sheetName: "8/8(토)", loginId: "teacher-1" },
+  { viewedAt: "2026-08-08 09:10:00", teacherName: "배유진", sheetName: "8/8(토)", loginId: "teacher-1" },
+  { viewedAt: "2026-08-08 09:20:00", teacherName: "김광수", sheetName: "8/8(토)", loginId: "teacher-2" }
+];
+const effectiveLogs = sandbox.buildEffectiveTeacherViewLogs(sourceLogs, [
+  { teacherName: "배유진T", sheetName: "8/8(토)", state: "viewed", count: 3, updatedAt: "2026-08-08 12:00:00", updatedBy: "admin" },
+  { teacherName: "김광수", sheetName: "8/8(토)", state: "missing", count: 0, updatedAt: "2026-08-08 12:00:00", updatedBy: "admin" }
+]);
+assert.strictEqual(effectiveLogs.filter((item) => item.teacherName === "배유진" && item.sheetName === "8/8(토)").length, 3, "manual viewed count must replace raw count exactly");
+assert.strictEqual(effectiveLogs.filter((item) => item.teacherName === "김광수" && item.sheetName === "8/8(토)").length, 0, "manual missing state must remove the effective view count");
+assert(effectiveLogs.filter((item) => item.teacherName === "배유진").every((item) => item.isManualOverride), "manual count must remain distinguishable from raw logs");
+
+vm.runInContext(`
+  currentSheetName = "8/8(토)";
+  teacherDashboardEditMode = true;
+  authState = { loggedIn: true, isMaster: true, isLookup: false, teacherName: "", loginId: "admin", dashboardAdminToken: "session-token" };
+  teacherViewOverridesCache = [{ teacherName: "배유진", sheetName: "8/8(토)", state: "missing", count: 0, updatedAt: "2026-08-08 12:00:00", updatedBy: "admin" }];
+`, sandbox);
+const adminDashboardCard = sandbox.renderCurrentTeacherLogPanel(null, ["배유진"]);
+assert(adminDashboardCard.includes("관리자 조정"), "manual state must be visible to administrators");
+assert(adminDashboardCard.includes("teacher-log-adjust-panel"), "admin dashboard must expose direct adjustment controls");
+assert(adminDashboardCard.includes("실제 로그로 복원"), "admin dashboard must make rollback explicit");
+vm.runInContext("authState.isMaster = false;", sandbox);
+const teacherDashboardCard = sandbox.renderCurrentTeacherLogPanel(null, ["배유진"]);
+assert(!teacherDashboardCard.includes("teacher-log-adjust-panel"), "non-admin dashboards must not render adjustment controls");
+
 assert(server.includes('if (!logTeacherView_(logTeacher, logSheet, logLoginId))'), "server must expose a failed log write to the client");
 const logApiSandbox = {
   isApiAuthorized_() { return true; },
@@ -254,6 +287,23 @@ const savedLogResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiReques
   action: "teacher_view_log", teacher: "배유진", sheet: "8/8(토)", loginId: "teacher-1"
 })));
 assert.deepStrictEqual(savedLogResponse, { ok: true }, "a successful write must preserve the normal response");
+
+logApiSandbox.getDashboardAdminSessionLogin_ = function() { return ""; };
+const deniedOverrideResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiRequest_({
+  action: "teacher_view_override_set", teacher: "배유진", sheet: "8/8(토)", state: "viewed", count: "2", adminToken: "invalid"
+})));
+assert.deepStrictEqual(deniedOverrideResponse, { ok: false, error: "DASHBOARD_ADMIN_SESSION_REQUIRED" }, "override writes must require a server-validated admin session");
+logApiSandbox.getDashboardAdminSessionLogin_ = function() { return "admin"; };
+logApiSandbox.setTeacherViewOverride_ = function(sheetName, teacherName, state, count, editor) {
+  return { sheetName, teacherName, state, count, updatedBy: editor };
+};
+const savedOverrideResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiRequest_({
+  action: "teacher_view_override_set", teacher: "배유진", sheet: "8/8(토)", state: "viewed", count: "2", adminToken: "valid"
+})));
+assert.deepStrictEqual(savedOverrideResponse, {
+  ok: true,
+  override: { sheetName: "8/8(토)", teacherName: "배유진", state: "viewed", count: 2, updatedBy: "admin" }
+}, "server must persist a validated admin adjustment");
 
 const legacyNames = extractFunction(server, "getLegacyTeacherNamesForAuth_");
 assert(!/\bbreak\s*;/.test(legacyNames), "teacher list must scan every row");

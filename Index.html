@@ -1083,6 +1083,19 @@
       .teacher-log-gauge { width:100%; height:7px; border-radius:999px; background:#e2e8f0; overflow:hidden; margin-top:8px; box-shadow:inset 0 1px 1px rgba(15,23,42,0.08); }
       .teacher-log-gauge-fill { height:100%; border-radius:inherit; background:linear-gradient(90deg,#60a5fa,#1d4ed8); }
       .teacher-log-status-card.viewed .teacher-log-gauge-fill { background:linear-gradient(90deg,#86efac,#16a34a); }
+      .teacher-log-edit-toggle { border-color:#bfdbfe; background:#eff6ff; color:#15327d; }
+      .teacher-log-edit-toggle.is-active { border-color:#0f1746; background:#0f1746; color:#fff; }
+      .teacher-log-edit-toggle:disabled { cursor:not-allowed; opacity:0.55; }
+      .teacher-log-manual-note { display:inline-flex; align-items:center; margin-top:6px; border-radius:999px; padding:3px 7px; background:#e0e7ff; color:#3730a3; font-size:0.68rem; font-weight:900; }
+      .teacher-log-adjust-panel { display:grid; grid-template-columns:minmax(0,1fr) 74px; gap:8px; margin-top:11px; padding-top:10px; border-top:1px solid #dbe7ff; }
+      .teacher-log-adjust-field { display:flex; flex-direction:column; gap:4px; min-width:0; color:#475569; font-size:0.68rem; font-weight:900; }
+      .teacher-log-adjust-field input, .teacher-log-adjust-field select { min-width:0; height:31px; border:1px solid #bfdbfe; border-radius:8px; padding:0 8px; background:#fff; color:#0f172a; font:inherit; font-size:0.78rem; font-weight:800; }
+      .teacher-log-adjust-field input:disabled { background:#f1f5f9; color:#94a3b8; }
+      .teacher-log-adjust-actions { grid-column:1 / -1; display:flex; align-items:center; gap:7px; }
+      .teacher-log-adjust-save, .teacher-log-adjust-reset { height:30px; border-radius:8px; padding:0 9px; font-size:0.72rem; font-weight:900; cursor:pointer; }
+      .teacher-log-adjust-save { border:1px solid #0f1746; background:#0f1746; color:#fff; }
+      .teacher-log-adjust-reset { border:1px solid #bfdbfe; background:#fff; color:#15327d; }
+      .teacher-log-adjust-save:disabled, .teacher-log-adjust-reset:disabled { cursor:wait; opacity:0.55; }
       .teacher-log-week-stack { display:flex; flex-direction:column; gap:14px; }
       .teacher-log-week-board { border:1px solid #dbe7ff; border-radius:20px; background:#fff; overflow:hidden; box-shadow:0 12px 30px rgba(30,58,138,0.05); }
       .teacher-log-week-head { display:flex; justify-content:space-between; gap:10px; padding:14px 16px; background:#111827; color:#e5eefc; font-weight:900; }
@@ -1396,6 +1409,7 @@
           <div class="teacher-log-toolbar-right">
             <input id="teacherViewLogSearch" class="modal-search teacher-log-search" type="text" placeholder="강사명 또는 일자/강의실 검색" oninput="filterTeacherViewLogs()">
             <button class="attendance-time-btn teacher-log-refresh" onclick="refreshTeacherViewLogs()">새로고침</button>
+            <button id="teacherViewLogEditButton" class="attendance-time-btn teacher-log-edit-toggle" type="button" onclick="toggleTeacherViewLogEditMode()" aria-pressed="false">집계 수정</button>
           </div>
         </div>
         <div class="teacher-dashboard-tabs">
@@ -1527,7 +1541,7 @@
       let lastScrollPosition = 0;
       let lastResponsiveMobile = window.innerWidth <= 768;
       let responsiveResizeFrame = null;
-      let authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "" };
+      let authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "" };
       let availableTeacherNames = [];
       let accessMode = "";
       let sheetNamesLoaded = false;
@@ -1564,10 +1578,12 @@
       let studentImageRefreshPendingSelection = "";
       let studentCardHideNote = false;
       let teacherViewLogsCache = [];
+      let teacherViewOverridesCache = [];
       let teacherViewLogKeys = new Set();
       let teacherViewLogWeekIndex = 0;
       let teacherViewLogSelectedDateIndex = 0;
       let teacherDashboardActiveTab = "log";
+      let teacherDashboardEditMode = false;
       let teacherRoomStatsCache = null;
       let teacherRoomStatsLoading = false;
       let lateNightCollapsed = true;
@@ -2295,6 +2311,25 @@
             return res.logs || [];
           });
         }
+        if (method === "getTeacherViewOverrides") {
+          return apiJsonp({ action: "teacher_view_overrides", adminToken: a[0] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "강사 열람 집계 수정값 조회 실패");
+            return res.overrides || [];
+          });
+        }
+        if (method === "setTeacherViewOverride") {
+          return apiJsonp({
+            action: "teacher_view_override_set",
+            teacher: a[0] || "",
+            sheet: a[1] || "",
+            state: a[2] || "",
+            count: a[3] == null ? "0" : String(a[3]),
+            adminToken: a[4] || ""
+          }, { timeoutMs: 15000, retries: 1 }).then(function(res){
+            if (!res || !res.ok) throw new Error((res && res.error) || "강사 열람 집계 수정값 저장 실패");
+            return res.override || null;
+          });
+        }
         if (method === "getStudentCardStatuses") {
           return apiJsonp({ action: "student_card_statuses", sheet: a[0] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "학생 카드 발송 상태 조회 실패");
@@ -2591,6 +2626,7 @@
           authState.isLookup = !!res.isLookup;
           authState.teacherName = res.teacherName || "";
           authState.loginId = res.loginId || loginId;
+          authState.dashboardAdminToken = res.dashboardAdminToken || "";
           saveLoginCredentials(loginId, password, remember);
           availableTeacherNames = (res.teacherNames || []).slice();
           if (fromGate) {
@@ -2634,7 +2670,7 @@
         });
       }
       function logoutTeacher() {
-        authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "" };
+        authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "" };
         clearVisitorLookupReturnTimer();
         visitorLookupShowFullDay = false;
         visitorLookupSelectedIndex = 0;
@@ -4634,8 +4670,55 @@
           viewedDateObj: viewedDateObj,
           teacherName: teacherName || "미확인",
           sheetName: sheetName || "미분류",
-          loginId: loginId || "-"
+          loginId: loginId || "-",
+          isManualOverride: !!item.isManualOverride,
+          updatedBy: String(item.updatedBy || "").trim()
         };
+      }
+      function getTeacherViewOverrideKey(sheetName, teacherName) {
+        return String(sheetName || "").trim() + "\u0000" + normalizeTeacherLogName(teacherName);
+      }
+      function getTeacherViewOverrideMap(overrides) {
+        var map = {};
+        (Array.isArray(overrides) ? overrides : []).forEach(function(item) {
+          var sheetName = String(item && item.sheetName || "").trim();
+          var teacherName = String(item && item.teacherName || "").trim();
+          var state = String(item && item.state || "").trim().toLowerCase();
+          if (!sheetName || !teacherName || (state !== "viewed" && state !== "missing")) return;
+          var count = Math.max(0, Math.min(99, parseInt(item.count, 10) || 0));
+          map[getTeacherViewOverrideKey(sheetName, teacherName)] = {
+            sheetName: sheetName,
+            teacherName: teacherName,
+            state: state,
+            count: state === "viewed" ? Math.max(1, count) : 0,
+            updatedAt: String(item.updatedAt || "").trim(),
+            updatedBy: String(item.updatedBy || "").trim()
+          };
+        });
+        return map;
+      }
+      function buildEffectiveTeacherViewLogs(logs, overrides) {
+        var overrideMap = getTeacherViewOverrideMap(overrides);
+        var effective = (Array.isArray(logs) ? logs : []).filter(function(item) {
+          if (!item) return false;
+          var key = getTeacherViewOverrideKey(item.sheetName || item.targetDate, item.teacherName || item.teacher);
+          return !overrideMap[key];
+        }).map(function(item) { return Object.assign({}, item); });
+        Object.keys(overrideMap).forEach(function(key) {
+          var override = overrideMap[key];
+          if (override.state !== "viewed") return;
+          for (var index = 0; index < override.count; index++) {
+            effective.push({
+              viewedAt: override.updatedAt || "2000-01-01 00:00:00",
+              teacherName: normalizeTeacherLogName(override.teacherName) || override.teacherName,
+              sheetName: override.sheetName,
+              loginId: "관리자 수정",
+              isManualOverride: true,
+              updatedBy: override.updatedBy
+            });
+          }
+        });
+        return effective;
       }
       function buildTeacherLogDashboardData(logs, keyword) {
         var normalized = (Array.isArray(logs) ? logs : []).map(normalizeTeacherLogItem).filter(Boolean).filter(function(item) {
@@ -4673,13 +4756,15 @@
               lastViewed: "",
               lastViewedObj: null,
               timestamps: [],
-              loginIds: {}
+              loginIds: {},
+              isManualOverride: false
             };
           }
           var teacherBucket = weekMap[weekKey].dates[dateKey].teachers[item.teacherName];
           teacherBucket.count += 1;
           teacherBucket.timestamps.push(item.viewedAt);
           teacherBucket.loginIds[item.loginId] = true;
+          teacherBucket.isManualOverride = teacherBucket.isManualOverride || !!item.isManualOverride;
           if (!teacherBucket.lastViewedObj || item.viewedDateObj > teacherBucket.lastViewedObj) {
             teacherBucket.lastViewedObj = item.viewedDateObj;
             teacherBucket.lastViewed = item.viewedAt;
@@ -4696,7 +4781,8 @@
                 count: teacher.count,
                 lastViewed: teacher.lastViewed,
                 timestamps: teacher.timestamps.sort().reverse(),
-                loginIds: Object.keys(teacher.loginIds)
+                loginIds: Object.keys(teacher.loginIds),
+                isManualOverride: teacher.isManualOverride
               };
             }).sort(function(a, b) {
               if (b.count !== a.count) return b.count - a.count;
@@ -4852,8 +4938,33 @@
           "<div class='teacher-log-gauge-fill' style='width:" + pct + "%'></div>" +
         "</div>";
       }
+      function renderTeacherViewOverrideControls(name, teacher, override) {
+        if (!teacherDashboardEditMode || !authState.isMaster) return "";
+        var selectedState = override ? override.state : "auto";
+        var count = override && override.state === "viewed"
+          ? override.count
+          : Math.max(1, parseInt(teacher && teacher.count, 10) || 1);
+        var disabled = selectedState !== "viewed" ? " disabled" : "";
+        return "<div class='teacher-log-adjust-panel' data-teacher='" + escapeTeacherLogHtml(name) + "' data-sheet='" + escapeTeacherLogHtml(currentSheetName) + "'>" +
+          "<label class='teacher-log-adjust-field'>상태" +
+            "<select data-role='state' onchange='syncTeacherViewOverrideCard(this)'>" +
+              "<option value='auto'" + (selectedState === "auto" ? " selected" : "") + ">실제 로그</option>" +
+              "<option value='viewed'" + (selectedState === "viewed" ? " selected" : "") + ">열람</option>" +
+              "<option value='missing'" + (selectedState === "missing" ? " selected" : "") + ">미열람</option>" +
+            "</select>" +
+          "</label>" +
+          "<label class='teacher-log-adjust-field'>횟수" +
+            "<input data-role='count' type='number' min='1' max='99' step='1' value='" + count + "'" + disabled + ">" +
+          "</label>" +
+          "<div class='teacher-log-adjust-actions'>" +
+            "<button type='button' class='teacher-log-adjust-save' onclick='saveTeacherViewOverrideFromCard(this)'>저장</button>" +
+            "<button type='button' class='teacher-log-adjust-reset' onclick='resetTeacherViewOverrideFromCard(this)'>실제 로그로 복원</button>" +
+          "</div>" +
+        "</div>";
+      }
       function renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers) {
         var viewedMap = {};
+        var overrideMap = getTeacherViewOverrideMap(teacherViewOverridesCache);
         if (currentDateLog) {
           currentDateLog.teachers.forEach(function(teacher) {
             viewedMap[normalizeTeacherLogName(teacher.teacherName)] = teacher;
@@ -4862,24 +4973,107 @@
         var teacherCards = expectedTeachers.map(function(name) {
           var teacher = viewedMap[normalizeTeacherLogName(name)];
           var viewed = !!teacher;
+          var override = overrideMap[getTeacherViewOverrideKey(currentSheetName, name)];
+          var detail = viewed ? (teacher.count + "회 · 최근 " + escapeTeacherLogHtml(teacher.lastViewed)) : "아직 열람 기록이 없습니다.";
+          if (override) detail = "관리자 수정 · " + (override.state === "viewed" ? (override.count + "회로 반영") : "미열람으로 반영");
           return "<div class='teacher-log-status-card " + (viewed ? "viewed" : "missing") + "'>" +
             "<div class='teacher-log-status-top'>" +
               "<div class='teacher-log-status-name'>" + escapeTeacherLogHtml(name) + "</div>" +
               "<div class='teacher-log-status-badge'>" + (viewed ? "열람" : "미열람") + "</div>" +
             "</div>" +
-            "<div class='teacher-log-status-sub'>" + (viewed ? (teacher.count + "회 · 최근 " + escapeTeacherLogHtml(teacher.lastViewed)) : "아직 열람 기록이 없습니다.") + "</div>" +
+            "<div class='teacher-log-status-sub'>" + detail + "</div>" +
+            (override ? "<div class='teacher-log-manual-note'>관리자 조정</div>" : "") +
             renderTeacherLogGauge(viewed ? teacher.count : 0) +
+            renderTeacherViewOverrideControls(name, teacher, override) +
           "</div>";
         }).join("");
         if (!expectedTeachers.length) teacherCards = "<div class='teacher-empty'>현재 불러온 시간표에서 강사명을 찾지 못했습니다.</div>";
         var meta = currentDateLog ? ("로그 강사 " + currentDateLog.teacherCount + "명 · 총 " + currentDateLog.totalViews + "회") : "열람 로그 없음";
+        var description = teacherDashboardEditMode
+          ? "수정 모드: 상태와 횟수를 저장하면 관리자 조정값으로 집계됩니다. 실제 강사 열람 로그는 보존됩니다."
+          : "시간표에 들어간 강사 기준으로 열람 여부를 대조합니다.";
         return "<section class='teacher-log-current-panel'>" +
           "<div class='teacher-log-current-head'>" +
-            "<div><div class='teacher-log-current-title'>" + escapeTeacherLogHtml(currentSheetName || "현재 시간표") + "</div><div class='teacher-log-current-meta'>시간표에 들어간 강사 기준으로 열람 여부를 대조합니다.</div></div>" +
+            "<div><div class='teacher-log-current-title'>" + escapeTeacherLogHtml(currentSheetName || "현재 시간표") + "</div><div class='teacher-log-current-meta'>" + description + "</div></div>" +
             "<div class='teacher-log-current-meta'>" + meta + "</div>" +
           "</div>" +
           "<div class='teacher-log-status-grid'>" + teacherCards + "</div>" +
         "</section>";
+      }
+      function syncTeacherDashboardEditButton() {
+        var button = document.getElementById('teacherViewLogEditButton');
+        if (!button) return;
+        var canEdit = !!(authState.isMaster && authState.dashboardAdminToken);
+        button.style.display = authState.isMaster && teacherDashboardActiveTab === 'log' ? '' : 'none';
+        button.disabled = !canEdit;
+        button.classList.toggle('is-active', !!teacherDashboardEditMode);
+        button.setAttribute('aria-pressed', teacherDashboardEditMode ? 'true' : 'false');
+        button.textContent = teacherDashboardEditMode ? '수정 완료' : '집계 수정';
+        button.title = canEdit ? '강사별 열람 상태와 횟수 수정' : '관리자 세션을 갱신하려면 다시 로그인하세요.';
+      }
+      function toggleTeacherViewLogEditMode() {
+        if (!authState.isMaster) return;
+        if (!authState.dashboardAdminToken) {
+          alert('관리자 세션을 갱신하려면 다시 로그인하세요.');
+          return;
+        }
+        teacherDashboardEditMode = !teacherDashboardEditMode;
+        syncTeacherDashboardEditButton();
+        filterTeacherViewLogs();
+      }
+      function syncTeacherViewOverrideCard(select) {
+        var panel = select && select.closest ? select.closest('.teacher-log-adjust-panel') : null;
+        if (!panel) return;
+        var countInput = panel.querySelector("[data-role='count']");
+        if (!countInput) return;
+        var isViewed = select.value === 'viewed';
+        countInput.disabled = !isViewed;
+        if (isViewed && (!countInput.value || Number(countInput.value) < 1)) countInput.value = '1';
+      }
+      function formatTeacherViewOverrideError(error) {
+        var message = error && error.message ? error.message : String(error || '');
+        if (message.indexOf('DASHBOARD_ADMIN_SESSION_REQUIRED') > -1) return '관리자 세션이 만료되었습니다. 다시 로그인한 뒤 저장하세요.';
+        if (message.indexOf('OVERRIDE_SAVE_FAILED') > -1) return '수정값을 저장하지 못했습니다. 네트워크를 확인한 뒤 다시 시도하세요.';
+        return '열람 집계 수정 실패: ' + message;
+      }
+      function saveTeacherViewOverrideFromCard(button) {
+        var panel = button && button.closest ? button.closest('.teacher-log-adjust-panel') : null;
+        if (!panel || !authState.isMaster || !authState.dashboardAdminToken) return;
+        var teacherName = String(panel.dataset.teacher || '').trim();
+        var sheetName = String(panel.dataset.sheet || '').trim();
+        var stateSelect = panel.querySelector("[data-role='state']");
+        var countInput = panel.querySelector("[data-role='count']");
+        var state = stateSelect ? String(stateSelect.value || '').trim() : '';
+        var count = countInput ? Number(countInput.value) : 0;
+        if (!teacherName || !sheetName || ['auto', 'viewed', 'missing'].indexOf(state) === -1) {
+          alert('수정할 강사와 상태를 확인하세요.');
+          return;
+        }
+        if (state === 'viewed' && (!Number.isInteger(count) || count < 1 || count > 99)) {
+          alert('열람 횟수는 1~99 사이의 정수로 입력하세요.');
+          if (countInput) countInput.focus();
+          return;
+        }
+        var controls = panel.querySelectorAll('button, select, input');
+        controls.forEach(function(control) { control.disabled = true; });
+        callServer('setTeacherViewOverride', [teacherName, sheetName, state, state === 'viewed' ? count : 0, authState.dashboardAdminToken]).then(function() {
+          return refreshTeacherViewLogs(true);
+        }).catch(function(error) {
+          alert(formatTeacherViewOverrideError(error));
+          controls.forEach(function(control) {
+            if (control.getAttribute('data-role') === 'count' && state !== 'viewed') return;
+            control.disabled = false;
+          });
+        });
+      }
+      function resetTeacherViewOverrideFromCard(button) {
+        var panel = button && button.closest ? button.closest('.teacher-log-adjust-panel') : null;
+        if (!panel) return;
+        var stateSelect = panel.querySelector("[data-role='state']");
+        if (!stateSelect) return;
+        stateSelect.value = 'auto';
+        syncTeacherViewOverrideCard(stateSelect);
+        saveTeacherViewOverrideFromCard(button);
       }
       function renderTeacherLogWeekStack(weeks) {
         var referenceDate = getTeacherLogReferenceDate();
@@ -5163,8 +5357,9 @@
           "<div class='teacher-log-skeleton-card'><div class='teacher-log-skeleton-head'></div><div class='teacher-log-skeleton-row'></div><div class='teacher-log-skeleton-row'></div></div>" +
         "</div>";
       }
-      function renderTeacherViewLogs(logs) {
+      function renderTeacherViewLogs(logs, overrides) {
         teacherViewLogsCache = Array.isArray(logs) ? logs.slice() : [];
+        teacherViewOverridesCache = Array.isArray(overrides) ? overrides.slice() : [];
         teacherViewLogWeekIndex = 0;
         teacherViewLogSelectedDateIndex = 0;
         filterTeacherViewLogs();
@@ -5174,6 +5369,7 @@
         var weekLabel = document.getElementById('teacherLogWeekLabel');
         var keyword = String((document.getElementById('teacherViewLogSearch').value || "")).trim();
         syncTeacherDashboardTabs();
+        syncTeacherDashboardEditButton();
         if (teacherDashboardActiveTab === "rooms") {
           if (teacherRoomStatsCache) renderTeacherRoomStats();
           else loadTeacherRoomStats(false);
@@ -5181,15 +5377,16 @@
         }
         renderTeacherLogLoading("skeleton");
         requestAnimationFrame(function() {
-          var weeks = buildTeacherLogDashboardData(teacherViewLogsCache, keyword);
+          var effectiveLogs = buildEffectiveTeacherViewLogs(teacherViewLogsCache, teacherViewOverridesCache);
+          var weeks = buildTeacherLogDashboardData(effectiveLogs, keyword);
           var expectedTeachers = getCurrentScheduleTeacherNames();
-          var currentDateLog = findTeacherLogDateGroup(buildTeacherLogDashboardData(teacherViewLogsCache, ""), currentSheetName);
+          var currentDateLog = findTeacherLogDateGroup(buildTeacherLogDashboardData(effectiveLogs, ""), currentSheetName);
           if (!weeks.length) {
             teacherViewLogWeekIndex = 0;
             teacherViewLogSelectedDateIndex = 0;
             if (weekLabel) weekLabel.textContent = keyword ? "검색 결과 없음" : "열람 기록 없음";
             list.innerHTML = renderTeacherLogSummaryCards(currentDateLog, expectedTeachers) +
-              renderTeacherLogAnalytics(teacherViewLogsCache, keyword) +
+              renderTeacherLogAnalytics(effectiveLogs, keyword) +
               renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers) +
               "<div class='teacher-empty'>" + (keyword ? "검색 결과가 없습니다." : "열람 기록이 없습니다.") + "</div>";
             list.classList.add('is-ready');
@@ -5201,7 +5398,7 @@
           }, 0);
           if (weekLabel) weekLabel.textContent = "전체 " + weeks.length + "주 · " + totalDates + "일 · " + totalViews + "회";
           list.innerHTML = renderTeacherLogSummaryCards(currentDateLog, expectedTeachers) +
-            renderTeacherLogAnalytics(teacherViewLogsCache, keyword) +
+            renderTeacherLogAnalytics(effectiveLogs, keyword) +
             renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers) +
             renderTeacherLogWeekStack(weeks);
           requestAnimationFrame(function() {
@@ -5215,7 +5412,7 @@
       }
       function shiftTeacherLogWeek(offset) {
         var keyword = String((document.getElementById('teacherViewLogSearch').value || "")).trim();
-        var weeks = buildTeacherLogDashboardData(teacherViewLogsCache, keyword);
+        var weeks = buildTeacherLogDashboardData(buildEffectiveTeacherViewLogs(teacherViewLogsCache, teacherViewOverridesCache), keyword);
         if (!weeks.length) return;
         var nextIndex = teacherViewLogWeekIndex + offset;
         if (nextIndex < 0 || nextIndex > weeks.length - 1) return;
@@ -5223,18 +5420,28 @@
         teacherViewLogSelectedDateIndex = 0;
         filterTeacherViewLogs();
       }
-      function refreshTeacherViewLogs() {
+      function refreshTeacherViewLogs(raiseOnError) {
         if (teacherDashboardActiveTab === "rooms") {
           teacherRoomStatsCache = null;
-          loadTeacherRoomStats(true);
-          return;
+          return loadTeacherRoomStats(true);
         }
         var teacherFilter = getAdminSelectedTeacher();
         renderTeacherLogLoading("spinner");
-        callServer("getTeacherViewLogs", [teacherFilter, 180]).then(function(logs) {
-          renderTeacherViewLogs(logs);
+        var requests = [callServer("getTeacherViewLogs", [teacherFilter, 180])];
+        requests.push(authState.dashboardAdminToken
+          ? callServer("getTeacherViewOverrides", [authState.dashboardAdminToken])
+          : Promise.resolve([]));
+        return Promise.all(requests).then(function(results) {
+          renderTeacherViewLogs(results[0], results[1]);
         }).catch(function(err) {
-          alert("열람 로그 로딩 실패: " + (err && err.message ? err.message : err));
+          var message = err && err.message ? err.message : String(err || '');
+          if (message.indexOf('DASHBOARD_ADMIN_SESSION_REQUIRED') > -1) {
+            alert('관리자 세션이 만료되었습니다. 다시 로그인한 뒤 대시보드를 열어주세요.');
+          } else {
+            alert("열람 로그 로딩 실패: " + message);
+          }
+          if (raiseOnError) throw err;
+          return null;
         });
       }
       function openTeacherViewLogModal() {
@@ -5244,8 +5451,10 @@
         teacherViewLogWeekIndex = 0;
         teacherViewLogSelectedDateIndex = 0;
         teacherDashboardActiveTab = "log";
+        teacherDashboardEditMode = false;
         teacherRoomStatsCache = null;
         syncTeacherDashboardTabs();
+        syncTeacherDashboardEditButton();
         renderTeacherLogLoading("spinner");
         refreshTeacherViewLogs();
       }
