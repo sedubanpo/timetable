@@ -209,6 +209,31 @@ assert(index.includes("data-operation-memo-base-title"), "operation memo refresh
 assert(index.includes('role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle"'), "review modal semantics missing");
 assert(index.includes("button.setAttribute('aria-selected'"), "review tabs must expose selected state");
 
+assert(index.includes("function recordTeacherViewAfterSuccessfulLoad(teacherName, sheetName)"), "teacher view logging helper missing");
+assert(index.includes("if (d && !d.error) recordTeacherViewAfterSuccessfulLoad(teacherName, n);"), "successful teacher-grid loads must record a view");
+assert(!index.includes("if (auditView && authState.loggedIn"), "teacher view logging must not depend on an optional route flag");
+assert(index.includes("teacherViewLogKeys.delete(key);"), "failed teacher view logs must be retryable");
+
+vm.runInContext(extractFunction(appScript, "recordTeacherViewAfterSuccessfulLoad"), sandbox);
+vm.runInContext(`
+  globalThis.__teacherViewCalls = [];
+  authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "배유진", loginId: "teacher-1" };
+  accessMode = "teacher";
+  teacherViewLogKeys = new Set();
+  callServer = function(method, args) {
+    globalThis.__teacherViewCalls.push({ method: method, args: args });
+    return Promise.resolve(true);
+  };
+  recordTeacherViewAfterSuccessfulLoad("배유진", "8/8(토)");
+  recordTeacherViewAfterSuccessfulLoad("배유진", "8/8(토)");
+  authState.isMaster = true;
+  recordTeacherViewAfterSuccessfulLoad("배유진", "8/9(일)");
+`, sandbox);
+const teacherViewCalls = JSON.parse(vm.runInContext("JSON.stringify(globalThis.__teacherViewCalls)", sandbox));
+assert.strictEqual(teacherViewCalls.length, 1, "one teacher/sheet view must be logged once per page session");
+assert.strictEqual(teacherViewCalls[0].method, "logTeacherView");
+assert.deepStrictEqual(teacherViewCalls[0].args, ["배유진", "8/8(토)", "teacher-1"]);
+
 const legacyNames = extractFunction(server, "getLegacyTeacherNamesForAuth_");
 assert(!/\bbreak\s*;/.test(legacyNames), "teacher list must scan every row");
 assert(legacyNames.includes("teacherNames.sort()"), "teacher list must be stable");

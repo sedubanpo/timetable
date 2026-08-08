@@ -1564,6 +1564,7 @@
       let studentImageRefreshPendingSelection = "";
       let studentCardHideNote = false;
       let teacherViewLogsCache = [];
+      let teacherViewLogKeys = new Set();
       let teacherViewLogWeekIndex = 0;
       let teacherViewLogSelectedDateIndex = 0;
       let teacherDashboardActiveTab = "log";
@@ -2643,6 +2644,7 @@
         availableTeacherNames = [];
         accessMode = "";
         clientCache = {};
+        teacherViewLogKeys = new Set();
         teacherCalendarSheetMap = {};
         teacherCalendarSheets = [];
         teacherCalendarReady = false;
@@ -3125,7 +3127,20 @@
       function nextMonth(){ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); }
       function goHome(){ document.getElementById('mainPage').style.display='none'; document.getElementById('loginGate').style.display='flex'; if(pollingTimer)clearInterval(pollingTimer); }
       
-      function loadData(n,r,auditView){ 
+      function recordTeacherViewAfterSuccessfulLoad(teacherName, sheetName) {
+        if (!authState.loggedIn || authState.isMaster || accessMode !== "teacher") return;
+        var teacher = String(teacherName || "").trim();
+        var sheet = String(sheetName || "").trim();
+        if (!teacher || !sheet) return;
+        var key = [String(authState.loginId || "").trim(), teacher, sheet].join("::");
+        if (teacherViewLogKeys.has(key)) return;
+        teacherViewLogKeys.add(key);
+        callServer("logTeacherView", [teacher, sheet, authState.loginId || ""]).catch(function(error) {
+          teacherViewLogKeys.delete(key);
+          if (window.console && console.warn) console.warn("강사 열람 로그 저장 실패:", error);
+        });
+      }
+      function loadData(n,r){
         currentSheetName=n; 
         loadOperationMemosForCurrentSheet(true, { silent: true });
         document.getElementById('introPage').style.display='none'; 
@@ -3149,9 +3164,7 @@
         var method = teacherName ? "getTeacherGridData" : "getFixedGridData";
         var params = teacherName ? [n, teacherName, r] : [n, r];
         callServer(method, params).then(function(d){ 
-          if (auditView && authState.loggedIn && !authState.isMaster && accessMode === "teacher" && teacherName) {
-            callServer("logTeacherView", [teacherName, n, authState.loginId || ""]).catch(function(){});
-          }
+          if (d && !d.error) recordTeacherViewAfterSuccessfulLoad(teacherName, n);
           clientCache[cacheKey]=d; 
           processData(d, r); 
         }).catch(function(err){
