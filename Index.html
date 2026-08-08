@@ -1926,7 +1926,10 @@
         var seen = {};
         return (Array.isArray(events) ? events : []).reduce(function(items, event, index) {
           var range = getSlmsSchoolEventDateRange(event || {});
-          if (!range.start || dateKey < range.start || dateKey > range.end) return items;
+          // Match the S-LMS calendar: even when a vacation has an end date, the
+          // event is surfaced on its registered start date rather than repeated
+          // as a warning on every day inside the range.
+          if (!range.start || dateKey !== range.start) return items;
           var target = parseSlmsSchoolEventTarget(event || {});
           if (!target.school) return items;
           var message = getSlmsSchoolEventMessage(event || {});
