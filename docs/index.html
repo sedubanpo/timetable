@@ -466,6 +466,13 @@
       .operation-memo-item.is-slms .operation-memo-item-meta, .operation-memo-item.is-slms .operation-memo-item-message { color:#1e3a8a; }
       .operation-memo-source-summary { margin-top:12px; padding:10px 12px; border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; color:#334155; font-size:0.8rem; line-height:1.45; }
       .operation-memo-source-summary strong { color:#1e3a8a; }
+      .operation-memo-visibility-control { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; padding:10px 12px; border:1px solid #dbeafe; border-radius:10px; background:#fff; }
+      .operation-memo-visibility-copy { min-width:0; }
+      .operation-memo-visibility-title { color:#0f172a; font-size:0.84rem; font-weight:900; }
+      .operation-memo-visibility-help { margin-top:2px; color:#64748b; font-size:0.74rem; line-height:1.4; }
+      .operation-memo-visibility-btn { flex:0 0 auto; min-width:92px; min-height:38px; border:1px solid #2563eb; border-radius:999px; background:#2563eb; color:#fff; padding:7px 12px; font-family:inherit; font-size:0.78rem; font-weight:900; cursor:pointer; }
+      .operation-memo-visibility-btn.is-off { border-color:#cbd5e1; background:#f1f5f9; color:#475569; }
+      .operation-memo-visibility-btn:focus-visible { outline:3px solid rgba(37,99,235,0.28); outline-offset:2px; }
       .operation-memo-source-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-size:0.7rem; font-weight:900; margin-right:5px; }
       .operation-memo-readonly-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:999px; background:#e2e8f0; color:#475569; font-size:0.7rem; font-weight:800; }
       .operation-memo-item-actions { display:flex; gap:6px; flex-shrink:0; }
@@ -1431,6 +1438,13 @@
         <div class="modal-title">운영 메모</div>
         <div style="color:#64748b; font-size:0.84rem; line-height:1.45; margin-top:6px;">수기 메모와 선택 날짜의 S-LMS 학교 일정을 함께 표시합니다. 공통·전학년 일정은 해당 학교 모든 학년에 적용됩니다.</div>
         <div id="operationMemoSourceSummary" class="operation-memo-source-summary" aria-live="polite"></div>
+        <div class="operation-memo-visibility-control">
+          <div class="operation-memo-visibility-copy">
+            <div class="operation-memo-visibility-title">학교 일정 경고</div>
+            <div class="operation-memo-visibility-help">시간표의 S-LMS 학교일정 강조·배지·알림만 숨깁니다. 수기 메모는 계속 표시됩니다.</div>
+          </div>
+          <button id="operationMemoSchoolWarningToggle" class="operation-memo-visibility-btn" type="button" aria-pressed="true" onclick="toggleOperationMemoSchoolWarnings()">표시 중</button>
+        </div>
         <div class="operation-memo-controls">
           <select id="operationMemoTypeInput" class="operation-memo-wide" onchange="syncOperationMemoFormMode()">
             <option value="common">공동 메모</option>
@@ -1598,6 +1612,7 @@
       let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], manualItems: [], autoItems: [], sourceErrors: {}, slmsEvents: [], slmsLoadedAt: 0, loading: false, editingId: "", popupKey: "" };
       let studentEnrollmentStatusState = { byName: {}, loadedAt: 0, warningCount: 0, loading: null, error: "" };
       let operationMemoPollTimer = null;
+      const OPERATION_MEMO_SCHOOL_WARNING_STORAGE_KEY = "sedu_operation_memo_school_warnings_visible_v1";
       const API_BASE_DEFAULT = "https://script.google.com/macros/s/AKfycbztGbkhmKvr23Yx8tSNcgK-Y-WzSCbOoFtc8QSaqYS5XvnAhp1kheu84VNmwr_hWQm9EQ/exec";
       const LIVE_FIREBASE_CONFIG = {
         apiKey: "AIzaSyCFM21ZxgwIYwmjRPaAOp5bL9Kprqiyppg",
@@ -1886,6 +1901,43 @@
       function isAutomaticOperationMemo(item) {
         return !!(item && (item.source === "slms-school-event" || item.read_only === true));
       }
+      function areOperationMemoSchoolWarningsVisible() {
+        try {
+          return localStorage.getItem(OPERATION_MEMO_SCHOOL_WARNING_STORAGE_KEY) !== "false";
+        } catch (error) {
+          return true;
+        }
+      }
+      function getVisibleOperationMemoItems() {
+        var showSchoolWarnings = areOperationMemoSchoolWarningsVisible();
+        return (operationMemoState.items || []).filter(function(item) {
+          return showSchoolWarnings || !isAutomaticOperationMemo(item);
+        });
+      }
+      function renderOperationMemoSchoolWarningToggle() {
+        var button = document.getElementById('operationMemoSchoolWarningToggle');
+        if (!button) return;
+        var visible = areOperationMemoSchoolWarningsVisible();
+        button.textContent = visible ? "표시 중" : "숨김";
+        button.setAttribute('aria-pressed', visible ? 'true' : 'false');
+        button.setAttribute('aria-label', "학교 일정 경고 " + (visible ? "끄기" : "켜기"));
+        button.classList.toggle('is-off', !visible);
+      }
+      function toggleOperationMemoSchoolWarnings() {
+        var nextVisible = !areOperationMemoSchoolWarningsVisible();
+        try {
+          localStorage.setItem(OPERATION_MEMO_SCHOOL_WARNING_STORAGE_KEY, nextVisible ? "true" : "false");
+        } catch (error) {
+          if (window.console && console.warn) console.warn("학교 일정 경고 설정 저장 실패:", error);
+        }
+        operationMemoState.popupKey = "";
+        closeOperationMemoAlert();
+        renderOperationMemoSchoolWarningToggle();
+        renderOperationMemoSourceSummary();
+        renderOperationCommonMemos();
+        applyOperationMemoHighlights();
+        showOperationMemoPopupIfNeeded();
+      }
       function normalizeSlmsOperationMemoDateKey(value) {
         var text = String(value || "").trim();
         var iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
@@ -2018,7 +2070,8 @@
         var status = [];
         if (errors.slms) status.push("S-LMS 불러오기 실패 · 이전 자료 유지");
         if (errors.manual) status.push("수기 메모 불러오기 실패 · 이전 자료 유지");
-        el.innerHTML = "<strong>S-LMS 자동 " + (operationMemoState.autoItems || []).length + "건</strong> · 수기 " + (operationMemoState.manualItems || []).length + "건" +
+        var visibilityLabel = areOperationMemoSchoolWarningsVisible() ? "시간표 표시 중" : "시간표 숨김";
+        el.innerHTML = "<strong>S-LMS 자동 " + (operationMemoState.autoItems || []).length + "건</strong> · 수기 " + (operationMemoState.manualItems || []).length + "건 · " + visibilityLabel +
           (status.length ? "<br><span style='color:#b45309'>" + escapeHtml(status.join(" / ")) + "</span>" : "<br>자동 일정은 S-LMS에서 관리하며 여기서는 읽기 전용입니다.");
       }
       function startOperationMemoPolling() {
@@ -2089,7 +2142,7 @@
       }
       function getOperationMemoMaps() {
         var maps = { student: {}, school: [] };
-        (operationMemoState.items || []).forEach(function(item) {
+        getVisibleOperationMemoItems().forEach(function(item) {
           var kind = getOperationMemoKind(item);
           if (kind === "student") {
             var key = normalizeOperationMemoName(item.student_name || item.studentName);
@@ -2111,7 +2164,7 @@
         var strip = document.getElementById('operationCommonMemoStrip');
         var content = document.getElementById('operationCommonMemoContent');
         if (!strip || !content) return;
-        var items = isOperationMemoReadable() ? (operationMemoState.items || []).filter(function(item) {
+        var items = isOperationMemoReadable() ? getVisibleOperationMemoItems().filter(function(item) {
           return getOperationMemoKind(item) === "common" && String(item.message || "").trim();
         }) : [];
         if (!items.length) {
@@ -2126,7 +2179,8 @@
       }
       function applyOperationMemoHighlights() {
         clearOperationMemoHighlights();
-        if (!isOperationMemoReadable() || !operationMemoState.items.length) return;
+        var visibleItems = getVisibleOperationMemoItems();
+        if (!isOperationMemoReadable() || !visibleItems.length) return;
         var memoMaps = getOperationMemoMaps();
         document.querySelectorAll('.student-item.is-student').forEach(function(itemEl) {
           var raw = itemEl.dataset.originalText || itemEl.textContent || "";
@@ -2160,18 +2214,19 @@
         });
       }
       function showOperationMemoPopupIfNeeded() {
-        if (!isOperationMemoReadable() || !operationMemoState.items.length || !operationMemoState.dateKey) return;
-        var key = operationMemoState.dateKey + "::" + operationMemoState.items.map(function(v) { return v.id || v.updated_at || v.student_name; }).join("|");
+        var visibleItems = getVisibleOperationMemoItems();
+        if (!isOperationMemoReadable() || !visibleItems.length || !operationMemoState.dateKey) return;
+        var key = operationMemoState.dateKey + "::" + visibleItems.map(function(v) { return v.id || v.updated_at || v.student_name; }).join("|");
         if (operationMemoState.popupKey === key) return;
         operationMemoState.popupKey = key;
         closeOperationMemoAlert();
         var alertBox = document.createElement('div');
         alertBox.id = 'operationMemoAlert';
         alertBox.className = 'operation-memo-alert';
-        var lines = operationMemoState.items.slice(0, 4).map(function(item) {
+        var lines = visibleItems.slice(0, 4).map(function(item) {
           return escapeHtml(getOperationMemoItemTitle(item)) + " - " + escapeHtml(isAutomaticOperationMemo(item) ? "S-LMS 학교 일정" : getOperationMemoTypeLabel(item.type)) + (item.message ? " · " + escapeHtml(item.message) : "");
         }).join("<br>");
-        alertBox.innerHTML = "<button class='operation-memo-alert-close' onclick='closeOperationMemoAlert()'>×</button><div class='operation-memo-alert-title'>이 날짜에 운영 메모가 있습니다</div><div class='operation-memo-alert-body'>" + lines + (operationMemoState.items.length > 4 ? "<br>외 " + (operationMemoState.items.length - 4) + "건" : "") + "</div>";
+        alertBox.innerHTML = "<button class='operation-memo-alert-close' onclick='closeOperationMemoAlert()'>×</button><div class='operation-memo-alert-title'>이 날짜에 운영 메모가 있습니다</div><div class='operation-memo-alert-body'>" + lines + (visibleItems.length > 4 ? "<br>외 " + (visibleItems.length - 4) + "건" : "") + "</div>";
         document.body.appendChild(alertBox);
       }
       function closeOperationMemoAlert() {
@@ -2219,6 +2274,7 @@
         operationMemoState.editingId = "";
         resetOperationMemoForm();
         document.getElementById('operationMemoModal').style.display = 'flex';
+        renderOperationMemoSchoolWarningToggle();
         renderOperationMemoList();
         renderOperationMemoSourceSummary();
         loadOperationMemosForCurrentSheet(true, { silent: true });

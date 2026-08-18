@@ -352,6 +352,25 @@ const retainedAutomatic = sandbox.resolveOperationMemoSourceItems({ items: [], e
 assert.strictEqual(retainedAutomatic.length, 3, "a same-date source failure must retain the last successful automatic items");
 assert.strictEqual(sandbox.resolveOperationMemoSourceItems({ items: [], error: new Error("temporary") }, automaticMemos, false).length, 0, "a new date must not leak stale automatic items");
 assert(index.includes("S-LMS 자동") && index.includes("읽기 전용") && index.includes("전학년"), "automatic memo source and coverage labels must remain visible");
+assert(index.includes('id="operationMemoSchoolWarningToggle"') && index.includes("학교 일정 경고"), "operation memo modal must expose the school warning toggle");
+assert(index.includes("aria-pressed=\"true\"") && index.includes('button.setAttribute(\'aria-label\', "학교 일정 경고 "'), "school warning toggle must expose its state and action accessibly");
+
+const preferenceStorage = new Map();
+sandbox.localStorage = {
+  getItem(key) { return preferenceStorage.has(key) ? preferenceStorage.get(key) : null; },
+  setItem(key, value) { preferenceStorage.set(key, String(value)); },
+  removeItem(key) { preferenceStorage.delete(key); }
+};
+sandbox.testOperationMemoItems = automaticMemos.concat([
+  { id: "manual-school", type: "school", target_school: "서울고", target_grade: "2", message: "수기 확인", active: true }
+]);
+vm.runInContext("operationMemoState.items = testOperationMemoItems", sandbox);
+assert.strictEqual(sandbox.areOperationMemoSchoolWarningsVisible(), true, "school warnings must default to visible");
+assert.strictEqual(sandbox.getVisibleOperationMemoItems().length, 4, "default view must include automatic and manual memos");
+preferenceStorage.set("sedu_operation_memo_school_warnings_visible_v1", "false");
+assert.strictEqual(sandbox.areOperationMemoSchoolWarningsVisible(), false, "stored off preference must remain off after state reads");
+assert.strictEqual(sandbox.getVisibleOperationMemoItems().length, 1, "off preference must hide only automatic school events");
+assert.strictEqual(sandbox.getVisibleOperationMemoItems()[0].id, "manual-school", "manual operation memos must remain visible when school warnings are off");
 
 let exportedRows = null;
 sandbox.XLSX = {
