@@ -10,6 +10,8 @@ var SCHEDULE_START_HOUR = 8;
 var SCHEDULE_END_HOUR = 23;
 var DASHBOARD_ADMIN_SESSION_PREFIX = "TEACHER_DASHBOARD_ADMIN_SESSION_V1_";
 var DASHBOARD_ADMIN_SESSION_TTL_SECONDS = 21600;
+var SCHEDULE_SHEET_NAMES_CACHE_KEY = "SCHEDULE_SHEET_NAMES_V1";
+var SCHEDULE_SHEET_NAMES_CACHE_TTL_SECONDS = 300;
 
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -863,12 +865,22 @@ function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
 
 function getSheetNames() {
   try {
+    var cache = CacheService.getScriptCache();
+    var cached = cache.get(SCHEDULE_SHEET_NAMES_CACHE_KEY);
+    if (cached) {
+      try {
+        var parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch (cacheError) {}
+    }
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    return ss.getSheets()
+    var names = ss.getSheets()
       .map(function(s) { return s.getName(); })
       .filter(function(n) { 
         return !n.includes("-엑세스") && !n.includes("업무") && !n.includes("데이터") && !n.includes("@") && (n.match(/\d/) !== null); 
       });
+    if (names.length) cache.put(SCHEDULE_SHEET_NAMES_CACHE_KEY, JSON.stringify(names), SCHEDULE_SHEET_NAMES_CACHE_TTL_SECONDS);
+    return names;
   } catch (e) { return ["ERROR: " + e.message]; }
 }
 

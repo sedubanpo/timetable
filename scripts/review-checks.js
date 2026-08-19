@@ -201,6 +201,12 @@ assert(reviewTimetableHtml.includes("확인필요 표시"), "timetable cards mus
 assert(reviewTimetableHtml.includes("1강의실") && reviewTimetableHtml.includes("14:00"), "timetable must preserve room and time coordinates");
 
 assert(index.includes('withFirestoreTimeout(loadPage("", []), 20000'), "enrollment timeout regression");
+assert(index.includes('{ timeoutMs: 10000, retries: 2 }'), "sheet list API must retry transient Apps Script failures without extending the current worst-case wait");
+assert(index.includes("AKfycbyI3P-cTCEMrk0mqe3QTorgXQZGoaITzqs-oqCQQ3eIbsZofe8B3wj6WTruKaCfpmUIQA"), "client must use the refreshed public Apps Script deployment");
+assert(index.includes("saveSheetNamesCache(names);"), "successful sheet lists must be cached for recovery");
+assert(index.includes("var cachedNames = loadSheetNamesCache();"), "sheet list timeout must recover from the last successful list");
+assert(index.includes("마지막 정상 목록을 불러왔습니다"), "degraded sheet list recovery must be disclosed to the user");
+assert(server.includes("SCHEDULE_SHEET_NAMES_CACHE_TTL_SECONDS = 300"), "sheet list server reads must be cached briefly");
 assert(index.includes("isMobile !== lastResponsiveMobile"), "resize breakpoint guard missing");
 assert(index.includes("escapeHtml(entry.name)"), "mobile teacher names must be escaped");
 assert(index.includes("escapeHtml(parsed.name || \"학생\")"), "detailed mobile teacher names must be escaped");
@@ -361,6 +367,15 @@ sandbox.localStorage = {
   setItem(key, value) { preferenceStorage.set(key, String(value)); },
   removeItem(key) { preferenceStorage.delete(key); }
 };
+sandbox.saveSheetNamesCache(["8/18(화)", "8/19(수)"]);
+assert.deepStrictEqual(Array.from(sandbox.loadSheetNamesCache()), ["8/18(화)", "8/19(수)"], "a recent successful sheet list must be recoverable");
+preferenceStorage.set("sedu_sheet_names_cache_v1", JSON.stringify({
+  savedAt: Date.now() - (8 * 24 * 60 * 60 * 1000),
+  names: ["오래된 목록"]
+}));
+assert.strictEqual(sandbox.loadSheetNamesCache().length, 0, "an expired sheet list must not be used as current navigation data");
+preferenceStorage.set("sedu_sheet_names_cache_v1", "not-json");
+assert.strictEqual(sandbox.loadSheetNamesCache().length, 0, "a corrupt sheet list cache must fail closed");
 sandbox.testOperationMemoItems = automaticMemos.concat([
   { id: "manual-school", type: "school", target_school: "서울고", target_grade: "2", message: "수기 확인", active: true }
 ]);
