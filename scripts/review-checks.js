@@ -219,12 +219,23 @@ assert(index.includes("function recordTeacherViewAfterSuccessfulLoad(teacherName
 assert(index.includes("if (d && !d.error) recordTeacherViewAfterSuccessfulLoad(teacherName, n);"), "successful teacher-grid loads must record a view");
 assert(!index.includes("if (auditView && authState.loggedIn"), "teacher view logging must not depend on an optional route flag");
 assert(index.includes("teacherViewLogKeys.delete(key);"), "failed teacher view logs must be retryable");
+assert(index.includes('if (!authState.isMaster && !authState.isLookup) accessMode = "teacher";'), "non-admin login must always enter teacher mode");
+
+vm.runInContext(extractFunction(appScript, "isTeacherViewActive"), sandbox);
+vm.runInContext(extractFunction(appScript, "getActiveTeacherName"), sandbox);
+vm.runInContext(`
+  authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "배유진", loginId: "teacher-1" };
+  accessMode = "all";
+  getAdminSelectedTeacher = function() { return ""; };
+`, sandbox);
+assert.strictEqual(vm.runInContext("isTeacherViewActive()", sandbox), true, "a non-admin account must remain in teacher mode even when stale UI state says all");
+assert.strictEqual(vm.runInContext("getActiveTeacherName()", sandbox), "배유진", "a non-admin account must always load its authenticated teacher timetable");
 
 vm.runInContext(extractFunction(appScript, "recordTeacherViewAfterSuccessfulLoad"), sandbox);
 vm.runInContext(`
   globalThis.__teacherViewCalls = [];
   authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "배유진", loginId: "teacher-1" };
-  accessMode = "teacher";
+  accessMode = "all";
   teacherViewLogKeys = new Set();
   callServer = function(method, args) {
     globalThis.__teacherViewCalls.push({ method: method, args: args });
@@ -232,6 +243,7 @@ vm.runInContext(`
   };
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/8(토)");
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/8(토)");
+  recordTeacherViewAfterSuccessfulLoad("김광수", "8/10(월)");
   authState.isMaster = true;
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/9(일)");
   authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "김광수", loginId: "teacher-2" };

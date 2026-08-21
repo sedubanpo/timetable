@@ -2804,14 +2804,14 @@
       function isTeacherViewActive() {
         if (isLookupViewActive()) return false;
         if (!authState.loggedIn) return false;
-        if (!authState.isMaster) return accessMode === "teacher";
+        if (!authState.isMaster) return true;
         if (getAdminSelectedTeacher()) return true;
         return accessMode === "teacher";
       }
       function getActiveTeacherName() {
         if (isLookupViewActive()) return "";
         if (!authState.loggedIn) return "";
-        if (!authState.isMaster) return accessMode === "teacher" ? (authState.teacherName || "") : "";
+        if (!authState.isMaster) return authState.teacherName || "";
         var selectedTeacher = getAdminSelectedTeacher();
         if (selectedTeacher) return selectedTeacher;
         if (accessMode === "teacher") return authState.teacherName || "";
@@ -2890,6 +2890,7 @@
           authState.teacherName = res.teacherName || "";
           authState.loginId = res.loginId || loginId;
           authState.dashboardAdminToken = res.dashboardAdminToken || "";
+          if (!authState.isMaster && !authState.isLookup) accessMode = "teacher";
           saveLoginCredentials(loginId, password, remember);
           availableTeacherNames = (res.teacherNames || []).slice();
           if (fromGate) {
@@ -3427,10 +3428,11 @@
       function goHome(){ document.getElementById('mainPage').style.display='none'; document.getElementById('loginGate').style.display='flex'; if(pollingTimer)clearInterval(pollingTimer); }
       
       function recordTeacherViewAfterSuccessfulLoad(teacherName, sheetName) {
-        if (!authState.loggedIn || authState.isMaster || accessMode !== "teacher") return;
+        if (!authState.loggedIn || authState.isMaster || authState.isLookup) return;
         var teacher = String(teacherName || "").trim();
         var sheet = String(sheetName || "").trim();
         if (!teacher || !sheet) return;
+        if (normalizeTeacherLogName(teacher) !== normalizeTeacherLogName(authState.teacherName)) return;
         var key = [String(authState.loginId || "").trim(), teacher, sheet].join("::");
         if (teacherViewLogKeys.has(key)) return;
         teacherViewLogKeys.add(key);
