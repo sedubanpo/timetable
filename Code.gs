@@ -9,7 +9,8 @@ var FIREBASE_API_KEY = "AIzaSyCFM21ZxgwIYwmjRPaAOp5bL9Kprqiyppg";
 var SCHEDULE_START_HOUR = 8;
 var SCHEDULE_END_HOUR = 23;
 var DASHBOARD_ADMIN_SESSION_PREFIX = "TEACHER_DASHBOARD_ADMIN_SESSION_V1_";
-var DASHBOARD_ADMIN_SESSION_TTL_SECONDS = 21600;
+var DASHBOARD_ADMIN_SESSION_TTL_SECONDS = 86400;
+var DASHBOARD_ADMIN_SESSION_CACHE_TTL_SECONDS = 21600;
 var SCHEDULE_SHEET_NAMES_CACHE_KEY = "SCHEDULE_SHEET_NAMES_V1";
 var SCHEDULE_SHEET_NAMES_CACHE_TTL_SECONDS = 300;
 
@@ -206,11 +207,18 @@ function issueDashboardAdminSession_(loginId) {
     var normalizedLoginId = normalizeLoginId_(loginId);
     if (!normalizedLoginId) return "";
     var token = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+    var expiresAt = Date.now() + (DASHBOARD_ADMIN_SESSION_TTL_SECONDS * 1000);
+    var key = DASHBOARD_ADMIN_SESSION_PREFIX + token;
+    PropertiesService.getScriptProperties().setProperty(key, JSON.stringify({
+      loginId: normalizedLoginId,
+      expiresAt: expiresAt
+    }));
     CacheService.getScriptCache().put(
-      DASHBOARD_ADMIN_SESSION_PREFIX + token,
+      key,
       normalizedLoginId,
-      DASHBOARD_ADMIN_SESSION_TTL_SECONDS
+      DASHBOARD_ADMIN_SESSION_CACHE_TTL_SECONDS
     );
+    cleanupExpiredDashboardAdminSessions_(expiresAt - (DASHBOARD_ADMIN_SESSION_TTL_SECONDS * 1000));
     return token;
   } catch (e) {
     return "";
@@ -221,10 +229,46 @@ function getDashboardAdminSessionLogin_(token) {
   try {
     var value = String(token || "").trim();
     if (!/^[a-f0-9]{64}$/i.test(value)) return "";
-    return String(CacheService.getScriptCache().get(DASHBOARD_ADMIN_SESSION_PREFIX + value) || "").trim();
+    var key = DASHBOARD_ADMIN_SESSION_PREFIX + value;
+    var cachedLoginId = String(CacheService.getScriptCache().get(key) || "").trim();
+    if (cachedLoginId) return cachedLoginId;
+
+    var properties = PropertiesService.getScriptProperties();
+    var raw = String(properties.getProperty(key) || "").trim();
+    if (!raw) return "";
+    var session = JSON.parse(raw);
+    var loginId = normalizeLoginId_(session && session.loginId);
+    var expiresAt = Number(session && session.expiresAt);
+    if (!loginId || !isFinite(expiresAt) || expiresAt <= Date.now()) {
+      properties.deleteProperty(key);
+      return "";
+    }
+    var remainingSeconds = Math.max(1, Math.min(
+      DASHBOARD_ADMIN_SESSION_CACHE_TTL_SECONDS,
+      Math.floor((expiresAt - Date.now()) / 1000)
+    ));
+    CacheService.getScriptCache().put(key, loginId, remainingSeconds);
+    return loginId;
   } catch (e) {
     return "";
   }
+}
+
+function cleanupExpiredDashboardAdminSessions_(nowMs) {
+  try {
+    var now = Number(nowMs) || Date.now();
+    var properties = PropertiesService.getScriptProperties();
+    var all = properties.getProperties();
+    Object.keys(all).forEach(function(key) {
+      if (key.indexOf(DASHBOARD_ADMIN_SESSION_PREFIX) !== 0) return;
+      try {
+        var session = JSON.parse(String(all[key] || ""));
+        if (!session || Number(session.expiresAt) <= now) properties.deleteProperty(key);
+      } catch (e) {
+        properties.deleteProperty(key);
+      }
+    });
+  } catch (e) {}
 }
 
 function normalizeLoginId_(value) {

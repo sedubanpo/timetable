@@ -248,6 +248,46 @@ assert(index.includes("function buildEffectiveTeacherViewLogs(logs, overrides)")
 assert(index.includes("실제 로그로 복원"), "admin dashboard must provide a safe restore action");
 assert(server.includes('DASHBOARD_ADMIN_SESSION_REQUIRED'), "admin override API must reject a missing admin session");
 assert(server.includes('attachDashboardAdminSession_'), "admin login must issue a dashboard edit session");
+assert(server.includes('PropertiesService.getScriptProperties().setProperty(key'), "admin sessions must have a durable server-side source of truth");
+assert(server.includes('var raw = String(properties.getProperty(key)'), "admin sessions must recover after best-effort cache eviction");
+assert(index.includes('function refreshDashboardAdminSession()'), "expired admin dashboard sessions must be refreshable from the live Firebase login");
+assert(index.includes('function withDashboardAdminSession(operation)'), "dashboard reads and writes must share one session-retry path");
+assert(index.includes('withDashboardAdminSession(function(token) { return callServer("getTeacherViewOverrides", [token]); })'), "dashboard opening must retry with a refreshed admin session");
+assert(index.includes("return callServer('setTeacherViewOverride', [teacherName, sheetName, state, state === 'viewed' ? count : 0, token]);"), "dashboard edits must retry with a refreshed admin session");
+
+const durableSessionProperties = {};
+const durableSessionCache = {};
+let durableUuidCounter = 0;
+const durableSessionSandbox = {
+  DASHBOARD_ADMIN_SESSION_PREFIX: "TEACHER_DASHBOARD_ADMIN_SESSION_V1_",
+  DASHBOARD_ADMIN_SESSION_TTL_SECONDS: 86400,
+  DASHBOARD_ADMIN_SESSION_CACHE_TTL_SECONDS: 21600,
+  Date,
+  JSON,
+  Object,
+  Math,
+  isFinite,
+  normalizeLoginId_(value) { return String(value || "").replace(/\D/g, ""); },
+  Utilities: { getUuid() { durableUuidCounter += 1; return String(durableUuidCounter).padStart(32, "a"); } },
+  CacheService: { getScriptCache() { return {
+    put(key, value) { durableSessionCache[key] = value; },
+    get(key) { return durableSessionCache[key] || null; }
+  }; } },
+  PropertiesService: { getScriptProperties() { return {
+    setProperty(key, value) { durableSessionProperties[key] = value; },
+    getProperty(key) { return durableSessionProperties[key] || null; },
+    getProperties() { return Object.assign({}, durableSessionProperties); },
+    deleteProperty(key) { delete durableSessionProperties[key]; }
+  }; } }
+};
+vm.createContext(durableSessionSandbox);
+vm.runInContext(extractFunction(server, "cleanupExpiredDashboardAdminSessions_"), durableSessionSandbox);
+vm.runInContext(extractFunction(server, "issueDashboardAdminSession_"), durableSessionSandbox);
+vm.runInContext(extractFunction(server, "getDashboardAdminSessionLogin_"), durableSessionSandbox);
+const durableToken = durableSessionSandbox.issueDashboardAdminSession_("010-4232-7428");
+assert.strictEqual(durableToken.length, 64, "admin session token shape must remain unchanged");
+Object.keys(durableSessionCache).forEach((key) => { delete durableSessionCache[key]; });
+assert.strictEqual(durableSessionSandbox.getDashboardAdminSessionLogin_(durableToken), "01042327428", "admin session must survive CacheService eviction via ScriptProperties");
 
 const sourceLogs = [
   { viewedAt: "2026-08-08 09:00:00", teacherName: "배유진", sheetName: "8/8(토)", loginId: "teacher-1" },

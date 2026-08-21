@@ -1563,6 +1563,7 @@
       let lastResponsiveMobile = window.innerWidth <= 768;
       let responsiveResizeFrame = null;
       let authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "" };
+      let dashboardAdminSessionRefreshPromise = null;
       let availableTeacherNames = [];
       let accessMode = "";
       let sheetNamesLoaded = false;
@@ -1860,6 +1861,44 @@
         return signInLiveFirebase(loginId, password).catch(function(error) {
           if (window.console && console.warn) console.warn("Firebase login fallback:", error);
           return "";
+        });
+      }
+      function isDashboardAdminSessionError(error) {
+        var message = error && error.message ? error.message : String(error || "");
+        return message.indexOf("DASHBOARD_ADMIN_SESSION_REQUIRED") > -1;
+      }
+      function refreshDashboardAdminSession() {
+        if (!authState.loggedIn || !authState.isMaster) return Promise.reject(new Error("ADMIN_LOGIN_REQUIRED"));
+        if (dashboardAdminSessionRefreshPromise) return dashboardAdminSessionRefreshPromise;
+        dashboardAdminSessionRefreshPromise = getLiveFirebaseAuth().then(function(auth) {
+          if (!auth.currentUser) throw new Error("FIREBASE_ADMIN_SESSION_REQUIRED");
+          return auth.currentUser.getIdToken(true);
+        }).then(function(idToken) {
+          return callServer("authenticateTeacher", ["", "", idToken]);
+        }).then(function(res) {
+          if (!res || !res.ok || !res.isMaster || !res.dashboardAdminToken) throw new Error("DASHBOARD_ADMIN_SESSION_REFRESH_FAILED");
+          authState.loginId = res.loginId || authState.loginId;
+          authState.dashboardAdminToken = res.dashboardAdminToken;
+          syncTeacherDashboardEditButton();
+          return authState.dashboardAdminToken;
+        }).finally(function() {
+          dashboardAdminSessionRefreshPromise = null;
+        });
+        return dashboardAdminSessionRefreshPromise;
+      }
+      function withDashboardAdminSession(operation) {
+        function renewAndRun() {
+          return refreshDashboardAdminSession().then(function(token) { return operation(token); });
+        }
+        var token = String(authState.dashboardAdminToken || "").trim();
+        if (!token) return renewAndRun();
+        return Promise.resolve().then(function() {
+          return operation(token);
+        }).catch(function(error) {
+          if (!isDashboardAdminSessionError(error)) throw error;
+          authState.dashboardAdminToken = "";
+          syncTeacherDashboardEditButton();
+          return renewAndRun();
         });
       }
       function initOperationMemoFeature() {
@@ -5262,7 +5301,7 @@
       }
       function formatTeacherViewOverrideError(error) {
         var message = error && error.message ? error.message : String(error || '');
-        if (message.indexOf('DASHBOARD_ADMIN_SESSION_REQUIRED') > -1) return '관리자 세션이 만료되었습니다. 다시 로그인한 뒤 저장하세요.';
+        if (isDashboardAdminSessionError(error) || message.indexOf('ADMIN_SESSION') > -1) return '관리자 세션을 자동 갱신하지 못했습니다. 다시 로그인한 뒤 저장하세요.';
         if (message.indexOf('OVERRIDE_SAVE_FAILED') > -1) return '수정값을 저장하지 못했습니다. 네트워크를 확인한 뒤 다시 시도하세요.';
         return '열람 집계 수정 실패: ' + message;
       }
@@ -5286,7 +5325,9 @@
         }
         var controls = panel.querySelectorAll('button, select, input');
         controls.forEach(function(control) { control.disabled = true; });
-        callServer('setTeacherViewOverride', [teacherName, sheetName, state, state === 'viewed' ? count : 0, authState.dashboardAdminToken]).then(function() {
+        withDashboardAdminSession(function(token) {
+          return callServer('setTeacherViewOverride', [teacherName, sheetName, state, state === 'viewed' ? count : 0, token]);
+        }).then(function() {
           return refreshTeacherViewLogs(true);
         }).catch(function(error) {
           alert(formatTeacherViewOverrideError(error));
@@ -5658,15 +5699,15 @@
         var teacherFilter = getAdminSelectedTeacher();
         renderTeacherLogLoading("spinner");
         var requests = [callServer("getTeacherViewLogs", [teacherFilter, 180])];
-        requests.push(authState.dashboardAdminToken
-          ? callServer("getTeacherViewOverrides", [authState.dashboardAdminToken])
+        requests.push(authState.isMaster
+          ? withDashboardAdminSession(function(token) { return callServer("getTeacherViewOverrides", [token]); })
           : Promise.resolve([]));
         return Promise.all(requests).then(function(results) {
           renderTeacherViewLogs(results[0], results[1]);
         }).catch(function(err) {
           var message = err && err.message ? err.message : String(err || '');
-          if (message.indexOf('DASHBOARD_ADMIN_SESSION_REQUIRED') > -1) {
-            alert('관리자 세션이 만료되었습니다. 다시 로그인한 뒤 대시보드를 열어주세요.');
+          if (isDashboardAdminSessionError(err) || message.indexOf('ADMIN_SESSION') > -1) {
+            alert('관리자 세션을 자동 갱신하지 못했습니다. 다시 로그인한 뒤 대시보드를 열어주세요.');
           } else {
             alert("열람 로그 로딩 실패: " + message);
           }
