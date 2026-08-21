@@ -246,6 +246,8 @@ vm.runInContext(`
   recordTeacherViewAfterSuccessfulLoad("김광수", "8/10(월)");
   authState.isMaster = true;
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/9(일)");
+  authState = { loggedIn: true, isMaster: false, isLookup: true, teacherName: "", loginId: "lookup-1" };
+  recordTeacherViewAfterSuccessfulLoad("배유진", "8/9(일)");
   authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "김광수", loginId: "teacher-2" };
   recordTeacherViewAfterSuccessfulLoad("김광수", "8/8(토)");
 `, sandbox);
