@@ -216,10 +216,14 @@ assert(index.includes('role="dialog" aria-modal="true" aria-labelledby="reviewMo
 assert(index.includes("button.setAttribute('aria-selected'"), "review tabs must expose selected state");
 
 assert(index.includes("function recordTeacherViewAfterSuccessfulLoad(teacherName, sheetName)"), "teacher view logging helper missing");
-assert(index.includes("if (d && !d.error) recordTeacherViewAfterSuccessfulLoad(teacherName, n);"), "successful teacher-grid loads must record a view");
+assert(index.includes("if (d && !d.error && !d.__teacherViewLogged) recordTeacherViewAfterSuccessfulLoad(teacherName || authState.teacherName, n);"), "successful grid loads must fall back to a separate view log when the server did not store it atomically");
 assert(!index.includes("if (auditView && authState.loggedIn"), "teacher view logging must not depend on an optional route flag");
 assert(index.includes("teacherViewLogKeys.delete(key);"), "failed teacher view logs must be retryable");
 assert(index.includes('if (!authState.isMaster && !authState.isLookup) accessMode = "teacher";'), "non-admin login must always enter teacher mode");
+assert(index.includes("auditLoginId: fixedAudit ? fixedAudit.loginId"), "full-grid requests must carry the authenticated teacher audit identity");
+assert(index.includes("auditLoginId: teacherAudit ? teacherAudit.loginId"), "teacher-grid requests must carry the authenticated teacher audit identity");
+assert(server.includes("resolveTeacherViewAuditName_(auditTeacherName, auditLoginId)"), "successful grid responses must resolve and store the canonical teacher view in the same server request");
+assert(server.includes('var sheet = authSS.getSheetByName("Teachers");'), "teacher audit identity lookup must prefer the named authentication sheet");
 
 vm.runInContext(extractFunction(appScript, "isTeacherViewActive"), sandbox);
 vm.runInContext(extractFunction(appScript, "getActiveTeacherName"), sandbox);
@@ -232,6 +236,8 @@ assert.strictEqual(vm.runInContext("isTeacherViewActive()", sandbox), true, "a n
 assert.strictEqual(vm.runInContext("getActiveTeacherName()", sandbox), "배유진", "a non-admin account must always load its authenticated teacher timetable");
 
 vm.runInContext(extractFunction(appScript, "recordTeacherViewAfterSuccessfulLoad"), sandbox);
+vm.runInContext(extractFunction(appScript, "getTeacherViewAuditRequest"), sandbox);
+vm.runInContext(extractFunction(appScript, "isTeacherDashboardExcludedName"), sandbox);
 vm.runInContext(`
   globalThis.__teacherViewCalls = [];
   authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "배유진", loginId: "teacher-1" };
@@ -248,14 +254,44 @@ vm.runInContext(`
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/9(일)");
   authState = { loggedIn: true, isMaster: false, isLookup: true, teacherName: "", loginId: "lookup-1" };
   recordTeacherViewAfterSuccessfulLoad("배유진", "8/9(일)");
+  authState = { loggedIn: true, isMaster: true, isLookup: false, teacherName: "안준성", loginId: "admin-1" };
+  recordTeacherViewAfterSuccessfulLoad("안준성", "8/9(일)");
   authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "김광수", loginId: "teacher-2" };
   recordTeacherViewAfterSuccessfulLoad("김광수", "8/8(토)");
 `, sandbox);
 const teacherViewCalls = JSON.parse(vm.runInContext("JSON.stringify(globalThis.__teacherViewCalls)", sandbox));
-assert.strictEqual(teacherViewCalls.length, 2, "each non-admin teacher account must log its own viewed sheet once per page session");
+assert.strictEqual(teacherViewCalls.length, 3, "each teacher identity, including permission-elevated teachers, must log its own viewed sheet once per page session");
 assert.strictEqual(teacherViewCalls[0].method, "logTeacherView");
 assert.deepStrictEqual(teacherViewCalls[0].args, ["배유진", "8/8(토)", "teacher-1"]);
-assert.deepStrictEqual(teacherViewCalls[1].args, ["김광수", "8/8(토)", "teacher-2"], "view logging must not be limited to one teacher name");
+assert.deepStrictEqual(teacherViewCalls[1].args, ["배유진", "8/9(일)", "teacher-1"], "schedule-management permission must not suppress a teacher's own view log");
+assert.deepStrictEqual(teacherViewCalls[2].args, ["김광수", "8/8(토)", "teacher-2"], "view logging must not be limited to one teacher name");
+
+vm.runInContext(`
+  authState = { loggedIn: true, isMaster: true, isLookup: false, teacherName: "배유진", loginId: "1062218168" };
+  teacherViewLogKeys = new Set();
+`, sandbox);
+const permissionElevatedAudit = JSON.parse(vm.runInContext("JSON.stringify(getTeacherViewAuditRequest('8/22(토)'))", sandbox));
+assert.deepStrictEqual(permissionElevatedAudit, {
+  teacherName: "배유진",
+  loginId: "1062218168",
+  sheetName: "8/22(토)",
+  key: "1062218168::배유진::8/22(토)"
+}, "permission-elevated teacher accounts must carry an audit identity even on a full-grid request");
+
+const teacherAuditServerSandbox = {
+  getTeacherAuthData_() {
+    return { byId: {
+      "1062218168": { teacherName: "배유진", isMaster: false },
+      "01042327428": { teacherName: "안준성", isMaster: true }
+    } };
+  },
+  buildLoginKeys_(value) { return [String(value || "")]; }
+};
+vm.createContext(teacherAuditServerSandbox);
+vm.runInContext(extractFunction(server, "resolveTeacherViewAuditName_"), teacherAuditServerSandbox);
+assert.strictEqual(teacherAuditServerSandbox.resolveTeacherViewAuditName_("", "1062218168"), "배유진", "the server must recover the canonical teacher name from the authenticated login id");
+assert.strictEqual(teacherAuditServerSandbox.resolveTeacherViewAuditName_("배유진", "01042327428"), "", "the canonical administrator account must never create a teacher view log");
+assert.strictEqual(teacherAuditServerSandbox.resolveTeacherViewAuditName_("배유진", "unknown"), "", "an unknown login id must not be accepted as a teacher audit identity");
 
 assert(index.includes('action: "teacher_view_override_set"'), "admin override save API call is missing");
 assert(index.includes("function buildEffectiveTeacherViewLogs(logs, overrides)"), "effective dashboard count helper is missing");
@@ -347,6 +383,28 @@ const savedLogResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiReques
   action: "teacher_view_log", teacher: "배유진", sheet: "8/8(토)", loginId: "teacher-1"
 })));
 assert.deepStrictEqual(savedLogResponse, { ok: true }, "a successful write must preserve the normal response");
+
+let atomicGridLog = null;
+logApiSandbox.getFixedGridData = function(sheetName) {
+  return { headers: ["1강의실"], grid: {}, version: "test" };
+};
+logApiSandbox.resolveTeacherViewAuditName_ = function(requestedTeacher, loginId) {
+  return loginId === "1062218168" ? "배유진" : "";
+};
+logApiSandbox.logTeacherView_ = function(teacherName, sheetName, loginId) {
+  atomicGridLog = { teacherName, sheetName, loginId };
+  return true;
+};
+const atomicGridResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiRequest_({
+  action: "grid", sheet: "8/22(토)", lite: "0", auditLoginId: "1062218168"
+})));
+assert.strictEqual(atomicGridResponse.ok, true, "the timetable grid must still load while recording its view");
+assert.strictEqual(atomicGridResponse.viewLogged, true, "the grid response must confirm the durable log write");
+assert.deepStrictEqual(atomicGridLog, {
+  teacherName: "배유진",
+  sheetName: "8/22(토)",
+  loginId: "1062218168"
+}, "the same successful grid request must persist the canonical teacher view");
 
 logApiSandbox.getDashboardAdminSessionLogin_ = function() { return ""; };
 const deniedOverrideResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiRequest_({

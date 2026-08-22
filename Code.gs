@@ -132,14 +132,18 @@ function handleApiRequest_(params) {
       var sheetName = String(params.sheet || "").trim();
       if (!sheetName) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
       var teacherName = String(params.teacher || "").trim();
+      var auditTeacherName = String(params.auditTeacher || "").trim();
+      var auditLoginId = String(params.auditLoginId || "").trim();
       var forceRefresh = String(params.refresh || "") === "1";
       var lite = String(params.lite || "1") !== "0";
       var payload = teacherName
         ? getTeacherGridData(sheetName, teacherName, forceRefresh)
         : getFixedGridData(sheetName, forceRefresh);
       if (!payload || payload.error) return jsonOutput_({ ok: false, error: payload && payload.error ? payload.error : "GRID_ERROR" }, params);
+      var canonicalAuditTeacher = resolveTeacherViewAuditName_(auditTeacherName, auditLoginId);
+      var viewLogged = canonicalAuditTeacher ? logTeacherView_(canonicalAuditTeacher, sheetName, auditLoginId) : false;
       if (lite) payload = toLitePayload_(payload);
-      return jsonOutput_({ ok: true, data: payload }, params);
+      return jsonOutput_({ ok: true, data: payload, viewLogged: viewLogged }, params);
     }
 
     return jsonOutput_({ ok: false, error: "UNKNOWN_ACTION" }, params);
@@ -375,7 +379,8 @@ function getTeacherAuthData_(forceRefresh) {
   }
 
   var authSS = SpreadsheetApp.openById(AUTH_SPREADSHEET_ID);
-  var sheet = authSS.getSheets()[0];
+  var sheet = authSS.getSheetByName("Teachers");
+  if (!sheet) sheet = authSS.getSheets()[0];
   var values = sheet.getDataRange().getDisplayValues();
   var byId = {};
   var teacherNames = [];
@@ -695,6 +700,28 @@ function getTeacherViewLogSheet_() {
     if (ss.getSheets().length > 1) sheet.hideSheet();
   }
   return sheet;
+}
+
+function resolveTeacherViewAuditName_(requestedTeacherName, loginId) {
+  var requested = String(requestedTeacherName || "").trim();
+  var login = String(loginId || "").trim();
+  if (!login) return "";
+  try {
+    var authData = getTeacherAuthData_(false);
+    var account = null;
+    buildLoginKeys_(login).some(function(key) {
+      if (authData && authData.byId && authData.byId[key]) {
+        account = authData.byId[key];
+        return true;
+      }
+      return false;
+    });
+    if (!account || account.isMaster) return "";
+    var canonical = String(account.teacherName || "").trim();
+    if (canonical) return canonical;
+    return requested;
+  } catch (e) {}
+  return "";
 }
 
 function logTeacherView_(teacherName, sheetName, loginId) {

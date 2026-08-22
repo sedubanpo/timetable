@@ -2537,15 +2537,23 @@
           });
         }
         if (method === "getFixedGridData") {
-          return apiJsonp({ action: "grid", sheet: a[0] || "", refresh: a[1] ? "1" : "0", lite: "0" }, { timeoutMs: 25000, retries: 1 }).then(function(res){
+          var fixedAudit = getTeacherViewAuditRequest(a[0] || "");
+          return apiJsonp({ action: "grid", sheet: a[0] || "", refresh: a[1] ? "1" : "0", lite: "0", auditTeacher: fixedAudit ? fixedAudit.teacherName : "", auditLoginId: fixedAudit ? fixedAudit.loginId : "" }, { timeoutMs: 25000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "시간표 조회 실패");
-            return res.data || { headers: [], grid: {}, version: "" };
+            var data = res.data || { headers: [], grid: {}, version: "" };
+            if (fixedAudit && res.viewLogged) teacherViewLogKeys.add(fixedAudit.key);
+            data.__teacherViewLogged = !!(fixedAudit && res.viewLogged);
+            return data;
           });
         }
         if (method === "getTeacherGridData") {
-          return apiJsonp({ action: "grid", sheet: a[0] || "", teacher: a[1] || "", refresh: a[2] ? "1" : "0", lite: "0" }, { timeoutMs: 25000, retries: 1 }).then(function(res){
+          var teacherAudit = getTeacherViewAuditRequest(a[0] || "");
+          return apiJsonp({ action: "grid", sheet: a[0] || "", teacher: a[1] || "", refresh: a[2] ? "1" : "0", lite: "0", auditTeacher: teacherAudit ? teacherAudit.teacherName : "", auditLoginId: teacherAudit ? teacherAudit.loginId : "" }, { timeoutMs: 25000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw new Error((res && res.error) || "강사 시간표 조회 실패");
-            return res.data || { headers: [], grid: {}, version: "" };
+            var data = res.data || { headers: [], grid: {}, version: "" };
+            if (teacherAudit && res.viewLogged) teacherViewLogKeys.add(teacherAudit.key);
+            data.__teacherViewLogged = !!(teacherAudit && res.viewLogged);
+            return data;
           });
         }
         if (method === "getTeacherSheetNames") {
@@ -3426,14 +3434,27 @@
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
       function nextMonth(){ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); }
       function goHome(){ document.getElementById('mainPage').style.display='none'; document.getElementById('loginGate').style.display='flex'; if(pollingTimer)clearInterval(pollingTimer); }
+
+      function getTeacherViewAuditRequest(sheetName) {
+        if (!authState.loggedIn || authState.isLookup) return null;
+        var teacher = normalizeTeacherLogName(authState.teacherName);
+        var loginId = String(authState.loginId || "").trim();
+        var sheet = String(sheetName || "").trim();
+        if ((!teacher && !loginId) || !sheet) return null;
+        var key = [loginId, teacher || "__BY_LOGIN_ID__", sheet].join("::");
+        if (teacherViewLogKeys.has(key)) return null;
+        return { teacherName: teacher, loginId: loginId, sheetName: sheet, key: key };
+      }
       
       function recordTeacherViewAfterSuccessfulLoad(teacherName, sheetName) {
-        if (!authState.loggedIn || authState.isMaster || authState.isLookup) return;
-        var teacher = String(teacherName || "").trim();
+        if (!authState.loggedIn || authState.isLookup) return;
+        var teacher = String(teacherName || authState.teacherName || "").trim();
         var sheet = String(sheetName || "").trim();
         if (!teacher || !sheet) return;
-        if (normalizeTeacherLogName(teacher) !== normalizeTeacherLogName(authState.teacherName)) return;
-        var key = [String(authState.loginId || "").trim(), teacher, sheet].join("::");
+        var authenticatedTeacher = normalizeTeacherLogName(authState.teacherName);
+        if (authenticatedTeacher && normalizeTeacherLogName(teacher) !== authenticatedTeacher) return;
+        if (authState.isMaster && isTeacherDashboardExcludedName(authenticatedTeacher)) return;
+        var key = [String(authState.loginId || "").trim(), authenticatedTeacher || normalizeTeacherLogName(teacher), sheet].join("::");
         if (teacherViewLogKeys.has(key)) return;
         teacherViewLogKeys.add(key);
         callServer("logTeacherView", [teacher, sheet, authState.loginId || ""]).catch(function(error) {
@@ -3472,7 +3493,7 @@
         var method = teacherName ? "getTeacherGridData" : "getFixedGridData";
         var params = teacherName ? [n, teacherName, r] : [n, r];
         callServer(method, params).then(function(d){ 
-          if (d && !d.error) recordTeacherViewAfterSuccessfulLoad(teacherName, n);
+          if (d && !d.error && !d.__teacherViewLogged) recordTeacherViewAfterSuccessfulLoad(teacherName || authState.teacherName, n);
           clientCache[cacheKey]=d; 
           processData(d, r); 
         }).catch(function(err){
