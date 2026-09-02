@@ -621,6 +621,15 @@ assert(index.includes('value="RESOLVED">처리 완료') && index.includes("전�
 assert(index.includes('title.textContent = isDesk ? "출결 전달함 · 데스크" : "내 출결 전달함"'), "attendance inbox must adapt to desk and teacher roles");
 assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(role)'), "desk and staff roles must receive attendance processing mode");
 assert(index.includes("if (attendanceInboxBtn) attendanceInboxBtn.style.display = '';"), "signed-in teachers must be able to open their sent attendance records");
+assert(index.includes('id="absenceNoticeBtn"') && index.includes("setToolbarButtonDisplay(absenceNoticeBtn, 'none')"), "teacher accounts must hide the absence notice toolbar action");
+assert(index.includes('id="attendanceReportBtn"') && index.includes("setToolbarButtonDisplay(attendanceReportBtn, 'none')"), "teacher accounts must hide the attendance summary toolbar action");
+assert(index.includes('id="attendanceInboxChatTab"') && index.includes('id="attendanceInboxDatabaseTab"'), "desk inbox must provide chat and database subviews");
+assert(index.includes('attendanceInboxView === "database"') && index.includes("renderAttendanceInboxDatabase(visible)"), "database subview must render only through the desk-aware inbox path");
+assert(index.includes("attendance-chat-message is-teacher") && index.includes("attendance-chat-message is-desk"), "attendance records must render as two-sided conversations");
+assert(index.includes("attendanceTeacherLabelHtml(report)") && index.includes("attendanceTeacherTone(label)"), "teacher names must use stable distinct labels");
+["강사명", "학생명", "학교·학년", "전달 내용", "처리 상태", "수업 시간", "전달 시각"].forEach((heading) => {
+  assert(index.includes("<th>" + heading + "</th>"), "attendance database missing heading: " + heading);
+});
 ["present", "late", "absent", "planned", "change", "other"].forEach((statusClass) => {
   assert(index.includes("attendance-status-" + statusClass), "missing attendance status treatment: " + statusClass);
 });

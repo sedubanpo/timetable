@@ -516,6 +516,11 @@
       .teacher-attendance-desk-reply { display:none; margin-top:12px; padding:11px 12px; border-radius:10px; background:#eff6ff; color:#1e3a8a; box-shadow:0 0 0 1px #bfdbfe; font-size:0.8rem; line-height:1.45; }
       .teacher-attendance-desk-reply.is-visible { display:block; }
       .attendance-inbox-box { width:min(1180px, calc(100vw - 28px)); height:min(860px, calc(100vh - 28px)); box-sizing:border-box; padding:22px; text-align:left; display:flex; flex-direction:column; overflow:hidden; border-radius:20px; box-shadow:0 0 0 1px rgba(15,23,42,.05), 0 22px 60px rgba(15,23,42,.24); }
+      .attendance-inbox-tabs { display:inline-flex; align-self:flex-start; gap:4px; margin:14px 0 2px; padding:4px; border-radius:12px; background:#eef2f7; box-shadow:inset 0 0 0 1px rgba(15,23,42,.05); }
+      .attendance-inbox-tabs[hidden] { display:none; }
+      .attendance-inbox-tab { min-width:88px; min-height:40px; border:0; border-radius:8px; padding:8px 13px; background:transparent; color:#64748b; font:inherit; font-size:.8rem; font-weight:900; cursor:pointer; transition-property:scale, background-color, color, box-shadow; transition-duration:150ms; transition-timing-function:ease-out; }
+      .attendance-inbox-tab[aria-selected="true"] { background:#fff; color:#0f3f85; box-shadow:0 0 0 1px rgba(15,23,42,.06), 0 3px 9px rgba(15,23,42,.08); }
+      .attendance-inbox-tab:active { scale:.96; }
       .attendance-inbox-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 12px; }
       .attendance-inbox-toolbar input, .attendance-inbox-toolbar select { min-height:40px; border:1px solid #cbd5e1; border-radius:9px; padding:7px 10px; font:inherit; }
       .attendance-inbox-toolbar input { flex:1 1 230px; }
@@ -526,28 +531,46 @@
       .attendance-inbox-refresh-result.error { color:#b91c1c; }
       .attendance-inbox-summary { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
       .attendance-inbox-pill { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:5px 9px; background:#f1f5f9; color:#334155; font-size:0.75rem; font-weight:900; font-variant-numeric:tabular-nums; }
-      .attendance-inbox-list { flex:1; min-height:0; overflow:auto; padding:2px 4px 14px 2px; }
-      .attendance-inbox-item { display:grid; grid-template-columns:minmax(280px,.9fr) minmax(300px,1fr); gap:16px; margin:0 0 10px; padding:15px; border-radius:14px; background:#fff; box-shadow:0 0 0 1px rgba(15,23,42,.07), 0 3px 10px rgba(15,23,42,.05); }
-      .attendance-inbox-item.is-new { box-shadow:0 0 0 1px #fed7aa, 0 4px 13px rgba(194,65,12,.08); }
-      .attendance-inbox-item.teacher-readonly { grid-template-columns:1fr; }
-      .attendance-inbox-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-      .attendance-inbox-title { color:#0f172a; font-size:0.94rem; font-weight:900; }
-      .attendance-inbox-meta { margin-top:5px; color:#64748b; font-size:0.76rem; font-weight:700; line-height:1.5; font-variant-numeric:tabular-nums; }
+      .attendance-inbox-list { flex:1; min-height:0; overflow:auto; padding:2px 5px 18px 2px; background:#f8fafc; border-radius:16px; box-shadow:inset 0 0 0 1px rgba(15,23,42,.05); }
+      .attendance-chat-thread { margin:12px; padding:15px 17px 17px; border-radius:18px; background:#fff; box-shadow:0 0 0 1px rgba(15,23,42,.06), 0 4px 14px rgba(15,23,42,.05); }
+      .attendance-chat-thread.is-new { box-shadow:0 0 0 1px #fdba74, 0 5px 16px rgba(194,65,12,.09); }
+      .attendance-chat-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding-bottom:11px; border-bottom:1px solid #e8edf3; }
+      .attendance-chat-student { color:#0f172a; font-size:1rem; font-weight:950; text-wrap:balance; }
+      .attendance-chat-lesson { margin-top:4px; color:#64748b; font-size:.75rem; font-weight:750; line-height:1.45; font-variant-numeric:tabular-nums; }
+      .attendance-chat-head-actions { display:flex; align-items:center; justify-content:flex-end; gap:7px; flex-wrap:wrap; }
+      .attendance-chat-state { display:inline-flex; align-items:center; border-radius:999px; padding:5px 8px; background:#f1f5f9; color:#475569; font-size:.7rem; font-weight:900; }
+      .attendance-chat-body { display:flex; flex-direction:column; gap:13px; padding:16px 2px 4px; }
+      .attendance-chat-message { display:flex; align-items:flex-end; gap:8px; max-width:82%; }
+      .attendance-chat-message.is-teacher { align-self:flex-end; flex-direction:row-reverse; }
+      .attendance-chat-message.is-desk { align-self:flex-start; }
+      .attendance-chat-avatar { display:flex; align-items:center; justify-content:center; width:34px; height:34px; flex:0 0 34px; border-radius:50%; background:var(--teacher-soft,#e2e8f0); color:var(--teacher-ink,#334155); font-size:.72rem; font-weight:950; box-shadow:0 0 0 1px rgba(15,23,42,.08); }
+      .attendance-chat-avatar.is-desk { --teacher-soft:#dbeafe; --teacher-ink:#1d4ed8; }
+      .attendance-chat-stack { min-width:0; }
+      .attendance-teacher-label { display:inline-flex; align-items:center; gap:5px; margin:0 0 5px 5px; border-radius:999px; padding:4px 8px; background:var(--teacher-soft); color:var(--teacher-ink); font-size:.7rem; font-weight:950; white-space:nowrap; box-shadow:0 0 0 1px var(--teacher-ring); }
+      .attendance-teacher-label svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+      .attendance-chat-message.is-teacher .attendance-teacher-label { float:right; margin:0 5px 5px 0; }
+      .attendance-chat-bubble { clear:both; max-width:100%; padding:11px 13px; border-radius:16px; color:#fff; background:var(--attendance-ink,#475569); font-size:.84rem; font-weight:700; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; text-wrap:pretty; box-shadow:0 5px 13px rgba(15,23,42,.1); }
+      .attendance-chat-message.is-teacher .attendance-chat-bubble { border-bottom-right-radius:5px; }
+      .attendance-chat-message.is-desk .attendance-chat-bubble { border-bottom-left-radius:5px; background:#eef4ff; color:#1e3a8a; box-shadow:0 0 0 1px #cfe0fb, 0 4px 11px rgba(30,64,175,.07); }
+      .attendance-chat-time { clear:both; margin-top:5px; color:#94a3b8; font-size:.66rem; font-weight:750; font-variant-numeric:tabular-nums; }
+      .attendance-chat-message.is-teacher .attendance-chat-time { text-align:right; }
+      .attendance-chat-waiting { align-self:center; border-radius:999px; padding:6px 10px; background:#f1f5f9; color:#64748b; font-size:.7rem; font-weight:800; }
       .attendance-status-badge { display:inline-flex; align-items:center; gap:5px; flex:0 0 auto; border-radius:999px; padding:5px 8px; background:var(--attendance-soft); color:var(--attendance-ink); box-shadow:0 0 0 1px var(--attendance-ring); font-size:.72rem; font-weight:900; }
       .attendance-status-badge .attendance-status-icon { width:14px; height:14px; flex-basis:14px; }
-      .attendance-inbox-report { margin-top:10px; padding:10px 11px; border-radius:10px; background:var(--attendance-soft,#f8fafc); color:#334155; box-shadow:inset 3px 0 0 var(--attendance-ink,#64748b); font-size:0.84rem; line-height:1.5; text-wrap:pretty; }
-      .attendance-inbox-report-label { display:block; margin-bottom:3px; color:var(--attendance-ink,#475569); font-size:.7rem; font-weight:900; }
-      .attendance-inbox-reply { margin-top:8px; padding:10px 11px; border-radius:10px; background:#eff6ff; color:#1e3a8a; box-shadow:0 0 0 1px #bfdbfe; font-size:.82rem; line-height:1.5; text-wrap:pretty; }
-      .attendance-inbox-reply strong { display:block; margin-bottom:3px; font-size:.72rem; }
-      .attendance-inbox-reply small { display:block; margin-top:5px; color:#64748b; font-size:.68rem; font-weight:700; }
-      .attendance-inbox-reply.is-empty { background:#f8fafc; color:#94a3b8; box-shadow:0 0 0 1px #e2e8f0; }
-      .attendance-inbox-state { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; color:#64748b; font-size:.7rem; font-weight:800; font-variant-numeric:tabular-nums; }
-      .attendance-inbox-state span:first-child { border-radius:999px; padding:3px 7px; background:#f1f5f9; color:#475569; font-weight:900; }
-      .attendance-inbox-controls { display:grid; grid-template-columns:150px minmax(0,1fr) auto; gap:8px; align-items:end; }
+      .attendance-inbox-controls { display:grid; grid-template-columns:150px minmax(0,1fr) auto; gap:8px; align-items:end; margin-top:14px; padding-top:13px; border-top:1px solid #e8edf3; }
       .attendance-inbox-controls select, .attendance-inbox-controls textarea { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:9px; padding:8px 9px; font:inherit; }
       .attendance-inbox-controls textarea { min-height:66px; resize:vertical; }
       .attendance-inbox-save { min-height:40px; border:0; border-radius:9px; background:#0f1746; color:#fff; padding:8px 12px; font:inherit; font-size:.78rem; font-weight:900; cursor:pointer; box-shadow:0 4px 11px rgba(15,23,70,.15); transition-property:scale, background-color, box-shadow, opacity; transition-duration:150ms; transition-timing-function:ease-out; }
       .attendance-inbox-save:not(:disabled):active { scale:.96; }
+      .attendance-db-wrap { min-width:980px; padding:12px; }
+      .attendance-db-table { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px; background:#fff; box-shadow:0 0 0 1px rgba(15,23,42,.07); }
+      .attendance-db-table th { position:sticky; top:0; z-index:1; padding:10px 9px; background:#eaf1fb; color:#1e3a5f; border-bottom:1px solid #cbd5e1; font-size:.7rem; font-weight:950; text-align:left; white-space:nowrap; }
+      .attendance-db-table td { padding:10px 9px; color:#334155; border-bottom:1px solid #edf1f5; font-size:.75rem; font-weight:700; line-height:1.45; vertical-align:top; }
+      .attendance-db-table tr:last-child td { border-bottom:0; }
+      .attendance-db-table tbody tr:hover td { background:#f8fbff; }
+      .attendance-db-time { white-space:nowrap; font-variant-numeric:tabular-nums; }
+      .attendance-db-content { min-width:220px; max-width:360px; white-space:pre-wrap; overflow-wrap:anywhere; }
+      .attendance-db-state { display:inline-flex; border-radius:999px; padding:4px 7px; background:#f1f5f9; color:#475569; font-size:.68rem; font-weight:900; white-space:nowrap; }
       .attendance-inbox-empty { padding:36px 12px; text-align:center; color:#64748b; font-weight:800; }
       .attendance-inbox-btn { background:#0f766e !important; position:relative; }
       .attendance-inbox-count { display:none; min-width:18px; height:18px; align-items:center; justify-content:center; border-radius:999px; background:#fff; color:#9f1239; padding:0 5px; font-size:.66rem; font-weight:950; }
@@ -1243,7 +1266,10 @@
         .attendance-refresh-notice { top:auto; bottom:18px; right:14px; width:calc(100vw - 28px); box-sizing:border-box; }
         .teacher-attendance-statuses { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .attendance-inbox-box { width:calc(100vw - 16px); height:calc(100vh - 16px); padding:14px; }
-        .attendance-inbox-item { grid-template-columns:1fr; }
+        .attendance-chat-thread { margin:9px; padding:13px; border-radius:16px; }
+        .attendance-chat-message { max-width:92%; }
+        .attendance-chat-head { align-items:stretch; flex-direction:column; }
+        .attendance-chat-head-actions { justify-content:flex-start; }
         .attendance-inbox-controls { grid-template-columns:1fr; }
         .visitor-lookup-mode .top-bar { min-height:82px; padding:14px 16px; }
         .visitor-lookup-mode .top-bar > div:first-child { left:14px; }
@@ -1531,6 +1557,10 @@
           </div>
           <button class="attendance-modal-close" type="button" onclick="closeAttendanceInbox()" aria-label="출결 전달함 닫기">닫기</button>
         </div>
+        <div id="attendanceInboxTabs" class="attendance-inbox-tabs" role="tablist" aria-label="출결 전달함 보기 방식" hidden>
+          <button id="attendanceInboxChatTab" class="attendance-inbox-tab" type="button" role="tab" aria-selected="true" onclick="setAttendanceInboxView('chat')">대화</button>
+          <button id="attendanceInboxDatabaseTab" class="attendance-inbox-tab" type="button" role="tab" aria-selected="false" onclick="setAttendanceInboxView('database')">목록</button>
+        </div>
         <div class="attendance-inbox-toolbar">
           <input id="attendanceInboxSearch" type="search" aria-label="학생, 강사 또는 전달 내용 검색" placeholder="학생·강사·내용 검색" oninput="renderAttendanceInbox()">
           <select id="attendanceInboxStateFilter" aria-label="출결 전달 처리 상태" onchange="renderAttendanceInbox()">
@@ -1662,10 +1692,10 @@
           <button class="msg-simple-btn admin-toolbar-hidden" onclick="openSelectionModal()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>상세안내</span>
           </button>
-          <button class="absence-notice-btn" onclick="openAbsenceNoticeModal()">
+          <button id="absenceNoticeBtn" class="absence-notice-btn" onclick="openAbsenceNoticeModal()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm.75 4.5a.75.75 0 00-1.5 0v4a.75.75 0 001.5 0v-4zM10 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>결석/당취 안내</span>
           </button>
-          <button class="attendance-report-btn" onclick="openAttendanceReportModal()">
+          <button id="attendanceReportBtn" class="attendance-report-btn" onclick="openAttendanceReportModal()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm-.75 3.5a.75.75 0 011.5 0v4.25l2.5 1.5a.75.75 0 11-.75 1.3l-2.87-1.72a.75.75 0 01-.38-.65V5.5z" clip-rule="evenodd"/></svg><span>출결 현황 보고</span>
           </button>
           <button id="operationMemoBtn" class="operation-memo-btn" onclick="openOperationMemoModal()" style="display:none;" title="운영 메모">
@@ -1758,6 +1788,7 @@
       let studentEnrollmentStatusState = { byName: {}, identitiesByName: {}, loadedAt: 0, warningCount: 0, loading: null, error: "" };
       let attendanceRealtimeState = { reports: [], byKey: {}, unsubscribe: null, notificationUnsubscribe: null, uid: "", mode: "", firebaseAdmin: false, loading: false, error: "", pendingDeskReplies: [] };
       let attendanceComposerContext = null;
+      let attendanceInboxView = "chat";
       let attendanceManualRefreshSequence = 0;
       let attendancePendingManualRefreshId = 0;
       let attendanceLastFocusedElement = null;
@@ -2448,12 +2479,62 @@
       }
       function openAttendanceInbox() {
         if (!authState.loggedIn || authState.isLookup) return;
+        if (!attendanceRealtimeState.firebaseAdmin) attendanceInboxView = "chat";
         openAttendanceDialog("attendanceInboxModal");
         renderAttendanceInbox();
         setTimeout(function() { document.getElementById("attendanceInboxSearch").focus(); }, 20);
       }
       function closeAttendanceInbox() {
         closeAttendanceDialog("attendanceInboxModal");
+      }
+      function setAttendanceInboxView(view) {
+        attendanceInboxView = view === "database" && attendanceRealtimeState.firebaseAdmin ? "database" : "chat";
+        renderAttendanceInbox();
+      }
+      function attendanceReporterLabel(report) {
+        var name = String(report && report.reporterName || "강사").trim().replace(/T$/, "").trim();
+        return /강사$/.test(name) ? name : name + " 강사";
+      }
+      function attendanceTeacherTone(name) {
+        var tones = [
+          ["#ecfdf5", "#047857", "#a7f3d0"],
+          ["#eff6ff", "#1d4ed8", "#bfdbfe"],
+          ["#f5f3ff", "#6d28d9", "#ddd6fe"],
+          ["#fff7ed", "#c2410c", "#fed7aa"],
+          ["#fdf2f8", "#be185d", "#fbcfe8"],
+          ["#ecfeff", "#0e7490", "#a5f3fc"]
+        ];
+        var sum = 0;
+        String(name || "").split("").forEach(function(char) { sum += char.charCodeAt(0); });
+        return tones[sum % tones.length];
+      }
+      function attendanceTeacherLabelHtml(report) {
+        var label = attendanceReporterLabel(report);
+        var tone = attendanceTeacherTone(label);
+        return "<span class='attendance-teacher-label' style='--teacher-soft:" + tone[0] + ";--teacher-ink:" + tone[1] + ";--teacher-ring:" + tone[2] + "'><svg viewBox='0 0 20 20' aria-hidden='true'><circle cx='10' cy='6' r='3'/><path d='M4 17c.5-4 2.5-6 6-6s5.5 2 6 6'/></svg>" + escapeHtml(label) + "</span>";
+      }
+      function attendanceAvatarHtml(name, isDesk) {
+        var label = String(name || (isDesk ? "데스크" : "강사")).trim();
+        var letter = label.replace(/\s+/g, "").charAt(0) || (isDesk ? "데" : "강");
+        var tone = isDesk ? ["#dbeafe", "#1d4ed8"] : attendanceTeacherTone(label);
+        return "<span class='attendance-chat-avatar" + (isDesk ? " is-desk" : "") + "' style='--teacher-soft:" + tone[0] + ";--teacher-ink:" + tone[1] + "' aria-hidden='true'>" + escapeHtml(letter) + "</span>";
+      }
+      function attendanceSchoolGrade(report) {
+        var grade = String(report && report.grade || "").trim();
+        var school = String(report && report.school || "").trim();
+        if (!grade) {
+          var match = school.match(/^(.*?)([1-6])$/);
+          if (match) { school = match[1]; grade = match[2]; }
+        }
+        return { school: school || "학교 미입력", grade: grade ? grade.replace(/학년$/, "") + "학년" : "학년 미입력" };
+      }
+      function renderAttendanceInboxDatabase(reports) {
+        var list = document.getElementById("attendanceInboxList");
+        list.innerHTML = "<div class='attendance-db-wrap'><table class='attendance-db-table'><thead><tr><th>강사명</th><th>학생명</th><th>학교·학년</th><th>출결</th><th>전달 내용</th><th>처리 상태</th><th>수업 시간</th><th>전달 시각</th></tr></thead><tbody>" + reports.map(function(report) {
+          var schoolGrade = attendanceSchoolGrade(report);
+          var lessonTime = [report.sheetName, Number(report.hour) ? Number(report.hour) + ":00" : "", report.room].filter(Boolean).join(" · ");
+          return "<tr data-attendance-report-id='" + escapeHtml(report.__id) + "'><td>" + attendanceTeacherLabelHtml(report) + "</td><td>" + escapeHtml(report.studentName || "학생") + "</td><td>" + escapeHtml(schoolGrade.school + " · " + schoolGrade.grade) + "</td><td>" + attendanceStatusBadgeHtml(report.status) + "</td><td class='attendance-db-content'>" + escapeHtml(report.note || "추가 전달 내용 없음") + "</td><td><span class='attendance-db-state'>" + attendanceStateLabel(report.effectiveDeskState) + "</span></td><td class='attendance-db-time'>" + escapeHtml(lessonTime || "수업 시간 미입력") + "</td><td class='attendance-db-time'>" + formatAttendanceDateTime(report.reportedAtMs) + "</td></tr>";
+        }).join("") + "</tbody></table></div>";
       }
       function renderAttendanceInbox() {
         var list = document.getElementById("attendanceInboxList");
@@ -2463,7 +2544,14 @@
         if (!list || !summary || !title || !subtitle) return;
         var isDesk = attendanceRealtimeState.firebaseAdmin;
         title.textContent = isDesk ? "출결 전달함 · 데스크" : "내 출결 전달함";
-        subtitle.textContent = isDesk ? "강사가 보낸 내용에 접수 상태와 답변을 남깁니다." : "내가 보낸 내용과 데스크의 접수·처리 상태를 확인합니다.";
+        subtitle.textContent = isDesk ? "대화에서 답변하고 목록에서 전체 출결 기록을 확인합니다." : "내가 보낸 내용과 데스크 답변을 대화로 확인합니다.";
+        var tabs = document.getElementById("attendanceInboxTabs");
+        var chatTab = document.getElementById("attendanceInboxChatTab");
+        var databaseTab = document.getElementById("attendanceInboxDatabaseTab");
+        if (!isDesk) attendanceInboxView = "chat";
+        if (tabs) tabs.hidden = !isDesk;
+        if (chatTab) chatTab.setAttribute("aria-selected", attendanceInboxView === "chat" ? "true" : "false");
+        if (databaseTab) databaseTab.setAttribute("aria-selected", attendanceInboxView === "database" ? "true" : "false");
         var reports = attendanceRealtimeState.reports || [];
         var counts = { NEW: 0, ACKNOWLEDGED: 0, RESOLVED: 0 };
         reports.forEach(function(report) { counts[report.effectiveDeskState] = (counts[report.effectiveDeskState] || 0) + 1; });
@@ -2490,24 +2578,26 @@
           list.innerHTML = "<div class='attendance-inbox-empty'>조건에 맞는 출결 전달이 없습니다.</div>";
           return;
         }
+        if (isDesk && attendanceInboxView === "database") {
+          renderAttendanceInboxDatabase(visible);
+          return;
+        }
         list.innerHTML = visible.map(function(report) {
           var safeId = escapeHtml(report.__id);
           var statusMeta = attendanceStatusMeta(String(report.status || "기타"));
-          var reporter = String(report.reporterName || "강사").replace(/T$/, "") + "T";
-          var meta = [isDesk ? reporter : "내가 보냄", report.sheetName, Number(report.hour) + ":00", report.room, report.subject].filter(Boolean).join(" · ");
+          var reporter = attendanceReporterLabel(report);
+          var schoolGrade = attendanceSchoolGrade(report);
+          var meta = [schoolGrade.school, schoolGrade.grade, report.sheetName, Number(report.hour) ? Number(report.hour) + ":00" : "", report.room, report.subject].filter(Boolean).join(" · ");
+          var teacherMessage = "<div class='attendance-chat-message is-teacher'>" + attendanceAvatarHtml(reporter, false) + "<div class='attendance-chat-stack'>" + attendanceTeacherLabelHtml(report) + "<div class='attendance-chat-bubble'>" + escapeHtml(report.note || "추가 전달 내용 없음") + "</div><div class='attendance-chat-time'>전달 " + formatAttendanceDateTime(report.reportedAtMs) + "</div></div></div>";
           var reply = report.deskReply
-            ? "<div class='attendance-inbox-reply'><strong>데스크 답변</strong><div>" + escapeHtml(report.deskReply) + "</div><small>" + escapeHtml(report.deskUpdatedByName || "데스크") + " · " + formatAttendanceDateTime(report.deskUpdatedAtMs) + "</small></div>"
-            : "<div class='attendance-inbox-reply is-empty'>아직 데스크 답변이 없습니다.</div>";
+            ? "<div class='attendance-chat-message is-desk'>" + attendanceAvatarHtml(report.deskUpdatedByName || "데스크", true) + "<div class='attendance-chat-stack'><span class='attendance-teacher-label' style='--teacher-soft:#dbeafe;--teacher-ink:#1d4ed8;--teacher-ring:#bfdbfe'>" + escapeHtml(report.deskUpdatedByName || "데스크") + "</span><div class='attendance-chat-bubble'>" + escapeHtml(report.deskReply) + "</div><div class='attendance-chat-time'>답변 " + formatAttendanceDateTime(report.deskUpdatedAtMs) + "</div></div></div>"
+            : "<div class='attendance-chat-waiting'>데스크 답변 대기 중</div>";
           var controls = isDesk
             ? "<div class='attendance-inbox-controls'><select aria-label='처리 상태'><option value='ACKNOWLEDGED'" + (report.deskState === "ACKNOWLEDGED" ? " selected" : "") + ">확인</option><option value='RESOLVED'" + (report.deskState === "RESOLVED" ? " selected" : "") + ">처리 완료</option></select>" +
               "<textarea maxlength='500' aria-label='강사에게 보낼 답변' placeholder='강사에게 보낼 답변'>" + escapeHtml(report.deskReply || "") + "</textarea>" +
               "<button type='button' class='attendance-inbox-save' onclick='saveAttendanceInboxReply(this)'>답변 보내기</button></div>"
             : "";
-          return "<article class='attendance-inbox-item attendance-status-" + statusMeta.className + (report.effectiveDeskState === "NEW" ? " is-new" : "") + (!isDesk ? " teacher-readonly" : "") + "' data-attendance-report-id='" + safeId + "'>" +
-            "<div class='attendance-inbox-content'><div class='attendance-inbox-title-row'><div class='attendance-inbox-title'>" + escapeHtml(report.studentName || "학생") + (report.school ? " · " + escapeHtml(report.school) : "") + "</div>" + attendanceStatusBadgeHtml(report.status) + "</div>" +
-            "<div class='attendance-inbox-meta'>" + escapeHtml(meta) + "</div>" +
-            "<div class='attendance-inbox-report'>" + (report.note ? escapeHtml(report.note) : "추가 전달 내용 없음") + "</div>" +
-            "<div class='attendance-inbox-state'><span>" + attendanceStateLabel(report.effectiveDeskState) + "</span><span>전달 " + formatAttendanceDateTime(report.reportedAtMs) + "</span></div>" + reply + "</div>" + controls + "</article>";
+          return "<article class='attendance-chat-thread attendance-status-" + statusMeta.className + (report.effectiveDeskState === "NEW" ? " is-new" : "") + "' data-attendance-report-id='" + safeId + "'><div class='attendance-chat-head'><div><div class='attendance-chat-student'>" + escapeHtml(report.studentName || "학생") + "</div><div class='attendance-chat-lesson'>" + escapeHtml(meta) + "</div></div><div class='attendance-chat-head-actions'>" + attendanceStatusBadgeHtml(report.status) + "<span class='attendance-chat-state'>" + attendanceStateLabel(report.effectiveDeskState) + "</span></div></div><div class='attendance-chat-body'>" + teacherMessage + reply + "</div>" + controls + "</article>";
         }).join("");
       }
       function refreshAttendanceInbox(button) {
@@ -3936,6 +4026,8 @@
         var emptyBtn = document.querySelector('.empty-btn');
         var teacherViewLogBtn = document.getElementById('teacherViewLogBtn');
         var attendanceInboxBtn = document.getElementById('attendanceInboxBtn');
+        var absenceNoticeBtn = document.getElementById('absenceNoticeBtn');
+        var attendanceReportBtn = document.getElementById('attendanceReportBtn');
         var operationMemoBtn = document.getElementById('operationMemoBtn');
         var actionGroup = document.querySelector('.action-group');
         var navGroup = document.querySelector('.nav-group');
@@ -3965,6 +4057,8 @@
           if (studentImageBtn) studentImageBtn.style.display = '';
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
           if (attendanceInboxBtn) attendanceInboxBtn.style.display = 'none';
+          setToolbarButtonDisplay(absenceNoticeBtn, '');
+          setToolbarButtonDisplay(attendanceReportBtn, '');
           if (operationMemoBtn) operationMemoBtn.style.display = 'none';
           if (actionGroup) actionGroup.style.display = '';
           if (navGroup) navGroup.style.display = '';
@@ -4009,6 +4103,8 @@
           if (studentImageBtn) studentImageBtn.style.display = 'none';
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
           if (attendanceInboxBtn) attendanceInboxBtn.style.display = 'none';
+          setToolbarButtonDisplay(absenceNoticeBtn, 'none');
+          setToolbarButtonDisplay(attendanceReportBtn, 'none');
           if (operationMemoBtn) operationMemoBtn.style.display = 'none';
           if (actionGroup) actionGroup.style.display = 'none';
           if (navGroup) navGroup.style.display = 'none';
@@ -4054,6 +4150,8 @@
           setToolbarButtonDisplay(msgGenBtn, '');
           setToolbarButtonDisplay(msgSimpleBtn, '');
           setToolbarButtonDisplay(emptyBtn, '');
+          setToolbarButtonDisplay(absenceNoticeBtn, '');
+          setToolbarButtonDisplay(attendanceReportBtn, '');
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = '';
           if (attendanceInboxBtn) attendanceInboxBtn.style.display = attendanceRealtimeState.firebaseAdmin ? '' : 'none';
           if (operationMemoBtn) operationMemoBtn.style.display = operationMemoState.configured ? '' : 'none';
@@ -4065,6 +4163,8 @@
           setToolbarButtonDisplay(msgGenBtn, 'none');
           setToolbarButtonDisplay(msgSimpleBtn, 'none');
           setToolbarButtonDisplay(emptyBtn, 'none');
+          setToolbarButtonDisplay(absenceNoticeBtn, 'none');
+          setToolbarButtonDisplay(attendanceReportBtn, 'none');
           if (teacherViewLogBtn) teacherViewLogBtn.style.display = 'none';
           if (attendanceInboxBtn) attendanceInboxBtn.style.display = 'none';
           if (operationMemoBtn) operationMemoBtn.style.display = 'none';
