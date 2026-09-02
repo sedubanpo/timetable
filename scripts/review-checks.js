@@ -235,6 +235,60 @@ vm.runInContext(`
 assert.strictEqual(vm.runInContext("isTeacherViewActive()", sandbox), true, "a non-admin account must remain in teacher mode even when stale UI state says all");
 assert.strictEqual(vm.runInContext("getActiveTeacherName()", sandbox), "배유진", "a non-admin account must always load its authenticated teacher timetable");
 
+vm.runInContext(`
+  authState = { loggedIn: true, isMaster: false, isLookup: false, teacherName: "배유진", loginId: "teacher-1" };
+  currentSheetName = "8/22(토)";
+  getAdminSelectedTeacher = function() { return ""; };
+  accessMode = "teacher";
+`, sandbox);
+assert.strictEqual(vm.runInContext("canCurrentUserSubmitAttendance()", sandbox), true, "a teacher must be able to report attendance");
+vm.runInContext("authState.isMaster = true;", sandbox);
+assert.strictEqual(vm.runInContext("canCurrentUserSubmitAttendance()", sandbox), true, "a permission-elevated teacher must still be able to report from their own timetable");
+vm.runInContext("getAdminSelectedTeacher = function() { return '김광수'; };", sandbox);
+assert.strictEqual(vm.runInContext("canCurrentUserSubmitAttendance()", sandbox), false, "an elevated teacher must not report against another teacher's timetable");
+vm.runInContext(`
+  authState = { loggedIn: true, isMaster: true, isLookup: false, teacherName: "안준성", loginId: "admin-1" };
+  getAdminSelectedTeacher = function() { return ""; };
+`, sandbox);
+assert.strictEqual(vm.runInContext("canCurrentUserSubmitAttendance()", sandbox), false, "the canonical administrator must not submit teacher attendance reports");
+
+const attendanceContext = {
+  sheetName: "8/22(토)", hour: 10, room: "2강의실", studentId: "student-1"
+};
+assert.strictEqual(sandbox.attendanceDateKey("8/22(토)"), "2026-08-22", "attendance reports must derive a stable ISO date from the selected sheet");
+assert.strictEqual(
+  sandbox.attendanceReportId(attendanceContext, "teacher-1"),
+  sandbox.attendanceReportId(attendanceContext, "teacher-1"),
+  "the same teacher, lesson and student must update one stable report"
+);
+assert.notStrictEqual(
+  sandbox.attendanceReportId(attendanceContext, "teacher-1"),
+  sandbox.attendanceReportId(attendanceContext, "teacher-2"),
+  "different teachers must never share an attendance report id"
+);
+const reopenedReport = sandbox.normalizeAttendanceReportSnapshot({
+  id: "report-1",
+  data() { return { teacherRevision: 2, deskHandledTeacherRevision: 1, deskState: "RESOLVED" }; }
+});
+assert.strictEqual(reopenedReport.effectiveDeskState, "NEW", "a teacher correction after desk handling must reopen the report");
+assert(index.includes("attendance-refresh-recommended"), "an administrator reply must visually recommend refreshing");
+assert(index.includes("데스크 답변이 도착했습니다") && index.includes("최신 상태 확인을 위해 새로고침해 주세요."), "the refresh recommendation must explain why the teacher should refresh");
+assert(index.includes("markAttendanceDeskRepliesSeen"), "manual refresh must acknowledge delivered desk replies");
+assert(index.includes("refreshData(false)"), "automatic refresh must not silently dismiss a desk reply recommendation");
+assert(index.includes("scheduleLoadSucceeded && attendanceManualRefreshId && attendancePendingManualRefreshId === attendanceManualRefreshId"), "a desk reply recommendation must clear only after its own manual schedule refresh succeeds");
+assert(index.includes("!scheduleLoadSucceeded && attendanceManualRefreshId && attendancePendingManualRefreshId === attendanceManualRefreshId"), "a failed manual schedule refresh must preserve the desk reply recommendation for another attempt");
+assert(index.includes("liveTimetableAttendanceReports"), "attendance reports must use the realtime Firestore channel");
+assert(index.includes("liveTimetableAttendanceNotifications"), "desk replies must use a separate per-teacher realtime notification channel");
+assert(index.includes('? query.where("deskState", "in", ["NEW", "ACKNOWLEDGED"])'), "the admin listener must retain all unresolved reports instead of truncating the latest 250 documents");
+assert(index.includes('.doc(attendanceReportId(context, user.uid)).get()'), "opening a composer must directly recover an older report outside the capped realtime state query");
+assert(!index.includes('<option value="RESOLVED">처리 완료</option>'), "the active inbox must not offer a resolved-history filter it does not subscribe to");
+assert(index.includes('userData.role === "ADMIN" ? "admin" : "teacher"'), "attendance inbox access must follow Firebase role instead of spreadsheet schedule-management permission");
+assert(index.includes("attendanceRealtimeState.firebaseAdmin ? '' : 'none'"), "the administrator inbox must stay hidden for permission-elevated instructor accounts");
+assert(!extractFunction(appScript, "resolveLiveFirebaseIdToken").includes("return \"\";\n        });"), "Firebase login failures must not silently fall back to a stale prior identity");
+assert(extractFunction(appScript, "logoutTeacher").includes("auth.signOut()"), "logging out of the timetable must also sign out Firebase");
+assert(index.includes("assertLiveFirebaseIdentity(res)"), "the timetable identity must be bound to the signed-in Firebase account before realtime starts");
+assert(!extractFunction(appScript, "submitTeacherAttendanceReport").includes("callServer("), "attendance submission must not pass through the spreadsheet Apps Script API");
+
 vm.runInContext(extractFunction(appScript, "recordTeacherViewAfterSuccessfulLoad"), sandbox);
 vm.runInContext(extractFunction(appScript, "getTeacherViewAuditRequest"), sandbox);
 vm.runInContext(extractFunction(appScript, "isTeacherDashboardExcludedName"), sandbox);
