@@ -279,6 +279,7 @@ assert(index.includes("scheduleLoadSucceeded && attendanceManualRefreshId && att
 assert(index.includes("!scheduleLoadSucceeded && attendanceManualRefreshId && attendancePendingManualRefreshId === attendanceManualRefreshId"), "a failed manual schedule refresh must preserve the desk reply recommendation for another attempt");
 assert(index.includes("liveTimetableAttendanceReports"), "attendance reports must use the realtime Firestore channel");
 assert(index.includes("liveTimetableAttendanceNotifications"), "desk replies must use a separate per-teacher realtime notification channel");
+assert(!index.includes("관리자에게 학생 권한 매핑을 요청해 주세요"), "attendance submission errors must not direct teachers to request an unnecessary student mapping");
 assert(index.includes('? query.where("deskState", "in", ["NEW", "ACKNOWLEDGED"])'), "the admin listener must retain all unresolved reports instead of truncating the latest 250 documents");
 assert(index.includes('.doc(attendanceReportId(context, user.uid)).get()'), "opening a composer must directly recover an older report outside the capped realtime state query");
 assert(!index.includes('<option value="RESOLVED">처리 완료</option>'), "the active inbox must not offer a resolved-history filter it does not subscribe to");
