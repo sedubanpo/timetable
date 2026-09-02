@@ -280,11 +280,10 @@ assert(index.includes("!scheduleLoadSucceeded && attendanceManualRefreshId && at
 assert(index.includes("liveTimetableAttendanceReports"), "attendance reports must use the realtime Firestore channel");
 assert(index.includes("liveTimetableAttendanceNotifications"), "desk replies must use a separate per-teacher realtime notification channel");
 assert(!index.includes("관리자에게 학생 권한 매핑을 요청해 주세요"), "attendance submission errors must not direct teachers to request an unnecessary student mapping");
-assert(index.includes('? query.where("deskState", "in", ["NEW", "ACKNOWLEDGED"])'), "the admin listener must retain all unresolved reports instead of truncating the latest 250 documents");
+assert(index.includes('return mode === "admin" ? query : query.where("reporterUid", "==", uid);'), "the attendance history listener must retain all desk records while keeping teacher reads reporter-scoped");
 assert(index.includes('.doc(attendanceReportId(context, user.uid)).get()'), "opening a composer must directly recover an older report outside the capped realtime state query");
-assert(!index.includes('<option value="RESOLVED">처리 완료</option>'), "the active inbox must not offer a resolved-history filter it does not subscribe to");
-assert(index.includes('userData.role === "ADMIN" ? "admin" : "teacher"'), "attendance inbox access must follow Firebase role instead of spreadsheet schedule-management permission");
-assert(index.includes("attendanceRealtimeState.firebaseAdmin ? '' : 'none'"), "the administrator inbox must stay hidden for permission-elevated instructor accounts");
+assert(index.includes('<option value="RESOLVED">처리 완료</option>'), "the attendance history must expose resolved records");
+assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(role)'), "attendance inbox access must follow Firebase desk roles instead of spreadsheet schedule-management permission");
 assert(!extractFunction(appScript, "resolveLiveFirebaseIdToken").includes("return \"\";\n        });"), "Firebase login failures must not silently fall back to a stale prior identity");
 assert(extractFunction(appScript, "logoutTeacher").includes("auth.signOut()"), "logging out of the timetable must also sign out Firebase");
 assert(index.includes("assertLiveFirebaseIdentity(res)"), "the timetable identity must be bound to the signed-in Firebase account before realtime starts");
@@ -616,5 +615,15 @@ assert(liteBoundary.rows.some((row) => row.hour === 23), "lite API must include 
 
 assert(!/for\s*\(var\s+(?:h|hour|hh|sh|t|time)\s*=\s*9\s*;[^\n]*<=\s*23/.test(index), "client schedule consumers must not retain the old 09:00-23:00 range");
 assert(!/for\s*\(var\s+h\s*=\s*9\s*;[^\n]*<=\s*23/.test(server), "server schedule consumers must not retain the old 09:00-23:00 range");
+
+assert(index.includes('id="attendanceInboxRefresh"') && index.includes("function refreshAttendanceInbox(button)"), "attendance inbox must provide a scoped manual refresh");
+assert(index.includes('value="RESOLVED">처리 완료') && index.includes("전체 기록"), "attendance inbox must retain and expose completed records");
+assert(index.includes('title.textContent = isDesk ? "출결 전달함 · 데스크" : "내 출결 전달함"'), "attendance inbox must adapt to desk and teacher roles");
+assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(role)'), "desk and staff roles must receive attendance processing mode");
+assert(index.includes("if (attendanceInboxBtn) attendanceInboxBtn.style.display = '';"), "signed-in teachers must be able to open their sent attendance records");
+["present", "late", "absent", "planned", "change", "other"].forEach((statusClass) => {
+  assert(index.includes("attendance-status-" + statusClass), "missing attendance status treatment: " + statusClass);
+});
+assert(index.includes("attendanceStatusBadgeHtml(report.status)"), "stored attendance records must retain status icons and colors");
 
 console.log("review checks passed");
