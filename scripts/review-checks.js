@@ -627,6 +627,13 @@ assert(index.includes('id="attendanceInboxChatTab"') && index.includes('id="atte
 assert(index.includes('attendanceInboxView === "database"') && index.includes("renderAttendanceInboxDatabase(visible)"), "database subview must render only through the desk-aware inbox path");
 assert(index.includes("attendance-chat-message is-teacher") && index.includes("attendance-chat-message is-desk"), "attendance records must render as two-sided conversations");
 assert(index.includes("attendanceTeacherLabelHtml(report)") && index.includes("attendanceTeacherTone(label)"), "teacher names must use stable distinct labels");
+assert(index.includes('id="attendanceInboxDateNav"') && index.includes("function renderAttendanceInboxDateNav(reports)"), "attendance inbox must provide a shared horizontal date navigator");
+assert(index.includes('attendanceInboxSelectedDateKey = attendanceLocalDateKey(new Date())') && index.includes('nav.scrollLeft = todayButton ? todayButton.offsetLeft : 0'), "date navigator must open with today at the left edge while retaining past dates before it");
+assert(index.includes('nav.scrollTo({ left: Math.max(0, selected.offsetLeft - 2), behavior: "smooth" })') && !index.includes('selected.scrollIntoView'), "date selection must scroll only the date navigator, not the document");
+assert(index.includes('return (date.getMonth() + 1) + "/" + date.getDate() + "(" + weekdays[date.getDay()] + ")"'), "date navigator must render M/D(day) labels");
+assert(index.includes('var dateReports = reports.filter(function(report) { return attendanceReportDateKey(report) === attendanceInboxSelectedDateKey; })'), "both attendance views must filter records by selected lesson date");
+assert(index.includes(".attendance-db-table .attendance-teacher-label, .attendance-db-table .attendance-status-badge") && index.includes("table-layout:fixed"), "database labels must fit rectangular fixed-layout cells");
+assert(index.includes("attendance-teacher-name") && index.includes("text-overflow:ellipsis"), "long teacher names must remain inside their label cell");
 ["강사명", "학생명", "학교·학년", "전달 내용", "처리 상태", "수업 시간", "전달 시각"].forEach((heading) => {
   assert(index.includes("<th>" + heading + "</th>"), "attendance database missing heading: " + heading);
 });

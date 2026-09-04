@@ -521,6 +521,14 @@
       .attendance-inbox-tab { min-width:88px; min-height:40px; border:0; border-radius:8px; padding:8px 13px; background:transparent; color:#64748b; font:inherit; font-size:.8rem; font-weight:900; cursor:pointer; transition-property:scale, background-color, color, box-shadow; transition-duration:150ms; transition-timing-function:ease-out; }
       .attendance-inbox-tab[aria-selected="true"] { background:#fff; color:#0f3f85; box-shadow:0 0 0 1px rgba(15,23,42,.06), 0 3px 9px rgba(15,23,42,.08); }
       .attendance-inbox-tab:active { scale:.96; }
+      .attendance-date-nav { position:relative; flex:0 0 auto; margin:10px 0 2px; overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:#cbd5e1 transparent; scroll-snap-type:x proximity; }
+      .attendance-date-nav::after { content:""; position:sticky; right:0; display:block; float:right; width:24px; height:44px; margin-top:-44px; pointer-events:none; background:linear-gradient(90deg,rgba(255,255,255,0),#fff); }
+      .attendance-date-track { display:flex; align-items:center; gap:6px; width:max-content; min-width:100%; padding:2px 26px 6px 0; }
+      .attendance-date-button { min-width:76px; min-height:40px; box-sizing:border-box; border:0; border-radius:8px; padding:7px 10px; background:#f1f5f9; color:#64748b; font:inherit; font-size:.76rem; font-weight:850; font-variant-numeric:tabular-nums; cursor:pointer; scroll-snap-align:start; box-shadow:inset 0 0 0 1px rgba(15,23,42,.06); transition-property:scale, background-color, color, box-shadow; transition-duration:150ms; transition-timing-function:ease-out; }
+      .attendance-date-button:hover { background:#e8eef6; color:#334155; }
+      .attendance-date-button[aria-pressed="true"] { background:#0f3f85; color:#fff; box-shadow:0 4px 11px rgba(15,63,133,.18); }
+      .attendance-date-button:focus-visible { outline:3px solid rgba(59,130,246,.28); outline-offset:2px; }
+      .attendance-date-button:active { scale:.96; }
       .attendance-inbox-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 12px; }
       .attendance-inbox-toolbar input, .attendance-inbox-toolbar select { min-height:40px; border:1px solid #cbd5e1; border-radius:9px; padding:7px 10px; font:inherit; }
       .attendance-inbox-toolbar input { flex:1 1 230px; }
@@ -548,6 +556,7 @@
       .attendance-chat-stack { min-width:0; }
       .attendance-teacher-label { display:inline-flex; align-items:center; gap:5px; margin:0 0 5px 5px; border-radius:999px; padding:4px 8px; background:var(--teacher-soft); color:var(--teacher-ink); font-size:.7rem; font-weight:950; white-space:nowrap; box-shadow:0 0 0 1px var(--teacher-ring); }
       .attendance-teacher-label svg { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+      .attendance-teacher-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .attendance-chat-message.is-teacher .attendance-teacher-label { float:right; margin:0 5px 5px 0; }
       .attendance-chat-bubble { clear:both; max-width:100%; padding:11px 13px; border-radius:16px; color:#fff; background:var(--attendance-ink,#475569); font-size:.84rem; font-weight:700; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; text-wrap:pretty; box-shadow:0 5px 13px rgba(15,23,42,.1); }
       .attendance-chat-message.is-teacher .attendance-chat-bubble { border-bottom-right-radius:5px; }
@@ -562,12 +571,16 @@
       .attendance-inbox-controls textarea { min-height:66px; resize:vertical; }
       .attendance-inbox-save { min-height:40px; border:0; border-radius:9px; background:#0f1746; color:#fff; padding:8px 12px; font:inherit; font-size:.78rem; font-weight:900; cursor:pointer; box-shadow:0 4px 11px rgba(15,23,70,.15); transition-property:scale, background-color, box-shadow, opacity; transition-duration:150ms; transition-timing-function:ease-out; }
       .attendance-inbox-save:not(:disabled):active { scale:.96; }
-      .attendance-db-wrap { min-width:980px; padding:12px; }
-      .attendance-db-table { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px; background:#fff; box-shadow:0 0 0 1px rgba(15,23,42,.07); }
+      .attendance-db-wrap { min-width:1120px; padding:12px; }
+      .attendance-db-table { width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px; background:#fff; box-shadow:0 0 0 1px rgba(15,23,42,.07); }
       .attendance-db-table th { position:sticky; top:0; z-index:1; padding:10px 9px; background:#eaf1fb; color:#1e3a5f; border-bottom:1px solid #cbd5e1; font-size:.7rem; font-weight:950; text-align:left; white-space:nowrap; }
-      .attendance-db-table td { padding:10px 9px; color:#334155; border-bottom:1px solid #edf1f5; font-size:.75rem; font-weight:700; line-height:1.45; vertical-align:top; }
+      .attendance-db-table td { min-width:0; padding:10px 9px; color:#334155; border-bottom:1px solid #edf1f5; font-size:.75rem; font-weight:700; line-height:1.45; vertical-align:top; overflow:hidden; }
       .attendance-db-table tr:last-child td { border-bottom:0; }
       .attendance-db-table tbody tr:hover td { background:#f8fbff; }
+      .attendance-db-table .attendance-teacher-label, .attendance-db-table .attendance-status-badge { display:flex; width:100%; min-height:34px; box-sizing:border-box; align-items:center; justify-content:flex-start; margin:0; border-radius:6px; padding:7px 8px; overflow:hidden; }
+      .attendance-db-table .attendance-teacher-label { float:none; text-overflow:ellipsis; }
+      .attendance-db-table .attendance-teacher-label svg, .attendance-db-table .attendance-status-badge svg { flex:0 0 auto; }
+      .attendance-db-person, .attendance-db-school { white-space:nowrap; text-overflow:ellipsis; }
       .attendance-db-time { white-space:nowrap; font-variant-numeric:tabular-nums; }
       .attendance-db-content { min-width:220px; max-width:360px; white-space:pre-wrap; overflow-wrap:anywhere; }
       .attendance-db-state { display:inline-flex; border-radius:999px; padding:4px 7px; background:#f1f5f9; color:#475569; font-size:.68rem; font-weight:900; white-space:nowrap; }
@@ -1561,6 +1574,9 @@
           <button id="attendanceInboxChatTab" class="attendance-inbox-tab" type="button" role="tab" aria-selected="true" onclick="setAttendanceInboxView('chat')">대화</button>
           <button id="attendanceInboxDatabaseTab" class="attendance-inbox-tab" type="button" role="tab" aria-selected="false" onclick="setAttendanceInboxView('database')">목록</button>
         </div>
+        <div id="attendanceInboxDateNav" class="attendance-date-nav" role="region" aria-label="출결 날짜 선택">
+          <div id="attendanceInboxDateTrack" class="attendance-date-track"></div>
+        </div>
         <div class="attendance-inbox-toolbar">
           <input id="attendanceInboxSearch" type="search" aria-label="학생, 강사 또는 전달 내용 검색" placeholder="학생·강사·내용 검색" oninput="renderAttendanceInbox()">
           <select id="attendanceInboxStateFilter" aria-label="출결 전달 처리 상태" onchange="renderAttendanceInbox()">
@@ -1789,6 +1805,8 @@
       let attendanceRealtimeState = { reports: [], byKey: {}, unsubscribe: null, notificationUnsubscribe: null, uid: "", mode: "", firebaseAdmin: false, loading: false, error: "", pendingDeskReplies: [] };
       let attendanceComposerContext = null;
       let attendanceInboxView = "chat";
+      let attendanceInboxSelectedDateKey = "";
+      let attendanceInboxDateStripInitialized = false;
       let attendanceManualRefreshSequence = 0;
       let attendancePendingManualRefreshId = 0;
       let attendanceLastFocusedElement = null;
@@ -2480,6 +2498,8 @@
       function openAttendanceInbox() {
         if (!authState.loggedIn || authState.isLookup) return;
         if (!attendanceRealtimeState.firebaseAdmin) attendanceInboxView = "chat";
+        attendanceInboxSelectedDateKey = attendanceLocalDateKey(new Date());
+        attendanceInboxDateStripInitialized = false;
         openAttendanceDialog("attendanceInboxModal");
         renderAttendanceInbox();
         setTimeout(function() { document.getElementById("attendanceInboxSearch").focus(); }, 20);
@@ -2490,6 +2510,76 @@
       function setAttendanceInboxView(view) {
         attendanceInboxView = view === "database" && attendanceRealtimeState.firebaseAdmin ? "database" : "chat";
         renderAttendanceInbox();
+      }
+      function attendanceLocalDateKey(value) {
+        var date = value instanceof Date ? value : new Date(value);
+        if (isNaN(date.getTime())) return "";
+        var pad = function(number) { return String(number).padStart(2, "0"); };
+        return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+      }
+      function attendanceDateFromKey(key) {
+        var match = String(key || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+      }
+      function attendanceReportDateKey(report) {
+        var sheetMatch = String(report && report.sheetName || "").match(/(\d{1,2})\s*\/\s*(\d{1,2})/);
+        var reported = new Date(Number(report && report.reportedAtMs || Date.now()));
+        if (!isNaN(reported.getTime()) && sheetMatch) {
+          var candidate = new Date(reported.getFullYear(), Number(sheetMatch[1]) - 1, Number(sheetMatch[2]));
+          var distance = candidate.getTime() - reported.getTime();
+          if (distance > 183 * 86400000) candidate.setFullYear(candidate.getFullYear() - 1);
+          if (distance < -183 * 86400000) candidate.setFullYear(candidate.getFullYear() + 1);
+          return attendanceLocalDateKey(candidate);
+        }
+        return attendanceLocalDateKey(reported);
+      }
+      function attendanceDateLabel(date) {
+        var weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+        return (date.getMonth() + 1) + "/" + date.getDate() + "(" + weekdays[date.getDay()] + ")";
+      }
+      function selectAttendanceInboxDate(key) {
+        attendanceInboxSelectedDateKey = key;
+        renderAttendanceInbox();
+        var nav = document.getElementById("attendanceInboxDateNav");
+        var selected = document.querySelector(".attendance-date-button[aria-pressed='true']");
+        if (nav && selected) nav.scrollTo({ left: Math.max(0, selected.offsetLeft - 2), behavior: "smooth" });
+      }
+      function renderAttendanceInboxDateNav(reports) {
+        var nav = document.getElementById("attendanceInboxDateNav");
+        var track = document.getElementById("attendanceInboxDateTrack");
+        if (!nav || !track) return;
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var todayKey = attendanceLocalDateKey(today);
+        if (!attendanceInboxSelectedDateKey) attendanceInboxSelectedDateKey = todayKey;
+        var start = new Date(today);
+        var end = new Date(today);
+        start.setDate(start.getDate() - 14);
+        end.setDate(end.getDate() + 14);
+        (reports || []).forEach(function(report) {
+          var reportDate = attendanceDateFromKey(attendanceReportDateKey(report));
+          if (!reportDate) return;
+          if (reportDate < start) start = reportDate;
+          if (reportDate > end) end = reportDate;
+        });
+        var previousScrollLeft = nav.scrollLeft;
+        var buttons = [];
+        for (var cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+          var key = attendanceLocalDateKey(cursor);
+          var isToday = key === todayKey;
+          var label = attendanceDateLabel(cursor);
+          buttons.push("<button type='button' class='attendance-date-button' data-date-key='" + key + "' aria-pressed='" + (key === attendanceInboxSelectedDateKey ? "true" : "false") + "' aria-label='" + label + (isToday ? " 오늘" : "") + "' onclick=\"selectAttendanceInboxDate('" + key + "')\">" + label + "</button>");
+        }
+        track.innerHTML = buttons.join("");
+        requestAnimationFrame(function() {
+          if (!attendanceInboxDateStripInitialized) {
+            var todayButton = track.querySelector("[data-date-key='" + todayKey + "']");
+            nav.scrollLeft = todayButton ? todayButton.offsetLeft : 0;
+            attendanceInboxDateStripInitialized = true;
+          } else {
+            nav.scrollLeft = previousScrollLeft;
+          }
+        });
       }
       function attendanceReporterLabel(report) {
         var name = String(report && report.reporterName || "강사").trim().replace(/T$/, "").trim();
@@ -2511,7 +2601,7 @@
       function attendanceTeacherLabelHtml(report) {
         var label = attendanceReporterLabel(report);
         var tone = attendanceTeacherTone(label);
-        return "<span class='attendance-teacher-label' style='--teacher-soft:" + tone[0] + ";--teacher-ink:" + tone[1] + ";--teacher-ring:" + tone[2] + "'><svg viewBox='0 0 20 20' aria-hidden='true'><circle cx='10' cy='6' r='3'/><path d='M4 17c.5-4 2.5-6 6-6s5.5 2 6 6'/></svg>" + escapeHtml(label) + "</span>";
+        return "<span class='attendance-teacher-label' style='--teacher-soft:" + tone[0] + ";--teacher-ink:" + tone[1] + ";--teacher-ring:" + tone[2] + "'><svg viewBox='0 0 20 20' aria-hidden='true'><circle cx='10' cy='6' r='3'/><path d='M4 17c.5-4 2.5-6 6-6s5.5 2 6 6'/></svg><span class='attendance-teacher-name'>" + escapeHtml(label) + "</span></span>";
       }
       function attendanceAvatarHtml(name, isDesk) {
         var label = String(name || (isDesk ? "데스크" : "강사")).trim();
@@ -2530,10 +2620,10 @@
       }
       function renderAttendanceInboxDatabase(reports) {
         var list = document.getElementById("attendanceInboxList");
-        list.innerHTML = "<div class='attendance-db-wrap'><table class='attendance-db-table'><thead><tr><th>강사명</th><th>학생명</th><th>학교·학년</th><th>출결</th><th>전달 내용</th><th>처리 상태</th><th>수업 시간</th><th>전달 시각</th></tr></thead><tbody>" + reports.map(function(report) {
+        list.innerHTML = "<div class='attendance-db-wrap'><table class='attendance-db-table'><colgroup><col style='width:130px'><col style='width:92px'><col style='width:142px'><col style='width:118px'><col><col style='width:94px'><col style='width:190px'><col style='width:144px'></colgroup><thead><tr><th>강사명</th><th>학생명</th><th>학교·학년</th><th>출결</th><th>전달 내용</th><th>처리 상태</th><th>수업 시간</th><th>전달 시각</th></tr></thead><tbody>" + reports.map(function(report) {
           var schoolGrade = attendanceSchoolGrade(report);
           var lessonTime = [report.sheetName, Number(report.hour) ? Number(report.hour) + ":00" : "", report.room].filter(Boolean).join(" · ");
-          return "<tr data-attendance-report-id='" + escapeHtml(report.__id) + "'><td>" + attendanceTeacherLabelHtml(report) + "</td><td>" + escapeHtml(report.studentName || "학생") + "</td><td>" + escapeHtml(schoolGrade.school + " · " + schoolGrade.grade) + "</td><td>" + attendanceStatusBadgeHtml(report.status) + "</td><td class='attendance-db-content'>" + escapeHtml(report.note || "추가 전달 내용 없음") + "</td><td><span class='attendance-db-state'>" + attendanceStateLabel(report.effectiveDeskState) + "</span></td><td class='attendance-db-time'>" + escapeHtml(lessonTime || "수업 시간 미입력") + "</td><td class='attendance-db-time'>" + formatAttendanceDateTime(report.reportedAtMs) + "</td></tr>";
+          return "<tr data-attendance-report-id='" + escapeHtml(report.__id) + "'><td>" + attendanceTeacherLabelHtml(report) + "</td><td class='attendance-db-person'>" + escapeHtml(report.studentName || "학생") + "</td><td class='attendance-db-school'>" + escapeHtml(schoolGrade.school + " · " + schoolGrade.grade) + "</td><td>" + attendanceStatusBadgeHtml(report.status) + "</td><td class='attendance-db-content'>" + escapeHtml(report.note || "추가 전달 내용 없음") + "</td><td><span class='attendance-db-state'>" + attendanceStateLabel(report.effectiveDeskState) + "</span></td><td class='attendance-db-time'>" + escapeHtml(lessonTime || "수업 시간 미입력") + "</td><td class='attendance-db-time'>" + formatAttendanceDateTime(report.reportedAtMs) + "</td></tr>";
         }).join("") + "</tbody></table></div>";
       }
       function renderAttendanceInbox() {
@@ -2553,9 +2643,11 @@
         if (chatTab) chatTab.setAttribute("aria-selected", attendanceInboxView === "chat" ? "true" : "false");
         if (databaseTab) databaseTab.setAttribute("aria-selected", attendanceInboxView === "database" ? "true" : "false");
         var reports = attendanceRealtimeState.reports || [];
+        renderAttendanceInboxDateNav(reports);
+        var dateReports = reports.filter(function(report) { return attendanceReportDateKey(report) === attendanceInboxSelectedDateKey; });
         var counts = { NEW: 0, ACKNOWLEDGED: 0, RESOLVED: 0 };
-        reports.forEach(function(report) { counts[report.effectiveDeskState] = (counts[report.effectiveDeskState] || 0) + 1; });
-        summary.innerHTML = "<span class='attendance-inbox-pill'>전체 " + reports.length + "건</span>" +
+        dateReports.forEach(function(report) { counts[report.effectiveDeskState] = (counts[report.effectiveDeskState] || 0) + 1; });
+        summary.innerHTML = "<span class='attendance-inbox-pill'>전체 " + dateReports.length + "건</span>" +
           "<span class='attendance-inbox-pill'>신규 " + counts.NEW + "건</span>" +
           "<span class='attendance-inbox-pill'>확인 " + counts.ACKNOWLEDGED + "건</span>" +
           "<span class='attendance-inbox-pill'>처리 완료 " + counts.RESOLVED + "건</span>";
@@ -2569,7 +2661,7 @@
         }
         var keyword = String(document.getElementById("attendanceInboxSearch").value || "").trim().toLowerCase();
         var filter = document.getElementById("attendanceInboxStateFilter").value || "ALL";
-        var visible = reports.filter(function(report) {
+        var visible = dateReports.filter(function(report) {
           if (filter !== "ALL" && report.effectiveDeskState !== filter) return false;
           if (!keyword) return true;
           return [report.studentName, report.reporterName, report.note, report.deskReply, report.sheetName, report.room].join(" ").toLowerCase().indexOf(keyword) !== -1;
