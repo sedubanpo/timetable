@@ -567,6 +567,10 @@ assert(exportedRows.some((row) => row["이름"] === "아침학생" && row["시�
 assert(exportedRows.some((row) => row["이름"] === "야간학생" && row["시작"] === "오후 10:00" && row["종료"] === "오전 12:00" && row["시간"] === 2), "timesheet must include and merge 22:00-24:00");
 
 const serverSandbox = {
+  Utilities: {
+    DigestAlgorithm: { SHA_256: "sha256" }, Charset: { UTF_8: "utf8" },
+    computeDigest(algorithm, value) { return Array.from(require("crypto").createHash(algorithm).update(value).digest()); }
+  },
   SCHEDULE_START_HOUR: 8,
   SCHEDULE_END_HOUR: 23,
   CacheService: { getScriptCache() { return { get() { return null; }, put() {} }; } },
@@ -599,6 +603,8 @@ const serverSandbox = {
   }
 };
 vm.createContext(serverSandbox);
+vm.runInContext(extractFunction(server, "scheduleContentRevision_"), serverSandbox);
+vm.runInContext(extractFunction(server, "scheduleRevisionCacheKey_"), serverSandbox);
 vm.runInContext(extractFunction(server, "parseScheduleStartHour_"), serverSandbox);
 vm.runInContext(extractFunction(server, "getFixedGridData"), serverSandbox);
 vm.runInContext(extractFunction(server, "toLitePayload_"), serverSandbox);
@@ -629,7 +635,7 @@ assert(index.includes("attendance-chat-message is-teacher") && index.includes("a
 assert(index.includes("attendanceTeacherLabelHtml(report)") && index.includes("attendanceTeacherTone(label)"), "teacher names must use stable distinct labels");
 assert(index.includes('id="attendanceInboxDateNav"') && index.includes("function renderAttendanceInboxDateNav(reports)"), "attendance inbox must provide a shared horizontal date navigator");
 assert(index.includes('attendanceInboxSelectedDateKey = attendanceLocalDateKey(new Date())') && index.includes('nav.scrollLeft = todayButton ? todayButton.offsetLeft : 0'), "date navigator must open with today at the left edge while retaining past dates before it");
-assert(index.includes('nav.scrollTo({ left: Math.max(0, selected.offsetLeft - 2), behavior: "smooth" })') && !index.includes('selected.scrollIntoView'), "date selection must scroll only the date navigator, not the document");
+assert(!extractFunction(index, "selectAttendanceInboxDate").includes('scrollIntoView') && !extractFunction(index, "selectAttendanceInboxDate").includes('scrollTo'), "date selection must preserve the user's scroll position, without moving the document");
 assert(index.includes('return (date.getMonth() + 1) + "/" + date.getDate() + "(" + weekdays[date.getDay()] + ")"'), "date navigator must render M/D(day) labels");
 assert(index.includes('var dateReports = reports.filter(function(report) { return attendanceReportDateKey(report) === attendanceInboxSelectedDateKey; })'), "both attendance views must filter records by selected lesson date");
 assert(index.includes(".attendance-db-table .attendance-teacher-label, .attendance-db-table .attendance-status-badge") && index.includes("table-layout:fixed"), "database labels must fit rectangular fixed-layout cells");

@@ -620,14 +620,16 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     if (!selectedTeacher) return getFixedGridData(sheetName, forceRefresh);
 
     var cache = CacheService.getScriptCache();
-    var cacheKey = "TEACHER_GRID_V5_" + sheetName + "_" + selectedTeacher;
-    if (!forceRefresh) {
-      var cached = cache.get(cacheKey);
-      if (cached) return JSON.parse(cached);
-    }
-
     var base = getFixedGridData(sheetName, forceRefresh);
     if (!base || base.error) return base;
+    var cacheKey = "TEACHER_GRID_V6_" + sheetName + "_" + selectedTeacher;
+    if (!forceRefresh) {
+      var cached = cache.get(cacheKey);
+      if (cached) {
+        var cachedTeacherGrid = JSON.parse(cached);
+        if (cachedTeacherGrid.version === base.version) return cachedTeacherGrid;
+      }
+    }
 
     var filtered = {};
     for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
@@ -645,7 +647,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     var result = {
       headers: base.headers || [],
       grid: filtered,
-      version: String(base.version || "") + "_T_" + selectedTeacherRaw
+      version: base.version
     };
     cache.put(cacheKey, JSON.stringify(result), 120);
     return result;
@@ -822,7 +824,7 @@ function setTeacherViewOverride_(sheetName, teacherName, state, count, editorLog
   if (targetState === "viewed" && targetCount < 1) return null;
   if (targetState !== "viewed") targetCount = 0;
 
-  var lock = LockService.getDocumentLock();
+  var lock = LockService.getScriptLock();
   try {
     lock.waitLock(5000);
     var sheet = getTeacherViewOverrideSheet_();
@@ -843,6 +845,7 @@ function setTeacherViewOverride_(sheetName, teacherName, state, count, editorLog
     var updatedAt = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss");
     var editor = normalizeLoginId_(editorLoginId);
     sheet.getRange(writeRow, 1, 1, 6).setValues([[targetSheetName, targetTeacherName, targetState, targetCount, updatedAt, editor]]);
+    SpreadsheetApp.flush();
     return {
       sheetName: targetSheetName,
       teacherName: targetTeacherName,
@@ -903,7 +906,9 @@ function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
   var targetSheet = String(sheetName || "").trim();
   var student = String(studentName || "").trim();
   if (!targetSheet || !student) return null;
-
+  var lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
   var logSheet = getStudentCardStatusSheet_();
   var values = logSheet.getDataRange().getDisplayValues();
   var key = buildStudentCardStatusKey_(targetSheet, student);
@@ -912,7 +917,8 @@ function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
   var payload = [targetSheet, student, sent ? "1" : "0", timestamp, String(loginId || "").trim(), key];
   var foundRow = 0;
 
-  for (var r = 1; r < values.length; r++) {
+  // Readers use the final row for a key; repair compatibility with old duplicates.
+  for (var r = values.length - 1; r >= 1; r--) {
     var rowKey = String((values[r] && values[r][5]) || "").trim();
     if (!rowKey) {
       rowKey = buildStudentCardStatusKey_(values[r][0], values[r][1]);
@@ -925,6 +931,7 @@ function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
 
   if (foundRow) logSheet.getRange(foundRow, 1, 1, payload.length).setValues([payload]);
   else logSheet.appendRow(payload);
+  SpreadsheetApp.flush();
 
   return {
     studentName: student,
@@ -932,6 +939,9 @@ function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
     updatedAt: timestamp,
     updatedBy: String(loginId || "").trim()
   };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function getSheetNames() {
@@ -955,12 +965,30 @@ function getSheetNames() {
   } catch (e) { return ["ERROR: " + e.message]; }
 }
 
+function scheduleRevisionCacheKey_(sheetName) {
+  return "SCHEDULE_REVISION_V1_" + sheetName;
+}
+
+function scheduleContentRevision_(values) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(values), Utilities.Charset.UTF_8);
+  return "content-v1-" + bytes.map(function(value) {
+    return ("0" + ((value + 256) % 256).toString(16)).slice(-2);
+  }).join("");
+}
+
 function checkDataVersion(sheetName) {
   try {
+    var cache = CacheService.getScriptCache();
+    var key = scheduleRevisionCacheKey_(sheetName);
+    var cached = cache.get(key);
+    if (cached) return cached;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = sheetName ? ss.getSheetByName(sheetName) : null;
     if (!sheet) return "ERROR";
-    return sheet.getLastRow() + "_" + sheet.getLastColumn() + "_" + sheet.getRange(1,1).getValue();
+    var revision = scheduleContentRevision_(sheet.getDataRange().getDisplayValues());
+    // Share one short-lived scan across viewers while detecting ordinary cell edits.
+    cache.put(key, revision, 15);
+    return revision;
   } catch (e) { return "ERROR"; }
 }
 
@@ -986,12 +1014,14 @@ function parseScheduleStartHour_(timeText) {
 function getFixedGridData(sheetName, forceRefresh) {
   try {
     var cache = CacheService.getScriptCache();
-    // [중요] 캐시 키 V63: 분리된 종료 시각 행의 오전/오후 오배치 수정
-    var cacheKey = "SHEET_DATA_V63_" + sheetName;
+    var cacheKey = "SHEET_DATA_V64_" + sheetName;
 
     if (!forceRefresh) {
       var cachedJSON = cache.get(cacheKey);
-      if (cachedJSON) return JSON.parse(cachedJSON);
+      if (cachedJSON) {
+        var cachedGrid = JSON.parse(cachedJSON);
+        if (cachedGrid.version === checkDataVersion(sheetName)) return cachedGrid;
+      }
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1093,8 +1123,9 @@ function getFixedGridData(sheetName, forceRefresh) {
     var result = {
       headers: classrooms.map(function(c) { return c.name; }),
       grid: gridData,
-      version: sheet.getLastRow() + "_" + sheet.getLastColumn() + "_" + sheet.getRange(1, 1).getDisplayValue()
+      version: scheduleContentRevision_(values)
     };
+    cache.put(scheduleRevisionCacheKey_(sheetName), result.version, 15);
     try { cache.put(cacheKey, JSON.stringify(result), 21600); } catch (e) {}
     return result;
   } catch (e) { return { error: "SERVER_ERR: " + e.message }; }

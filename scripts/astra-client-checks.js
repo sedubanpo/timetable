@@ -1,0 +1,134 @@
+#!/usr/bin/env node
+'use strict';
+const fs = require('fs');
+const vm = require('vm');
+const assert = require('assert');
+const path = require('path');
+const html = fs.readFileSync(path.join(__dirname, '..', 'Index.html'), 'utf8');
+const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
+const elements = new Map();
+function el(id) {
+  if (!elements.has(id)) elements.set(id, { style: {}, value: '', innerHTML: '', classList: { add() {}, remove() {} }, querySelectorAll() { return []; } });
+  return elements.get(id);
+}
+const sandbox = { window: { innerWidth: 1440, addEventListener() {} }, document: { getElementById: el, addEventListener() {}, querySelectorAll() { return []; }, body: { classList: { add() {}, remove() {} } } }, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} }, console, alert() {}, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, requestAnimationFrame() {}, cancelAnimationFrame() {}, URLSearchParams, Date, Promise, Set, Map };
+vm.createContext(sandbox);
+vm.runInContext(app, sandbox);
+const run = code => vm.runInContext(code, sandbox);
+const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
+(async () => {
+  assert.equal(run("getSubjectName('개별 수학 검증강사T')"), '수학', 'class format must not mask actual math subject');
+  assert.equal(run("getSubjectName('정규 영어 검증강사T')"), '영어', 'class format must not mask actual English subject');
+  assert.equal(run("getSubjectName('개별정규 물리 검증강사T')"), '물리', 'class format must not mask actual physics subject');
+  run(`
+    authState = { loggedIn: true, isMaster: true, loginId: 'admin' };
+    getActiveTeacherName = () => '';
+    closeOperationMemoAlert = clearOperationMemoHighlights = renderOperationCommonMemos = () => {};
+    recordTeacherViewAfterSuccessfulLoad = () => {};
+    globalThis.applied = [];
+    processData = d => applied.push(d.version);
+    globalThis.pending = [];
+    callServer = (method, args) => new Promise((resolve,reject) => pending.push({method,args,resolve,reject}));
+    loadData('9/4(금)', true);
+    loadData('9/5(토)', true);
+    pending[1].resolve({grid:{},version:'new'});
+  `);
+  await flush();
+  run(`pending[0].resolve({grid:{},version:'old'});`);
+  await flush();
+  assert.equal(run('applied.join()'), 'new', 'stale date response must not replace selected grid');
+  run(`loadData('9/6(일)', true); authState.loginId = 'other'; pending[2].resolve({grid:{},version:'wrong-account'});`);
+  await flush();
+  assert.equal(run('applied.join()'), 'new', 'stale identity response must not apply');
+  run(`
+    clientCache['9/5(토)::__ALL__'] = {grid:{},version:'cached'};
+    currentSheetName = '9/5(토)'; lastData = {grid:{}, version:'displayed'};
+    getTeacherRoomSheetData('9/5(토)', true);
+  `);
+  assert.equal(run('pending[3].method'), 'getFixedGridData');
+  assert.equal(run('pending[3].args[1]'), true, 'forced stats refresh must bypass client and server caches');
+  run(`pending[3].resolve({grid:{},version:'fresh'});`);
+  await flush();
+  assert.equal(run(`clientCache['9/5(토)::__ALL__'].version`), 'fresh');
+  run(`
+    globalThis.memoPending = [];
+    isOperationMemoReadable = () => true;
+    fetchOperationMemos = () => new Promise(resolve => memoPending.push(resolve));
+    fetchSlmsOperationMemos = () => Promise.resolve([]);
+    renderOperationMemoList = renderOperationMemoSourceSummary = applyOperationMemoHighlights = showOperationMemoPopupIfNeeded = startOperationMemoPolling = () => {};
+    currentSheetName = '9/4(금)'; loadOperationMemosForCurrentSheet(true);
+    currentSheetName = '9/5(토)'; loadOperationMemosForCurrentSheet(true);
+    memoPending[1]([{id:'new'}]);
+  `);
+  await flush();
+  run(`memoPending[0]([{id:'old'}]);`);
+  await flush();
+  assert.equal(run('operationMemoState.manualItems[0].id'), 'new', 'stale memo must not replace current date notices');
+  run(`
+    globalThis.cardPending = [];
+    globalThis.cardRenders = 0;
+    filterStudentImageList = syncStudentCardActionButtons = renderStudentImagePreview = refreshStudentImageListSelectionState = () => { cardRenders++; };
+    callServer = (method,args) => new Promise((resolve,reject) => cardPending.push({method,args,resolve,reject}));
+    currentSheetName='9/4(금)'; loadStudentCardStatuses();
+    currentSheetName='9/5(토)'; loadStudentCardStatuses();
+    cardPending[1].resolve({Alice:{sent:true,updatedAt:'new-date'}});
+  `);
+  await flush();
+  const currentCardRenders = run('cardRenders');
+  run(`cardPending[0].resolve({Alice:{sent:false,updatedAt:'old-date'}});`);
+  await flush();
+  assert.equal(run('studentCardSentMap.Alice.updatedAt'), 'new-date', 'late status load must not replace selected date');
+  assert.equal(run('cardRenders'), currentCardRenders, 'stale load must not rerender current card UI');
+  run(`
+    currentSheetName='9/4(금)'; markStudentCardSentStatus('Alice',true);
+    currentSheetName='9/5(토)'; loadStudentCardStatuses();
+    studentCardSentMap={Alice:{sent:false,updatedAt:'keep-current'}};
+    cardPending[2].resolve({sent:true,updatedAt:'old-save'});
+  `);
+  await flush();
+  assert.equal(run('studentCardSentMap.Alice.updatedAt'), 'keep-current', 'late save must not mutate current date status');
+  assert.equal(run('studentCardStatusLoading'), true, 'stale save finally must not clear newer loading');
+  run(`cardPending[3].resolve({Alice:{sent:false,updatedAt:'loaded-current'}});`);
+  await flush();
+  run(`
+    markStudentCardSentStatus('Alice',true);
+    loadStudentCardStatuses();
+    studentCardSentMap={Alice:{sent:true,updatedAt:'keep-after-failure'}};
+    cardPending[4].reject(new Error('stale save failed'));
+  `);
+  await flush();
+  assert.equal(run('studentCardSentMap.Alice.updatedAt'), 'keep-after-failure', 'stale failed save must not roll back newer state');
+  assert.equal(run('studentCardStatusLoading'), true, 'stale rejected save must not end newer load');
+  run(`cardPending[5].resolve({Alice:{sent:false}});`);
+  await flush();
+  run(`
+    authState={loggedIn:false,isMaster:false,isLookup:false,loginId:'',teacherName:''};
+    markStudentCardSentStatus('Alice',true);
+  `);
+  assert.equal(run('cardPending[6].method'),'setStudentCardSentStatus','guest workflow remains authorized');
+  assert.equal(run('cardPending[6].args[3]'),'','guest save retains blank login ID');
+  run(`authState.loginId='new-account';studentCardSentMap={Alice:{sent:false,updatedAt:'new-account'}};cardPending[6].resolve({sent:true});`);
+  await flush();
+  assert.equal(run('studentCardSentMap.Alice.updatedAt'),'new-account','stale account save must not apply');
+  run(`
+    studentCardStatusLoading=false;
+    studentCardSentMap={Alice:{sent:false,updatedAt:'before'},Bob:{sent:false}};
+    markStudentCardSentStatus('Alice',true,{silent:true}).catch(()=>{});
+    globalThis.firstSaveSequence=studentCardStatusSequence;
+    markStudentCardSentStatus('Bob',true,{silent:true});
+  `);
+  assert.equal(run('cardPending.length'),8,'rapid second student save must be blocked');
+  assert.equal(run('studentCardStatusSequence'),run('firstSaveSequence'),'blocked second save must not invalidate first save');
+  assert.equal(run('studentCardSentMap.Bob.sent'),false,'blocked student must not show optimistic success');
+  run(`cardPending[7].reject(new Error('first student save failed'));`);
+  await flush();
+  assert.equal(run('studentCardSentMap.Alice.sent'),false,'failed first student save must roll back after blocked second click');
+  assert.equal(run('studentCardStatusLoading'),false,'failed active save must release loading');
+  run(`markStudentCardSentStatus('Bob',true);`);
+  assert.equal(run('cardPending.length'),9,'next student may save after first settles');
+  run(`cardPending[8].resolve({studentName:'Bob',sent:true});`);
+  await flush();
+  assert.equal(run('studentCardSentMap.Bob.sent'),true,'serialized next save completes');
+  assert(!/originalHtml\.replace\(re/.test(html), 'search must not mutate serialized markup');
+  console.log('Astra client checks passed: subject parsing, date/session races, fresh stats, memo/card races, guest card save, safe-search invariant');
+})().catch(error => { console.error(error); process.exitCode = 1; });

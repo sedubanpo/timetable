@@ -1787,6 +1787,7 @@
       let selectedStudentForImage = "";
       let studentCardSentMap = {};
       let studentCardStatusLoading = false;
+      let studentCardStatusSequence = 0;
       let studentImageRefreshPendingSelection = "";
       let studentCardHideNote = false;
       let teacherViewLogsCache = [];
@@ -1807,12 +1808,20 @@
       let attendanceInboxView = "chat";
       let attendanceInboxSelectedDateKey = "";
       let attendanceInboxDateStripInitialized = false;
+      let attendanceReplyEditors = new Map();
+      let attendanceConnectionSequence = 0;
       let attendanceManualRefreshSequence = 0;
       let attendancePendingManualRefreshId = 0;
       let attendanceLastFocusedElement = null;
       let liveFirebaseFirestorePromise = null;
       let liveFirebaseLogoutPromise = Promise.resolve();
       let operationMemoPollTimer = null;
+      let scheduleLoadSequence = 0;
+      let operationMemoLoadSequence = 0;
+      let versionCheckPending = false;
+      function getScheduleSessionKey() {
+        return [authState.loggedIn, authState.isMaster, authState.isLookup, authState.loginId, authState.teacherName, getActiveTeacherName()].join("::");
+      }
       const OPERATION_MEMO_SCHOOL_WARNING_STORAGE_KEY = "sedu_operation_memo_school_warnings_visible_v1";
       const SHEET_NAMES_CACHE_STORAGE_KEY = "sedu_sheet_names_cache_v1";
       const SHEET_NAMES_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -2121,6 +2130,12 @@
           input.checked = input.value === status;
         });
         document.getElementById("teacherAttendanceNote").value = existing ? String(existing.note || "") : "";
+        renderTeacherAttendanceDeskReply(existing);
+        var result = document.getElementById("teacherAttendanceResult");
+        result.textContent = existing ? "기존 전달 내용을 수정하면 변경 이력이 함께 남습니다." : "";
+        result.classList.remove("error");
+      }
+      function renderTeacherAttendanceDeskReply(existing) {
         var reply = document.getElementById("teacherAttendanceDeskReply");
         if (existing && existing.effectiveDeskState !== "NEW" && (existing.deskReply || existing.deskState === "ACKNOWLEDGED" || existing.deskState === "RESOLVED")) {
           var stateLabel = existing.deskState === "RESOLVED" ? "처리 완료" : "확인";
@@ -2130,20 +2145,25 @@
           reply.textContent = "";
           reply.classList.remove("is-visible");
         }
-        var result = document.getElementById("teacherAttendanceResult");
-        result.textContent = existing ? "기존 전달 내용을 수정하면 변경 이력이 함께 남습니다." : "";
-        result.classList.remove("error");
       }
       function loadTeacherAttendanceReportForComposer(context) {
         if (!context || getAttendanceReportForContext(context)) return;
+        var sequence = attendanceConnectionSequence;
+        var originalNote = document.getElementById("teacherAttendanceNote").value;
+        var originalStatus = document.querySelector('input[name="teacherAttendanceStatus"]:checked');
+        var originalStatusValue = originalStatus && originalStatus.value;
         Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
+          if (sequence !== attendanceConnectionSequence || attendanceComposerContext !== context) return null;
           var user = values[1].currentUser;
           if (!user) return null;
           return values[0].collection("liveTimetableAttendanceReports").doc(attendanceReportId(context, user.uid)).get();
         }).then(function(snapshot) {
-          if (!snapshot || !snapshot.exists || !attendanceComposerContext || attendanceContextKey(attendanceComposerContext) !== attendanceContextKey(context)) return;
+          if (!snapshot || !snapshot.exists || sequence !== attendanceConnectionSequence || attendanceComposerContext !== context) return;
           var report = normalizeAttendanceReportSnapshot(snapshot);
           attendanceRealtimeState.byKey[attendanceContextKey(context)] = report;
+          renderTeacherAttendanceDeskReply(report);
+          var selectedStatus = document.querySelector('input[name="teacherAttendanceStatus"]:checked');
+          if (document.getElementById("teacherAttendanceNote").value !== originalNote || (selectedStatus && selectedStatus.value) !== originalStatusValue) return;
           applyTeacherAttendanceExistingState(report);
           var result = document.getElementById("teacherAttendanceResult");
           result.textContent = "기존 전달 내용을 불러왔습니다. 수정하면 변경 이력이 함께 남습니다.";
@@ -2240,6 +2260,11 @@
       function submitTeacherAttendanceReport() {
         var context = attendanceComposerContext;
         var submit = document.getElementById("teacherAttendanceSubmit");
+        if (submit.disabled || !canCurrentUserSubmitAttendance()) return;
+        var sequence = attendanceConnectionSequence;
+        var loginId = authState.loginId;
+        var reporterName = authState.teacherName || "";
+        var isCurrent = function() { return sequence === attendanceConnectionSequence && authState.loginId === loginId && attendanceComposerContext === context; };
         var result = document.getElementById("teacherAttendanceResult");
         var selected = document.querySelector('input[name="teacherAttendanceStatus"]:checked');
         var status = selected ? selected.value : "";
@@ -2255,7 +2280,7 @@
         Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
           var db = values[0];
           var user = values[1].currentUser;
-          if (!user) throw new Error("로그인 세션을 다시 확인해 주세요.");
+          if (!user || !isCurrent()) throw new Error("로그인 세션을 다시 확인해 주세요.");
           var id = attendanceReportId(context, user.uid);
           var ref = db.collection("liveTimetableAttendanceReports").doc(id);
           var eventRef = ref.collection("events").doc();
@@ -2266,7 +2291,7 @@
               var nowMs = Date.now();
               var payload = {
                 reporterUid: user.uid,
-                reporterName: authState.teacherName || "",
+                reporterName: reporterName,
                 studentId: context.studentId,
                 studentName: context.studentName,
                 school: context.school,
@@ -2306,9 +2331,11 @@
             });
           });
         }).then(function() {
+          if (!isCurrent()) return;
           result.textContent = "전달했습니다. 데스크에서 확인하거나 처리하면 이 화면에 답변이 표시됩니다.";
           if (lastData) renderTable(lastData, true);
         }).catch(function(error) {
+          if (!isCurrent()) return;
           var message = error && error.code === "permission-denied"
             ? "전달하지 못했습니다. 로그인 상태를 확인한 뒤 다시 시도해 주세요. 입력 내용은 그대로 남아 있습니다."
             : "전달하지 못했습니다. 입력 내용은 그대로 남아 있습니다. 잠시 후 다시 시도해 주세요.";
@@ -2328,6 +2355,7 @@
         return data;
       }
       function stopAttendanceRealtime() {
+        attendanceConnectionSequence++;
         if (attendanceRealtimeState.unsubscribe) attendanceRealtimeState.unsubscribe();
         if (attendanceRealtimeState.notificationUnsubscribe) attendanceRealtimeState.notificationUnsubscribe();
         attendanceRealtimeState.unsubscribe = null;
@@ -2338,6 +2366,12 @@
         attendanceRealtimeState.reports = [];
         attendanceRealtimeState.byKey = {};
         attendanceRealtimeState.pendingDeskReplies = [];
+        attendanceRealtimeState.loading = false;
+        attendanceRealtimeState.error = "";
+        attendanceReplyEditors.clear();
+        var inboxList = document.getElementById("attendanceInboxList");
+        if (inboxList) inboxList.innerHTML = "";
+        attendanceComposerContext = null;
         syncAttendanceRefreshRecommendation();
         renderAttendanceInbox();
       }
@@ -2373,20 +2407,33 @@
         syncAttendanceRefreshRecommendation();
         syncAttendanceInboxCount();
         renderAttendanceInbox();
-        if (lastData && isTeacherViewActive()) renderTable(lastData, true);
+        // A report update changes only these affordances, not the schedule grid.
+        document.querySelectorAll(".teacher-attendance-report-btn").forEach(function(button) {
+          var key = [button.dataset.sheet, button.dataset.hour, button.dataset.room, button.dataset.studentId].join("||");
+          var exists = !!byKey[key];
+          button.classList.toggle("has-report", exists);
+          var label = exists ? "전달 수정" : (button.disabled ? "학생 확인 필요" : "출결 전달");
+          if (button.textContent !== label) button.textContent = label;
+        });
+        if (attendanceComposerContext) renderTeacherAttendanceDeskReply(getAttendanceReportForContext(attendanceComposerContext));
       }
       function startAttendanceRealtime() {
         if (!authState.loggedIn || authState.isLookup) {
           stopAttendanceRealtime();
           return;
         }
+        stopAttendanceRealtime();
+        var sequence = attendanceConnectionSequence;
+        var loginId = authState.loginId;
+        var isCurrent = function() { return sequence === attendanceConnectionSequence && authState.loggedIn && authState.loginId === loginId; };
+        attendanceRealtimeState.loading = true;
         Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
+          if (!isCurrent()) return;
           var db = values[0];
           var user = values[1].currentUser;
           if (!user) throw new Error("Firebase 로그인 세션 없음");
           return resolveAttendanceRealtimeMode(db, user).then(function(mode) {
-          if (attendanceRealtimeState.unsubscribe && attendanceRealtimeState.uid === user.uid && attendanceRealtimeState.mode === mode) return;
-          stopAttendanceRealtime();
+          if (!isCurrent() || values[1].currentUser !== user) return;
           attendanceRealtimeState.uid = user.uid;
           attendanceRealtimeState.mode = mode;
           attendanceRealtimeState.firebaseAdmin = mode === "admin";
@@ -2394,8 +2441,10 @@
           applyRoleUi();
           var query = buildAttendanceReportsQuery(db, mode, user.uid);
           attendanceRealtimeState.unsubscribe = query.onSnapshot(function(snapshot) {
+            if (!isCurrent()) return;
             applyAttendanceReportsSnapshot(snapshot, user.uid, mode);
           }, function(error) {
+            if (!isCurrent()) return;
             attendanceRealtimeState.loading = false;
             attendanceRealtimeState.error = error && error.message ? error.message : "실시간 연결 실패";
             syncAttendanceInboxCount();
@@ -2405,6 +2454,7 @@
           if (mode === "teacher") {
             attendanceRealtimeState.notificationUnsubscribe = db.collection("liveTimetableAttendanceNotifications").doc(user.uid)
               .collection("items").where("seen", "==", false).onSnapshot(function(snapshot) {
+                if (!isCurrent()) return;
                 attendanceRealtimeState.pendingDeskReplies = snapshot.docs.map(function(doc) {
                   var item = doc.data() || {};
                   item.__notificationId = doc.id;
@@ -2417,7 +2467,10 @@
           }
           });
         }).catch(function(error) {
+          if (!isCurrent()) return;
+          attendanceRealtimeState.loading = false;
           attendanceRealtimeState.error = error && error.message ? error.message : "실시간 연결 실패";
+          renderAttendanceInbox();
           if (window.console && console.warn) console.warn("출결 실시간 초기화 실패:", error);
         });
       }
@@ -2437,11 +2490,14 @@
       function markAttendanceDeskRepliesSeen() {
         var pending = (attendanceRealtimeState.pendingDeskReplies || []).slice();
         if (!pending.length || !canCurrentUserSubmitAttendance()) return Promise.resolve();
+        var uid = attendanceRealtimeState.uid;
+        var sequence = attendanceConnectionSequence;
         return getLiveFirebaseFirestore().then(function(db) {
+          if (sequence !== attendanceConnectionSequence || uid !== attendanceRealtimeState.uid) return;
           return Promise.all(pending.map(function(report) {
             var reportId = report.reportId || report.__id;
             if (!reportId || !report.__notificationId) return Promise.resolve();
-            var notificationRef = db.collection("liveTimetableAttendanceNotifications").doc(attendanceRealtimeState.uid).collection("items").doc(report.__notificationId);
+            var notificationRef = db.collection("liveTimetableAttendanceNotifications").doc(uid).collection("items").doc(report.__notificationId);
             var reportRef = db.collection("liveTimetableAttendanceReports").doc(reportId);
             return db.runTransaction(function(transaction) {
               return transaction.get(notificationRef).then(function(snapshot) {
@@ -2519,9 +2575,12 @@
       }
       function attendanceDateFromKey(key) {
         var match = String(key || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+        if (!match) return null;
+        var date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        return attendanceLocalDateKey(date) === key ? date : null;
       }
       function attendanceReportDateKey(report) {
+        if (report && attendanceDateFromKey(report.dateKey)) return report.dateKey;
         var sheetMatch = String(report && report.sheetName || "").match(/(\d{1,2})\s*\/\s*(\d{1,2})/);
         var reported = new Date(Number(report && report.reportedAtMs || Date.now()));
         if (!isNaN(reported.getTime()) && sheetMatch) {
@@ -2538,11 +2597,9 @@
         return (date.getMonth() + 1) + "/" + date.getDate() + "(" + weekdays[date.getDay()] + ")";
       }
       function selectAttendanceInboxDate(key) {
+        if (!attendanceDateFromKey(key)) return;
         attendanceInboxSelectedDateKey = key;
         renderAttendanceInbox();
-        var nav = document.getElementById("attendanceInboxDateNav");
-        var selected = document.querySelector(".attendance-date-button[aria-pressed='true']");
-        if (nav && selected) nav.scrollTo({ left: Math.max(0, selected.offsetLeft - 2), behavior: "smooth" });
       }
       function renderAttendanceInboxDateNav(reports) {
         var nav = document.getElementById("attendanceInboxDateNav");
@@ -2556,21 +2613,54 @@
         var end = new Date(today);
         start.setDate(start.getDate() - 14);
         end.setDate(end.getDate() + 14);
+        var recordedKeys = new Set();
         (reports || []).forEach(function(report) {
           var reportDate = attendanceDateFromKey(attendanceReportDateKey(report));
           if (!reportDate) return;
+          recordedKeys.add(attendanceLocalDateKey(reportDate));
           if (reportDate < start) start = reportDate;
           if (reportDate > end) end = reportDate;
         });
+        // Reuse the strip when its range has not changed: preserve focus and scroll.
+        var sparse = end.getTime() - start.getTime() > 366 * 86400000;
+        var rangeKey = attendanceLocalDateKey(start) + ":" + attendanceLocalDateKey(end) + ":" + todayKey + (sparse ? ":" + Array.from(recordedKeys).sort().join(",") : "");
+        if (track.getAttribute("data-range") === rangeKey) {
+          track.querySelectorAll(".attendance-date-button").forEach(function(button) {
+            button.setAttribute("aria-pressed", button.getAttribute("data-date-key") === attendanceInboxSelectedDateKey ? "true" : "false");
+          });
+          if (!attendanceInboxDateStripInitialized) {
+            var todayButton = track.querySelector("[data-date-key='" + todayKey + "']");
+            nav.scrollLeft = todayButton ? todayButton.offsetLeft : 0;
+            attendanceInboxDateStripInitialized = true;
+          }
+          return;
+        }
         var previousScrollLeft = nav.scrollLeft;
+        var focusedDate = document.activeElement && document.activeElement.getAttribute("data-date-key");
         var buttons = [];
-        for (var cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+        var dates = [];
+        if (sparse) {
+          // Keep all recorded days reachable without building years of empty DOM.
+          for (var offset = -14; offset <= 14; offset++) {
+            var nearby = new Date(today); nearby.setDate(today.getDate() + offset);
+            recordedKeys.add(attendanceLocalDateKey(nearby));
+          }
+          dates = Array.from(recordedKeys).sort().map(attendanceDateFromKey);
+        } else {
+          for (var day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) dates.push(new Date(day));
+        }
+        dates.forEach(function(cursor) {
           var key = attendanceLocalDateKey(cursor);
           var isToday = key === todayKey;
           var label = attendanceDateLabel(cursor);
           buttons.push("<button type='button' class='attendance-date-button' data-date-key='" + key + "' aria-pressed='" + (key === attendanceInboxSelectedDateKey ? "true" : "false") + "' aria-label='" + label + (isToday ? " 오늘" : "") + "' onclick=\"selectAttendanceInboxDate('" + key + "')\">" + label + "</button>");
-        }
+        });
         track.innerHTML = buttons.join("");
+        track.setAttribute("data-range", rangeKey);
+        if (focusedDate) {
+          var focusedButton = track.querySelector("[data-date-key='" + focusedDate + "']");
+          if (focusedButton) focusedButton.focus({ preventScroll: true });
+        }
         requestAnimationFrame(function() {
           if (!attendanceInboxDateStripInitialized) {
             var todayButton = track.querySelector("[data-date-key='" + todayKey + "']");
@@ -2627,6 +2717,8 @@
         }).join("") + "</tbody></table></div>";
       }
       function renderAttendanceInbox() {
+        var modal = document.getElementById("attendanceInboxModal");
+        if (modal && modal.style.display !== "flex") return;
         var list = document.getElementById("attendanceInboxList");
         var summary = document.getElementById("attendanceInboxSummary");
         var title = document.getElementById("attendanceInboxTitle");
@@ -2674,7 +2766,7 @@
           renderAttendanceInboxDatabase(visible);
           return;
         }
-        list.innerHTML = visible.map(function(report) {
+        var chatHtml = visible.map(function(report) {
           var safeId = escapeHtml(report.__id);
           var statusMeta = attendanceStatusMeta(String(report.status || "기타"));
           var reporter = attendanceReporterLabel(report);
@@ -2691,9 +2783,58 @@
             : "";
           return "<article class='attendance-chat-thread attendance-status-" + statusMeta.className + (report.effectiveDeskState === "NEW" ? " is-new" : "") + "' data-attendance-report-id='" + safeId + "'><div class='attendance-chat-head'><div><div class='attendance-chat-student'>" + escapeHtml(report.studentName || "학생") + "</div><div class='attendance-chat-lesson'>" + escapeHtml(meta) + "</div></div><div class='attendance-chat-head-actions'>" + attendanceStatusBadgeHtml(report.status) + "<span class='attendance-chat-state'>" + attendanceStateLabel(report.effectiveDeskState) + "</span></div></div><div class='attendance-chat-body'>" + teacherMessage + reply + "</div>" + controls + "</article>";
         }).join("");
+        reconcileAttendanceChat(list, chatHtml, isDesk);
+      }
+      function reconcileAttendanceChat(list, html, isDesk) {
+        var next = document.createElement("div");
+        next.innerHTML = html;
+        var previous = new Map();
+        Array.from(list.children).forEach(function(article) {
+          if (article.classList.contains("attendance-chat-thread")) previous.set(article.getAttribute("data-attendance-report-id"), article);
+        });
+        var focused = document.activeElement;
+        var articles = Array.from(next.children);
+        articles.forEach(function(article, index) {
+          var id = article.getAttribute("data-attendance-report-id");
+          var incoming = article.querySelector(".attendance-inbox-controls");
+          var old = previous.get(id);
+          if (old) {
+            old.className = article.className;
+            [".attendance-chat-head", ".attendance-chat-body"].forEach(function(selector) {
+              var target = old.querySelector(selector);
+              var source = article.querySelector(selector);
+              if (target.innerHTML !== source.innerHTML) target.innerHTML = source.innerHTML;
+            });
+            article = old;
+          }
+          var controls = article.querySelector(".attendance-inbox-controls");
+          if (isDesk && controls) {
+            var editor = attendanceReplyEditors.get(id);
+            if (editor) {
+              if (editor.getAttribute("data-dirty") !== "true" && !editor.querySelector("button").disabled) {
+                editor.querySelector("textarea").value = incoming.querySelector("textarea").value;
+                editor.querySelector("select").value = incoming.querySelector("select").value;
+              }
+              if (editor !== controls) controls.replaceWith(editor);
+            } else {
+              controls.addEventListener("input", function() { controls.setAttribute("data-dirty", "true"); });
+              controls.addEventListener("change", function() { controls.setAttribute("data-dirty", "true"); });
+              attendanceReplyEditors.set(id, controls);
+            }
+          } else if (!isDesk && controls) controls.remove();
+          if (list.children[index] !== article) list.insertBefore(article, list.children[index] || null);
+        });
+        while (list.children.length > articles.length) list.lastElementChild.remove();
+        // Moving an edited report in the sort order must not strand keyboard focus.
+        if (focused && focused.isConnected && document.activeElement !== focused && list.contains(focused)) focused.focus({ preventScroll: true });
       }
       function refreshAttendanceInbox(button) {
         if (!authState.loggedIn || authState.isLookup || !attendanceRealtimeState.uid) return;
+        if (button && button.disabled) return;
+        var sequence = attendanceConnectionSequence;
+        var uid = attendanceRealtimeState.uid;
+        var mode = attendanceRealtimeState.mode;
+        var isCurrent = function() { return sequence === attendanceConnectionSequence && uid === attendanceRealtimeState.uid; };
         var result = document.getElementById("attendanceInboxRefreshResult");
         var label = button && button.querySelector("span");
         if (button) button.disabled = true;
@@ -2705,13 +2846,17 @@
         attendanceRealtimeState.loading = true;
         renderAttendanceInbox();
         getLiveFirebaseFirestore().then(function(db) {
-          return buildAttendanceReportsQuery(db, attendanceRealtimeState.mode, attendanceRealtimeState.uid).get().then(function(snapshot) {
-            applyAttendanceReportsSnapshot(snapshot, attendanceRealtimeState.uid, attendanceRealtimeState.mode);
+          if (!isCurrent()) return;
+          return buildAttendanceReportsQuery(db, mode, uid).get().then(function(snapshot) {
+            if (!isCurrent()) return;
+            applyAttendanceReportsSnapshot(snapshot, uid, mode);
             return attendanceRealtimeState.firebaseAdmin ? Promise.resolve() : markAttendanceDeskRepliesSeen();
           });
         }).then(function() {
+          if (!isCurrent()) return;
           if (result) result.textContent = "출결 전달 내역을 방금 다시 불러왔습니다.";
         }).catch(function(error) {
+          if (!isCurrent()) return;
           attendanceRealtimeState.loading = false;
           if (result) {
             result.textContent = "새로고침하지 못했습니다. 기존 내역은 그대로 표시됩니다. 잠시 후 다시 시도해 주세요.";
@@ -2725,7 +2870,10 @@
         });
       }
       function saveAttendanceInboxReply(button) {
-        if (!button || !attendanceRealtimeState.firebaseAdmin) return;
+        if (!button || button.disabled || !attendanceRealtimeState.firebaseAdmin) return;
+        var sequence = attendanceConnectionSequence;
+        var uid = attendanceRealtimeState.uid;
+        var authorName = authState.teacherName || authState.loginId || "관리자";
         var article = button.closest("[data-attendance-report-id]");
         var id = article ? article.getAttribute("data-attendance-report-id") : "";
         var select = article && article.querySelector("select");
@@ -2738,7 +2886,7 @@
         Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
           var db = values[0];
           var user = values[1].currentUser;
-          if (!user) throw new Error("로그인 세션 없음");
+          if (!user || user.uid !== uid || sequence !== attendanceConnectionSequence) throw new Error("로그인 세션 없음");
           var ref = db.collection("liveTimetableAttendanceReports").doc(id);
           var eventRef = ref.collection("events").doc();
           return db.runTransaction(function(transaction) {
@@ -2753,7 +2901,7 @@
                 deskRevision: deskRevision,
                 deskHandledTeacherRevision: Number(report.teacherRevision || 0),
                 deskUpdatedByUid: user.uid,
-                deskUpdatedByName: authState.teacherName || authState.loginId || "관리자",
+                deskUpdatedByName: authorName,
                 deskUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 deskUpdatedAtMs: nowMs
               });
@@ -2779,7 +2927,14 @@
               });
             });
           });
+        }).then(function() {
+          if (sequence !== attendanceConnectionSequence || uid !== attendanceRealtimeState.uid) return;
+          if (String(textarea.value || "").trim() === reply && select.value === state) {
+            var editor = attendanceReplyEditors.get(id);
+            if (editor) editor.removeAttribute("data-dirty");
+          }
         }).catch(function(error) {
+          if (sequence !== attendanceConnectionSequence) return;
           alert("답변을 보내지 못했습니다. 로그인 상태를 확인한 뒤 다시 시도해 주세요.");
           if (window.console && console.warn) console.warn("출결 답변 실패:", error);
         }).finally(function() {
@@ -3115,6 +3270,8 @@
       }
       function loadOperationMemosForCurrentSheet(force, options) {
         var opts = options || {};
+        var requestId = ++operationMemoLoadSequence;
+        var sessionKey = getScheduleSessionKey();
         if (!isOperationMemoReadable()) {
           operationMemoState.dateKey = "";
           operationMemoState.items = [];
@@ -3125,6 +3282,7 @@
           return Promise.resolve([]);
         }
         var dateKey = getOperationMemoDateKey(currentSheetName);
+        function isCurrentMemoRequest() { return requestId === operationMemoLoadSequence && sessionKey === getScheduleSessionKey() && dateKey === getOperationMemoDateKey(currentSheetName); }
         if (!dateKey) return Promise.resolve([]);
         if (!force && operationMemoState.dateKey === dateKey && operationMemoState.items.length) {
           applyOperationMemoHighlights();
@@ -3135,6 +3293,7 @@
         var manualPromise = fetchOperationMemos(dateKey).then(function(items) { return { items: items, error: null }; }).catch(function(error) { return { items: [], error: error }; });
         var slmsPromise = fetchSlmsOperationMemos(dateKey, opts).then(function(items) { return { items: items, error: null }; }).catch(function(error) { return { items: [], error: error }; });
         return Promise.all([manualPromise, slmsPromise]).then(function(results) {
+          if (!isCurrentMemoRequest()) return operationMemoState.items || [];
           var manualResult = results[0];
           var slmsResult = results[1];
           operationMemoState.dateKey = dateKey;
@@ -3150,13 +3309,14 @@
           startOperationMemoPolling();
           return operationMemoState.items;
         }).catch(function(err) {
+          if (!isCurrentMemoRequest()) return operationMemoState.items || [];
           if (!opts.silent) console.warn(err);
           operationMemoState.sourceErrors = { unexpected: err };
           renderOperationMemoSourceSummary();
           renderOperationMemoList();
           return operationMemoState.items || [];
         }).finally(function() {
-          operationMemoState.loading = false;
+          if (isCurrentMemoRequest()) operationMemoState.loading = false;
         });
       }
       function clearOperationMemoHighlights() {
@@ -3919,6 +4079,10 @@
         });
       }
       function logoutTeacher() {
+        scheduleLoadSequence++;
+        operationMemoLoadSequence++;
+        if (pollingTimer) clearInterval(pollingTimer);
+        pollingTimer = null;
         stopAttendanceRealtime();
         liveFirebaseLogoutPromise = getLiveFirebaseAuth().then(function(auth) { return auth.signOut(); }).catch(function(error) {
           if (window.console && console.warn) console.warn("Firebase 로그아웃 실패:", error);
@@ -4460,6 +4624,10 @@
         });
       }
       function loadData(n,r,requestOptions){
+        var requestId = ++scheduleLoadSequence;
+        var sessionKey = getScheduleSessionKey();
+        operationMemoLoadSequence++;
+        function isCurrentLoad() { return requestId === scheduleLoadSequence && currentSheetName === n && sessionKey === getScheduleSessionKey(); }
         var attendanceManualRefreshId = requestOptions && typeof requestOptions === "object"
           ? Number(requestOptions.attendanceManualRefreshId || 0)
           : 0;
@@ -4493,12 +4661,14 @@
         var method = teacherName ? "getTeacherGridData" : "getFixedGridData";
         var params = teacherName ? [n, teacherName, r] : [n, r];
         callServer(method, params).then(function(d){ 
+          if (!isCurrentLoad()) return;
           if (d && !d.error && !d.__teacherViewLogged) recordTeacherViewAfterSuccessfulLoad(teacherName || authState.teacherName, n);
-          clientCache[cacheKey]=d; 
+          if (d && !d.error) clientCache[cacheKey]=d;
           processData(d, r, attendanceManualRefreshId);
         }).catch(function(err){
+          if (!isCurrentLoad()) return;
           alert("데이터 로딩 실패: " + (err && err.message ? err.message : err));
-          processData({ headers: [], grid: {}, version: "ERROR" }, r, attendanceManualRefreshId);
+          processData({ error: true, headers: [], grid: {}, version: "ERROR" }, r, attendanceManualRefreshId);
         });
       }
       
@@ -4553,7 +4723,17 @@
         if(pollingTimer)clearInterval(pollingTimer); 
         pollingTimer=setInterval(checkUpdate,30000); 
       }
-      function checkUpdate(){ var c=document.getElementById('mainSheetSelector').value; if(!c)return; callServer("checkDataVersion",[c]).then(function(v){ if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; } }).catch(function(){}); }
+      function checkUpdate(){
+        var c=document.getElementById('mainSheetSelector').value;
+        if(!c || versionCheckPending || document.hidden || document.getElementById('mainPage').style.display === 'none') return;
+        var sessionKey = getScheduleSessionKey();
+        var requestId = scheduleLoadSequence;
+        versionCheckPending = true;
+        callServer("checkDataVersion",[c]).then(function(v){
+          if(c !== currentSheetName || requestId !== scheduleLoadSequence || sessionKey !== getScheduleSessionKey()) return;
+          if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; }
+        }).catch(function(){}).finally(function(){ versionCheckPending = false; });
+      }
       function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false,true); }
       function refreshData(markReplySeen){
         if(!currentSheetName) return;
@@ -4604,9 +4784,11 @@
         document.getElementById('messageModal').style.display='flex'; 
       }
       let studentScheduleMap = {};
+      let selectedArrivalStudentNames = new Set();
       function openSelectionModal() {
         if (!lastData) { alert("데이터를 불러오는 중입니다..."); return; }
         studentScheduleMap = {};
+        selectedArrivalStudentNames.clear();
         
         var headers = lastData.headers;
         for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
@@ -4673,10 +4855,26 @@
              validCount++;
              var div = document.createElement('div');
              div.className = 'student-checkbox-item';
-             div.innerHTML = `<input type="checkbox" class="stu-chk" value="${name}" id="chk_${name}"><label for="chk_${name}">${name} <span style="font-size:0.8em; color:#888;">(${uniqueSubjects.size}과목 수강)</span></label>`;
+             var input = document.createElement('input');
+             input.type = 'checkbox'; input.className = 'stu-chk'; input.value = name;
+             input.id = 'arrival_student_' + validCount;
+             input.checked = selectedArrivalStudentNames.has(name);
+             input.onchange = function() {
+               if (input.checked) selectedArrivalStudentNames.add(name);
+               else selectedArrivalStudentNames.delete(name);
+             };
+             var label = document.createElement('label');
+             label.htmlFor = input.id;
+             label.textContent = name + ' (' + uniqueSubjects.size + '과목 수강)';
+             div.appendChild(input); div.appendChild(label);
              listContainer.appendChild(div);
            }
         });
+        var selectAll = document.getElementById('selectAllCheckbox');
+        if (selectAll) {
+          var renderedInputs = Array.from(listContainer.querySelectorAll('.stu-chk'));
+          selectAll.checked = renderedInputs.length > 0 && renderedInputs.every(function(input) { return input.checked; });
+        }
         if(validCount === 0) {
            listContainer.innerHTML = "<div style='padding:20px; text-align:center; color:#888;'>해당 조건의 학생이 없습니다.<br>(1과목 학생은 검색창을 이용하세요)</div>";
         }
@@ -4811,10 +5009,14 @@
       function toggleSelectAll() {
         var chk = document.getElementById('selectAllCheckbox').checked;
         var inputs = document.querySelectorAll('.stu-chk');
-        inputs.forEach(el => el.checked = chk);
+        inputs.forEach(function(el) {
+          el.checked = chk;
+          if (chk) selectedArrivalStudentNames.add(el.value);
+          else selectedArrivalStudentNames.delete(el.value);
+        });
       }
       function generateSelectedMessage() {
-        var inputs = document.querySelectorAll('.stu-chk:checked');
+        var inputs = Array.from(selectedArrivalStudentNames).filter(function(name) { return !!studentScheduleMap[name]; }).map(function(name) { return { value: name }; });
         if (inputs.length === 0) { alert("학생을 한 명 이상 선택해주세요."); return; }
         
         var dateMatch = currentSheetName.match(/(\d+\/\d+\([가-힣]\))/);
@@ -5342,6 +5544,9 @@
         renderStudentImagePreview(selectedStudentForImage);
       }
       function syncStudentCardActionButtons() {
+        document.querySelectorAll('#studentImageList .student-list-toggle-btn').forEach(function(button) {
+          button.disabled = !!studentCardStatusLoading;
+        });
         var toggleBtn = document.getElementById('studentCardSentToggleBtn');
         if (!toggleBtn) return;
         if (!selectedStudentForImage) {
@@ -5356,9 +5561,18 @@
       function loadStudentCardStatuses() {
         var list = document.getElementById('studentImageList');
         var targetSheet = String(currentSheetName || "").trim();
+        var requestId = ++studentCardStatusSequence;
+        var sessionKey = getScheduleSessionKey();
+        var scheduleRequestId = scheduleLoadSequence;
+        function isCurrentStatusRequest() {
+          return requestId === studentCardStatusSequence && targetSheet === String(currentSheetName || "").trim() &&
+            sessionKey === getScheduleSessionKey() && scheduleRequestId === scheduleLoadSequence;
+        }
         if (!targetSheet) {
           studentCardSentMap = {};
+          studentCardStatusLoading = false;
           filterStudentImageList();
+          syncStudentCardActionButtons();
           return Promise.resolve({});
         }
         studentCardStatusLoading = true;
@@ -5367,12 +5581,15 @@
           list.innerHTML = "<div class='student-list-item' style='color:#94a3b8;'>발송 상태를 불러오는 중입니다...</div>";
         }
         return callServer("getStudentCardStatuses", [targetSheet]).then(function(statuses) {
+          if (!isCurrentStatusRequest()) return {};
           studentCardSentMap = statuses || {};
           return studentCardSentMap;
         }).catch(function() {
+          if (!isCurrentStatusRequest()) return {};
           studentCardSentMap = {};
           return {};
         }).then(function(result) {
+          if (!isCurrentStatusRequest()) return result;
           studentCardStatusLoading = false;
           filterStudentImageList();
           syncStudentCardActionButtons();
@@ -5381,12 +5598,21 @@
         });
       }
       function markStudentCardSentStatus(name, sent, options) {
+        if (studentCardStatusLoading) return Promise.resolve(null);
         var opts = options || {};
         var studentName = String(name || "").trim();
         var targetSheet = String(currentSheetName || "").trim();
         if (!studentName || !targetSheet) {
           if (!opts.silent) alert("학생 또는 일자 정보가 없습니다.");
           return Promise.reject(new Error("학생 또는 일자 정보가 없습니다."));
+        }
+        var requestId = ++studentCardStatusSequence;
+        var sessionKey = getScheduleSessionKey();
+        var scheduleRequestId = scheduleLoadSequence;
+        var loginId = authState.loginId || "";
+        function isCurrentStatusRequest() {
+          return requestId === studentCardStatusSequence && targetSheet === String(currentSheetName || "").trim() &&
+            sessionKey === getScheduleSessionKey() && scheduleRequestId === scheduleLoadSequence;
         }
         var previous = studentCardSentMap[studentName] ? Object.assign({}, studentCardSentMap[studentName]) : null;
         var optimistic = {
@@ -5396,12 +5622,13 @@
           updatedBy: String(authState.loginId || "")
         };
         studentCardSentMap[studentName] = optimistic;
+        studentCardStatusLoading = true;
         filterStudentImageList();
         if (selectedStudentForImage === studentName) renderStudentImagePreview(studentName);
         refreshStudentImageListSelectionState();
-        studentCardStatusLoading = true;
         syncStudentCardActionButtons();
-        return callServer("setStudentCardSentStatus", [targetSheet, studentName, !!sent, authState.loginId || ""]).then(function(status) {
+        return callServer("setStudentCardSentStatus", [targetSheet, studentName, !!sent, loginId]).then(function(status) {
+          if (!isCurrentStatusRequest()) return status;
           studentCardSentMap[studentName] = status || {
             studentName: studentName,
             sent: !!sent,
@@ -5414,6 +5641,7 @@
           syncStudentCardActionButtons();
           return studentCardSentMap[studentName];
         }).catch(function(err) {
+          if (!isCurrentStatusRequest()) return null;
           if (previous) studentCardSentMap[studentName] = previous;
           else delete studentCardSentMap[studentName];
           filterStudentImageList();
@@ -5422,6 +5650,7 @@
           if (!opts.silent) alert("발송 상태 저장에 실패했습니다. 다시 시도해주세요.");
           throw err;
         }).finally(function() {
+          if (!isCurrentStatusRequest()) return;
           studentCardStatusLoading = false;
           syncStudentCardActionButtons();
         });
@@ -5471,6 +5700,7 @@
           var toggleBtn = document.createElement('button');
           toggleBtn.type = 'button';
           toggleBtn.className = 'student-list-toggle-btn';
+          toggleBtn.disabled = !!studentCardStatusLoading;
           toggleBtn.textContent = status.sent ? '해제' : '표시';
           toggleBtn.onclick = function(ev) {
             ev.stopPropagation();
@@ -6459,6 +6689,7 @@
           if (!raw) return null;
           var parsed = JSON.parse(raw);
           if (!parsed || !parsed.stats || !Array.isArray(parsed.sheets)) return null;
+          if (!parsed.savedAt || Date.now() - parsed.savedAt > 5 * 60 * 1000) return null;
           if (parsed.sheets.join("|") !== (sheets || []).join("|")) return null;
           return parsed.stats;
         } catch (e) {
@@ -6488,11 +6719,14 @@
       function formatTeacherRoomHours(value) {
         return (parseInt(value, 10) || 0) + "시간";
       }
-      function getTeacherRoomSheetData(sheetName) {
-        if (sheetName === currentSheetName && lastData && lastData.grid) return Promise.resolve(lastData);
+      function getTeacherRoomSheetData(sheetName, force) {
+        if (!force && !getActiveTeacherName() && sheetName === currentSheetName && lastData && lastData.grid) return Promise.resolve(lastData);
         var cacheKey = sheetName + "::__ALL__";
-        if (clientCache[cacheKey] && clientCache[cacheKey].grid) return Promise.resolve(clientCache[cacheKey]);
-        return callServer("getFixedGridData", [sheetName, false]).then(function(data) {
+        if (!force && clientCache[cacheKey] && clientCache[cacheKey].grid) return Promise.resolve(clientCache[cacheKey]);
+        var sessionKey = getScheduleSessionKey();
+        return callServer("getFixedGridData", [sheetName, !!force]).then(function(data) {
+          if (!data || data.error || !data.grid) throw new Error("시간표를 불러오지 못했습니다: " + sheetName);
+          if (sessionKey !== getScheduleSessionKey()) throw new Error("로그인 상태가 변경되었습니다.");
           clientCache[cacheKey] = data;
           return data;
         });
@@ -6566,10 +6800,13 @@
           }
         }
         teacherRoomStatsLoading = true;
+        var sessionKey = getScheduleSessionKey();
+        var failedSheets = [];
         var bucket = {};
         var index = 0;
         renderTeacherRoomStatsLoading(0, sheets.length);
         function next() {
+          if (sessionKey !== getScheduleSessionKey()) { teacherRoomStatsLoading = false; return; }
           if (index >= sheets.length) {
             stats.teachers = Object.keys(bucket).map(function(name) {
               var item = bucket[name];
@@ -6590,16 +6827,21 @@
               return a.teacherName.localeCompare(b.teacherName, "ko");
             });
             teacherRoomStatsCache = stats;
-            writeTeacherRoomStatsToStorage(sheets, stats);
+            if (!failedSheets.length) writeTeacherRoomStatsToStorage(sheets, stats);
             teacherRoomStatsLoading = false;
             if (teacherDashboardActiveTab === "rooms") renderTeacherRoomStats();
+            if (failedSheets.length) {
+              teacherRoomStatsCache = null;
+              alert("일부 시간표를 불러오지 못해 강의실 현황이 누락될 수 있습니다. 새로고침해 주세요. (" + failedSheets.length + "일)");
+            }
             return;
           }
           var sheetName = sheets[index++];
           renderTeacherRoomStatsLoading(index - 1, sheets.length);
-          getTeacherRoomSheetData(sheetName).then(function(data) {
+          getTeacherRoomSheetData(sheetName, force).then(function(data) {
             collectTeacherRoomStatsFromGrid(sheetName, data, bucket);
           }).catch(function(err) {
+            failedSheets.push(sheetName);
             console.warn("강의실 현황 집계 실패", sheetName, err);
           }).then(next);
         }
@@ -7142,7 +7384,7 @@
           alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
         });
       }
-      function getSubjectName(text) { var m = text.match(/(수학|수I|수II|미적|기하|확통|개별|정규|과학|물리|화학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|컨설팅|클리닉|면접)/); return m ? m[0] : ""; }
+      function getSubjectName(text) { var m = String(text || "").match(/(수학|수II|수I|미적|기하|확통|과학|물리|화학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|컨설팅|클리닉|면접)/); return m ? m[0] : ""; }
       function getSubjectEmoji(subj) { if (subj.match(/(수학|수I|수II|미적|기하|확통|개별|정규)/)) return "📐"; if (subj.match(/(과학|물리|화학|생명|지구과학|물|화|생|지)/)) return "🧪"; if (subj.match(/(국어|언매|화작)/)) return "📚"; if (subj.match(/(영어)/)) return "🅰️"; if (subj.match(/(사회|한국사|역사|사탐)/)) return "🌏"; return "✏️"; }
       function getDistinctColor(str) { var hash = 0; for (var i=0; i<str.length; i++) hash = str.charCodeAt(i) + ((hash<<5)-hash); var hue = (Math.abs(hash)*137.508)%360; return "hsl(" + hue + ", 75%, 93%)"; }
       function escapeRegExp(value) {
@@ -7373,6 +7615,7 @@
         renderTeacherMobileView(data);
         updateTimelinePosition();
         applyOperationMemoHighlights();
+        if (document.getElementById('searchInput').value.trim()) searchTable();
       }
       function renderTeacherMobileView(data) {
         var mobileWrap = document.getElementById('teacherMobileList');
@@ -8043,6 +8286,36 @@
         return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       }
       
+      function highlightScheduleText(root, keyword) {
+        root.querySelectorAll('.highlight-text').forEach(function(mark) {
+          mark.replaceWith(document.createTextNode(mark.textContent));
+        });
+        root.normalize();
+        if (!keyword) return;
+        var walker = document.createTreeWalker(root, 4);
+        var nodes = [];
+        var node;
+        while ((node = walker.nextNode())) {
+          if (!node.parentElement.closest('script, style, textarea, input')) nodes.push(node);
+        }
+        var re = new RegExp(escapeRegExp(keyword), 'gi');
+        nodes.forEach(function(textNode) {
+          var text = textNode.nodeValue;
+          re.lastIndex = 0;
+          var match, start = 0, fragment = document.createDocumentFragment();
+          while ((match = re.exec(text))) {
+            fragment.appendChild(document.createTextNode(text.slice(start, match.index)));
+            var mark = document.createElement('span');
+            mark.className = 'highlight-text';
+            mark.textContent = match[0];
+            fragment.appendChild(mark);
+            start = match.index + match[0].length;
+          }
+          if (!start) return;
+          fragment.appendChild(document.createTextNode(text.slice(start)));
+          textNode.replaceWith(fragment);
+        });
+      }
       function searchTable() { 
         var rawInput = document.getElementById('searchInput').value.trim();
         var input = rawInput.toUpperCase(); 
@@ -8057,14 +8330,11 @@
         if (isTeacherViewActive() && window.innerWidth <= 768) {
           var cards = mobileWrap.querySelectorAll('.teacher-hour-card, .teacher-simple-hour-card');
           cards.forEach(function(card) {
-            if (card.dataset.originalHtml) card.innerHTML = card.dataset.originalHtml;
+            highlightScheduleText(card, "");
             var text = (card.innerText || card.textContent || "").toUpperCase();
             var visible = (!input || text.includes(input));
             card.style.display = visible ? "" : "none";
-            if (!teacherMobileSimpleView && visible && rawInput && card.dataset.originalHtml) {
-              var re = new RegExp("(" + escapeRegExp(rawInput) + ")", "gi");
-              card.innerHTML = card.dataset.originalHtml.replace(re, "<span class='highlight-text'>$1</span>");
-            }
+            if (!teacherMobileSimpleView && visible && rawInput) highlightScheduleText(card, rawInput);
           });
           applyOperationMemoHighlights();
           return;
@@ -8095,21 +8365,13 @@
           
           if (!input) {
              cell.classList.remove('hidden-cell'); 
-             items.forEach(item => {
-               var originalText = item.dataset.originalText;
-               if(originalText) renderTableItem(item, originalText);
-             });
+             items.forEach(function(item) { highlightScheduleText(item, ""); });
           } else {
              if (cellHasMatch) {
                cell.classList.remove('hidden-cell'); 
                items.forEach(item => {
-                 var originalText = item.dataset.originalText;
                  var itemText = item.innerText || item.textContent || "";
-                 if(originalText && itemText.toUpperCase().includes(input)) {
-                   highlightItem(item, originalText, input);
-                 } else if (originalText) {
-                   renderTableItem(item, originalText);
-                 }
+                 highlightScheduleText(item, itemText.toUpperCase().includes(input) ? rawInput : "");
                });
              } else {
                cell.classList.add('hidden-cell'); 
