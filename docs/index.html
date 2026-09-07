@@ -4013,7 +4013,11 @@ window.SeduHubAdapter={
   if(!res||!res.ok)throw Error('Timetable access denied');await assertLiveFirebaseIdentity(res);
   authState.loggedIn=true;authState.isMaster=!!res.isMaster;authState.isLookup=!!res.isLookup;
   authState.teacherName=res.teacherName||'';authState.loginId=res.loginId||'';authState.dashboardAdminToken=res.dashboardAdminToken||'';
-  availableTeacherNames=(res.teacherNames||[]).slice();startAttendanceRealtime();completeAccessSelection(res.isMaster?'all':'teacher');
+  availableTeacherNames=(res.teacherNames||[]).slice();startAttendanceRealtime();
+  const names=await callServer('getSheetNames',[]);if(!Array.isArray(names)||names.some(n=>String(n).startsWith('ERROR')))throw Error('Schedule list unavailable');
+  availableSheets=names;sheetNamesLoaded=true;completeAccessSelection(res.isMaster?'all':'teacher');
+  const introLogin=document.querySelector('.intro-login-btn');if(introLogin){introLogin.textContent='로그인됨';introLogin.disabled=true;}
+  const today=getTodaySheetNameFromMap(sheetMap);if(today)loadData(today,true,true);
  },async signOut(){await (await getLiveFirebaseAuth()).signOut();logoutTeacher();}
 };
       function submitTeacherLogin(source) {
