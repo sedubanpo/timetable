@@ -4005,6 +4005,17 @@
         applyRoleUi();
         startAppAfterAuth();
       }
+window.SeduHubAdapter={
+ async signIn(token,uid){
+  const auth=await getLiveFirebaseAuth();await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+  const credential=await auth.signInWithCustomToken(token);if(credential.user.uid!==uid)throw Error('Identity mismatch');
+  const res=await callServer('authenticateTeacher',['','',await credential.user.getIdToken()]);
+  if(!res||!res.ok)throw Error('Timetable access denied');await assertLiveFirebaseIdentity(res);
+  authState.loggedIn=true;authState.isMaster=!!res.isMaster;authState.isLookup=!!res.isLookup;
+  authState.teacherName=res.teacherName||'';authState.loginId=res.loginId||'';authState.dashboardAdminToken=res.dashboardAdminToken||'';
+  availableTeacherNames=(res.teacherNames||[]).slice();startAttendanceRealtime();completeAccessSelection(res.isMaster?'all':'teacher');
+ },async signOut(){await (await getLiveFirebaseAuth()).signOut();logoutTeacher();}
+};
       function submitTeacherLogin(source) {
         var fromGate = source === 'gate';
         var loginId = fromGate ? document.getElementById('gateIdInput').value.trim() : document.getElementById('authIdInput').value.trim();
@@ -10068,5 +10079,6 @@
         return `${ampm} ${hour}:00`;
       }
     </script>
-  </body>
+  <script type="module" src="hub-start.mjs"></script>
+</body>
 </html>
