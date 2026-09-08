@@ -4277,11 +4277,15 @@
         var sel = document.getElementById('teacherViewSelector');
         if (sel) sel.dataset.selected = sel.value || "__ALL__";
         clientCache = {};
-        updateTeacherCalendarAvailability(true).then(function(names) {
+        var selectedValue = sel.value;
+        // Do not block the visible day behind an all-dates calendar scan.
+        if (currentSheetName) loadData(currentSheetName, true);
+        updateTeacherCalendarAvailability(false).then(function(names) {
+          if (!authState.isMaster || sel.value !== selectedValue) return;
           var visibleNames = Array.isArray(names) && names.length ? names : getNavigableSheetNames();
           var targetSheet = currentSheetName;
           if (visibleNames.length && visibleNames.indexOf(targetSheet) === -1) targetSheet = visibleNames[0];
-          if (targetSheet) loadData(targetSheet, true);
+          if (targetSheet && targetSheet !== currentSheetName) loadData(targetSheet, true);
         });
       }
       function buildSheetMapFromNames(names) {
