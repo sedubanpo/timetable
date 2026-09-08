@@ -1050,6 +1050,27 @@
       .visitor-map-building span { margin-top:3px; font-size:0.78rem; opacity:0.78; }
       .visitor-room-map { position:relative; height:360px; min-width:820px; border:1px solid #dbe2ee; border-radius:12px; background:#ffffff; overflow:hidden; }
       .visitor-room-map-scroll { overflow-x:auto; overflow-y:visible; padding-bottom:2px; }
+      .visitor-lookup-right { min-width:0; }
+      .visitor-floorplan { display:block; width:100%; min-width:560px; height:auto; background:#fff; color:var(--primary); }
+      .visitor-floorplan text { text-anchor:middle; dominant-baseline:middle; font-family:inherit; fill:var(--primary); font-weight:800; font-size:20px; }
+      .visitor-map-outline { fill:#fff; stroke:var(--primary); stroke-width:3; }
+      .visitor-map-room rect, .visitor-map-office { fill:var(--bg); stroke:var(--primary); stroke-width:3; }
+      .visitor-map-room.empty rect { fill:#f0fdf4; }
+      .visitor-map-room.empty text { fill:#166534; }
+      .visitor-map-room.active rect { fill:var(--sedu-blue); }
+      .visitor-map-room.active text { fill:#fff; }
+      .visitor-floorplan .visitor-map-room-state, .visitor-floorplan .visitor-map-caption { font-size:15px; }
+      .visitor-map-desk { fill:var(--bg); stroke:var(--primary); stroke-width:2; }
+      .visitor-map-door { fill:none; stroke:#fff; stroke-width:6; }
+      .visitor-map-route-base { fill:none; stroke:var(--sedu-blue); stroke-width:5; opacity:0.2; }
+      .visitor-map-route { fill:none; stroke:var(--sedu-blue); stroke-width:5; stroke-linejoin:round; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:0; animation:visitor-route-reveal 700ms ease-out both; }
+      #visitorMapArrow path { fill:var(--sedu-blue); }
+      .visitor-map-origin { fill:var(--sedu-blue); stroke:#fff; stroke-width:3; }
+      .visitor-floorplan .visitor-map-origin-label { font-size:17px; fill:var(--sedu-blue); }
+      .visitor-map-instruction { margin:0 0 16px; color:var(--primary); font-size:0.95rem; line-height:1.6; }
+      .visitor-room-map-scroll:focus-visible { outline:2px solid var(--sedu-blue); outline-offset:2px; }
+      @keyframes visitor-route-reveal { from { stroke-dashoffset:1; } to { stroke-dashoffset:0; } }
+      @media (prefers-reduced-motion:reduce) { .visitor-map-route { animation:none; } }
       .visitor-room-map::before { content:""; position:absolute; left:12%; right:8%; top:42%; height:56px; border-radius:8px; background:rgba(254,205,211,0.28); border:1px solid rgba(251,113,133,0.15); }
       .visitor-room-map::after { content:""; position:absolute; left:66%; right:8%; top:42%; height:92px; border-radius:8px; background:rgba(254,205,211,0.24); border:1px solid rgba(251,113,133,0.12); }
       .visitor-room { position:absolute; width:17%; height:24%; border:1.5px solid #d4dbe8; background:linear-gradient(180deg,#f9fafb,#eef2f7); box-shadow:inset 0 0 0 2px rgba(255,255,255,0.72); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#0f172a; font-weight:900; }
@@ -1284,10 +1305,11 @@
         .attendance-chat-head { align-items:stretch; flex-direction:column; }
         .attendance-chat-head-actions { justify-content:flex-start; }
         .attendance-inbox-controls { grid-template-columns:1fr; }
-        .visitor-lookup-mode .top-bar { min-height:82px; padding:14px 16px; }
-        .visitor-lookup-mode .top-bar > div:first-child { left:14px; }
+        .visitor-lookup-mode .top-bar { min-height:82px; padding:14px 16px; flex-wrap:nowrap; }
+        .visitor-lookup-mode .top-bar > div:first-child { position:static; transform:none; flex-shrink:0; }
         .visitor-lookup-mode .top-bar > #digitalClock { display:none !important; }
-        .visitor-lookup-mode .top-bar > .search-wrapper { width:min(560px, calc(100vw - 132px)); }
+        .visitor-lookup-mode .top-bar > .search-wrapper { position:static; transform:none; width:auto; min-width:0; flex:1; }
+        .visitor-lookup-mode .top-bar > .search-wrapper .search-input { width:100%; min-width:0; box-sizing:border-box; }
         .visitor-lookup-return-progress { width:calc(100vw - 132px); bottom:6px; }
         .teacher-log-controls { align-items:stretch; }
         .teacher-log-toolbar-left, .teacher-log-toolbar-right { width:100%; justify-content:space-between; }
@@ -8045,8 +8067,13 @@
         setVisitorLookupFullDay(true);
       }
       function selectVisitorLookupMatch(index) {
+        var restoreFocus = document.activeElement && document.activeElement.classList.contains('visitor-lookup-card');
         visitorLookupSelectedIndex = Math.max(0, parseInt(index, 10) || 0);
         renderVisitorLookupResults();
+        if (restoreFocus) {
+          var selectedCard = document.querySelector('.visitor-lookup-card.active');
+          if (selectedCard) selectedCard.focus({ preventScroll:true });
+        }
       }
       function setVisitorLookupTab(tab) {
         visitorLookupTab = tab === "study" ? "study" : "today";
@@ -8070,13 +8097,11 @@
         return "본관";
       }
       function getVisitorLookupRoomNumber(roomName) {
-        var text = String(roomName || "");
-        var m = text.match(/([1-9])\s*강의실/);
-        if (m && m[1]) return m[1];
-        m = text.match(/\b([1-9])\b/);
-        if (m && m[1]) return m[1];
-        m = text.match(/([1-9])/);
-        return m && m[1] ? m[1] : "";
+        var text = String(roomName || "").trim();
+        var m = text.match(/(?:^|[^0-9])([1-9])\s*강의실/);
+        if (m) return m[1];
+        m = text.match(/^(?:(?:본관|2관|3관)\s*)?([1-9])$/);
+        return m ? m[1] : "";
       }
       function buildVisitorLookupEmptyRooms() {
         if (!lastData || !lastData.headers || !lastData.grid) return { hour: new Date().getHours(), rooms: [], ready: false };
@@ -8144,44 +8169,58 @@
         var activeRoom = selectedMatch ? getVisitorLookupRoomNumber(selectedMatch.room) : "";
         var activeRoomLabel = activeRoom ? activeRoom + "강의실" : "강의실";
         var emptyCount = (emptyRooms || []).length;
-        if (selectedMatch && selectedBuilding === "2관") {
+        if (selectedMatch && (selectedBuilding !== "본관" || !activeRoom)) {
           return "<div class='visitor-map-head'>" +
-              "<div><div class='visitor-map-kicker'>배정 강의실</div><div class='visitor-map-title'>2관 " + activeRoomLabel + "</div></div>" +
-              "<div class='visitor-map-target'><span class='visitor-map-target-num'>" + (activeRoom || "2") + "</span>2관</div>" +
+              "<div class='visitor-map-title'>" + escapeHtml(selectedMatch.room) + "</div>" +
             "</div>" +
-            "<div class='visitor-map-textonly'><div><div class='visitor-map-textonly-title'>2관 " + activeRoomLabel + "</div><div class='visitor-map-textonly-sub'>2관 길 안내는 준비 중입니다.</div></div></div>";
+            "<div class='visitor-map-textonly'><div><div class='visitor-map-textonly-title'>" + escapeHtml(selectedMatch.room) + "</div><div class='visitor-map-textonly-sub'>이 강의실의 이동 경로는 데스크에 문의해주세요.</div></div></div>";
         }
-        var rooms = ["6", "7", "8", "9", "5", "4", "3", "2", "1"];
+        // Coordinates follow the supplied plan. All routes stay in the corridor and end at a door.
+        var rooms = [
+          ["1",400,40,140,160,465,200], ["2",540,40,140,160,610,200],
+          ["3",680,40,85,160,735,200], ["4",765,40,195,160,850,200],
+          ["5",875,200,85,230,875,230], ["6",745,260,130,170,795,260],
+          ["7",600,260,145,170,655,260], ["8",445,260,155,170,515,260],
+          ["9",45,200,140,170,185,335]
+        ];
         var emptySet = {};
         (emptyRooms || []).forEach(function(item) {
           if (item.building === "본관" && item.number) emptySet[item.number] = true;
         });
-        var roomHtml = rooms.map(function(num) {
+        var roomHtml = rooms.map(function(room) {
+          var num = room[0], x = room[1], y = room[2], w = room[3], h = room[4];
           var active = activeRoom === num;
           var isEmpty = !!emptySet[num];
-          return "<div class='visitor-room visitor-room-" + num + (active ? " active" : "") + (isEmpty ? " empty" : "") + "'>" +
-            "<div class='visitor-room-pin'></div>" +
-            "<div class='visitor-room-num'>" + num + "</div>" +
-            "<div class='visitor-room-name'>" + num + "강의실</div>" +
-          "</div>";
+          return "<g data-room='" + num + "' class='visitor-map-room" + (active ? " active" : "") + (isEmpty ? " empty" : "") + "'>" +
+            "<rect x='" + x + "' y='" + y + "' width='" + w + "' height='" + h + "'/>" +
+            "<text x='" + (x+w/2) + "' y='" + (y+h/2) + "'>" + num + "강의실</text>" +
+            ((active || isEmpty) ? "<text class='visitor-map-room-state' x='" + (x+w/2) + "' y='" + (y+h/2+27) + "'>" + (active ? "도착" : "자습 가능") + "</text>" : "") + "</g>";
         }).join("");
-        var title = activeRoom ? "본관 " + activeRoomLabel : (emptyCount ? "현재 빈 강의실" : "강의실 안내도");
-        var target = activeRoom
-          ? "<span class='visitor-map-target-num'>" + activeRoom + "</span>강의실"
-          : (emptyCount ? "<span class='visitor-map-target-num'>" + emptyCount + "</span>빈 강의실" : "<span class='visitor-map-target-num'>?</span>검색");
-        return "<div class='visitor-map-head'>" +
-            "<div><div class='visitor-map-kicker'>배정 강의실</div><div class='visitor-map-title'>" + title + "</div></div>" +
-            "<div class='visitor-map-target'>" + target + "</div>" +
-          "</div>" +
-          "<div class='visitor-map-building-tabs'>" +
-            "<div class='visitor-map-building active'>본관<span>1F</span></div>" +
-            "<div class='visitor-map-building'>2관<span>2F</span></div>" +
-            "<div class='visitor-map-building'>3관<span>3F</span></div>" +
-          "</div>" +
-          "<div class='visitor-room-map-scroll'><div class='visitor-room-map'>" +
-              "<div class='visitor-route-line'></div><div class='visitor-route-branch'></div>" +
-              roomHtml +
-            "</div></div>";
+        var destination = rooms.find(function(room) { return room[0] === activeRoom; });
+        var direction = destination ? (activeRoom === "9" ? "데스크 앞에서 왼쪽으로 이동한 뒤, 아래쪽 9강의실 문으로 들어가세요." :
+          "데스크 앞에서 오른쪽 복도로 이동한 뒤, " + (Number(activeRoom) <= 4 ? "위쪽 " : activeRoom === "5" ? "복도 끝 " : "아래쪽 ") + activeRoomLabel + " 문으로 들어가세요.") :
+          "현 위치는 데스크 앞입니다. 수업을 선택하면 이동 경로가 표시됩니다.";
+        var route = "";
+        if (destination) {
+          var d = activeRoom === "9" ? "M330 230 H240 V335 H185" : "M330 230 H" + destination[5] + " V" + destination[6];
+          route = "<path class='visitor-map-route-base' d='" + d + "'/><path class='visitor-map-route' pathLength='1' d='" + d + "' marker-end='url(#visitorMapArrow)'/>";
+        }
+        var doors = rooms.map(function(room) {
+          var vertical = room[0] === "5" || room[0] === "9";
+          return "<path class='visitor-map-door' d='M" + (room[5]-(vertical?0:12)) + " " + (room[6]-(vertical?12:0)) + " l" + (vertical?0:24) + " " + (vertical?24:0) + "'/>";
+        }).join("");
+        return "<div class='visitor-map-head'><div class='visitor-map-title'>" + (activeRoom ? "본관 " + activeRoomLabel : "본관 강의실 안내도") + "</div></div>" +
+          "<p class='visitor-map-instruction' role='status'>" + direction + "</p>" +
+          "<div class='visitor-room-map-scroll' role='region' aria-label='본관 강의실 안내도, 좁은 화면에서는 좌우로 스크롤' tabindex='0'>" +
+          "<svg class='visitor-floorplan' viewBox='0 0 1000 470' role='img' aria-labelledby='visitorMapTitle visitorMapDesc'>" +
+          "<title id='visitorMapTitle'>본관 강의실 안내도" + (activeRoom ? ", " + activeRoomLabel + " 선택됨" : "") + "</title><desc id='visitorMapDesc'>" + direction + " 원장실과 9강의실은 왼쪽, 1~4강의실은 위쪽, 8·7·6강의실은 아래쪽, 5강의실은 오른쪽입니다.</desc>" +
+          "<defs><marker id='visitorMapArrow' viewBox='0 0 10 10' refX='8' refY='5' markerWidth='5' markerHeight='5' orient='auto-start-reverse'><path d='M0 0 L10 5 L0 10 Z'/></marker></defs>" +
+          "<path class='visitor-map-outline' d='M45 40 H960 V430 H185 V370 H45 Z'/>" +
+          "<rect class='visitor-map-office' x='45' y='40' width='140' height='160'/><text class='visitor-map-label' x='115' y='120'>원장실</text>" +
+          "<text class='visitor-map-label' x='300' y='115'>데스크</text><rect class='visitor-map-desk' x='260' y='140' width='140' height='55'/>" + roomHtml + doors +
+          "<path class='visitor-map-door' d='M185 125 V150 M275 430 H320'/>" +
+          route + "<circle class='visitor-map-origin' cx='330' cy='230' r='8'/><text class='visitor-map-origin-label' x='330' y='266'>현 위치</text>" +
+          "<text class='visitor-map-caption' x='298' y='457'>출입문</text></svg></div>";
       }
       function ensureVisitorLookupShell(pane) {
         var shellKey = [
@@ -8251,7 +8290,7 @@
               var lessonLabel = item.subject + (item.classType ? " · " + item.classType : "");
               var timeLabel = item.hour + ":00 - " + item.endHour + ":00";
               var isSelected = idx === visitorLookupSelectedIndex;
-              return "<div class='visitor-lookup-card" + (isSelected ? " active" : "") + "' onclick='selectVisitorLookupMatch(" + idx + ")'>" +
+              return "<div class='visitor-lookup-card" + (isSelected ? " active" : "") + "' role='button' tabindex='0' aria-pressed='" + isSelected + "' onkeydown='if(event.key===\"Enter\" || event.key===\" \"){event.preventDefault();selectVisitorLookupMatch(" + idx + ");}' onclick='selectVisitorLookupMatch(" + idx + ")'>" +
                 "<div class='visitor-lookup-check'>" + (isSelected ? "✓" : "") + "</div>" +
                 "<div class='visitor-lookup-namecell'>" +
                   "<div class='visitor-lookup-card-name'>" + escapeHtml(item.studentName) + "</div>" +
@@ -8280,7 +8319,13 @@
         var resultsHost = document.getElementById('visitorLookupResultsHost');
         var mapHost = document.getElementById('visitorLookupMapHost');
         if (resultsHost) resultsHost.innerHTML = resultHtml;
-        if (mapHost) mapHost.innerHTML = renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []);
+        if (mapHost) {
+          var mapHtml = renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []);
+          if (mapHost._visitorMapHtml !== mapHtml) {
+            mapHost.innerHTML = mapHtml;
+            mapHost._visitorMapHtml = mapHtml;
+          }
+        }
       }
       function escapeRegExp(str) {
         return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

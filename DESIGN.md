@@ -1,5 +1,11 @@
 # Live Timetable Design Tokens
 
+## Visitor wayfinding — 2026-09-08
+
+The supplied academy plan is authoritative for main-building room topology: office and room 9 at left; desk above the origin; rooms 1–4 above the corridor; rooms 8,7,6 below it; room 5 at right; entrance below the desk. Use an authored SVG diagram, not a raster image edit. Preserve the existing Pretendard stack and navy palette. Map tokens scoped to `.visitor-floorplan`: wall `--primary`, room surface `--bg`, selected room and route `--sedu-blue`, on-selected white, empty-room surface #f0fdf4 and text #166534 (existing study palette). Walls use 3 SVG units; route uses 5 units, room type 20 units, map captions 15 units. ViewBox 1000×470 follows the approved geometry, with origin (330,230) directly in front of the desk. Minimum diagram width 560px preserves readable room names; only the labelled map region scrolls on narrower screens.
+
+Selected destination uses fill plus a textual destination label, not color alone. One 700ms path reveal runs on destination change; reduced motion displays the complete route immediately. No perpetual pulse, no layout animation, no route before selection, no invented inter-building path. A static arrow and plain-language desk-to-door instruction remain after animation. Repeated rendering with unchanged map content preserves the SVG and scroll position.
+
 ## 1. Atmosphere / signature
 
 Live Timetable is a dense operations board. Information stays compact and calm, while a condition that requires a desk operator to stop and act is marked with one decisive rose-red warning treatment. Do not introduce decorative gradients, cards, or new visual families for operational warnings.
