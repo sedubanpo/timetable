@@ -1,5 +1,9 @@
 # Live Timetable Design Tokens
 
+## Annex direction images — 2026-09-08
+
+For lookup lessons in 2관 and 3관, show the user-supplied PNG unchanged instead of the main-building SVG. The image scales to panel width with its original aspect ratio and no crop; a labelled original-image link permits full-size inspection in a separate tab. Keep the assigned classroom title and destination address as HTML text even if the image cannot load. Addresses are supplied by the approved images: 2관 반포쇼핑타운 2동 5층; 3관 반포쇼핑타운 3동 4층. Reuse existing primary/SEDU blue and spacing. No new animation, dependency, authentication or timetable data changes.
+
 ## Visitor wayfinding — 2026-09-08
 
 The supplied academy plan is authoritative for main-building room topology: office and room 9 at left; desk above the origin; rooms 1–4 above the corridor; rooms 8,7,6 below it; room 5 at right; entrance below the desk. Use an authored SVG diagram, not a raster image edit. Preserve the existing Pretendard stack and navy palette. Map tokens scoped to `.visitor-floorplan`: wall `--primary`, room surface `--bg`, selected room and route `--sedu-blue`, on-selected white, empty-room surface #f0fdf4 and text #166534 (existing study palette). Walls use 3 SVG units; route uses 5 units, room type 20 units, map captions 15 units. ViewBox 1000×470 follows the approved geometry, with origin (330,230) directly in front of the desk. Minimum diagram width 560px preserves readable room names; only the labelled map region scrolls on narrower screens.

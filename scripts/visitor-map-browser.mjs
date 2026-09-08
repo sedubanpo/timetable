@@ -22,7 +22,12 @@ const results = { browser: browser.version(), baseline, cases: {}, errors: [] };
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'ko-KR', timezoneId: 'Asia/Seoul', reducedMotion: 'reduce' });
   page.on('pageerror', error => results.errors.push(error.message));
-  await page.route('**/*', route => route.request().url().startsWith('http://127.0.0.1:') ? route.continue() : route.abort());
+  await page.route('**/*', route => {
+    const url = route.request().url();
+    const asset = url.match(/^https:\/\/sedubanpo\.github\.io\/timetable\/assets\/(annex-[23]-directions\.png)$/);
+    if (asset) return route.fulfill({ contentType:'image/png', body:fs.readFileSync(path.join(root,'docs/assets',asset[1])) });
+    return url.startsWith('http://127.0.0.1:') ? route.continue() : route.abort();
+  });
   await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => {
     authState = { loggedIn: true, isMaster: false, isLookup: true, teacherName: '', loginId: '2371' };
@@ -96,6 +101,24 @@ try {
     results.cases.mobileMapReachable=await page.locator('.visitor-floorplan').isVisible();
   }
   if (!baseline) results.cases.mobileNoDocumentOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+  if (!baseline) {
+    for (const width of [1440,390]) {
+      await page.setViewportSize({width,height:900});
+      for (const annex of [2,3]) {
+        await page.evaluate(annex => qaLoadRooms([annex+'관 1강의실']),annex);
+        await page.locator('.visitor-annex-image').evaluate(img=>img.decode());
+        results.cases[`annex${annex}Image${width}`] = await page.locator('.visitor-annex-image').evaluate((img,annex)=>img.naturalWidth>1000 && img.src.endsWith('annex-'+annex+'-directions.png'),annex);
+        results.cases[`annex${annex}Fits${width}`] = await page.locator('.visitor-annex-image').evaluate(img=>img.getBoundingClientRect().width<=img.parentElement.clientWidth);
+        results.cases[`annex${annex}Link${width}`] = (await page.locator('.visitor-annex-link').getAttribute('href')) === (await page.locator('.visitor-annex-image').getAttribute('src'));
+        await page.locator('.visitor-annex-image').scrollIntoViewIfNeeded();
+        await page.screenshot({path:path.join(evidence,`annex-${annex}-${width}.png`),fullPage:true});
+      }
+    }
+    await page.evaluate(()=>{document.getElementById('searchInput').value='';searchTable();});
+    results.cases.clearRemovesAnnexImage = await page.locator('.visitor-annex-image').count() === 0;
+    await page.evaluate(()=>qaLoadRooms(['1강의실']));
+    results.cases.mainRestoresSvg = await page.locator('.visitor-floorplan').count() === 1 && await page.locator('.visitor-annex-image').count() === 0;
+  }
   results.cases.noPageErrors = results.errors.length === 0;
   fs.writeFileSync(path.join(evidence, `${prefix}-browser-results.json`), JSON.stringify(results, null, 2));
   console.log(JSON.stringify(results, null, 2));

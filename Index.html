@@ -1068,6 +1068,9 @@
       .visitor-map-origin { fill:var(--sedu-blue); stroke:#fff; stroke-width:3; }
       .visitor-floorplan .visitor-map-origin-label { font-size:17px; fill:var(--sedu-blue); }
       .visitor-map-instruction { margin:0 0 16px; color:var(--primary); font-size:0.95rem; line-height:1.6; }
+      .visitor-annex-image { display:block; width:100%; height:auto; outline:1px solid rgba(0,0,0,0.1); }
+      .visitor-annex-link { display:inline-flex; align-items:center; min-height:44px; color:var(--sedu-blue); font-weight:700; text-underline-offset:4px; }
+      .visitor-annex-link:focus-visible { outline:2px solid var(--sedu-blue); outline-offset:2px; }
       .visitor-room-map-scroll:focus-visible { outline:2px solid var(--sedu-blue); outline-offset:2px; }
       @keyframes visitor-route-reveal { from { stroke-dashoffset:1; } to { stroke-dashoffset:0; } }
       @media (prefers-reduced-motion:reduce) { .visitor-map-route { animation:none; } }
@@ -8169,6 +8172,16 @@
         var activeRoom = selectedMatch ? getVisitorLookupRoomNumber(selectedMatch.room) : "";
         var activeRoomLabel = activeRoom ? activeRoom + "강의실" : "강의실";
         var emptyCount = (emptyRooms || []).length;
+        if (selectedMatch && (selectedBuilding === "2관" || selectedBuilding === "3관")) {
+          var annexNumber = selectedBuilding === "2관" ? "2" : "3";
+          var destinationAddress = selectedBuilding === "2관" ? "반포쇼핑타운 2동 5층" : "반포쇼핑타운 3동 4층";
+          // Absolute asset URL also works in the Apps Script HTML host.
+          var imageUrl = "https://sedubanpo.github.io/timetable/assets/annex-" + annexNumber + "-directions.png";
+          return "<div class='visitor-map-head'><div class='visitor-map-title'>" + escapeHtml(selectedMatch.room) + "</div></div>" +
+            "<p class='visitor-map-instruction'>" + destinationAddress + "</p>" +
+            "<img class='visitor-annex-image' src='" + imageUrl + "' alt='본관 덕성빌딩 5층에서 " + selectedBuilding + " " + destinationAddress + "으로 이동하는 경로 안내' decoding='async'>" +
+            "<a class='visitor-annex-link' href='" + imageUrl + "' target='_blank' rel='noopener noreferrer'>" + selectedBuilding + " 이동 안내 크게 보기 (새 탭)</a>";
+        }
         if (selectedMatch && (selectedBuilding !== "본관" || !activeRoom)) {
           return "<div class='visitor-map-head'>" +
               "<div class='visitor-map-title'>" + escapeHtml(selectedMatch.room) + "</div>" +
