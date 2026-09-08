@@ -42,7 +42,12 @@ function extractFunction(source, name) {
   throw new Error("unterminated function: " + name);
 }
 
-assert.strictEqual(index, mirror, "Index.html and docs/index.html diverged");
+// GitHub Pages owns the hub adapter/module; Apps Script serves only the shared app.
+// Keep all shared UI byte-identical while allowing that explicit hosting boundary.
+const mirrorShared = mirror
+  .replace(/^window\.SeduHubAdapter=\{\n[\s\S]*?^\};\n/m, "")
+  .replace('  <script type="module" src="hub-start.mjs"></script>\n</body>', '  </body>');
+assert.strictEqual(index, mirrorShared, "Shared Index.html and docs/index.html UI diverged");
 
 const inlineScripts = Array.from(index.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))
   .map((match) => match[1])

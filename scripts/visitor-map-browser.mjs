@@ -8,8 +8,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const evidence = path.resolve(root, process.env.VISITOR_MAP_EVIDENCE_DIR || '.superloopy/sessions/visitor-map-20260908/evidence');
 const baseline = process.argv.includes('--baseline');
 fs.mkdirSync(evidence, { recursive: true });
-const source = fs.readFileSync(path.join(root, 'Index.html'));
-const server = http.createServer((req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(source); });
+const source = fs.readFileSync(path.join(root, 'docs/index.html'));
+const server = http.createServer((req, res) => {
+  const moduleName = req.url.split('?')[0].slice(1);
+  if (['hub-start.mjs', 'hub-client.mjs'].includes(moduleName)) {
+    res.setHeader('Content-Type', 'text/javascript'); res.end(fs.readFileSync(path.join(root, 'docs', moduleName))); return;
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(source);
+});
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const browser = await playwright.chromium.launch({ headless: true });
 const results = { browser: browser.version(), baseline, cases: {}, errors: [] };
