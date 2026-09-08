@@ -66,6 +66,10 @@ function handleApiRequest_(params) {
 
     if (action === "teacher_sheets") {
       var selectedTeacher = String(params.teacher || "").trim();
+      if (params.idToken) {
+        var sheetIdentity = authenticateFirebaseTeacher_(String(params.idToken), true);
+        if (!sheetIdentity.isMaster) selectedTeacher = sheetIdentity.teacherName;
+      }
       var teacherRefresh = String(params.refresh || "") === "1";
       if (!selectedTeacher) return jsonOutput_({ ok: false, error: "TEACHER_REQUIRED" }, params);
       return jsonOutput_({ ok: true, sheets: getTeacherSheetNames(selectedTeacher, teacherRefresh) }, params);
@@ -132,6 +136,10 @@ function handleApiRequest_(params) {
       var sheetName = String(params.sheet || "").trim();
       if (!sheetName) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
       var teacherName = String(params.teacher || "").trim();
+      if (params.idToken) {
+        var gridIdentity = authenticateFirebaseTeacher_(String(params.idToken), true);
+        if (!gridIdentity.isMaster) teacherName = gridIdentity.teacherName;
+      }
       var auditTeacherName = String(params.auditTeacher || "").trim();
       var auditLoginId = String(params.auditLoginId || "").trim();
       var forceRefresh = String(params.refresh || "") === "1";
@@ -462,12 +470,26 @@ function asRecord_(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function readFirebaseTeacherNames_(loginId) {
-  try {
-    return getLegacyTeacherNamesForAuth_(loginId);
-  } catch (e) {
-    return [];
-  }
+function readFirebaseTeacherNames_(idToken) {
+  // Account management owns employment status, not the historical sheet roster.
+  var response = UrlFetchApp.fetch("https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents:runQuery", {
+    method: "post", contentType: "application/json",
+    headers: { Authorization: "Bearer " + idToken }, muteHttpExceptions: true,
+    payload: JSON.stringify({ structuredQuery: {
+      from: [{ collectionId: "users" }],
+      select: { fields: [{ fieldPath: "name" }, { fieldPath: "role" }, { fieldPath: "status" }] }
+    } })
+  });
+  if (response.getResponseCode() !== 200) throw new Error("TEACHER_ROSTER_UNAVAILABLE");
+  var names = [];
+  JSON.parse(response.getContentText()).forEach(function(result) {
+    var fields = result.document && result.document.fields || {};
+    var name = fields.name && fields.name.stringValue || "";
+    var role = String(fields.role && fields.role.stringValue || "INSTRUCTOR").toUpperCase();
+    var status = String(fields.status && fields.status.stringValue || "ACTIVE").toUpperCase();
+    if (name && status === "ACTIVE" && (role === "INSTRUCTOR" || role === "TEACHER" || role === "ADMIN") && names.indexOf(name) < 0) names.push(name);
+  });
+  return names.sort();
 }
 
 function getLegacyTeacherNamesForAuth_(loginId) {
@@ -489,7 +511,7 @@ function getLegacyTeacherNamesForAuth_(loginId) {
   return teacherNames;
 }
 
-function authenticateFirebaseTeacher_(idToken) {
+function authenticateFirebaseTeacher_(idToken, skipRoster) {
   var lookupUrl = "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(FIREBASE_API_KEY);
   var response = UrlFetchApp.fetch(lookupUrl, {
     method: "post",
@@ -514,10 +536,10 @@ function authenticateFirebaseTeacher_(idToken) {
   var accessDoc = fetchFirebaseDocument_(idToken, "userAppAccess", uid);
   var apps = asRecord_(accessDoc.apps);
   var permissions = asRecord_(accessDoc.permissions);
-  var rawRole = asString_(userDoc.role || profileDoc.role || accessDoc.role || "INSTRUCTOR").toUpperCase();
-  var status = asString_(userDoc.status || profileDoc.status || "ACTIVE").toUpperCase();
+  var rawRole = asString_(userDoc.role || "INSTRUCTOR").toUpperCase();
+  var status = asString_(userDoc.status || "ACTIVE").toUpperCase();
 
-  if (status === "DISABLED" || rawRole === "DISABLED") {
+  if (!Object.keys(userDoc).length || status !== "ACTIVE" || ["ADMIN", "STAFF", "INSTRUCTOR", "TEACHER"].indexOf(rawRole) < 0) {
     throw new Error("FIREBASE_BLOCKED: 비활성화된 계정입니다.");
   }
   if (Object.prototype.hasOwnProperty.call(apps, "liveTimetable") && apps.liveTimetable === false) {
@@ -529,10 +551,15 @@ function authenticateFirebaseTeacher_(idToken) {
   var teacherName = asString_(userDoc.name || profileDoc.displayName || accessDoc.instructorName || "");
   if (!teacherName && email) teacherName = email.split("@")[0];
   var normalizedLoginId = normalizeLoginId_(loginId);
-  var isMaster = rawRole === "ADMIN" ||
-    permissions.canManageAccounts === true ||
-    permissions.canManageSchedules === true ||
-    normalizeLoginId_(normalizedLoginId) === normalizeLoginId_(MASTER_LOGIN_ID);
+  // A teaching account stays scoped even when generic management flags are set.
+  var isMaster = rawRole === "ADMIN" || (rawRole === "STAFF" &&
+    (permissions.canManageAccounts === true || permissions.canManageSchedules === true));
+  var teacherNames = [];
+  var teacherRosterUnavailable = false;
+  if (isMaster && !skipRoster) {
+    try { teacherNames = readFirebaseTeacherNames_(idToken); }
+    catch (rosterError) { teacherRosterUnavailable = true; }
+  }
 
   return {
     ok: true,
@@ -545,11 +572,13 @@ function authenticateFirebaseTeacher_(idToken) {
     isMaster: isMaster,
     isLookup: false,
     role: isMaster ? "ADMIN" : "TEACHER",
-    teacherNames: readFirebaseTeacherNames_(normalizedLoginId)
+    teacherNames: teacherNames,
+    teacherRosterUnavailable: teacherRosterUnavailable
   };
 }
 
-function authenticateTeacher(id, password) {
+function authenticateTeacher(id, password, idToken) {
+  if (idToken) return attachDashboardAdminSession_(authenticateFirebaseTeacher_(idToken));
   var sheetId = "1ByPeH0bZZrZDvW_yPkCpQCIuk724_Gt7uudUj_Ue8Ho";
   var ss = SpreadsheetApp.openById(sheetId);
   var sheet = ss.getSheetByName("Teachers");
@@ -607,10 +636,25 @@ function authenticateTeacher(id, password) {
       isMaster: isMaster,
       isLookup: false,
       role: isMaster ? "ADMIN" : "TEACHER",
-      teacherNames: teacherNames
+      teacherNames: [],
+      teacherRosterUnavailable: true
     };
   }
   return { ok: false, success: false, message: "아이디 또는 비밀번호가 올바르지 않습니다." };
+}
+
+function getAuthenticatedSchedule(sheetName, teacherName, forceRefresh, idToken) {
+  var identity = authenticateFirebaseTeacher_(idToken, true);
+  var selected = identity.isMaster ? String(teacherName || "").trim() : identity.teacherName;
+  if (!identity.isMaster && !selected) throw new Error("TEACHER_IDENTITY_REQUIRED");
+  return selected ? getTeacherGridData(sheetName, selected, forceRefresh) : getFixedGridData(sheetName, forceRefresh);
+}
+
+function getAuthenticatedTeacherSheets(teacherName, forceRefresh, idToken) {
+  var identity = authenticateFirebaseTeacher_(idToken, true);
+  var selected = identity.isMaster ? String(teacherName || "").trim() : identity.teacherName;
+  if (!selected) throw new Error("TEACHER_IDENTITY_REQUIRED");
+  return getTeacherSheetNames(selected, forceRefresh);
 }
 
 function getTeacherGridData(sheetName, teacherName, forceRefresh) {

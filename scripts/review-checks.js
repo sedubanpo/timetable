@@ -59,7 +59,7 @@ new vm.Script(server, { filename: "Code.gs" });
 const appScript = inlineScripts[inlineScripts.length - 1];
 const sandbox = {
   window: { innerWidth: 1280, addEventListener() {} },
-  document: {},
+  document: { addEventListener() {} },
   localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
   console,
   alert() {},

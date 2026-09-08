@@ -1,5 +1,9 @@
 # Live Timetable Design Tokens
 
+## Teacher search and narrow toolbar — 2026-09-08
+
+Keep the compact operations toolbar. The admin teacher picker reuses the navy primary, accent focus ring, white/bg surfaces, 6px control radius and 8px spacing. The popover has 8px padding/radius, a 280px preferred width clamped inside the viewport, and a 240px scrolling option region. Its input and options have 44px targets. No animation. Native select remains a hidden state adapter; keyboard-operable buttons own selection, Escape returns focus. At narrow widths the main search occupies its own row; border-box sizing prevents padding from spilling outside its container. Toolbar actions wrap independently of the two-dimensional timetable.
+
 ## Annex direction images — 2026-09-08
 
 For lookup lessons in 2관 and 3관, show the user-supplied PNG unchanged instead of the main-building SVG. The image scales to panel width with its original aspect ratio and no crop; a labelled original-image link permits full-size inspection in a separate tab. Keep the assigned classroom title and destination address as HTML text even if the image cannot load. Addresses are supplied by the approved images: 2관 반포쇼핑타운 2동 5층; 3관 반포쇼핑타운 3동 4층. Reuse existing primary/SEDU blue and spacing. No new animation, dependency, authentication or timetable data changes.
