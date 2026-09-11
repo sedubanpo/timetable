@@ -10200,7 +10200,8 @@ window.SeduHubAdapter={
         var rows = [];
         var currentStudent = "";
         mergedData.forEach(function(entry) {
-          var duration = entry.end - entry.start;
+          var exportTime = getExportTimeRange(entry);
+          var duration = exportTime.end - exportTime.start;
           var school = entry.school || "";
           var exportRow = {
             "이름": entry.student,
@@ -10208,8 +10209,8 @@ window.SeduHubAdapter={
             "반명": buildExportClassName(entry),
             "출결": entry.status,
             "TR": entry.teacher,
-            "시작": formatTime(entry.start),
-            "종료": formatTime(entry.end),
+            "시작": formatTime(exportTime.start),
+            "종료": formatTime(exportTime.end),
             "시간": duration,
             "수업일": dateStr,
             "참고": entry.note || ""
@@ -10256,11 +10257,40 @@ window.SeduHubAdapter={
         XLSX.writeFile(workbook, "시수표_" + dateStr + ".xlsx");
       }
       
+      // Only use an unambiguous half-hour range contained in the merged grid block.
+      // Single arrival times and conflicting ranges leave scheduled hours unchanged.
+      function getExportTimeRange(entry) {
+        var fallback = { start: entry.start, end: entry.end };
+        var pattern = /(?:^|[^\d:])(오전|오후)?\s*(\d{1,2}):([0-5]\d)\s*[-~～–—]\s*(오전|오후)?\s*(\d{1,2}):([0-5]\d)(?![\d:])/g;
+        var note = String(entry.note || "");
+        var match, ranges = [];
+        function candidates(hour, minute, period) {
+          hour = Number(hour); minute = Number(minute);
+          if (minute % 30 || hour > 24 || (hour === 24 && minute)) return [];
+          if (period) return hour >= 1 && hour <= 12 ? [(hour % 12) + (period === "오후" ? 12 : 0) + minute / 60] : [];
+          return hour >= 1 && hour <= 12 ? [hour % 12 + minute / 60, hour % 12 + 12 + minute / 60] : [hour + minute / 60];
+        }
+        while ((match = pattern.exec(note))) {
+          var starts = candidates(match[2], match[3], match[1]);
+          var ends = candidates(match[5], match[6], match[4]);
+          starts.forEach(function(start) {
+            ends.forEach(function(end) {
+              if (start >= entry.start && end <= entry.end && end > start) {
+                var key = start + ":" + end;
+                if (!ranges.some(function(range) { return range.key === key; })) ranges.push({ start: start, end: end, key: key });
+              }
+            });
+          });
+        }
+        return ranges.length === 1 ? ranges[0] : fallback;
+      }
+
       function formatTime(h) {
         var normalized = ((Number(h) % 24) + 24) % 24;
         var ampm = normalized < 12 ? "오전" : "오후";
-        var hour = normalized % 12 || 12;
-        return `${ampm} ${hour}:00`;
+        var hour = Math.floor(normalized) % 12 || 12;
+        var minute = String(Math.round((normalized % 1) * 60)).padStart(2, "0");
+        return `${ampm} ${hour}:${minute}`;
       }
     </script>
   <script type="module" src="hub-start.mjs"></script>
