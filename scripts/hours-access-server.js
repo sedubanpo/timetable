@@ -8,7 +8,7 @@ const roster = [
   ['중지강사', 'INSTRUCTOR', 'PAUSED'], ['비활성', 'INSTRUCTOR', 'DISABLED'],
   ['관리자', 'ADMIN', 'ACTIVE'], ['직원', 'STAFF', 'ACTIVE'], ['재직강사', 'INSTRUCTOR', 'ACTIVE']
 ].map(([name, role, status]) => ({document: {fields: Object.fromEntries(Object.entries({name, role, status}).map(([k,v]) => [k,{stringValue:v}]))}}));
-const scope = {UrlFetchApp:{fetch(url) {
+const scope = {Utilities:{getUuid:()=> 'test-request'},console:{log(){}},UrlFetchApp:{fetch(url) {
   return {getResponseCode:()=>url.includes('runQuery') ? rosterCode : 200,
     getContentText:()=>JSON.stringify(url.includes('runQuery') ? roster : {users:[{localId:'fixture',email:'fixture@sedu-auth.local'}]})};
 }}};
@@ -17,6 +17,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../Code.gs'),'utf8'),scope)
 scope.fetchFirebaseDocument_ = (_, collection) => collection === 'users'
   ? {role,status,name:'검증강사',loginId:'01042327428'}
   : collection === 'userAppAccess' ? {permissions:{canManageSchedules:true,canManageAccounts:true},apps:{liveTimetable:true}} : {};
+scope.fetchFirebaseIdentityDocuments_ = token => ['users','userProfiles','userAppAccess'].map(collection => scope.fetchFirebaseDocument_(token,collection));
 let checks = 0;
 function check(fn) {fn(); checks++;}
 check(()=>assert.equal(scope.authenticateFirebaseTeacher_('fixture').isMaster,false,'generic flags and legacy master id cannot elevate instructor'));

@@ -28,9 +28,28 @@ function doGet(e) {
 }
 
 function handleApiRequest_(params) {
+  params = params || {};
+  params._serverStartedAt = Date.now();
+  var requestId = String(params.requestId || "");
+  params._requestId = /^[A-Za-z0-9_-]{1,80}$/.test(requestId) ? requestId : Utilities.getUuid();
+  var action = String(params.action || "grid").toLowerCase();
+  var knownActions = ["ping", "sheets", "auth", "teacher_roster", "teacher_sheets", "teacher_view_log", "teacher_view_logs", "teacher_view_overrides", "teacher_view_override_set", "student_card_statuses", "student_card_mark", "version", "grid"];
+  try {
+    return dispatchApiRequest_(params);
+  } finally {
+    // Never log credentials, request parameters, response data, or raw errors.
+    try {
+      console.log(JSON.stringify({ event: "timetable_api", requestId: params._requestId,
+        action: knownActions.indexOf(action) >= 0 ? action : "unknown",
+        serverMs: Math.max(0, Date.now() - params._serverStartedAt) }));
+    } catch (loggingError) { /* Diagnostics must not turn a successful API call into a failure. */ }
+  }
+}
+
+function dispatchApiRequest_(params) {
   try {
     if (!isApiAuthorized_(params)) {
-      return jsonOutput_({ ok: false, error: "UNAUTHORIZED" });
+      return jsonOutput_({ ok: false, error: "UNAUTHORIZED" }, params);
     }
 
     var action = String(params.action || "grid").toLowerCase();
@@ -52,7 +71,7 @@ function handleApiRequest_(params) {
       var idToken = String(params.idToken || "").trim();
       if (idToken) {
         try {
-          return jsonOutput_(attachDashboardAdminSession_(authenticateFirebaseTeacher_(idToken)), params);
+          return jsonOutput_(attachDashboardAdminSession_(authenticateFirebaseTeacher_(idToken, String(params.deferRoster || "") === "1")), params);
         } catch (firebaseErr) {
           var firebaseMessage = firebaseErr && firebaseErr.message ? firebaseErr.message : String(firebaseErr || "");
           if (!loginId || !password || /^FIREBASE_BLOCKED:/.test(firebaseMessage)) {
@@ -62,6 +81,10 @@ function handleApiRequest_(params) {
       }
       if (!loginId || !password) return jsonOutput_({ ok: false, error: "AUTH_REQUIRED" }, params);
       return jsonOutput_(attachDashboardAdminSession_(authenticateTeacher(loginId, password)), params);
+    }
+
+    if (action === "teacher_roster") {
+      return jsonOutput_(getAuthenticatedTeacherRoster(String(params.idToken || "")), params);
     }
 
     if (action === "teacher_sheets") {
@@ -195,6 +218,10 @@ function isApiAuthorized_(params) {
 }
 
 function jsonOutput_(obj, params) {
+  if (params && params._requestId) {
+    obj.requestId = params._requestId;
+    obj.serverMs = Math.max(0, Date.now() - params._serverStartedAt);
+  }
   var callback = String((params && params.callback) || "").trim();
   if (callback) {
     var safeCallback = callback.replace(/[^\w.$]/g, "");
@@ -462,6 +489,23 @@ function fetchFirebaseDocument_(idToken, collection, docId) {
   return parseFirestoreFields_(payload.fields || {});
 }
 
+function fetchFirebaseIdentityDocuments_(idToken, uid) {
+  var collections = ["users", "userProfiles", "userAppAccess"];
+  var requests = collections.map(function(collection) {
+    return { url: "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(FIREBASE_PROJECT_ID) +
+      "/databases/(default)/documents/" + collection + "/" + encodeURIComponent(uid),
+      method: "get", headers: { Authorization: "Bearer " + idToken }, muteHttpExceptions: true };
+  });
+  var responses = UrlFetchApp.fetchAll(requests);
+  if (!responses || responses.length !== requests.length) throw new Error("FIREBASE_PROFILE_FETCH_FAILED");
+  return responses.map(function(response) {
+    var code = response.getResponseCode();
+    if (code === 404) return {};
+    if (code < 200 || code >= 300) throw new Error("FIREBASE_PROFILE_FETCH_FAILED");
+    return parseFirestoreFields_(JSON.parse(response.getContentText() || "{}").fields || {});
+  });
+}
+
 function asString_(value) {
   return String(value == null ? "" : value).trim();
 }
@@ -531,9 +575,10 @@ function authenticateFirebaseTeacher_(idToken, skipRoster) {
 
   var uid = String(user.localId || "").trim();
   var email = String(user.email || "").trim();
-  var userDoc = fetchFirebaseDocument_(idToken, "users", uid);
-  var profileDoc = fetchFirebaseDocument_(idToken, "userProfiles", uid);
-  var accessDoc = fetchFirebaseDocument_(idToken, "userAppAccess", uid);
+  var identityDocuments = fetchFirebaseIdentityDocuments_(idToken, uid);
+  var userDoc = identityDocuments[0];
+  var profileDoc = identityDocuments[1];
+  var accessDoc = identityDocuments[2];
   var apps = asRecord_(accessDoc.apps);
   var permissions = asRecord_(accessDoc.permissions);
   var rawRole = asString_(userDoc.role || "INSTRUCTOR").toUpperCase();
@@ -573,19 +618,13 @@ function authenticateFirebaseTeacher_(idToken, skipRoster) {
     isLookup: false,
     role: isMaster ? "ADMIN" : "TEACHER",
     teacherNames: teacherNames,
-    teacherRosterUnavailable: teacherRosterUnavailable
+    teacherRosterUnavailable: teacherRosterUnavailable,
+    teacherRosterDeferred: !!(isMaster && skipRoster)
   };
 }
 
-function authenticateTeacher(id, password, idToken) {
-  if (idToken) return attachDashboardAdminSession_(authenticateFirebaseTeacher_(idToken));
-  var sheetId = "1ByPeH0bZZrZDvW_yPkCpQCIuk724_Gt7uudUj_Ue8Ho";
-  var ss = SpreadsheetApp.openById(sheetId);
-  var sheet = ss.getSheetByName("Teachers");
-  if (!sheet) sheet = ss.getSheets()[0];
-  var data = sheet.getDataRange().getValues();
-  var teacherNames = [];
-  var matchedAccount = null;
+function authenticateTeacher(id, password, idToken, deferRoster) {
+  if (idToken) return attachDashboardAdminSession_(authenticateFirebaseTeacher_(idToken, deferRoster === true));
 
   // 입력 아이디 정규화 (- 제거, 8자리일 경우 010 추가)
   var inputIdClean = String(id).replace(/[^0-9]/g, "");
@@ -606,6 +645,12 @@ function authenticateTeacher(id, password, idToken) {
     };
   }
 
+  var ss = SpreadsheetApp.openById(AUTH_SPREADSHEET_ID);
+  var sheet = ss.getSheetByName("Teachers");
+  if (!sheet) sheet = ss.getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  var teacherNames = [];
+  var matchedAccount = null;
   for (var i = 1; i < data.length; i++) {
     var dbId = String(data[i][0]).replace(/[^0-9]/g, "");
     if (!dbId) continue;
@@ -641,6 +686,13 @@ function authenticateTeacher(id, password, idToken) {
     };
   }
   return { ok: false, success: false, message: "아이디 또는 비밀번호가 올바르지 않습니다." };
+}
+
+function getAuthenticatedTeacherRoster(idToken) {
+  if (!idToken) throw new Error("AUTH_REQUIRED");
+  var identity = authenticateFirebaseTeacher_(idToken, true);
+  if (!identity.isMaster) throw new Error("ADMIN_REQUIRED");
+  return { ok: true, teacherNames: readFirebaseTeacherNames_(idToken) };
 }
 
 function getAuthenticatedSchedule(sheetName, teacherName, forceRefresh, idToken) {

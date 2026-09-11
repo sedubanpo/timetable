@@ -432,6 +432,9 @@ const logApiSandbox = {
   logTeacherView_() { return false; }
 };
 vm.createContext(logApiSandbox);
+logApiSandbox.Utilities = { getUuid: () => 'fixture-request' };
+logApiSandbox.console = { log() {} };
+vm.runInContext(extractFunction(server, "dispatchApiRequest_"), logApiSandbox);
 vm.runInContext(extractFunction(server, "handleApiRequest_"), logApiSandbox);
 const failedLogResponse = JSON.parse(JSON.stringify(logApiSandbox.handleApiRequest_({
   action: "teacher_view_log", teacher: "배유진", sheet: "8/8(토)", loginId: "teacher-1"
