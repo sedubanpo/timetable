@@ -57,7 +57,21 @@
       .auth-btn.secondary { background: #eef2ff; color: #334155; }
       .role-badge { background: #eef2ff; color: #1e3a8a; border: 1px solid #c7d2fe; border-radius: 999px; padding: 6px 10px; font-size: 0.78rem; font-weight: 700; }
       .intro-login-btn { margin-top: 14px; width: 100%; border: 1px solid #c7d2fe; background: #eef2ff; color: #1e3a8a; border-radius: 10px; padding: 10px; font-weight: 800; cursor: pointer; }
-      #loginGate { position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 20% 20%, #1e40af 0%, #0b2f79 55%, #0b1f4a 100%); }
+      #loginGate { position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center; overflow-y:auto; padding:24px 0; box-sizing:border-box; background:#0b1637; }
+      #loginGate .gate-glass { width:min(440px,calc(100% - 40px)); padding:40px; border:0; border-radius:16px; background:#14254b; backdrop-filter:none; -webkit-backdrop-filter:none; box-shadow:0 24px 64px rgba(0,0,0,.28); }
+      #loginGate .gate-logo { width:72px; height:72px; object-fit:contain; margin:0 0 28px; }
+      #loginGate .gate-title { font-size:1.6rem; font-weight:750; text-wrap:balance; margin-bottom:10px; }
+      #loginGate .gate-sub { color:#becce6; font-size:.86rem; line-height:1.6; margin-bottom:28px; }
+      #loginGate .gate-field-label { display:block; color:#d6e1f4; font-size:.78rem; font-weight:650; margin:16px 0 8px; }
+      #loginGate .gate-input { border:1px solid #415477; border-radius:8px; background:#0b1938; min-height:48px; margin:0; padding:12px 14px; color:#fff; caret-color:#93c5fd; }
+      #loginGate .gate-input:focus-visible { outline:2px solid #93c5fd; outline-offset:2px; }
+      #loginGate .gate-input::placeholder { color:#acbddc; }
+      #loginGate .gate-btn { border-radius:8px; min-height:48px; background:#dbeafe; color:#14254b; }
+      #loginGate .gate-btn.secondary { background:#21365e; color:#fff; border-color:#415477; }
+      #loginGate .gate-btn:focus-visible { outline:2px solid #93c5fd; outline-offset:3px; }
+      #loginGate .gate-save-row { margin:12px 0 20px; color:#becce6; font-size:.8rem; }
+      @media(max-width:480px) { #loginGate .gate-glass { padding:28px; } }
+      @media(max-height:650px) { #loginGate { align-items:flex-start; } }
       .gate-glass { width: min(420px, calc(100% - 32px)); box-sizing: border-box; border-radius: 22px; padding: 24px; background: rgba(255,255,255,0.15); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.35); box-shadow: 0 20px 50px rgba(3, 10, 30, 0.35); color: #fff; }
       .gate-logo { width: 120px; display:block; margin: 0 auto 14px; filter: brightness(0) invert(1); opacity: 0.95; }
       .gate-title { font-size: 1.45rem; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 8px; }
@@ -73,7 +87,12 @@
       .login-progress { display: none; margin: 12px 0 4px; }
       .login-progress.is-visible { display: block; }
       .login-progress-track { position: relative; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.18); border: 1px solid rgba(191,219,254,0.52); box-shadow: inset 0 1px 2px rgba(15,23,42,0.15); }
-      .login-progress-fill { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #93c5fd 0%, #dbeafe 30%, #60a5fa 65%, #2563eb 100%); background-size: 200% 100%; box-shadow: 0 0 18px rgba(96,165,250,0.35); transition: width 0.22s ease; animation: loginProgressShimmer 1.6s linear infinite; }
+      .login-progress-fill { width:34%; height:100%; border-radius:inherit; background:#93c5fd; transform:translateX(-110%); }
+      .login-progress.is-visible .login-progress-fill { animation:loginProgressTravel 1.7s cubic-bezier(.65,0,.35,1) infinite; }
+      .login-progress-track { height:4px; border:0; box-shadow:none; background:rgba(191,219,254,.2); }
+      .login-progress-text { min-height:2.6em; line-height:1.5; }
+      @keyframes loginProgressTravel { to { transform:translateX(400%); } }
+      @media(prefers-reduced-motion:reduce) { .login-progress.is-visible .login-progress-fill { animation:none; transform:none; width:100%; opacity:.65; } }
       .login-progress-text { margin-top: 7px; font-size: 0.78rem; font-weight: 700; color: rgba(255,255,255,0.92); letter-spacing: -0.01em; }
       .auth-progress .login-progress-track { background: #e2e8f0; border-color: #bfdbfe; }
       .auth-progress .login-progress-fill { box-shadow: 0 0 14px rgba(59,130,246,0.22); }
@@ -436,7 +455,8 @@
       .empty-mode-active td:not(:has(.student-item)) { background-color: #e8f5e9 !important; opacity: 1 !important; border: 2px dashed #4caf50; }
       .empty-mode-active td:has(.student-item) { background-color: #eee !important; }
       .cell-inner { padding: 2px; display: flex; flex-direction: column; gap: 2px; min-height: 100%; overflow: visible; }
-      .cell-inner.oneonone-cell { background: linear-gradient(180deg, #efe7ff 0%, #f5f0ff 100%); box-shadow: inset 0 0 0 1px #c4b5fd; }
+      .cell-inner.oneonone-cell { background:#fff9e9; box-shadow:inset 0 0 0 2px #b58a2e; }
+      .cell-inner.oneonone-cell .is-teacher { color:#654b16; }
       .student-item { 
         padding: 3px 5px; line-height: 1.3; color: #333; font-weight: 500; font-size: 0.85rem; 
         border-radius: 3px; background: rgba(255,255,255,0.9); 
@@ -445,18 +465,29 @@
       .student-item:hover { z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
       #scheduleTable .student-item { white-space:normal; overflow-wrap:anywhere; letter-spacing:normal !important; }
       #scheduleTable .school-text { color:#546e7a; }
+      .top-bar .action-group { flex-wrap:wrap; min-width:0; max-width:100%; }
       .top-bar .action-group button { white-space:nowrap; }
       #scheduleTable .note-bubble { width:220px; max-width:80vw; box-sizing:border-box; overflow-wrap:break-word; }
-      #scheduleTable .student-item.is-teacher { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:4px; background:transparent; box-shadow:none; }
-      #scheduleTable .lesson-kind { display:inline-block; max-width:100%; box-sizing:border-box; border-radius:3px; padding:2px 4px; background:var(--primary); color:white; font-size:.68rem; font-weight:700; line-height:1.3; }
-      #scheduleTable .teacher-name { display:block; max-width:100%; white-space:normal; overflow-wrap:anywhere; line-height:1.3; }
+      #scheduleTable .student-item.is-teacher { display:flex; flex-direction:row; align-items:center; gap:3px; padding:4px 3px; background:transparent; box-shadow:none; }
+      #scheduleTable .lesson-kind { display:flex; flex-direction:column; flex-shrink:0; align-items:center; box-sizing:border-box; border-radius:3px; padding:2px 3px; background:var(--primary); color:white; font-size:.58rem; font-weight:700; line-height:1.35; }
+      #scheduleTable .lesson-type { font-weight:500; color:#dbeafe; }
+      #scheduleTable .teacher-name { display:block; min-width:0; flex:1; font-size:.75rem; white-space:normal; overflow-wrap:anywhere; line-height:1.3; }
+      #scheduleTable .student-item.is-student { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:2px; padding:3px; font-size:.77rem; }
+      #scheduleTable .student-info { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:1px; }
+      #scheduleTable .student-info .school-text { margin:0; font-size:.59rem; line-height:1.2; }
+      #scheduleTable .student-item.is-student > .student-new-mark { grid-column:1; }
+      #scheduleTable .student-item.is-student > .type-badge { grid-column:1 / -1; }
       #scheduleTable .student-name-button { font:inherit; font-weight:700; color:inherit; background:transparent; border:0; padding:0; text-align:left; cursor:pointer; }
       #scheduleTable .student-name-button:hover { text-decoration:underline; text-underline-offset:2px; }
       #scheduleTable .student-name-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-      #scheduleTable .status-note-btn { border-radius:3px; padding:2px 4px; margin-left:4px; min-height:20px; }
+      #scheduleTable .status-note-btn { border-radius:3px; padding:3px 2px; margin:0; min-height:24px; font-size:.57rem; line-height:1.15; writing-mode:vertical-rl; text-orientation:upright; letter-spacing:0; align-self:center; }
       #scheduleTable .student-item.is-new-student { border:1px solid var(--accent); }
       #scheduleTable .student-new-mark { display:inline-block; margin-left:4px; color:var(--sedu-blue); font-size:.6rem; font-weight:800; line-height:1.3; }
-      #scheduleTable .student-item.student-selected { outline:2px solid var(--accent); outline-offset:-2px; }
+      #scheduleTable .student-item.student-selected { position:relative; z-index:2; outline:3px solid #0755b3; outline-offset:-2px; background:#dbeafe !important; color:#102a56 !important; box-shadow:none !important; }
+      #scheduleTable .student-item.student-selected .student-info { background:#0755b3; color:white; padding:2px; border-radius:2px; }
+      #scheduleTable .student-item.student-selected .school-text { color:#fff !important; }
+      #scheduleTable .student-item.student-selected .student-name-button { color:white; }
+      #scheduleTable .student-item.student-selected .status-note-red { background:#fee2e2; color:#991b1b; }
       #scheduleTable .student-item.student-selected .student-name-button { text-decoration:underline; text-underline-offset:2px; }
       .student-item.enrollment-alert { background: var(--status-alert-bg); border: 1px solid var(--status-alert-border); color: var(--status-alert-text); font-weight: 800; }
       .student-item.schedule-anomaly { background-color: var(--schedule-anomaly-bg) !important; color: var(--schedule-anomaly-text) !important; box-shadow: inset 0 0 0 1px var(--schedule-anomaly-border); }
@@ -1458,11 +1489,13 @@
         <img class="gate-logo" src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" alt="SEDU">
         <div class="gate-title">시간표 접근 인증</div>
         <div class="gate-sub">로그인 검증 후 접근 모드를 선택할 수 있습니다.</div>
-        <input id="gateIdInput" class="gate-input" type="text" placeholder="아이디 (휴대폰 번호)" onkeydown="if(event.key==='Enter') submitTeacherLogin('gate');">
-        <input id="gatePwInput" class="gate-input" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') submitTeacherLogin('gate');">
+        <label class="gate-field-label" for="gateIdInput">아이디 (휴대폰 번호)</label>
+        <input id="gateIdInput" class="gate-input" type="text" inputmode="tel" autocomplete="username" placeholder="아이디 (휴대폰 번호)" onkeydown="if(event.key==='Enter') submitTeacherLogin('gate');">
+        <label class="gate-field-label" for="gatePwInput">비밀번호</label>
+        <input id="gatePwInput" class="gate-input" type="password" autocomplete="current-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter') submitTeacherLogin('gate');">
         <label class="gate-save-row"><input id="rememberLoginToggle" type="checkbox">아이디/비밀번호 저장</label>
         <button id="gateLoginBtn" class="gate-btn" onclick="submitTeacherLogin('gate')">로그인 검증</button>
-        <div id="gateLoginProgress" class="login-progress">
+        <div id="gateLoginProgress" class="login-progress" role="status" aria-live="polite">
           <div class="login-progress-track"><div id="gateLoginProgressFill" class="login-progress-fill"></div></div>
           <div id="gateLoginProgressText" class="login-progress-text">인증 정보를 확인하고 있습니다...</div>
         </div>
@@ -3991,21 +4024,16 @@
         if (!ui.button || !ui.wrap || !ui.fill || !ui.text) return;
         if (loginProgressTimer) clearInterval(loginProgressTimer);
         loginProgressSource = source;
-        loginProgressValue = 14;
+        var attempt = (ui.wrap._loginAttempt || 0) + 1;
+        ui.wrap._loginAttempt = attempt;
         ui.wrap.classList.add('is-visible');
+        ui.wrap.setAttribute('aria-busy', 'true');
         ui.button.disabled = true;
         ui.button.classList.add('loading');
         ui.button.textContent = ui.loadingLabel;
-        ui.fill.style.width = loginProgressValue + "%";
+        ui.fill.style.removeProperty('width');
         ui.text.textContent = source === 'gate' ? "인증 정보를 확인하고 있습니다..." : "접근 권한을 확인하고 있습니다...";
-        loginProgressTimer = setInterval(function() {
-          if (loginProgressValue < 48) loginProgressValue += 8;
-          else if (loginProgressValue < 72) loginProgressValue += 5;
-          else if (loginProgressValue < 90) loginProgressValue += 2;
-          loginProgressValue = Math.min(90, loginProgressValue);
-          ui.fill.style.width = loginProgressValue + "%";
-          if (loginProgressValue >= 62) ui.text.textContent = source === 'gate' ? "시간표 접근 모드를 준비하고 있습니다..." : "로그인 정보를 적용하고 있습니다...";
-        }, 160);
+        loginProgressTimer = null;
       }
       function stopLoginProgress(source, success) {
         var ui = getLoginProgressUi(source);
@@ -4013,14 +4041,16 @@
         if (loginProgressTimer) clearInterval(loginProgressTimer);
         loginProgressTimer = null;
         loginProgressSource = "";
-        ui.fill.style.width = (success ? 100 : Math.max(26, loginProgressValue)) + "%";
+        var attempt = ui.wrap._loginAttempt;
+        ui.wrap.setAttribute('aria-busy', 'false');
         ui.text.textContent = success ? "완료되었습니다." : "다시 시도할 수 있습니다.";
         ui.button.disabled = false;
         ui.button.classList.remove('loading');
         ui.button.textContent = ui.defaultLabel;
         setTimeout(function() {
+          if (ui.wrap._loginAttempt !== attempt) return;
           ui.wrap.classList.remove('is-visible');
-          ui.fill.style.width = "0%";
+          ui.fill.style.removeProperty('width');
         }, success ? 380 : 240);
       }
       function isCopySheetName(name) {
@@ -10305,7 +10335,7 @@
           if (typeInfo) displayText = displayText.replace(typeInfo.keyword, "").trim();
           var subject = getSubjectName(displayText); var content = displayText.replace(subject, "").trim(); 
           var lessonLabel = [subject, typeInfo ? typeInfo.keyword.replace('개별정규', '개별') : ''].filter(Boolean).join(' ');
-          var subjBadge = lessonLabel ? "<span class='lesson-kind'>" + escapeHtml(lessonLabel) + "</span>" : "";
+          var subjBadge = lessonLabel ? "<span class='lesson-kind'><span>" + escapeHtml(subject) + "</span> <span class='lesson-type'>" + escapeHtml(typeInfo ? typeInfo.keyword.replace('개별정규', '개별') : '') + "</span></span>" : "";
           itemDiv.innerHTML = subjBadge + "<span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
         } else { 
           itemDiv.classList.add("is-student");
@@ -10315,7 +10345,7 @@
           var noteButton = getStatusButtonHtml(statusLabel, parsed.note);
           var schoolText = parsed.school ? (" <span class='school-text'>" + escapeHtml(parsed.school) + "</span>") : "";
           itemDiv.dataset.studentIdentity = JSON.stringify([studentName.trim(), String(parsed.school || '').replace(/\s+/g, '')]);
-          itemDiv.innerHTML = "<button type='button' class='student-name-button' aria-pressed='false' aria-label='" + escapeHtml(studentName + " 같은 날 수업 강조") + "'>" + escapeHtml(studentName) + "</button>" + schoolText + noteButton + allBadges;
+          itemDiv.innerHTML = "<span class='student-info'><button type='button' class='student-name-button' aria-pressed='false' aria-label='" + escapeHtml(studentName + " 같은 날 수업 강조") + "'>" + escapeHtml(studentName) + "</button>" + schoolText + "</span>" + noteButton + allBadges;
         } 
       }
       // [Excel Export Logic]

@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const {default:playwright}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const evidence=path.join(root,'.superloopy/evidence/frontend/20260912T062623Z-timetable-refresh/calendar');
+const evidence=path.resolve(root,process.env.CALENDAR_EVIDENCE_DIR||'.superloopy/evidence/frontend/20260912T062623Z-timetable-refresh/calendar');
 fs.mkdirSync(evidence,{recursive:true});
 const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(path.join(root,req.url==='/source'?'Index.html':'docs/index.html')));});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
