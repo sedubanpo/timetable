@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 const {default:pw}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const root=process.cwd(), out=path.resolve(root,'.superloopy/sessions/timetable-polish-20260912/evidence');
+const root=process.cwd(), out=path.resolve(root,process.env.POLISH_EVIDENCE_DIR||'.superloopy/sessions/timetable-inline-20260912/evidence');
 fs.mkdirSync(out,{recursive:true});
 const server=http.createServer((q,r)=>{r.setHeader('Content-Type','text/html; charset=utf-8');r.end(fs.readFileSync(path.join(root,'docs/index.html')));});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -42,12 +42,15 @@ try {
  for(const width of [1280,1024,390]){
   await page.setViewportSize({width,height:900});await page.evaluate(()=>renderTable(lastData,true));
   await page.locator('#scheduleTable .student-name-button').first().click();
-  cases['horizontalHeader'+width]=await page.locator('#scheduleTable .is-teacher').first().evaluate(e=>getComputedStyle(e).flexDirection==='row');
+  cases['horizontalHeader'+width]=await page.locator('#scheduleTable .is-teacher').first().evaluate(e=>getComputedStyle(e).display==='block'&&getComputedStyle(e).whiteSpace==='nowrap');
   cases['teacherFits'+width]=await page.locator('#scheduleTable .teacher-name').evaluateAll(es=>es.every(e=>e.getBoundingClientRect().right<=e.closest('td').getBoundingClientRect().right+1));
+  if(width>=1024)cases['statusFits'+width]=await page.locator('#scheduleTable .status-note-btn').evaluateAll(es=>es.every(e=>e.getBoundingClientRect().right<=e.closest('td').getBoundingClientRect().right+1));
   await page.screenshot({path:path.join(out,`table-${width}-selected.png`)});
   await page.keyboard.press('Escape');
  }
- cases.verticalStatus=await page.locator('#scheduleTable .status-note-btn').first().evaluate(e=>getComputedStyle(e).writingMode==='vertical-rl');
+ cases.inlineStatus=await page.locator('#scheduleTable .status-note-btn').first().evaluate(e=>getComputedStyle(e).writingMode==='horizontal-tb');
+ cases.plainStatus=await page.locator('#scheduleTable .status-note-btn').first().evaluate(e=>getComputedStyle(e).backgroundColor==='rgba(0, 0, 0, 0)'&&getComputedStyle(e).borderWidth==='0px');
+ cases.compactStudent=await page.locator('#scheduleTable .is-student').first().evaluate(e=>e.getBoundingClientRect().height<28);
  cases.gold=await page.locator('#scheduleTable .oneonone-cell').first().evaluate(e=>getComputedStyle(e).boxShadow.includes('181, 138, 46'));
  await page.locator('#scheduleTable .student-name-button').first().click();
  cases.strongSelected=await page.locator('#scheduleTable .student-selected').first().evaluate(e=>getComputedStyle(e).outlineWidth==='3px');

@@ -463,31 +463,31 @@
         white-space: nowrap; overflow: visible; position: relative; z-index: 1;
       }
       .student-item:hover { z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-      #scheduleTable .student-item { white-space:normal; overflow-wrap:anywhere; letter-spacing:normal !important; }
+      #scheduleTable { min-width:1800px; }
+      #scheduleTable .student-item { white-space:nowrap; overflow-wrap:normal; letter-spacing:normal !important; font-size:.75rem; }
       #scheduleTable .school-text { color:#546e7a; }
       .top-bar .action-group { flex-wrap:wrap; min-width:0; max-width:100%; }
       .top-bar .action-group button { white-space:nowrap; }
       #scheduleTable .note-bubble { width:220px; max-width:80vw; box-sizing:border-box; overflow-wrap:break-word; }
-      #scheduleTable .student-item.is-teacher { display:flex; flex-direction:row; align-items:center; gap:3px; padding:4px 3px; background:transparent; box-shadow:none; }
-      #scheduleTable .lesson-kind { display:flex; flex-direction:column; flex-shrink:0; align-items:center; box-sizing:border-box; border-radius:3px; padding:2px 3px; background:var(--primary); color:white; font-size:.58rem; font-weight:700; line-height:1.35; }
-      #scheduleTable .lesson-type { font-weight:500; color:#dbeafe; }
-      #scheduleTable .teacher-name { display:block; min-width:0; flex:1; font-size:.75rem; white-space:normal; overflow-wrap:anywhere; line-height:1.3; }
-      #scheduleTable .student-item.is-student { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:2px; padding:3px; font-size:.77rem; }
-      #scheduleTable .student-info { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:1px; }
-      #scheduleTable .student-info .school-text { margin:0; font-size:.59rem; line-height:1.2; }
-      #scheduleTable .student-item.is-student > .student-new-mark { grid-column:1; }
-      #scheduleTable .student-item.is-student > .type-badge { grid-column:1 / -1; }
+      #scheduleTable .student-item.is-teacher { display:block; padding-left:2px; padding-right:2px; background:transparent; box-shadow:none; }
+      #scheduleTable .teacher-name { display:inline-block; white-space:nowrap; font-size:.7rem; }
+      #scheduleTable .type-badge, #scheduleTable .subject-badge { font-size:.58rem; padding:1px 2px; margin-right:2px; }
+      #scheduleTable .school-text { font-size:.62rem; }
+      #scheduleTable .student-item.is-student { display:block; }
+      #scheduleTable .student-info { display:inline; }
       #scheduleTable .student-name-button { font:inherit; font-weight:700; color:inherit; background:transparent; border:0; padding:0; text-align:left; cursor:pointer; }
       #scheduleTable .student-name-button:hover { text-decoration:underline; text-underline-offset:2px; }
       #scheduleTable .student-name-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-      #scheduleTable .status-note-btn { border-radius:3px; padding:3px 2px; margin:0; min-height:24px; font-size:.57rem; line-height:1.15; writing-mode:vertical-rl; text-orientation:upright; letter-spacing:0; align-self:center; }
+      #scheduleTable .status-note-btn { appearance:none; border:0; border-radius:0; background:transparent; box-shadow:none; padding:0; margin:0 0 0 4px; min-height:0; font-size:.62rem; line-height:1.3; writing-mode:horizontal-tb; letter-spacing:0; }
+      #scheduleTable .status-note-btn:hover { filter:none; text-decoration:underline; text-underline-offset:2px; }
+      #scheduleTable .status-note-btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
       #scheduleTable .student-item.is-new-student { border:1px solid var(--accent); }
       #scheduleTable .student-new-mark { display:inline-block; margin-left:4px; color:var(--sedu-blue); font-size:.6rem; font-weight:800; line-height:1.3; }
       #scheduleTable .student-item.student-selected { position:relative; z-index:2; outline:3px solid #0755b3; outline-offset:-2px; background:#dbeafe !important; color:#102a56 !important; box-shadow:none !important; }
-      #scheduleTable .student-item.student-selected .student-info { background:#0755b3; color:white; padding:2px; border-radius:2px; }
+      #scheduleTable .student-item.student-selected .student-info { background:#0755b3; color:white; border-radius:2px; }
       #scheduleTable .student-item.student-selected .school-text { color:#fff !important; }
       #scheduleTable .student-item.student-selected .student-name-button { color:white; }
-      #scheduleTable .student-item.student-selected .status-note-red { background:#fee2e2; color:#991b1b; }
+      #scheduleTable .student-item.student-selected .status-note-red { color:#991b1b; }
       #scheduleTable .student-item.student-selected .student-name-button { text-decoration:underline; text-underline-offset:2px; }
       .student-item.enrollment-alert { background: var(--status-alert-bg); border: 1px solid var(--status-alert-border); color: var(--status-alert-text); font-weight: 800; }
       .student-item.schedule-anomaly { background-color: var(--schedule-anomaly-bg) !important; color: var(--schedule-anomaly-text) !important; box-shadow: inset 0 0 0 1px var(--schedule-anomaly-border); }
@@ -10347,12 +10347,11 @@ window.SeduHubAdapter={
         var allBadges = newBadge + cancelBadge + badgeHtml;
         if (displayText.includes("T")) { 
           itemDiv.classList.add("is-teacher");
-          var typeInfo = getTypeBadge(displayText);
-          if (typeInfo) displayText = displayText.replace(typeInfo.keyword, "").trim();
+          var typeInfo = getTypeBadge(displayText); var typeBadgeHtml = "";
+          if (typeInfo) { typeBadgeHtml = typeInfo.html; displayText = displayText.replace(typeInfo.keyword, "").trim(); }
           var subject = getSubjectName(displayText); var content = displayText.replace(subject, "").trim(); 
-          var lessonLabel = [subject, typeInfo ? typeInfo.keyword.replace('개별정규', '개별') : ''].filter(Boolean).join(' ');
-          var subjBadge = lessonLabel ? "<span class='lesson-kind'><span>" + escapeHtml(subject) + "</span> <span class='lesson-type'>" + escapeHtml(typeInfo ? typeInfo.keyword.replace('개별정규', '개별') : '') + "</span></span>" : "";
-          itemDiv.innerHTML = subjBadge + "<span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
+          var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + escapeHtml(subject) + "</span>" : "";
+          itemDiv.innerHTML = typeBadgeHtml + subjBadge + " <span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
         } else { 
           itemDiv.classList.add("is-student");
           var parsed = parseStudentRawText(rawText);

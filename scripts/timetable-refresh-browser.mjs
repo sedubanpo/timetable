@@ -26,9 +26,9 @@ try {
   grid[19][4]=['수학 개별 가검증T','다른학생 검증중2 첫등원'];
   lastData={headers,grid,version:'qa-refresh'};renderTable(lastData,true);
  });
- results.cases.combinedBadge=await page.locator('#scheduleTable .lesson-kind').first().textContent()==='사탐 개별';
+ results.cases.originalBadges=await page.locator('#scheduleTable .subject-badge').first().textContent().then(t=>t.includes('사탐'));
  results.cases.teacherSeparate=await page.locator('#scheduleTable .teacher-name').first().textContent()==='검증강사T';
- results.cases.rectangularStatus=await page.locator('#scheduleTable .status-note-btn').first().evaluate(e=>getComputedStyle(e).borderRadius==='3px');
+ results.cases.textStatus=await page.locator('#scheduleTable .status-note-btn').first().evaluate(e=>getComputedStyle(e).borderWidth==='0px'&&getComputedStyle(e).backgroundColor==='rgba(0, 0, 0, 0)');
  results.cases.newBorder=await page.locator('#scheduleTable .is-new-student').count()===2;
  results.cases.newMarks=await page.locator('#scheduleTable .student-new-mark').count()===2;
  await page.locator('#scheduleTable .student-name-button').filter({hasText:'한학생'}).first().click();
