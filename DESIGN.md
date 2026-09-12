@@ -1,5 +1,9 @@
 # Live Timetable Design Tokens
 
+## Dense timetable refresh — 2026-09-12
+
+Preserve the operations board, room/time axes and existing subject/status colors. Lesson headers use one subject + type label and a separate teacher line; no emoji is needed in this label. Student name, school/grade and attendance retain their order. Compact status labels and NEW marks use 3px rectangular corners, existing status colors, and no animation/shadow. Name controls inherit row typography and have visible accent focus. Selected student rows use a 2px inset accent outline; NEW rows use a 1px accent border and small NEW text, independently of selection. Neither selection nor export changes source attendance. Preserve full-width desktop comparison and existing mobile horizontal scrolling; horizontal scrolling belongs to the timetable, not the toolbar. Row contents wrap within the column instead of clipping. Note bubbles retain their existing 220px reading width independent of narrow columns. Header spacing uses existing 4px/2px units. Calendar controls follow the existing teacher-picker tokens (6px controls, 8px panel, white/navy, 44px date targets), Monday-first, without animation.
+
 ## Teacher search and narrow toolbar — 2026-09-08
 
 Keep the compact operations toolbar. The admin teacher picker reuses the navy primary, accent focus ring, white/bg surfaces, 6px control radius and 8px spacing. The popover has 8px padding/radius, a 280px preferred width clamped inside the viewport, and a 240px scrolling option region. Its input and options have 44px targets. No animation. Native select remains a hidden state adapter; keyboard-operable buttons own selection, Escape returns focus. At narrow widths the main search occupies its own row; border-box sizing prevents padding from spilling outside its container. Toolbar actions wrap independently of the two-dimensional timetable.

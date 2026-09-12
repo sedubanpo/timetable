@@ -110,6 +110,7 @@ assert.doesNotThrow(() => new RegExp(sandbox.escapeRegExp(specialQuery), "gi"));
 
 const fakeElement = {
   innerHTML: "",
+  dataset: {},
   classList: { add() {} }
 };
 sandbox.renderTableItem(fakeElement, "<img src=x onerror=alert(1)> 강남고1");

@@ -443,6 +443,21 @@
         white-space: nowrap; overflow: visible; position: relative; z-index: 1;
       }
       .student-item:hover { z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+      #scheduleTable .student-item { white-space:normal; overflow-wrap:anywhere; letter-spacing:normal !important; }
+      #scheduleTable .school-text { color:#546e7a; }
+      .top-bar .action-group button { white-space:nowrap; }
+      #scheduleTable .note-bubble { width:220px; max-width:80vw; box-sizing:border-box; overflow-wrap:break-word; }
+      #scheduleTable .student-item.is-teacher { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:4px; background:transparent; box-shadow:none; }
+      #scheduleTable .lesson-kind { display:inline-block; max-width:100%; box-sizing:border-box; border-radius:3px; padding:2px 4px; background:var(--primary); color:white; font-size:.68rem; font-weight:700; line-height:1.3; }
+      #scheduleTable .teacher-name { display:block; max-width:100%; white-space:normal; overflow-wrap:anywhere; line-height:1.3; }
+      #scheduleTable .student-name-button { font:inherit; font-weight:700; color:inherit; background:transparent; border:0; padding:0; text-align:left; cursor:pointer; }
+      #scheduleTable .student-name-button:hover { text-decoration:underline; text-underline-offset:2px; }
+      #scheduleTable .student-name-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+      #scheduleTable .status-note-btn { border-radius:3px; padding:2px 4px; margin-left:4px; min-height:20px; }
+      #scheduleTable .student-item.is-new-student { border:1px solid var(--accent); }
+      #scheduleTable .student-new-mark { display:inline-block; margin-left:4px; color:var(--sedu-blue); font-size:.6rem; font-weight:800; line-height:1.3; }
+      #scheduleTable .student-item.student-selected { outline:2px solid var(--accent); outline-offset:-2px; }
+      #scheduleTable .student-item.student-selected .student-name-button { text-decoration:underline; text-underline-offset:2px; }
       .student-item.enrollment-alert { background: var(--status-alert-bg); border: 1px solid var(--status-alert-border); color: var(--status-alert-text); font-weight: 800; }
       .student-item.schedule-anomaly { background-color: var(--schedule-anomaly-bg) !important; color: var(--schedule-anomaly-text) !important; box-shadow: inset 0 0 0 1px var(--schedule-anomaly-border); }
       .student-item.schedule-anomaly .school-text { color: #991b1b !important; }
@@ -1416,6 +1431,25 @@
         *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         .refresh-btn.attendance-refresh-recommended { animation:none; outline:4px solid rgba(244,63,94,0.22); outline-offset:2px; }
       }
+      #mainSheetSelector { display:none !important; }
+      .calendar-picker[hidden], .calendar-panel[hidden] { display:none !important; }
+      .calendar-picker { position:relative; }
+      .calendar-trigger { min-height:40px; border-radius:6px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .calendar-panel { position:fixed; z-index:30000; box-sizing:border-box; width:374px; max-width:calc(100vw - 16px); overflow:auto; padding:8px; background:#fff; color:var(--primary); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.14); }
+      .calendar-month-nav { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+      .calendar-month-nav button, .calendar-date, .calendar-sheet-option { min-height:44px; border:1px solid var(--border); border-radius:6px; background:#fff; color:var(--primary); cursor:pointer; font:inherit; }
+      .calendar-month-nav button { min-width:44px; }
+      #calendarDateGrid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; font-variant-numeric:tabular-nums; }
+      .calendar-weekday { text-align:center; font-size:12px; padding:4px 0; }
+      .calendar-date { padding:0; min-width:0; }
+      .calendar-date:disabled { color:#9ca3af; background:#f8fafc; cursor:default; }
+      .calendar-date[aria-current="date"] { box-shadow:inset 0 0 0 2px var(--primary); font-weight:700; }
+      .calendar-date[aria-pressed="true"] { background:var(--primary); color:#fff; }
+      .calendar-panel button:focus-visible, .calendar-trigger:focus-visible { outline:3px solid #8092d0; outline-offset:2px; }
+      .calendar-aux { display:grid; gap:8px; margin-top:8px; }
+      .calendar-sheet-option { text-align:left; padding:8px; overflow-wrap:anywhere; }
+      .calendar-help { font-size:12px; color:#64748b; margin:8px 0 0; }
+
     </style>
   </head>
   <body>
@@ -1702,7 +1736,16 @@
         
         <div class="nav-group"><button class="nav-btn" onclick="navigateDay(1)">◀ 어제</button><button class="nav-btn nav-btn-today" onclick="navigateDay(0)">오늘</button><button class="nav-btn" onclick="navigateDay(-1)">내일 ▶</button></div>
         
-        <select id="mainSheetSelector" class="sheet-select" onchange="changeSheet()"></select>
+        <select id="mainSheetSelector" class="sheet-select" onchange="changeSheet()" hidden aria-hidden="true" tabindex="-1"></select>
+        <div id="calendarPicker" class="calendar-picker">
+          <button id="calendarTrigger" type="button" class="nav-btn calendar-trigger" aria-expanded="false" aria-controls="calendarPanel" onclick="calendarToggle()">날짜 선택 ▾</button>
+          <div id="calendarPanel" class="calendar-panel" hidden role="region" aria-label="시간표 날짜 선택">
+            <div class="calendar-month-nav"><button type="button" aria-label="이전 달" onclick="calendarMoveMonth(-1)">‹</button><strong id="calendarMonthLabel" aria-live="polite"></strong><button type="button" aria-label="다음 달" onclick="calendarMoveMonth(1)">›</button></div>
+            <div id="calendarDateGrid" class="calendar-grid"></div>
+            <p class="calendar-help">시간표가 있는 날짜만 선택할 수 있습니다.</p>
+            <div id="calendarAux" class="calendar-aux"></div>
+          </div>
+        </div>
         <span id="roleBadge" class="role-badge" style="display:none;"></span>
         <select id="teacherViewSelector" class="sheet-select" style="display:none;" onchange="changeTeacherView()"></select>
         <div id="teacherPicker" class="teacher-picker" hidden>
@@ -4498,6 +4541,7 @@ window.SeduHubAdapter={
         });
       }
       function applyRoleUi() {
+        calendarSync();
         refreshOptionalTeacherRoster();
         syncTeacherPicker();
         function setToolbarButtonDisplay(btn, value) {
@@ -4700,7 +4744,7 @@ window.SeduHubAdapter={
         else c.classList.remove('dimming-enabled');
       }
       function toggleDimming(){ syncLookupDimmingState(); }
-      function togglePrivacy() { document.body.classList.toggle('privacy-active'); }
+      function togglePrivacy() { document.body.classList.toggle('privacy-active'); selectedTimetableStudent = null; syncStudentSelection(); }
       
       function toggleTimeline() {
          var line = document.getElementById('liveTimeline');
@@ -4812,6 +4856,7 @@ window.SeduHubAdapter={
           var targetMonth = now.getMonth();
           populateMainSheetSelector(currentSheetName); 
           sheetMap = buildSheetMapFromNames(availableSheets);
+          calendarSync();
           if (authState.isLookup) {
             var lookupSheetMap = buildSheetMapFromNames(getLookupSelectableSheetNames());
             var lookupTodaySheet = getTodaySheetNameFromMap(lookupSheetMap) || getTodaySheetNameFromMap(sheetMap);
@@ -4881,6 +4926,7 @@ window.SeduHubAdapter={
         document.getElementById('introPage').style.display='none'; 
         document.getElementById('mainPage').style.display='flex'; 
         document.getElementById('mainSheetSelector').value=n; 
+        calendarSync();
         document.getElementById('loading').style.display='flex'; 
         if (window.innerWidth <= 768) document.getElementById('mobileLoading').style.display = 'flex';
         document.getElementById('refreshBtn').classList.add('spinning'); 
@@ -4972,6 +5018,104 @@ window.SeduHubAdapter={
           if(v!=currentVersion){ document.getElementById('updateAlert').style.display='block'; document.getElementById('updateText').style.display='block'; }
         }).catch(function(){}).finally(function(){ versionCheckPending = false; });
       }
+      var calendarViewMonth = null;
+      function calendarSync() {
+        var picker = document.getElementById('calendarPicker');
+        if (!picker) return;
+        picker.hidden = isLookupViewActive();
+        document.getElementById('calendarTrigger').textContent = (currentSheetName || document.getElementById('mainSheetSelector').value || '날짜 선택') + ' ▾';
+        if (picker.hidden) calendarClose(false);
+        else if (!document.getElementById('calendarPanel').hidden) calendarRender();
+      }
+      function calendarClose(restore) {
+        var panel = document.getElementById('calendarPanel');
+        var wasOpen = !panel.hidden;
+        panel.hidden = true;
+        document.getElementById('calendarTrigger').setAttribute('aria-expanded', 'false');
+        if (restore && wasOpen) document.getElementById('calendarTrigger').focus();
+      }
+      function calendarPosition() {
+        var panel = document.getElementById('calendarPanel');
+        if (panel.hidden) return;
+        var rect = document.getElementById('calendarTrigger').getBoundingClientRect();
+        panel.style.maxHeight = Math.max(100, window.innerHeight - 16) + 'px';
+        panel.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - panel.offsetWidth - 8)) + 'px';
+        panel.style.top = Math.max(8, Math.min(rect.bottom + 8, window.innerHeight - panel.offsetHeight - 8)) + 'px';
+      }
+      function calendarToggle() {
+        if (isLookupViewActive()) return;
+        var panel = document.getElementById('calendarPanel');
+        if (!panel.hidden) { calendarClose(true); return; }
+        var selected = parseTeacherLogTargetDate(currentSheetName, new Date());
+        calendarViewMonth = new Date(selected.getFullYear(), selected.getMonth(), 1);
+        panel.hidden = false;
+        document.getElementById('calendarTrigger').setAttribute('aria-expanded', 'true');
+        calendarRender();
+        var target = panel.querySelector('.calendar-date[aria-pressed="true"]:not(:disabled)') || panel.querySelector('.calendar-date:not(:disabled)') || panel.querySelector('button');
+        target.focus();
+      }
+      function calendarMoveMonth(delta) {
+        calendarViewMonth = new Date(calendarViewMonth.getFullYear(), calendarViewMonth.getMonth() + delta, 1);
+        calendarRender();
+      }
+      function calendarChoose(name) {
+        if (isLookupViewActive() || getSheetSelectorNames().indexOf(name) === -1) return;
+        document.getElementById('mainSheetSelector').value = name;
+        calendarClose(true);
+        changeSheet();
+      }
+      function calendarRender() {
+        var month = calendarViewMonth || new Date();
+        var year = month.getFullYear(), m = month.getMonth(), today = new Date();
+        var names = getSheetSelectorNames(), map = buildSheetMapFromNames(names);
+        var grid = document.getElementById('calendarDateGrid'), aux = document.getElementById('calendarAux');
+        grid.replaceChildren(); aux.replaceChildren();
+        document.getElementById('calendarMonthLabel').textContent = year + '년 ' + (m + 1) + '월';
+        ['월','화','수','목','금','토','일'].forEach(function(label) {
+          var el = document.createElement('span'); el.className = 'calendar-weekday'; el.textContent = label; grid.appendChild(el);
+        });
+        for (var i = 0; i < (new Date(year,m,1).getDay() + 6) % 7; i++) grid.appendChild(document.createElement('span'));
+        function addSheetButton(name) {
+          var option = document.createElement('button'); option.type = 'button'; option.className = 'calendar-sheet-option'; option.textContent = name;
+          option.onclick = function() { calendarChoose(name); }; aux.appendChild(option);
+        }
+        for (var d = 1; d <= new Date(year,m+1,0).getDate(); d++) {
+          (function(day) {
+            var key = (m+1) + '-' + day;
+            var choices = (map[key] || []).filter(function(name) {
+              return parseTeacherLogTargetDate(name, today).getFullYear() === year;
+            });
+            var button = document.createElement('button'); button.type = 'button'; button.className = 'calendar-date'; button.textContent = day;
+            button.disabled = !choices.length;
+            button.setAttribute('aria-label', year + '년 ' + (m+1) + '월 ' + day + '일' + (choices.length ? '' : ' 시간표 없음'));
+            button.setAttribute('aria-pressed', String(choices.indexOf(currentSheetName) !== -1));
+            if (year === today.getFullYear() && m === today.getMonth() && day === today.getDate()) button.setAttribute('aria-current','date');
+            button.onclick = function() {
+              if (choices.length === 1) calendarChoose(choices[0]);
+              else { aux.replaceChildren(); choices.forEach(addSheetButton); calendarPosition(); aux.querySelector('button').focus(); }
+            };
+            grid.appendChild(button);
+          })(d);
+        }
+        names.filter(function(name) { return !/\d+\/\d+/.test(name); }).forEach(addSheetButton);
+        calendarPosition();
+      }
+      document.addEventListener('keydown', function(event) {
+        var panel = document.getElementById('calendarPanel');
+        if (!panel || panel.hidden) return;
+        if (event.key === 'Escape') { event.preventDefault(); calendarClose(true); }
+      });
+      document.addEventListener('pointerdown', function(event) {
+        var picker = document.getElementById('calendarPicker');
+        if (picker && !picker.contains(event.target)) calendarClose(false);
+      });
+      document.addEventListener('focusin', function(event) {
+        var picker = document.getElementById('calendarPicker');
+        if (picker && !picker.contains(event.target)) calendarClose(false);
+      });
+      window.addEventListener('resize', calendarPosition);
+      window.addEventListener('scroll', calendarPosition, true);
+
       function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false,true); }
       function refreshData(markReplySeen){
         if(!currentSheetName) return;
@@ -7844,6 +7988,7 @@ window.SeduHubAdapter={
           }
         }
         table.appendChild(tbody);
+        syncStudentSelection();
         if (isRefresh) {
            if(container) setTimeout(function() { container.scrollTop = lastScrollPosition; }, 0);
         } else {
@@ -10113,14 +10258,44 @@ window.SeduHubAdapter={
           panel.classList.toggle('active', panel.getAttribute('data-review-teacher-panel') === teacherKey);
         });
       }
+      var selectedTimetableStudent = null;
+      function syncStudentSelection() {
+        var privateView = document.body.classList.contains('privacy-active');
+        if (selectedTimetableStudent && (privateView || selectedTimetableStudent.sheet !== currentSheetName || selectedTimetableStudent.session !== getScheduleSessionKey())) selectedTimetableStudent = null;
+        document.querySelectorAll('#scheduleTable .student-item.is-student').forEach(function(row) {
+          var selected = !!(selectedTimetableStudent && row.dataset.studentIdentity === selectedTimetableStudent.key);
+          row.classList.toggle('student-selected', selected);
+          var button = row.querySelector('.student-name-button');
+          if (button) { button.setAttribute('aria-pressed', String(selected)); button.tabIndex = privateView ? -1 : 0; }
+        });
+      }
+      document.addEventListener('click', function(event) {
+        var nameButton = event.target.closest('#scheduleTable .student-name-button');
+        if (nameButton) {
+          if (document.body.classList.contains('privacy-active') || nameButton.closest('.privacy-active')) return;
+          var row = nameButton.closest('.student-item');
+          selectedTimetableStudent = { sheet:currentSheetName, session:getScheduleSessionKey(), key:row.dataset.studentIdentity };
+          syncStudentSelection();
+        } else if (!event.target.closest('button, input, select, textarea, a, [role="dialog"], .student-item')) {
+          selectedTimetableStudent = null;
+          syncStudentSelection();
+        }
+      });
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && selectedTimetableStudent) {
+          selectedTimetableStudent = null;
+          syncStudentSelection();
+        }
+      });
       function renderTableItem(itemDiv, text) { 
         var rawText = String(text || "");
         var displayText = rawText; 
         var badgeHtml = ""; var newBadge = ""; var cancelBadge = "";
         
-        if (displayText.match(/신\s*규|첫\s*수\s*업/)) {
-           newBadge = "<span class='type-badge badge-gold'>NEW</span>";
-           displayText = displayText.replace(/신\s*규\s*생?|첫\s*수\s*업/g, "").trim();
+        if (displayText.match(/신\s*규|첫\s*(?:수\s*업|등\s*원)/)) {
+           newBadge = "<span class='student-new-mark'>NEW</span>";
+           itemDiv.classList.add('is-new-student');
+           displayText = displayText.replace(/신\s*규\s*생?|첫\s*(?:수\s*업|등\s*원)/g, "").trim();
         }
         if (displayText.includes("자기주도") || displayText.includes("자습")) {
            itemDiv.classList.add("self-study");
@@ -10142,11 +10317,12 @@ window.SeduHubAdapter={
         var allBadges = newBadge + cancelBadge + badgeHtml;
         if (displayText.includes("T")) { 
           itemDiv.classList.add("is-teacher");
-          var typeInfo = getTypeBadge(displayText); var typeBadgeHtml = "";
-          if (typeInfo) { typeBadgeHtml = typeInfo.html; displayText = displayText.replace(typeInfo.keyword, "").trim(); }
+          var typeInfo = getTypeBadge(displayText);
+          if (typeInfo) displayText = displayText.replace(typeInfo.keyword, "").trim();
           var subject = getSubjectName(displayText); var content = displayText.replace(subject, "").trim(); 
-          var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + escapeHtml(subject) + "</span>" : "";
-          itemDiv.innerHTML = typeBadgeHtml + subjBadge + " <span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
+          var lessonLabel = [subject, typeInfo ? typeInfo.keyword.replace('개별정규', '개별') : ''].filter(Boolean).join(' ');
+          var subjBadge = lessonLabel ? "<span class='lesson-kind'>" + escapeHtml(lessonLabel) + "</span>" : "";
+          itemDiv.innerHTML = subjBadge + "<span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
         } else { 
           itemDiv.classList.add("is-student");
           var parsed = parseStudentRawText(rawText);
@@ -10154,7 +10330,8 @@ window.SeduHubAdapter={
           var statusLabel = normalizeStatusLabel(parsed.status || "");
           var noteButton = getStatusButtonHtml(statusLabel, parsed.note);
           var schoolText = parsed.school ? (" <span class='school-text'>" + escapeHtml(parsed.school) + "</span>") : "";
-          itemDiv.innerHTML = "<span style='font-weight:600'>" + escapeHtml(studentName) + "</span>" + schoolText + noteButton + allBadges;
+          itemDiv.dataset.studentIdentity = JSON.stringify([studentName.trim(), String(parsed.school || '').replace(/\s+/g, '')]);
+          itemDiv.innerHTML = "<button type='button' class='student-name-button' aria-pressed='false' aria-label='" + escapeHtml(studentName + " 같은 날 수업 강조") + "'>" + escapeHtml(studentName) + "</button>" + schoolText + noteButton + allBadges;
         } 
       }
       // [Excel Export Logic]
@@ -10177,7 +10354,7 @@ window.SeduHubAdapter={
       }
       function mapExportAttendanceStatus(statusLabel) {
         var s = normalizeStatusLabel(statusLabel || "");
-        if (s === "당일취소" || s === "결석예고" || s === "지각" || s === "병결") return s;
+        if (s === "당일취소" || s === "결석예고" || s === "병결") return s;
         return "출석";
       }
       function buildExportClassName(entry) {
@@ -10233,17 +10410,22 @@ window.SeduHubAdapter={
                 room: roomName,
                 hour: h,
                 status: attendance,
-                note: parsed.note || ""
+                note: parsed.note || "",
+                lateMarker: normalizeStatusLabel(parsed.status || "") === "지각"
               });
             });
           }
         }
 
         rawEntries.sort(function(a, b) {
-          if (a.student !== b.student) return a.student.localeCompare(b.student, "ko");
-          if (a.hour !== b.hour) return a.hour - b.hour;
-          if (a.subject !== b.subject) return a.subject.localeCompare(b.subject, "ko");
-          return a.teacher.localeCompare(b.teacher, "ko");
+          // Keep each lesson identity together before checking adjacent hours.
+          // A same-name student or simultaneous different lesson must not split it.
+          var identityFields = ["student", "school", "subject", "teacher", "type", "room"];
+          for (var fieldIndex = 0; fieldIndex < identityFields.length; fieldIndex++) {
+            var field = identityFields[fieldIndex];
+            if (a[field] !== b[field]) return a[field].localeCompare(b[field], "ko");
+          }
+          return a.hour - b.hour;
         });
 
         var mergedData = [];
@@ -10264,6 +10446,7 @@ window.SeduHubAdapter={
 
             if (shouldMerge) {
               current.end = next.hour + 1;
+              current.lateMarker = current.lateMarker || next.lateMarker;
               if (next.status === "지각") current.status = "지각";
               if (next.note && current.notes.indexOf(next.note) === -1) current.notes.push(next.note);
               current.note = current.notes.join(" / ");
@@ -10277,9 +10460,16 @@ window.SeduHubAdapter={
 
         if (!mergedData.length) { alert("저장할 데이터가 없습니다."); return; }
 
+        mergedData.sort(function(a, b) {
+          if (a.student !== b.student) return a.student.localeCompare(b.student, "ko");
+          return a.start - b.start;
+        });
         var rows = [];
         var currentStudent = "";
         mergedData.forEach(function(entry) {
+          if (entry.lateMarker && String(entry.note || "").indexOf("지각") === -1) {
+            entry.note = entry.note ? entry.note + " / 지각" : "지각";
+          }
           var exportTime = getExportTimeRange(entry);
           var duration = exportTime.end - exportTime.start;
           var school = entry.school || "";
@@ -10341,26 +10531,33 @@ window.SeduHubAdapter={
       // Single arrival times and conflicting ranges leave scheduled hours unchanged.
       function getExportTimeRange(entry) {
         var fallback = { start: entry.start, end: entry.end };
-        var pattern = /(?:^|[^\d:])(오전|오후)?\s*(\d{1,2}):([0-5]\d)\s*[-~～–—]\s*(오전|오후)?\s*(\d{1,2}):([0-5]\d)(?![\d:])/g;
+        var timeToken = "(오전|오후)?\\s*(\\d+)(?::(\\d+)|\\s*시(?:\\s*(\\d+)\\s*분?)?)";
+        var pattern = new RegExp("(?:^|[^\\d:])" + timeToken + "\\s*[-~～–—]\\s*" + timeToken + "(?![\\d:])", "g");
         var note = String(entry.note || "");
+        // Seconds are not half-hour boundaries; never silently discard them.
+        if (/\d\s*분\s*\d+\s*초|\d+:\d+:\d+/.test(note)) return fallback;
         var match, ranges = [];
         function candidates(hour, minute, period) {
           hour = Number(hour); minute = Number(minute);
-          if (minute % 30 || hour > 24 || (hour === 24 && minute)) return [];
+          if (minute >= 60 || minute % 30 || hour > 24 || (hour === 24 && minute)) return [];
           if (period) return hour >= 1 && hour <= 12 ? [(hour % 12) + (period === "오후" ? 12 : 0) + minute / 60] : [];
           return hour >= 1 && hour <= 12 ? [hour % 12 + minute / 60, hour % 12 + 12 + minute / 60] : [hour + minute / 60];
         }
         while ((match = pattern.exec(note))) {
-          var starts = candidates(match[2], match[3], match[1]);
-          var ends = candidates(match[5], match[6], match[4]);
+          var starts = candidates(match[2], match[3] || match[4] || 0, match[1]);
+          var ends = candidates(match[6], match[7] || match[8] || 0, match[5]);
+          var matchedRanges = [];
           starts.forEach(function(start) {
             ends.forEach(function(end) {
               if (start >= entry.start && end <= entry.end && end > start) {
                 var key = start + ":" + end;
-                if (!ranges.some(function(range) { return range.key === key; })) ranges.push({ start: start, end: end, key: key });
+                matchedRanges.push({ start: start, end: end, key: key });
               }
             });
           });
+          // Every explicit range must agree, including ranges outside this block.
+          if (matchedRanges.length !== 1) return fallback;
+          if (!ranges.some(function(range) { return range.key === matchedRanges[0].key; })) ranges.push(matchedRanges[0]);
         }
         return ranges.length === 1 ? ranges[0] : fallback;
       }

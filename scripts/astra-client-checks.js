@@ -8,7 +8,22 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'Index.html'), 'utf8');
 const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
 const elements = new Map();
 function el(id) {
-  if (!elements.has(id)) elements.set(id, { style: {}, value: '', innerHTML: '', classList: { add() {}, remove() {} }, querySelectorAll() { return []; } });
+  if (!elements.has(id)) {
+    const tag = html.match(new RegExp('<[^>]+\\bid="' + id + '"[^>]*>'));
+    // Match real initial markup: closed popovers must not accidentally render
+    // merely because a lightweight fixture omitted the DOM hidden property.
+    elements.set(id, {
+      style: {}, value: '', innerHTML: '', textContent: '', dataset: {},
+      hidden: !!(tag && /\bhidden(?:\s|=|>)/.test(tag[0])),
+      children: [], attributes: {},
+      classList: { add() {}, remove() {} },
+      appendChild(child) { this.children.push(child); return child; },
+      replaceChildren(...children) { this.children = children; this.innerHTML = ''; },
+      setAttribute(name, value) { this.attributes[name] = String(value); },
+      getAttribute(name) { return this.attributes[name] ?? null; },
+      querySelectorAll() { return []; }
+    });
+  }
   return elements.get(id);
 }
 const sandbox = { window: { innerWidth: 1440, addEventListener() {} }, document: { getElementById: el, addEventListener() {}, querySelectorAll() { return []; }, body: { classList: { add() {}, remove() {} } } }, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} }, console, alert() {}, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, requestAnimationFrame() {}, cancelAnimationFrame() {}, URLSearchParams, Date, Promise, Set, Map };

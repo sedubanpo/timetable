@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const {default:playwright}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const evidence=path.join(root,'.superloopy/evidence/frontend/20260912T062623Z-timetable-refresh/calendar');
+fs.mkdirSync(evidence,{recursive:true});
+const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(path.join(root,req.url==='/source'?'Index.html':'docs/index.html')));});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const browser=await playwright.chromium.launch({headless:true});
+const results={cases:{},errors:[]};
+try {
+ for(const source of ['source','docs']) {
+  const page=await browser.newPage({viewport:{width:390,height:844},locale:'ko-KR'});
+  page.on('pageerror',e=>results.errors.push(e.message));
+  await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:')?r.continue():r.abort());
+  await page.goto(`http://127.0.0.1:${server.address().port}/${source}`,{waitUntil:'domcontentloaded'});
+  await page.evaluate(()=>{
+   authState={loggedIn:true,isMaster:true,isLookup:false,teacherName:'',loginId:'qa'};accessMode='all';
+   currentSheetName='12/31(목)';availableSheets=['12/31(목)','1/1(금)','12/30(수)','관리용','12/29(화) 사본'];
+   populateMainSheetSelector(currentSheetName);sheetMap=buildSheetMapFromNames(availableSheets);
+   window.qaCalls=[];callServer=(method,args)=>{qaCalls.push({method,args});return Promise.resolve({headers:[],grid:{},version:'qa'});};
+   processData=d=>{window.qaProcessed=d;document.getElementById('loading').style.display='none';document.getElementById('mobileLoading').style.display='none';};
+   applyRoleUi();document.getElementById('mainPage').style.display='flex';document.getElementById('introPage').style.display='none';document.getElementById('loginGate').style.display='none';
+  });
+  await page.locator('#calendarTrigger').click();
+  results.cases[source+'MondayFirst']=(await page.locator('.calendar-weekday').allTextContents()).join('')==='월화수목금토일';
+  results.cases[source+'NativeHidden']=await page.locator('#mainSheetSelector').isHidden();
+  results.cases[source+'UnavailableDisabled']=await page.locator('.calendar-date').first().isDisabled();
+  results.cases[source+'AdminNonDate']=await page.locator('.calendar-sheet-option').getByText('관리용',{exact:true}).count()===1;
+  results.cases[source+'MobileBounds']=await page.locator('#calendarPanel').evaluate(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;});
+  await page.screenshot({path:path.join(evidence,`calendar-${source}-390.png`)});
+  const before=await page.locator('#calendarMonthLabel').textContent();
+  await page.getByRole('button',{name:'다음 달',exact:true}).click();
+  results.cases[source+'YearRollover']=(await page.locator('#calendarMonthLabel').textContent())===(Number(before.split('년')[0])+1)+'년 1월';
+  results.cases[source+'JanuaryHelperYear']=await page.evaluate(()=>document.querySelector('.calendar-date').disabled===(calendarViewMonth.getFullYear()!==parseTeacherLogTargetDate('1/1(금)',new Date()).getFullYear()));
+  await page.evaluate(()=>{calendarViewMonth=new Date(new Date().getFullYear()+1,11,1);calendarRender();});
+  results.cases[source+'AdjacentYearUnavailable']=await page.locator('.calendar-date:not(:disabled)').count()===0;
+  await page.evaluate(()=>{var inferred=parseTeacherLogTargetDate('1/1(금)',new Date());calendarViewMonth=new Date(inferred.getFullYear(),inferred.getMonth(),1);calendarRender();});
+  await page.locator('.calendar-date:not(:disabled)').first().focus();await page.keyboard.press('Enter');
+  results.cases[source+'RealLoadData']=await page.evaluate(()=>currentSheetName==='1/1(금)'&&qaCalls.some(c=>c.method==='getFixedGridData'&&c.args[0]==='1/1(금)')&&qaProcessed.version==='qa');
+  results.cases[source+'SelectionFocus']=await page.locator('#calendarTrigger').evaluate(e=>document.activeElement===e);
+  await page.locator('#calendarTrigger').click();await page.keyboard.press('Escape');
+  results.cases[source+'Escape']=await page.locator('#calendarPanel').isHidden()&&await page.locator('#calendarTrigger').evaluate(e=>document.activeElement===e);
+  await page.locator('#calendarTrigger').click();await page.mouse.click(389,843);
+  results.cases[source+'Outside']=await page.locator('#calendarPanel').isHidden();
+  await page.evaluate(()=>{var t=new Date();currentSheetName=(t.getMonth()+1)+'/'+t.getDate();availableSheets.push(currentSheetName);populateMainSheetSelector();calendarToggle();});
+  results.cases[source+'TodaySelectedDistinct']=await page.locator('.calendar-date[aria-current="date"][aria-pressed="true"]').count()===1;
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>{authState.isMaster=false;authState.teacherName='검증';accessMode='teacher';teacherCalendarReady=true;teacherCalendarSheets=['12/30(수)'];populateMainSheetSelector();applyRoleUi();});
+  await page.locator('#calendarTrigger').click();
+  await page.evaluate(()=>{calendarViewMonth=new Date(new Date().getFullYear(),11,1);calendarRender();});
+  results.cases[source+'TeacherRestriction']=await page.locator('.calendar-date:not(:disabled)').count()===1;
+  await page.evaluate(()=>{authState.isLookup=true;accessMode='lookup';applyRoleUi();calendarToggle();});
+  results.cases[source+'LookupHidden']=await page.locator('#calendarPicker').isHidden()&&await page.locator('#calendarPanel').isHidden();
+  await page.close();
+ }
+ results.cases.noPageErrors=results.errors.length===0;
+ fs.writeFileSync(path.join(evidence,'calendar-browser-results.json'),JSON.stringify(results,null,2));
+ console.log(JSON.stringify(results,null,2));
+ for(const [name,pass]of Object.entries(results.cases))assert.equal(pass,true,name);
+} finally {await browser.close();server.close();}

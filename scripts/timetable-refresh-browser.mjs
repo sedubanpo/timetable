@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const {default:playwright}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const evidence=path.resolve(root,process.env.REFRESH_EVIDENCE_DIR||'.superloopy/evidence/frontend/20260912T062623Z-timetable-refresh');
+fs.mkdirSync(evidence,{recursive:true});
+const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(path.join(root,'docs/index.html')));});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const browser=await playwright.chromium.launch({headless:true});
+const results={browser:browser.version(),platform:process.platform,locale:'ko-KR',timezone:'Asia/Seoul',cases:{},errors:[]};
+try {
+ const page=await browser.newPage({viewport:{width:1280,height:900},locale:'ko-KR',timezoneId:'Asia/Seoul',reducedMotion:'reduce'});
+ page.on('pageerror',e=>results.errors.push(e.message));
+ await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:')?r.continue():r.abort());
+ await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
+ await page.evaluate(()=>{
+  authState={loggedIn:true,isMaster:true,isLookup:false,teacherName:'',loginId:'qa-admin'};accessMode='all';currentSheetName='9/10(목)';availableSheets=[currentSheetName];
+  applyRoleUi();document.getElementById('mainPage').style.display='flex';document.getElementById('introPage').style.display='none';document.getElementById('loginGate').style.display='none';
+  const headers=Array.from({length:15},(_,i)=>`${i+1}강의실`);const grid={};
+  for(let h=16;h<20;h++)grid[h]=headers.map((_,i)=>[`${i%2?'국어':'수학'} 개별 ${i%2?'나검증':'가검증'}T`,`학생${i} 검증중2 정규`]);
+  for(let h=16;h<20;h++)grid[h][0]=['사탐 개별 검증강사T','한학생 검증고1 '+(h===16?'지각':'정규')+' 9/10(목) 확정-개학, 4시30-7시30분 수업'];
+  grid[17][2]=['국어 1:1 다른강사T','한학생 다른고1 정규','새학생 검증중2 첫수업'];
+  grid[19][4]=['수학 개별 가검증T','다른학생 검증중2 첫등원'];
+  lastData={headers,grid,version:'qa-refresh'};renderTable(lastData,true);
+ });
+ results.cases.combinedBadge=await page.locator('#scheduleTable .lesson-kind').first().textContent()==='사탐 개별';
+ results.cases.teacherSeparate=await page.locator('#scheduleTable .teacher-name').first().textContent()==='검증강사T';
+ results.cases.rectangularStatus=await page.locator('#scheduleTable .status-note-btn').first().evaluate(e=>getComputedStyle(e).borderRadius==='3px');
+ results.cases.newBorder=await page.locator('#scheduleTable .is-new-student').count()===2;
+ results.cases.newMarks=await page.locator('#scheduleTable .student-new-mark').count()===2;
+ await page.locator('#scheduleTable .student-name-button').filter({hasText:'한학생'}).first().click();
+ results.cases.sameIdentityOnly=await page.locator('#scheduleTable .student-selected').count()===4;
+ results.cases.pressedState=await page.locator('#scheduleTable .student-name-button[aria-pressed="true"]').count()===4;
+ await page.locator('#scheduleTable .status-note-btn').first().click();
+ results.cases.noteStillWorks=await page.locator('.note-bubble').count()===1;
+ results.cases.noteKeepsSelection=await page.locator('.student-selected').count()===4;
+ await page.screenshot({path:path.join(evidence,'timetable-1280-selected.png')});
+ await page.locator('#scheduleTable th').first().click();
+ results.cases.blankClears=await page.locator('.student-selected').count()===0;
+ await page.locator('#scheduleTable .student-name-button').filter({hasText:'한학생'}).first().focus();await page.keyboard.press('Enter');
+ results.cases.keyboardSelect=await page.locator('.student-selected').count()===4;
+ await page.keyboard.press('Escape');results.cases.escapeClears=await page.locator('.student-selected').count()===0;
+ await page.locator('#scheduleTable .student-name-button').filter({hasText:'한학생'}).first().click();
+ await page.evaluate(()=>renderTable(lastData,true));results.cases.refreshKeepsSelection=await page.locator('.student-selected').count()===4;
+ await page.evaluate(()=>{authState.loginId='qa-other-admin';renderTable(lastData,true);});results.cases.sessionClears=await page.locator('.student-selected').count()===0;
+ await page.locator('#scheduleTable .student-name-button').filter({hasText:'한학생'}).first().click();
+ await page.evaluate(()=>togglePrivacy());results.cases.privacyClears=await page.locator('.student-selected').count()===0;
+ results.cases.privacyNoNameTab=await page.locator('#scheduleTable .student-name-button').evaluateAll(es=>es.every(e=>e.tabIndex===-1));
+ await page.evaluate(()=>togglePrivacy());
+ await page.locator('#scheduleTable .student-name-button').filter({hasText:'한학생'}).first().click();
+ await page.evaluate(()=>{currentSheetName='9/11(금)';renderTable(lastData,true);});results.cases.dateClears=await page.locator('.student-selected').count()===0;
+ results.cases.realParserExport=await page.evaluate(()=>{
+  let rows;window.XLSX={utils:{json_to_sheet:r=>{rows=r;return {};},book_new:()=>({}),book_append_sheet:()=>{}},writeFile:()=>{}};
+  const before=JSON.stringify(lastData);exportScheduleToExcel();const row=rows.find(r=>r['이름']==='한학생'&&r['학교']==='검증고');
+  window.qaExportDiagnostic={row,rows:rows.filter(r=>r['이름']==='한학생'),parsed:parseStudentRawText(lastData.grid[16][0][1])};
+  return !!row&&row['시작']==='오후 4:30'&&row['종료']==='오후 7:30'&&row['시간']===3&&row['출결']==='출석'&&row['참고'].includes('지각')&&before===JSON.stringify(lastData);
+ });
+ for(const width of [1440,1024,390]){
+  await page.setViewportSize({width,height:900});await page.evaluate(()=>renderTable(lastData,true));
+  results.cases['teacherFits'+width]=await page.locator('#scheduleTable .teacher-name').evaluateAll(es=>es.every(e=>{const b=e.getBoundingClientRect(),p=e.closest('td').getBoundingClientRect();return b.left>=p.left&&b.right<=p.right+1&&e.scrollWidth<=e.clientWidth+1;}));
+  results.cases['searchFits'+width]=await page.locator('#searchInput').evaluate(e=>{const b=e.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth+1;});
+  await page.screenshot({path:path.join(evidence,`timetable-${width}.png`)});
+ }
+ results.exportDiagnostic=await page.evaluate(()=>qaExportDiagnostic);
+ results.cases.noErrors=results.errors.length===0;
+ fs.writeFileSync(path.join(evidence,'timetable-browser.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));
+ for(const [name,pass]of Object.entries(results.cases))assert.equal(pass,true,name);
+} finally {await browser.close();server.close();}
