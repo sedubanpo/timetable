@@ -1481,6 +1481,16 @@
       .calendar-sheet-option { text-align:left; padding:8px; overflow-wrap:anywhere; }
       .calendar-help { font-size:12px; color:#64748b; margin:8px 0 0; }
 
+      /* Keep the two toolbar rows independent of timetable cell layout. */
+      .top-bar { column-gap:6px; row-gap:6px; }
+      .top-bar > .primary-actions { display:flex; flex-wrap:wrap; gap:6px; margin-left:auto; max-width:100%; }
+      .top-bar > .toolbar-row-break { flex:0 0 100%; height:0; }
+      .top-bar > .search-wrapper { margin-left:0; }
+      .loading-bar-container { flex:0 0 83.33px; width:83.33px; max-width:83.33px; margin:0 4px; }
+      .loading-bar-container .loading-bar-fill { background:#bfdbfe; }
+      .loading-bar-container .loading-text-overlay { color:#0f1746; }
+      .fullscreen-btn { width:40px; min-width:40px; padding:0; justify-content:center; }
+      .ticker-wrap { cursor:default; }
     </style>
   </head>
   <body>
@@ -1537,7 +1547,7 @@
       <div class="review-box">
         <div class="review-modal-head">
           <div>
-            <div class="review-modal-title" id="reviewModalTitle">내일 시간표 점검</div>
+            <div class="review-modal-title" id="reviewModalTitle">시간표 점검</div>
             <div class="review-modal-sub">누락, 변동, 현재표 오류, 시험·직보 가능성, 발송 준비 상태를 실무 흐름에 맞춰 확인합니다.</div>
           </div>
           <button type="button" class="review-close-btn" onclick="closeReviewModal()">닫기</button>
@@ -1756,8 +1766,8 @@
       </div>
     </div>
     <div id="mainPage">
-      <div class="ticker-wrap" onclick="editNotice()">
-         <div class="ticker" id="noticeText">📢 [공지] 이곳을 클릭하여 실시간 공지사항을 입력하세요. (시험기간, 보강 안내 등)</div>
+      <div class="ticker-wrap" aria-label="S-LMS 공지사항">
+         <div class="ticker" id="noticeText">S-LMS 공지사항</div>
       </div>
       <div class="top-bar">
         <div onclick="goHome()" style="cursor:pointer; display:flex; align-items:center;">
@@ -1765,7 +1775,7 @@
              <span style="margin-left:5px; font-weight:bold; color:#0f1746;">HOME</span>
         </div>
         <div id="digitalClock" class="digital-clock"></div>
-        <div class="loading-bar-container"><div class="loading-bar-fill" id="loadingBar"></div><div class="loading-text-overlay" id="loadingText">잠시 후 업데이트...</div></div>
+        <div class="loading-bar-container"><div class="loading-bar-fill" id="loadingBar"></div><div class="loading-text-overlay" id="loadingText">30:00</div></div>
         
         <div class="nav-group"><button class="nav-btn" onclick="navigateDay(1)">◀ 어제</button><button class="nav-btn nav-btn-today" onclick="navigateDay(0)">오늘</button><button class="nav-btn" onclick="navigateDay(-1)">내일 ▶</button></div>
         
@@ -1796,34 +1806,39 @@
         <label class="toggle-wrapper" style="margin-left:5px;" title="지난 시간대 수업 흐리게 표시"><input type="checkbox" id="dimmingToggle" class="toggle-input" checked onchange="toggleDimming()"><div class="toggle-switch"></div><span>지난 OFF</span></label>
         <label id="hide9Control" class="toggle-wrapper" style="margin-left:5px;" title="9시 선생님 요약표 숨기기"><input type="checkbox" id="hide9amToggle" class="toggle-input" checked onchange="toggle9am()"><div class="toggle-switch"></div><span>9시 OFF</span></label>
         
-        <div class="refresh-container"><button id="refreshBtn" class="refresh-btn" onclick="refreshData()" title="데이터 강제 새로고침"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg></button><div class="update-alert-dot" id="updateAlert"></div><div class="update-tooltip" id="updateText" onclick="refreshData()" style="cursor:pointer">업데이트 확인됨!</div></div><div class="search-wrapper"><input type="text" class="search-input" id="searchInput" placeholder="🔍 학생/강사 검색" onkeyup="searchTable()"></div>
+        <div class="refresh-container"><button id="refreshBtn" class="refresh-btn" onclick="refreshData()" title="데이터 강제 새로고침"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg></button><div class="update-alert-dot" id="updateAlert"></div><div class="update-tooltip" id="updateText" onclick="refreshData()" style="cursor:pointer">업데이트 확인됨!</div></div><div class="primary-actions">
+          <button class="excel-btn" onclick="exportScheduleToExcel()" title="시수 저장 (엑셀)">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg><span>시수 저장</span>
+          </button>
+          <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="학생별 시간표 카드 생성">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h9a1 1 0 001-1V8.414a1 1 0 00-.293-.707l-3.414-3.414A1 1 0 009.586 4H4zm7 1.414L13.586 7H11V4.414z"/><path d="M16 9a1 1 0 011 1v5h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-5a1 1 0 011-1z"/></svg><span>시간표 카드</span>
+          </button>
+          <button id="operationMemoBtn" class="operation-memo-btn" onclick="openOperationMemoModal()" style="display:none;" title="운영 메모">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L15 3.586A2 2 0 0013.586 3H4zm9 1.5V7h2.5L13 4.5zM6 10a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z"/></svg><span>운영 메모</span>
+          </button>
+          <button id="teacherViewLogBtn" class="review-btn" onclick="openTeacherViewLogModal()" style="display:none;" aria-label="강사 대시보드" title="강사 대시보드">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>강사 대시보드</span>
+          </button>
+        </div><div class="toolbar-row-break" aria-hidden="true"></div><div class="search-wrapper"><input type="text" class="search-input" id="searchInput" placeholder="🔍 학생/강사 검색" onkeyup="searchTable()"></div>
         <div id="attendanceRefreshNotice" class="attendance-refresh-notice" role="status" aria-live="assertive">
           <div class="attendance-refresh-notice-main"><div class="attendance-refresh-notice-title">데스크 답변이 도착했습니다</div><div id="attendanceRefreshNoticeCopy" class="attendance-refresh-notice-copy">최신 상태 확인을 위해 새로고침해 주세요.</div></div>
           <button type="button" onclick="refreshData()">새로고침</button>
         </div>
         
         <div class="action-group">
-          <button class="excel-btn" onclick="exportScheduleToExcel()" title="시수 저장 (엑셀)">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg><span>시수 저장</span>
+
+          <button class="review-btn" onclick="runScheduleReview()" title="시간표 점검">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>시간표 점검</span>
           </button>
-          <button class="review-btn" onclick="runScheduleReview()" title="내일 시간표 점검">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>내일 시간표 점검</span>
-          </button>
-          <button class="empty-btn" onclick="toggleEmptyMode()" title="빈 강의실 보기">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg><span>빈강의실</span>
-          </button>
+
           <button class="capture-btn admin-toolbar-hidden" onclick="captureScreen()" title="이미지 저장">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l.74 2.228a1 1 0 00.948.684h6.168a2 2 0 011.992 2.181l-.637 7A2 2 0 0115.445 20H4.555a2 2 0 01-1.992-1.819l-.637-7a1.99 1.99 0 01.316-1.318A2 2 0 013 9.5V5z" clip-rule="evenodd" /></svg><span>저장</span>
           </button>
           <button class="capture-btn admin-toolbar-hidden" onclick="copyCurrentScheduleImage()" title="현재 화면 이미지 복사" style="background:#0ea5e9;">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M8 2a2 2 0 00-2 2v1H5a2 2 0 00-2 2v8a2 2 0 002 2h7a2 2 0 002-2v-1h1a2 2 0 002-2V4a2 2 0 00-2-2H8zm4 5v8H5V7h7zm3-3v8h-1V7a2 2 0 00-2-2H8V4h7z"/></svg><span>이미지 복사</span>
           </button>
-          <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="학생별 시간표 카드 생성">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h9a1 1 0 001-1V8.414a1 1 0 00-.293-.707l-3.414-3.414A1 1 0 009.586 4H4zm7 1.414L13.586 7H11V4.414z"/><path d="M16 9a1 1 0 011 1v5h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-5a1 1 0 011-1z"/></svg><span>시간표 카드</span>
-          </button>
-          <button class="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 (F11)">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>전체화면</span>
-          </button>
+
+
           <button class="msg-gen-btn admin-toolbar-hidden" onclick="generateArrivalMessage()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></svg><span>등원안내</span>
           </button>
@@ -1836,14 +1851,13 @@
           <button id="attendanceReportBtn" class="attendance-report-btn" onclick="openAttendanceReportModal()">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm-.75 3.5a.75.75 0 011.5 0v4.25l2.5 1.5a.75.75 0 11-.75 1.3l-2.87-1.72a.75.75 0 01-.38-.65V5.5z" clip-rule="evenodd"/></svg><span>출결 현황 보고</span>
           </button>
-          <button id="operationMemoBtn" class="operation-memo-btn" onclick="openOperationMemoModal()" style="display:none;" title="운영 메모">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L15 3.586A2 2 0 0013.586 3H4zm9 1.5V7h2.5L13 4.5zM6 10a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z"/></svg><span>운영 메모</span>
-          </button>
-          <button id="teacherViewLogBtn" class="review-btn" onclick="openTeacherViewLogModal()" style="display:none;">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>강사 대시보드</span>
-          </button>
+
+
           <button id="attendanceInboxBtn" class="review-btn attendance-inbox-btn" onclick="openAttendanceInbox()" style="display:none;" title="보낸 출결과 접수·처리 기록 확인">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a2 2 0 00-2 2v9a2 2 0 002 2h3.586l2.707 2.707a1 1 0 001.414 0L13.414 16H17a2 2 0 002-2V5a2 2 0 00-2-2H3zm3 5a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg><span>출결 전달함</span><span id="attendanceInboxCount" class="attendance-inbox-count"></span>
+          </button>
+          <button class="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 (F11)" aria-label="전체화면">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg>
           </button>
         </div>
       </div>
@@ -4555,6 +4569,7 @@
         });
       }
       function applyRoleUi() {
+        loadNotice();
         calendarSync();
         refreshOptionalTeacherRoster();
         syncTeacherPicker();
@@ -4571,7 +4586,7 @@
         var privacyControl = document.getElementById('privacyControl');
         var hide9Control = document.getElementById('hide9Control');
         var studentImageBtn = document.getElementById('studentImageBtn');
-        var reviewBtn = document.querySelector('.review-btn');
+        var reviewBtn = document.querySelector('button[onclick="runScheduleReview()"]');
         var excelBtn = document.querySelector('.excel-btn');
         var msgGenBtn = document.querySelector('.msg-gen-btn');
         var msgSimpleBtn = document.querySelector('.msg-simple-btn');
@@ -4818,25 +4833,79 @@
           }
         });
       }
-      function editNotice() {
-        var noticeText = document.getElementById('noticeText');
-        var newNotice = prompt("공지사항을 입력하세요:", noticeText.textContent.replace("📢 ", ""));
-        if(newNotice) {
-           var finalNotice = "📢 " + newNotice;
-           noticeText.textContent = finalNotice;
-           localStorage.setItem("sedu_notice", finalNotice);
-        }
+      var liveNoticeState = { key: "", generation: 0, unsubscribe: null, authUnsubscribe: null };
+      function setLiveNotice(text) {
+        document.getElementById("noticeText").textContent = text;
+      }
+      function stopLiveNotice() {
+        liveNoticeState.generation++;
+        if (liveNoticeState.unsubscribe) liveNoticeState.unsubscribe();
+        if (liveNoticeState.authUnsubscribe) liveNoticeState.authUnsubscribe();
+        liveNoticeState.unsubscribe = null;
+        liveNoticeState.authUnsubscribe = null;
+        liveNoticeState.key = "";
+        setLiveNotice("S-LMS 공지사항");
+      }
+      function normalizeLiveNotice(data) {
+        data = data || {};
+        var items = Array.isArray(data.items) ? data.items : (data.content ? [data] : []);
+        return items.filter(function(item) { return item && item.active !== false; })
+          .map(function(item) { return String(item.content || "").trim(); }).filter(Boolean);
       }
       function loadNotice() {
-        var saved = localStorage.getItem("sedu_notice");
-        if(saved) document.getElementById('noticeText').textContent = saved;
+        var key = authState.loggedIn && !authState.isLookup ? String(authState.loginId || "") : "";
+        if (!key) { stopLiveNotice(); return; }
+        if (liveNoticeState.key === key) return;
+        stopLiveNotice();
+        liveNoticeState.key = key;
+        var generation = liveNoticeState.generation;
+        function current() {
+          return generation === liveNoticeState.generation && authState.loggedIn &&
+            !authState.isLookup && String(authState.loginId || "") === key;
+        }
+        setLiveNotice("S-LMS 공지를 불러오는 중입니다.");
+        getLiveFirebaseAuth().then(function(auth) {
+          if (!current()) return;
+          var user = auth.currentUser;
+          if (!user || String(user.email || "").toLowerCase() !== firebaseEmailForLoginId(key).toLowerCase()) {
+            throw new Error("NOTICE_IDENTITY_MISMATCH");
+          }
+          var uid = user.uid;
+          liveNoticeState.authUnsubscribe = auth.onAuthStateChanged(function(nextUser) {
+            if (current() && (!nextUser || nextUser.uid !== uid)) stopLiveNotice();
+          });
+          return getLiveFirebaseFirestore().then(function(db) {
+            if (!current() || !auth.currentUser || auth.currentUser.uid !== uid) return;
+            liveNoticeState.unsubscribe = db.collection("dashboardSnapshots").doc("GLOBAL_NOTICE").onSnapshot(function(snapshot) {
+              if (!current() || !auth.currentUser || auth.currentUser.uid !== uid) return;
+              var notices = normalizeLiveNotice(snapshot.exists ? snapshot.data() : {});
+              setLiveNotice(notices.length ? "📢 " + notices.join("   •   ") : "등록된 S-LMS 공지가 없습니다.");
+            }, function() {
+              if (current()) {
+                stopLiveNotice();
+                setLiveNotice("S-LMS 공지를 불러오지 못했습니다. S-LMS에서 확인해 주세요.");
+              }
+            });
+          });
+        }).catch(function() {
+          if (current()) {
+            stopLiveNotice();
+            setLiveNotice("S-LMS 공지를 불러오지 못했습니다. S-LMS에서 확인해 주세요.");
+          }
+        });
       }
       
       function updateTimeline() {
          updateTimelinePosition();
       }
-      function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= SCHEDULE_START_HOUR && hour <= SCHEDULE_END_HOUR) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(false); timeLeft = 1800; } } else { document.getElementById('loadingText').textContent = "업데이트 대기중 (운영시간 외)"; document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
-      function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; document.getElementById('loadingText').textContent = "다음 업데이트까지 " + min + "분 " + sec + "초"; }
+      function setCountdownText(shortText, fullText) {
+        var label = document.getElementById("loadingText");
+        label.textContent = shortText;
+        label.parentElement.title = fullText;
+        label.parentElement.setAttribute("aria-label", fullText);
+      }
+      function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= SCHEDULE_START_HOUR && hour <= SCHEDULE_END_HOUR) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(false); timeLeft = 1800; } } else { setCountdownText("대기", "업데이트 대기중 (운영시간 외)"); document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
+      function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; setCountdownText(String(min).padStart(2,"0") + ":" + String(sec).padStart(2,"0"), "다음 업데이트까지 " + min + "분 " + sec + "초"); }
       function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var Y=now.getFullYear(); var M=String(now.getMonth()+1).padStart(2,'0'); var D=String(now.getDate()).padStart(2,'0'); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+Y+"."+M+"."+D+" ("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); updateTimelinePosition(); }
       
       function updateTimelinePosition() {
@@ -10124,7 +10193,7 @@
 	          html += "<div class='review-dashboard'>";
 	          html += "<section class='review-panel active' data-review-panel='overview'>";
 	          html += "<div class='review-dashboard-head'>" +
-	            "<div><div class='review-dashboard-title'>" + escapeHtml(currentSheetName || "현재 시간표") + " 내일 시간표 점검</div>" +
+	            "<div><div class='review-dashboard-title'>" + escapeHtml(currentSheetName || "현재 시간표") + " 시간표 점검</div>" +
 	            "<div class='review-dashboard-sub'>" + (previousSheetName ? "지난주 기준: " + escapeHtml(previousSheetName) : "지난주 같은 요일 기준 시트를 찾지 못했습니다.") + "</div></div>" +
 	            "<div class='review-dashboard-score'><strong>" + (comparison ? matchPercent + "%" : "-") + "</strong><span>지난주 학생 일치율</span><div class='review-meter'><div class='review-meter-fill' style='width:" + (comparison ? matchPercent : 0) + "%'></div></div></div>" +
 	            "</div>";

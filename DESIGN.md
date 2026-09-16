@@ -1,5 +1,9 @@
 # Live Timetable Design Tokens
 
+## Toolbar arrangement — 2026-09-16
+
+Preserve existing button colors, 6px radii and 40px targets. Put frequent actions (hours export, timetable card, memo, teacher dashboard) after top-row navigation. A full-width flex break starts the second row: search aligned under Home, then remaining actions; icon-only fullscreen is last at right. Keep direct-child search and Home for visitor-mode compatibility. Countdown width is one third of the former 250px (83.33px), with compact mm:ss text and full accessible description. Empty-room button is omitted. No timetable-cell redesign.
+
 ## Dense timetable refresh — 2026-09-12
 
 The user's original screenshot is the layout authority. Restore inline type badge, subject badge and teacher name; restore inline student name, school/grade and status. Teacher names use .7rem, badges .58rem and students .75rem. Status is horizontal colored text with no border, background, shadow or minimum height. Its note-opening action and keyboard focus remain. Do not introduce vertical text or stacked student identities.
