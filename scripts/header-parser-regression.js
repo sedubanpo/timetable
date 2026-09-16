@@ -18,6 +18,8 @@ const a = load(client, ['isTeacherHeader', 'getSubjectName']);
 const b = load(server, ['isTeacherHeader_', 'getSubjectName_']);
 for (const [text, expected] of [
   ['생윤 1:1 정지호T', true], ['개별 수학 안준성T', true],
+  ['과학 3:1 유소연T', true], ['과학 4:1 유소연T', true],
+  ['검증학생 검증고2 정규 과학 3:1 유소연T', false],
   ['상담 안준성T', true], ['정지호T', true],
   ['검증학생 검증고3 정규 정지호T', false],
   ['검증학생 정규 정지호T', false],
@@ -31,4 +33,4 @@ for (const subject of ['생윤', '윤사', '생명과학', '지구과학', '사�
   assert.equal(a.getSubjectName(subject + ' 1:1 정지호T'), subject);
   assert.equal(b.getSubjectName_(subject + ' 1:1 정지호T'), subject);
 }
-console.log('PASS client/server header parity and whole subject tokens (28 assertions).');
+console.log('PASS client/server header parity and whole subject tokens (34 assertions).');

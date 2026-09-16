@@ -26,9 +26,13 @@ try {
   grid[19][4]=['수학 개별 가검증T','다른학생 검증중2 첫등원'];
   grid[16][5]=['생윤 1:1 정지호T','비고학생 검증고3 정규 정지호T'];
   grid[17][5]=['생윤 1:1 정지호T','비고학생 검증고3 정규 정지호T와 상담'];
+  for (const h of [16,17]) grid[h][6]=['과학 3:1 유소연T','검증가 검증고2 정규','검증나 검증고2 정규','검증다 검증고2 정규 유소연T'];
   lastData={headers,grid,version:'qa-refresh'};renderTable(lastData,true);
  });
  results.cases.subjectIntact=await page.locator('#scheduleTable .subject-badge').allTextContents().then(ts=>ts.filter(t=>t.includes('생윤')).length===2);
+ results.cases.ratioHeaders=await page.locator('#scheduleTable .is-teacher').filter({hasText:'유소연T'}).count()===2;
+ results.cases.ratioBadges=await page.locator('#scheduleTable .type-badge').allTextContents().then(ts=>ts.filter(t=>t==='3:1').length===2);
+ results.cases.ratioStudents=await page.locator('#scheduleTable .is-student').filter({hasText:/검증[가나다]/}).count()===6;
  results.cases.noteStudentNotTeacher=await page.locator('#scheduleTable .is-student').filter({hasText:'비고학생'}).count()===2;
  results.cases.noNoteTeacher=await page.locator('#scheduleTable .is-teacher').filter({hasText:'비고학생'}).count()===0;
  results.cases.originalBadges=await page.locator('#scheduleTable .subject-badge').first().textContent().then(t=>t.includes('사탐'));
@@ -62,6 +66,8 @@ try {
   const before=JSON.stringify(lastData);exportScheduleToExcel();const row=rows.find(r=>r['이름']==='한학생'&&r['학교']==='검증고');
   window.qaExportDiagnostic={row,rows:rows.filter(r=>r['이름']==='한학생'),parsed:parseStudentRawText(lastData.grid[16][0][1])};
   const noted = rows.find(r=>r['이름']==='비고학생');
+  const ratioRows = rows.filter(r=>['검증가','검증나','검증다'].includes(r['이름']));
+  if (ratioRows.length!==3 || !ratioRows.every(r=>r['반명']==='과학-3:1-유소연' && r['시간']===2)) return false;
   return !!noted&&noted['반명'].includes('생윤')&&noted['참고'].includes('정지호T')&&!!row&&row['시작']==='오후 4:30'&&row['종료']==='오후 7:30'&&row['시간']===3&&row['출결']==='출석'&&row['참고'].includes('지각')&&before===JSON.stringify(lastData);
  });
  for(const width of [1440,1024,390]){

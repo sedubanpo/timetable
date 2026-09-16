@@ -5278,8 +5278,8 @@
       function detectClassType(text) {
         var t = String(text || "");
         if (t.includes("개별정규")) return "개별정규";
-        if (t.includes("2:1")) return "2:1";
-        if (t.includes("1:1")) return "1:1";
+        var ratio = t.match(/(?:^|\s)([1-9][0-9]*:1)(?=\s|$)/);
+        if (ratio) return ratio[1];
         if (t.includes("특강")) return "특강";
         if (t.includes("보강") || t.includes("보충")) return "보강";
         if (t.includes("개별")) return "개별";
@@ -7786,7 +7786,7 @@
         if (!/(?:^|\s)[가-힣A-Za-z]+\s*T$/.test(text)) return false;
         var prefix = text.replace(/(?:^|\s)[가-힣A-Za-z]+\s*T$/, "").trim();
         return !prefix || prefix.split(/\s+/).every(function(token) {
-          return /^(개별정규|개별|정규|1:1|2:1|특강|보강|보충|상담)$/.test(token) ||
+          return /^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|상담)$/.test(token) ||
             getSubjectName(token) === token;
         });
       }
@@ -7831,8 +7831,7 @@
       function getTypeBadge(text) {
         var t = detectClassType(text);
         if (!t) return null;
-        if (t === "2:1") return { html: "<span class='type-badge badge-purple'>2:1</span>", keyword: "2:1" };
-        if (t === "1:1") return { html: "<span class='type-badge badge-purple'>1:1</span>", keyword: "1:1" };
+        if (/^[1-9][0-9]*:1$/.test(t)) return { html: "<span class='type-badge badge-purple'>" + t + "</span>", keyword: t };
         if (t === "직보") return { html: "<span class='type-badge badge-red'>직보</span>", keyword: "직보" };
         if (t === "개별정규") return { html: "<span class='type-badge badge-green'>개별정규</span>", keyword: "개별정규" };
         if (t === "개별") return { html: "<span class='type-badge badge-green'>개별</span>", keyword: "개별" };

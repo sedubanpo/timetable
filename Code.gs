@@ -338,7 +338,7 @@ function isTeacherHeader_(value) {
         if (!/(?:^|\s)[가-힣A-Za-z]+\s*T$/.test(text)) return false;
         var prefix = text.replace(/(?:^|\s)[가-힣A-Za-z]+\s*T$/, "").trim();
         return !prefix || prefix.split(/\s+/).every(function(token) {
-          return /^(개별정규|개별|정규|1:1|2:1|특강|보강|보충|상담)$/.test(token) ||
+          return /^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|상담)$/.test(token) ||
             getSubjectName_(token) === token;
         });
       }
