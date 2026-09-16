@@ -13,6 +13,7 @@ let rows=[];
 const context={SCHEDULE_START_HOUR:8,SCHEDULE_END_HOUR:23,currentSheetName:'9/8(화)',
   alert:message=>{throw Error(message);},
   extractTeacherName:text=>text.split('|')[1],getSubjectName:text=>text.split('|')[2],getTypeBadgeText:text=>text.split('|')[3],
+  isTeacherHeader:text=>text.startsWith('T|'),
   parseStudentRawText:text=>{const [name,school,status,note]=text.split('|');return {name,school,status,note,full:school};},
   shouldHideStatus:()=>false,normalizeStatusLabel:value=>value,
   XLSX:{utils:{json_to_sheet:value=>{rows=value;return {'!ref':'A1:J9'};},book_new:()=>({}),book_append_sheet:()=>{}},writeFile:()=>{}}

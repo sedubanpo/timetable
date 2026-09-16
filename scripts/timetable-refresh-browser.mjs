@@ -24,8 +24,13 @@ try {
   for(let h=16;h<20;h++)grid[h][0]=['사탐 개별 검증강사T','한학생 검증고1 '+(h===16?'지각':'정규')+' 9/10(목) 확정-개학, 4시30-7시30분 수업'];
   grid[17][2]=['국어 1:1 다른강사T','한학생 다른고1 정규','새학생 검증중2 첫수업'];
   grid[19][4]=['수학 개별 가검증T','다른학생 검증중2 첫등원'];
+  grid[16][5]=['생윤 1:1 정지호T','비고학생 검증고3 정규 정지호T'];
+  grid[17][5]=['생윤 1:1 정지호T','비고학생 검증고3 정규 정지호T와 상담'];
   lastData={headers,grid,version:'qa-refresh'};renderTable(lastData,true);
  });
+ results.cases.subjectIntact=await page.locator('#scheduleTable .subject-badge').allTextContents().then(ts=>ts.filter(t=>t.includes('생윤')).length===2);
+ results.cases.noteStudentNotTeacher=await page.locator('#scheduleTable .is-student').filter({hasText:'비고학생'}).count()===2;
+ results.cases.noNoteTeacher=await page.locator('#scheduleTable .is-teacher').filter({hasText:'비고학생'}).count()===0;
  results.cases.originalBadges=await page.locator('#scheduleTable .subject-badge').first().textContent().then(t=>t.includes('사탐'));
  results.cases.teacherSeparate=await page.locator('#scheduleTable .teacher-name').first().textContent()==='검증강사T';
  results.cases.textStatus=await page.locator('#scheduleTable .status-note-btn').first().evaluate(e=>getComputedStyle(e).borderWidth==='0px'&&getComputedStyle(e).backgroundColor==='rgba(0, 0, 0, 0)');
@@ -56,7 +61,8 @@ try {
   let rows;window.XLSX={utils:{json_to_sheet:r=>{rows=r;return {};},book_new:()=>({}),book_append_sheet:()=>{}},writeFile:()=>{}};
   const before=JSON.stringify(lastData);exportScheduleToExcel();const row=rows.find(r=>r['이름']==='한학생'&&r['학교']==='검증고');
   window.qaExportDiagnostic={row,rows:rows.filter(r=>r['이름']==='한학생'),parsed:parseStudentRawText(lastData.grid[16][0][1])};
-  return !!row&&row['시작']==='오후 4:30'&&row['종료']==='오후 7:30'&&row['시간']===3&&row['출결']==='출석'&&row['참고'].includes('지각')&&before===JSON.stringify(lastData);
+  const noted = rows.find(r=>r['이름']==='비고학생');
+  return !!noted&&noted['반명'].includes('생윤')&&noted['참고'].includes('정지호T')&&!!row&&row['시작']==='오후 4:30'&&row['종료']==='오후 7:30'&&row['시간']===3&&row['출결']==='출석'&&row['참고'].includes('지각')&&before===JSON.stringify(lastData);
  });
  for(const width of [1440,1024,390]){
   await page.setViewportSize({width,height:900});await page.evaluate(()=>renderTable(lastData,true));

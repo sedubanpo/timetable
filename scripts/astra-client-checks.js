@@ -32,6 +32,15 @@ vm.runInContext(app, sandbox);
 const run = code => vm.runInContext(code, sandbox);
 const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 (async () => {
+  for (const subject of ['생윤','윤사','생활과윤리','생명과학','물리1','지구과학','사문','정법','수II']) {
+    assert.equal(run(`getSubjectName(${JSON.stringify(subject+' 1:1 정지호T')})`), subject);
+    assert.equal(run(`isTeacherHeader(${JSON.stringify(subject+' 1:1 정지호T')})`), true);
+  }
+  for (const note of ['정지호T','정지호T와 상담','수학 개별 안준성T 보강','TEST 교재']) {
+    assert.equal(run(`isTeacherHeader(${JSON.stringify('검증학생 검증고3 정규 '+note)})`), false);
+  }
+  assert.equal(run("getSubjectEmoji('생윤')"), '🌏');
+  assert.equal(run("getSubjectName('정지호T')"), '');
   assert.equal(run("getSubjectName('개별 수학 검증강사T')"), '수학', 'class format must not mask actual math subject');
   assert.equal(run("getSubjectName('정규 영어 검증강사T')"), '영어', 'class format must not mask actual English subject');
   assert.equal(run("getSubjectName('개별정규 물리 검증강사T')"), '물리', 'class format must not mask actual physics subject');

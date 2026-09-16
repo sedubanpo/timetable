@@ -332,6 +332,23 @@ function buildLoginKeys_(value) {
   return keys.filter(function(v, idx, arr){ return v && arr.indexOf(v) === idx; });
 }
 
+function isTeacherHeader_(value) {
+        var text = String(value || "").trim();
+        // A note mentioning a teacher is not a lesson header.
+        if (!/(?:^|\s)[가-힣A-Za-z]+\s*T$/.test(text)) return false;
+        var prefix = text.replace(/(?:^|\s)[가-힣A-Za-z]+\s*T$/, "").trim();
+        return !prefix || prefix.split(/\s+/).every(function(token) {
+          return /^(개별정규|개별|정규|1:1|2:1|특강|보강|보충|상담)$/.test(token) ||
+            getSubjectName_(token) === token;
+        });
+      }
+      function getSubjectName_(text) {
+        var tokens = String(text || "").trim().split(/\s+/);
+        var subjects = /^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
+        for (var i = 0; i < tokens.length; i++) if (subjects.test(tokens[i])) return tokens[i];
+        return "";
+      }
+
 function extractTeacherName_(teacherItem) {
   var text = String(teacherItem || "");
   var withSuffix = text.match(/([가-힣A-Za-z]+)\s*T\b/);
@@ -732,7 +749,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
       var row = base.grid[h] || [];
       filtered[h] = row.map(function(items) {
         var list = items || [];
-        var teacherItem = list.find(function(item) { return String(item || "").includes("T"); });
+        var teacherItem = list.find(function(item) { return isTeacherHeader_(item || ""); });
         if (!teacherItem) return [];
         var name = normalizeTeacherName_(extractTeacherName_(teacherItem));
         if (name !== selectedTeacher) return [];

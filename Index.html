@@ -2181,7 +2181,7 @@
         return studentEnrollmentStatusState.loading;
       }
       function applyEnrollmentStatusWarning(itemDiv, rawText) {
-        if (!itemDiv || String(rawText || "").includes("T")) return;
+        if (!itemDiv || isTeacherHeader(rawText || "")) return;
         var parsed = parseStudentRawText(rawText);
         var label = getEnrollmentWarningForStudent(parsed.name);
         if (!label) return;
@@ -2307,7 +2307,7 @@
           (disabled ? " disabled title='S-LMS 학생 ID를 한 명으로 확인할 수 없습니다.'" : "") + ">" + label + "</button>";
       }
       function appendTeacherAttendanceButton(itemDiv, rawText) {
-        if (!itemDiv || !canCurrentUserSubmitAttendance() || String(rawText || "").includes("T")) return;
+        if (!itemDiv || !canCurrentUserSubmitAttendance() || isTeacherHeader(rawText || "")) return;
         var context = buildAttendanceContext(rawText, itemDiv.dataset.scheduleHour, itemDiv.dataset.scheduleRoom, itemDiv.dataset.scheduleSubject, itemDiv.dataset.scheduleLessonType);
         itemDiv.insertAdjacentHTML("beforeend", buildTeacherAttendanceButtonHtml(context));
       }
@@ -5157,7 +5157,7 @@
             var is2=rn.includes("2관"); var st=h; var ts=st+":00"; 
             items.forEach(function(t){ 
               var txt = String(t || ""); 
-              if(txt.includes("T")||txt.includes("결석예고"))return; 
+              if(isTeacherHeader(txt)||txt.includes("결석예고"))return;
               if (shouldHideStudentText(txt)) return;
               var ct=txt.replace("확인필요","").replace(/신\s*규\s*생?|첫\s*수\s*업/g,"").trim(); 
               ct=ct.split(" ")[0]; 
@@ -5195,13 +5195,13 @@
             if(roomName.includes("휴강")) continue;
             
             var teacherName = "";
-            var teacherItem = items.find(t => String(t||"").includes("T"));
+            var teacherItem = items.find(t => isTeacherHeader(t||""));
             if(teacherItem) teacherName = teacherItem.split(" ").pop(); 
             var subjectName = teacherItem ? getSubjectName(teacherItem) : "";
             var typeInfo = teacherItem ? getTypeBadgeText(teacherItem) : "";
             items.forEach(function(text) {
               var txt = String(text || "");
-              if (txt.includes("T") || txt.includes("결석예고")) return;
+              if (isTeacherHeader(txt) || txt.includes("결석예고")) return;
               if (shouldHideStudentText(txt)) return;
               var cleanText = txt.replace("확인필요", "").replace(/신\s*규\s*생?|첫\s*수\s*업/g, "").trim();
               var parts = cleanText.split(" ");
@@ -5520,7 +5520,7 @@
       }
       function getScheduleStudentIdentity(rawText) {
         var raw = String(rawText || "");
-        if (!raw || raw.includes("T")) return "";
+        if (!raw || isTeacherHeader(raw)) return "";
         var parsed = parseStudentRawText(raw);
         var status = normalizeStatusLabel(parsed.status || "");
         if (!parsed.name || !parsed.school || shouldHideStatus(status) || isAbsenceNoticeStatus(status)) return "";
@@ -5537,7 +5537,7 @@
       }
       function getScheduleLessonSignature(items, roomName) {
         var teacherItem = (items || []).find(function(item) {
-          return String(item || "").includes("T");
+          return isTeacherHeader(item || "");
         });
         if (teacherItem) {
           var teacherKey = normalizeEnrollmentStudentName(extractTeacherName(teacherItem)) || normalizeEnrollmentStudentName(teacherItem);
@@ -5638,13 +5638,13 @@
             if (!items.length) continue;
             var room = lastData.headers[i];
             if (String(room || "").includes("휴강")) continue;
-            var teacherItem = items.find(function(v){ return String(v || "").includes("T"); });
+            var teacherItem = items.find(function(v){ return isTeacherHeader(v || ""); });
             var teacherName = teacherItem ? extractTeacherName(teacherItem) : "";
             var subject = teacherItem ? getSubjectName(String(teacherItem)) : "";
 	            var classType = teacherItem ? detectStudentCardClassType(String(teacherItem)) : "";
             items.forEach(function(text){
               var raw = String(text || "");
-              if (!raw || raw.includes("T")) return;
+              if (!raw || isTeacherHeader(raw)) return;
               var clean = raw.replace("확인필요", "").replace(/신\s*규\s*생?|첫\s*수\s*업/g, "").trim();
               var student = clean.split(" ")[0];
               if (!student) return;
@@ -5716,13 +5716,13 @@
             if (String(room || "").includes("휴강")) continue;
             var items = row[i] || [];
             if (!items.length) continue;
-            var teacherItem = items.find(function(v){ return String(v || "").includes("T"); });
+            var teacherItem = items.find(function(v){ return isTeacherHeader(v || ""); });
             var subject = teacherItem ? getSubjectName(String(teacherItem)) : "";
             var teacher = teacherItem ? extractTeacherName(String(teacherItem)) : "";
             var classType = teacherItem ? detectClassType(String(teacherItem)) : "";
             items.forEach(function(text){
               var raw = String(text || "");
-              if (!raw || raw.includes("T")) return;
+              if (!raw || isTeacherHeader(raw)) return;
               var parsed = parseStudentRawText(raw);
               var status = normalizeStatusLabel(parsed.status || "");
               if (!isAbsenceNoticeStatus(status)) return;
@@ -6767,7 +6767,7 @@
             if (roomName.includes("휴강")) return;
             (items || []).forEach(function(text) {
               var raw = String(text || "");
-              if (!raw || !raw.includes("T")) return;
+              if (!raw || !isTeacherHeader(raw)) return;
               var name = normalizeTeacherLogName(extractTeacherName(raw));
               if (isTeacherDashboardExcludedName(name)) return;
               if (name) names[name] = true;
@@ -7138,7 +7138,7 @@
             var meta = getTeacherRoomMetaFromHeader(roomName);
             (items || []).forEach(function(text) {
               var raw = String(text || "");
-              if (!raw || raw.indexOf("T") === -1) return;
+              if (!raw || !isTeacherHeader(raw)) return;
               var teacherName = normalizeTeacherLogName(extractTeacherName(raw));
               if (!teacherName || isTeacherDashboardExcludedName(teacherName)) return;
               if (!bucket[teacherName]) {
@@ -7472,7 +7472,7 @@
           if (String(room || "").includes("휴강")) continue;
           var cell = row[i] || [];
           if (!cell.length) continue;
-          var teacherItem = cell.find(function(v){ return String(v || "").includes("T"); });
+          var teacherItem = cell.find(function(v){ return isTeacherHeader(v || ""); });
           var subject = teacherItem ? getSubjectName(String(teacherItem)) : "";
           var teacher = teacherItem ? extractTeacherName(String(teacherItem)) : "";
           var classType = teacherItem ? detectClassType(String(teacherItem)) : "";
@@ -7495,7 +7495,7 @@
           }
           cell.forEach(function(v){
             var raw = String(v || "");
-            if (!raw || raw.includes("T")) return;
+            if (!raw || isTeacherHeader(raw)) return;
             var parsed = parseStudentRawText(raw);
             if (!parsed.name) return;
             totalStudentCount += 1;
@@ -7780,8 +7780,23 @@
           alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
         });
       }
-      function getSubjectName(text) { var m = String(text || "").match(/(수학|수II|수I|미적|기하|확통|과학|물리|화학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|컨설팅|클리닉|면접)/); return m ? m[0] : ""; }
-      function getSubjectEmoji(subj) { if (subj.match(/(수학|수I|수II|미적|기하|확통|개별|정규)/)) return "📐"; if (subj.match(/(과학|물리|화학|생명|지구과학|물|화|생|지)/)) return "🧪"; if (subj.match(/(국어|언매|화작)/)) return "📚"; if (subj.match(/(영어)/)) return "🅰️"; if (subj.match(/(사회|한국사|역사|사탐)/)) return "🌏"; return "✏️"; }
+      function isTeacherHeader(value) {
+        var text = String(value || "").trim();
+        // A note mentioning a teacher is not a lesson header.
+        if (!/(?:^|\s)[가-힣A-Za-z]+\s*T$/.test(text)) return false;
+        var prefix = text.replace(/(?:^|\s)[가-힣A-Za-z]+\s*T$/, "").trim();
+        return !prefix || prefix.split(/\s+/).every(function(token) {
+          return /^(개별정규|개별|정규|1:1|2:1|특강|보강|보충|상담)$/.test(token) ||
+            getSubjectName(token) === token;
+        });
+      }
+      function getSubjectName(text) {
+        var tokens = String(text || "").trim().split(/\s+/);
+        var subjects = /^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
+        for (var i = 0; i < tokens.length; i++) if (subjects.test(tokens[i])) return tokens[i];
+        return "";
+      }
+      function getSubjectEmoji(subj) { if (/^(생윤|윤사|생활과윤리|윤리와사상|사회|한국사|역사|사탐|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사)$/.test(subj)) return "🌏"; if (/^(수학|수[12IⅠⅡ]|미적|기하|확통)/.test(subj)) return "📐"; if (/^(과학|물리|화학|생명|지구|물$|화$|생$|지$)/.test(subj)) return "🧪"; if (/^(국어|언매|화작)$/.test(subj)) return "📚"; if (subj === "영어") return "🅰️"; return "✏️"; }
       function getDistinctColor(str) { var hash = 0; for (var i=0; i<str.length; i++) hash = str.charCodeAt(i) + ((hash<<5)-hash); var hue = (Math.abs(hash)*137.508)%360; return "hsl(" + hue + ", 75%, 93%)"; }
       function escapeRegExp(value) {
         return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -7799,7 +7814,7 @@
         function mark(value) {
           return escapeHtml(value).replace(regex, "<span class='highlight-text'>$1</span>");
         }
-        if (rawText.includes("T")) {
+        if (isTeacherHeader(rawText)) {
           var subject = getSubjectName(rawText);
           var content = displayText.replace(subject, "").trim();
           var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + escapeHtml(subject) + "</span>" : "";
@@ -7831,7 +7846,7 @@
         return row.some(function(items) {
           return (items || []).some(function(text) {
             var raw = String(text || "");
-            return raw && !raw.includes("T") && !shouldHideStudentText(raw);
+            return raw && !isTeacherHeader(raw) && !shouldHideStudentText(raw);
           });
         });
       }
@@ -7928,10 +7943,10 @@
             if (hiddenIndices.has(i)) continue;
             var td = document.createElement('td'); td.style.padding = "0"; td.setAttribute('data-col-index', i); 
             var rawItems = rowData[i] || [];
-            var teacherItems = rawItems.filter(function(tx){ return String(tx || "").includes("T"); });
+            var teacherItems = rawItems.filter(function(tx){ return isTeacherHeader(tx || ""); });
             var visibleStudents = rawItems.filter(function(tx){
               var s = String(tx || "");
-              if (!s || s.includes("T")) return false;
+              if (!s || isTeacherHeader(s)) return false;
               return !shouldHideStudentText(s);
             });
             var items = visibleStudents.length ? teacherItems.concat(visibleStudents) : [];
@@ -7941,13 +7956,13 @@
               items.sort(function(a, b) {
                 if(!a) return 1; if(!b) return -1;
                 var aStr = String(a); var bStr = String(b);
-                var aT = aStr.includes("T"); var bT = bStr.includes("T");
+                var aT = isTeacherHeader(aStr); var bT = isTeacherHeader(bStr);
                 var aAbs = aStr.includes("결석예고"); var bAbs = bStr.includes("결석예고");
                 if (aT && !bT) return -1; if (!aT && bT) return 1;
                 if (!aAbs && bAbs) return -1; if (aAbs && !bAbs) return 1;
                 return aStr.localeCompare(bStr); 
               });
-              var teacherItem = items.find(function(t) { return t && String(t).includes("T"); });
+              var teacherItem = items.find(function(t) { return t && isTeacherHeader(t); });
               if (teacherItem && detectClassType(String(teacherItem)) === "1:1") {
                 div.classList.add("oneonone-cell");
               }
@@ -8050,13 +8065,13 @@
               var cellItems = simpleRow[si] || [];
               if (!cellItems.length) continue;
               var roomName = data.headers[si];
-              var teacherItem = cellItems.find(function(t) { return t && String(t).includes("T"); }) || "";
+              var teacherItem = cellItems.find(function(t) { return t && isTeacherHeader(t); }) || "";
               var subjectName = getSubjectName(teacherItem || "") || "수업";
               var lessonType = detectClassType(teacherItem || "");
               var teacherName = teacherItem ? extractTeacherName(String(teacherItem)) : "";
               cellItems.forEach(function(rawText) {
                 var raw = String(rawText || "");
-                if (!raw || raw.includes("T")) return;
+                if (!raw || isTeacherHeader(raw)) return;
                 if (shouldHideStudentText(raw)) return;
                 var parsed = parseStudentRawText(raw);
                 if (!parsed.name) return;
@@ -8131,12 +8146,12 @@
             var roomName = data.headers[ci];
             var it = rr[ci] || [];
             if (!it.length) continue;
-            var teacherItemAt = it.find(function(t){ return t && String(t).includes("T"); }) || "";
+            var teacherItemAt = it.find(function(t){ return t && isTeacherHeader(t); }) || "";
             var typeAt = detectClassType(teacherItemAt || "");
             var subjectAt = getSubjectName(teacherItemAt || "");
             it.forEach(function(rowText) {
               var raw = String(rowText || "");
-              if (!raw || raw.includes("T")) return;
+              if (!raw || isTeacherHeader(raw)) return;
               if (shouldHideStudentText(raw)) return;
               var p = parseStudentRawText(raw);
               if (!p.name) return;
@@ -8170,10 +8185,10 @@
             if (!items.length) continue;
             var students = items.filter(function(t) {
               var s = String(t || "");
-              if (!s || s.includes("T")) return false;
+              if (!s || isTeacherHeader(s)) return false;
               return !shouldHideStudentText(s);
             });
-            var teacherItem = items.find(function(t) { return t && String(t).includes("T"); });
+            var teacherItem = items.find(function(t) { return t && isTeacherHeader(t); });
             var lessonType = detectClassType(teacherItem || "");
             var subjectName = getSubjectName(teacherItem || "");
             if (!students.length) continue;
@@ -8267,12 +8282,12 @@
             if (!items.length) continue;
             var roomName = lastData.headers[i];
             if (String(roomName || "").includes("휴강")) continue;
-            var teacherItem = items.find(function(v) { return String(v || "").includes("T"); }) || "";
+            var teacherItem = items.find(function(v) { return isTeacherHeader(v || ""); }) || "";
             var teacherName = teacherItem ? extractTeacherName(teacherItem) : "";
             var subjectName = teacherItem ? getSubjectName(teacherItem) : "";
             items.forEach(function(raw) {
               var text = String(raw || "");
-              if (!text || text.includes("T")) return;
+              if (!text || isTeacherHeader(text)) return;
               var parsed = parseStudentRawText(text);
               if (shouldHideStatus(parsed.status) || isAbsenceNoticeStatus(parsed.status)) return;
               var nameKey = normalizeLookupKeyword(parsed.name);
@@ -8492,12 +8507,12 @@
           if (!/[1-9]\s*강의실/.test(roomName)) return;
           var items = row[idx] || [];
           var hasClass = items.some(function(v) {
-            return String(v || "").includes("T");
+            return isTeacherHeader(v || "");
           });
           if (!hasClass) {
             var studentCount = items.filter(function(v) {
               var text = String(v || "").trim();
-              if (!text || text.includes("T") || shouldHideStudentText(text)) return false;
+              if (!text || isTeacherHeader(text) || shouldHideStudentText(text)) return false;
               return !!parseStudentRawText(text).name;
             }).length;
             rooms.push({
@@ -8937,7 +8952,7 @@
               var cellAllStudents = [];
               var hasCheckNeeded = false;
               var teacherItem = items.find(function(text) {
-                return String(text || "").includes("T");
+                return isTeacherHeader(text || "");
               }) || "";
               var lessonType = detectClassType(teacherItem);
               var cellTextForContext = items.join(" ");
@@ -8965,7 +8980,7 @@
                 if (/(결석예고|휴강)/.test(combinedText)) snapshot.operationalTags.absence.push(tagTarget);
                 if (/(당일취소|당취)/.test(combinedText)) snapshot.operationalTags.cancellation.push(tagTarget);
                 if (/(자습|자기주도|자율학습)/.test(combinedText)) snapshot.operationalTags.selfStudy.push(tagTarget);
-                if (txt.includes("T")) return;
+                if (isTeacherHeader(txt)) return;
 	                var extractedName = extractReviewStudentName(txt);
 	                if (extractedName) {
 	                  var parsedStudent = parseStudentRawText(txt);
@@ -10329,7 +10344,7 @@
         } 
         
         var allBadges = newBadge + cancelBadge + badgeHtml;
-        if (displayText.includes("T")) { 
+        if (isTeacherHeader(displayText)) {
           itemDiv.classList.add("is-teacher");
           var typeInfo = getTypeBadge(displayText); var typeBadgeHtml = "";
           if (typeInfo) { typeBadgeHtml = typeInfo.html; displayText = displayText.replace(typeInfo.keyword, "").trim(); }
@@ -10395,7 +10410,7 @@
             if (!items.length) continue;
 
             var teacherItem = items.find(function(t) {
-              return String(t || "").includes("T");
+              return isTeacherHeader(t || "");
             });
             var teacherName = teacherItem ? extractTeacherName(teacherItem) : "";
             var subjectName = teacherItem ? getSubjectName(teacherItem) : "";
@@ -10404,7 +10419,7 @@
 
             items.forEach(function(text) {
               var rawText = String(text || "").trim();
-              if (!rawText || rawText.includes("T")) return;
+              if (!rawText || isTeacherHeader(rawText)) return;
 
               var parsed = parseStudentRawText(rawText);
               if (!parsed.name || shouldHideStatus(parsed.status)) return;
