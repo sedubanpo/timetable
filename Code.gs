@@ -989,6 +989,15 @@ function buildStudentCardStatusKey_(sheetName, studentName) {
   return String(sheetName || "").trim() + "||" + String(studentName || "").trim();
 }
 
+// google.script.run cannot call underscore-suffixed private functions.
+function getStudentCardStatuses(sheetName) {
+  return getStudentCardStatuses_(sheetName);
+}
+
+function setStudentCardSentStatus(sheetName, studentName, sent, loginId) {
+  return setStudentCardSentStatus_(sheetName, studentName, sent, loginId);
+}
+
 function getStudentCardStatuses_(sheetName) {
   try {
     var targetSheet = String(sheetName || "").trim();
@@ -1011,7 +1020,7 @@ function getStudentCardStatuses_(sheetName) {
     });
     return statuses;
   } catch (e) {
-    return {};
+    throw new Error("학생카드 발송 기록을 읽지 못했습니다: " + (e && e.message ? e.message : e));
   }
 }
 
