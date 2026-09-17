@@ -1943,6 +1943,9 @@
       let lateNightAccessCode = "2371";
       let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], manualItems: [], autoItems: [], sourceErrors: {}, slmsEvents: [], slmsLoadedAt: 0, loading: false, editingId: "", popupKey: "" };
       let studentEnrollmentStatusState = { byName: {}, identitiesByName: {}, loadedAt: 0, warningCount: 0, loading: null, error: "" };
+      let studentEnrollmentStatusSequence = 0;
+      let studentEnrollmentStatusContext = "";
+      let studentEnrollmentStatusUser = null;
       let attendanceRealtimeState = { reports: [], byKey: {}, unsubscribe: null, notificationUnsubscribe: null, uid: "", mode: "", firebaseAdmin: false, loading: false, error: "", pendingDeskReplies: [] };
       let attendanceComposerContext = null;
       let attendanceInboxView = "chat";
@@ -1956,6 +1959,8 @@
       let liveFirebaseFirestorePromise = null;
       let liveFirebaseLogoutPromise = Promise.resolve();
       let operationMemoPollTimer = null;
+      let operationMemoInFlight = null;
+      let scheduleInFlight = null;
       let scheduleLoadSequence = 0;
       let operationMemoLoadSequence = 0;
       let versionCheckPending = false;
@@ -2175,28 +2180,71 @@
         }
         return withFirestoreTimeout(loadPage("", []), 12000, "Firebase 학교 일정");
       }
+      function resetStudentEnrollmentStatus() {
+        studentEnrollmentStatusSequence++;
+        studentEnrollmentStatusContext = "";
+        studentEnrollmentStatusUser = null;
+        studentEnrollmentStatusState = { byName: {}, identitiesByName: {}, loadedAt: 0, warningCount: 0, loading: null, error: "" };
+      }
+      function enrollmentStatusSignature(index) {
+        function canonical(records) {
+          return Object.keys(records).sort().map(function(key) {
+            return [key, records[key].map(function(record) { return JSON.stringify(record); }).sort()];
+          });
+        }
+        return JSON.stringify([canonical(index.byName), canonical(index.identitiesByName), index.warningCount]);
+      }
       function loadStudentEnrollmentStatusWarnings(force) {
-        var now = Date.now();
-        if (!force && studentEnrollmentStatusState.loadedAt && now - studentEnrollmentStatusState.loadedAt < 5 * 60 * 1000) return Promise.resolve(false);
-        if (studentEnrollmentStatusState.loading) return studentEnrollmentStatusState.loading;
-        studentEnrollmentStatusState.loading = getLiveFirebaseAuth().then(function(auth) {
-          if (!auth.currentUser) throw new Error("Firebase 로그인 세션 없음");
-          return auth.currentUser.getIdToken();
-        }).then(fetchEnrollmentStatusStudents).then(function(rows) {
-          var index = buildEnrollmentStatusIndex(rows);
-          studentEnrollmentStatusState.byName = index.byName;
-          studentEnrollmentStatusState.identitiesByName = index.identitiesByName;
-          studentEnrollmentStatusState.warningCount = index.warningCount;
-          studentEnrollmentStatusState.loadedAt = Date.now();
-          studentEnrollmentStatusState.error = "";
-          return true;
-        }).catch(function(error) {
-          studentEnrollmentStatusState.error = error && error.message ? error.message : String(error || "학생 상태 조회 실패");
-          throw error;
-        }).finally(function() {
-          studentEnrollmentStatusState.loading = null;
+        var context = JSON.stringify([!!authState.loggedIn, authState.loginId || ""]);
+        if (studentEnrollmentStatusContext !== context) {
+          resetStudentEnrollmentStatus();
+          studentEnrollmentStatusContext = context;
+        }
+        var sequence = studentEnrollmentStatusSequence;
+        function currentContext() {
+          return sequence === studentEnrollmentStatusSequence && context === JSON.stringify([!!authState.loggedIn, authState.loginId || ""]);
+        }
+        // Resolve Firebase identity before freshness/inflight reuse: an account change
+        // must never inherit another user's cache, including a still-pending request.
+        return getLiveFirebaseAuth().then(function(auth) {
+          if (!currentContext()) return false;
+          var user = auth.currentUser;
+          if (studentEnrollmentStatusUser !== user) {
+            if (studentEnrollmentStatusUser) resetStudentEnrollmentStatus();
+            studentEnrollmentStatusContext = context;
+            studentEnrollmentStatusUser = user;
+            sequence = studentEnrollmentStatusSequence;
+          }
+          if (!user) throw new Error("Firebase 로그인 세션 없음");
+          var now = Date.now();
+          if (!force && studentEnrollmentStatusState.loadedAt && now - studentEnrollmentStatusState.loadedAt < 5 * 60 * 1000) return false;
+          if (studentEnrollmentStatusState.loading) return studentEnrollmentStatusState.loading;
+          function isCurrent() { return currentContext() && auth.currentUser === user; }
+          var loading = Promise.resolve().then(function() {
+            if (!isCurrent()) return null;
+            return user.getIdToken().then(function(token) {
+              return isCurrent() ? fetchEnrollmentStatusStudents(token) : null;
+            });
+          }).then(function(rows) {
+            if (!isCurrent() || rows === null) return false;
+            var index = buildEnrollmentStatusIndex(rows);
+            var changed = enrollmentStatusSignature(index) !== enrollmentStatusSignature(studentEnrollmentStatusState);
+            studentEnrollmentStatusState.byName = index.byName;
+            studentEnrollmentStatusState.identitiesByName = index.identitiesByName;
+            studentEnrollmentStatusState.warningCount = index.warningCount;
+            studentEnrollmentStatusState.loadedAt = Date.now();
+            studentEnrollmentStatusState.error = "";
+            return changed;
+          }).catch(function(error) {
+            if (!isCurrent()) return false;
+            studentEnrollmentStatusState.error = error && error.message ? error.message : String(error || "학생 상태 조회 실패");
+            throw error;
+          }).finally(function() {
+            if (studentEnrollmentStatusState.loading === loading) studentEnrollmentStatusState.loading = null;
+          });
+          studentEnrollmentStatusState.loading = loading;
+          return loading;
         });
-        return studentEnrollmentStatusState.loading;
       }
       function applyEnrollmentStatusWarning(itemDiv, rawText) {
         if (!itemDiv || isTeacherHeader(rawText || "")) return;
@@ -3334,7 +3382,9 @@
       }
       function fetchSlmsOperationMemos(dateKey, options) {
         var opts = options || {};
-        var cacheFresh = operationMemoState.slmsEvents.length && (Date.now() - operationMemoState.slmsLoadedAt < 300000);
+        var sessionKey = getScheduleSessionKey();
+        var requestId = operationMemoLoadSequence;
+        var cacheFresh = operationMemoState.slmsSession === sessionKey && operationMemoState.slmsLoadedAt > 0 && (Date.now() - operationMemoState.slmsLoadedAt < 300000);
         var eventsPromise = (!opts.refreshSlms && cacheFresh)
           ? Promise.resolve(operationMemoState.slmsEvents)
           : getLiveFirebaseAuth().then(function(auth) {
@@ -3344,9 +3394,13 @@
                 return fetchSlmsSchoolEventsCollection(idToken);
               });
             }).then(function(events) {
-              operationMemoState.slmsEvents = Array.isArray(events) ? events : [];
-              operationMemoState.slmsLoadedAt = Date.now();
-              return operationMemoState.slmsEvents;
+              var rows = Array.isArray(events) ? events : [];
+              if ((!opts.isMemoReadActive || opts.isMemoReadActive()) && sessionKey === getScheduleSessionKey() && requestId === operationMemoLoadSequence) {
+                operationMemoState.slmsEvents = rows;
+                operationMemoState.slmsLoadedAt = Date.now();
+                operationMemoState.slmsSession = sessionKey;
+              }
+              return rows;
             });
         return eventsPromise.then(function(events) { return buildSlmsOperationMemoItems(events, dateKey); });
       }
@@ -3401,17 +3455,38 @@
           (status.length ? "<br><span style='color:#b45309'>" + escapeHtml(status.join(" / ")) + "</span>" : "<br>자동 일정은 S-LMS에서 관리하며 여기서는 읽기 전용입니다.");
       }
       function startOperationMemoPolling() {
-        if (operationMemoPollTimer) clearInterval(operationMemoPollTimer);
+        if (operationMemoPollTimer) clearTimeout(operationMemoPollTimer);
         operationMemoPollTimer = null;
-        if (!isOperationMemoReadable() || !operationMemoState.dateKey) return;
-        operationMemoPollTimer = setInterval(function() {
-          loadOperationMemosForCurrentSheet(true, { silent: true });
+        if (!isOperationMemoReadable() || !getOperationMemoDateKey(currentSheetName)) return;
+        var sessionKey = getScheduleSessionKey();
+        var dateKey = getOperationMemoDateKey(currentSheetName);
+        operationMemoPollTimer = setTimeout(function() {
+          operationMemoPollTimer = null;
+          if (sessionKey !== getScheduleSessionKey() || dateKey !== getOperationMemoDateKey(currentSheetName)) return;
+          var mainPage = document.getElementById('mainPage');
+          if (document.hidden || !mainPage || mainPage.style.display === 'none') {
+            startOperationMemoPolling();
+            return;
+          }
+          loadOperationMemosForCurrentSheet(true, { silent: true, poll: true });
         }, 15000);
       }
       function loadOperationMemosForCurrentSheet(force, options) {
         var opts = options || {};
-        var requestId = ++operationMemoLoadSequence;
         var sessionKey = getScheduleSessionKey();
+        var requestedDate = getOperationMemoDateKey(currentSheetName);
+        if (operationMemoInFlight && operationMemoInFlight.session === sessionKey && operationMemoInFlight.date === requestedDate && operationMemoInFlight.requestId === operationMemoLoadSequence) {
+          var pending = operationMemoInFlight;
+          if (opts.poll) return pending.promise;
+          var queuedSequence = operationMemoLoadSequence;
+          return pending.promise.then(function() {
+            if (sessionKey !== getScheduleSessionKey() || requestedDate !== getOperationMemoDateKey(currentSheetName) || queuedSequence !== operationMemoLoadSequence) return [];
+            return loadOperationMemosForCurrentSheet(force, opts);
+          });
+        }
+        var requestId = ++operationMemoLoadSequence;
+        if (operationMemoPollTimer) clearTimeout(operationMemoPollTimer);
+        operationMemoPollTimer = null;
         if (!isOperationMemoReadable()) {
           operationMemoState.dateKey = "";
           operationMemoState.items = [];
@@ -3426,13 +3501,22 @@
         if (!dateKey) return Promise.resolve([]);
         if (!force && operationMemoState.dateKey === dateKey && operationMemoState.items.length) {
           applyOperationMemoHighlights();
+          startOperationMemoPolling();
           return Promise.resolve(operationMemoState.items);
         }
         operationMemoState.loading = true;
+        var memoRequestActive = true;
+        opts = Object.assign({}, opts, { isMemoReadActive: function() { return memoRequestActive; } });
         var sameDate = operationMemoState.dateKey === dateKey;
         var manualPromise = fetchOperationMemos(dateKey).then(function(items) { return { items: items, error: null }; }).catch(function(error) { return { items: [], error: error }; });
         var slmsPromise = fetchSlmsOperationMemos(dateKey, opts).then(function(items) { return { items: items, error: null }; }).catch(function(error) { return { items: [], error: error }; });
-        return Promise.all([manualPromise, slmsPromise]).then(function(results) {
+        var flight = { session: sessionKey, date: requestedDate, requestId: requestId };
+        operationMemoInFlight = flight;
+        var deadlineTimer;
+        var deadline = new Promise(function(resolve, reject) {
+          deadlineTimer = setTimeout(function() { reject(new Error("OPERATION_MEMO_TIMEOUT")); }, 65000);
+        });
+        flight.promise = Promise.race([Promise.all([manualPromise, slmsPromise]), deadline]).then(function(results) {
           if (!isCurrentMemoRequest()) return operationMemoState.items || [];
           var manualResult = results[0];
           var slmsResult = results[1];
@@ -3446,7 +3530,6 @@
           renderOperationCommonMemos();
           applyOperationMemoHighlights();
           showOperationMemoPopupIfNeeded();
-          startOperationMemoPolling();
           return operationMemoState.items;
         }).catch(function(err) {
           if (!isCurrentMemoRequest()) return operationMemoState.items || [];
@@ -3456,8 +3539,15 @@
           renderOperationMemoList();
           return operationMemoState.items || [];
         }).finally(function() {
-          if (isCurrentMemoRequest()) operationMemoState.loading = false;
+          clearTimeout(deadlineTimer);
+          memoRequestActive = false;
+          if (operationMemoInFlight === flight) operationMemoInFlight = null;
+          if (isCurrentMemoRequest()) {
+            operationMemoState.loading = false;
+            startOperationMemoPolling();
+          }
         });
+        return flight.promise;
       }
       function clearOperationMemoHighlights() {
         document.querySelectorAll('.operation-memo-hit').forEach(function(el) {
@@ -4271,6 +4361,7 @@ window.SeduHubAdapter={
   const credential=await auth.signInWithCustomToken(token);if(credential.user.uid!==uid)throw Error('Identity mismatch');
   const res=await callServer('authenticateTeacher',['','',await credential.user.getIdToken()]);
   if(!res||!res.ok)throw Error('Timetable access denied');await assertLiveFirebaseIdentity(res);
+  resetStudentEnrollmentStatus();
   authState.loggedIn=true;authState.isMaster=!!res.isMaster;authState.isLookup=!!res.isLookup;
   authState.teacherName=res.teacherName||'';authState.loginId=res.loginId||'';authState.dashboardAdminToken=res.dashboardAdminToken||'';
   authState.teacherRosterUnavailable=!!res.teacherRosterUnavailable;
@@ -4304,6 +4395,7 @@ window.SeduHubAdapter={
           return assertLiveFirebaseIdentity(res);
         }).then(function(res) {
           if (!res) return;
+          resetStudentEnrollmentStatus();
           authState.loggedIn = true;
           authState.isMaster = !!res.isMaster;
           authState.isLookup = !!res.isLookup;
@@ -4357,6 +4449,7 @@ window.SeduHubAdapter={
         });
       }
       function logoutTeacher() {
+        resetStudentEnrollmentStatus();
         studentCardStatusSequence++;
         studentCardStatusContext = "";
         studentCardSentMap = {};
@@ -4391,6 +4484,9 @@ window.SeduHubAdapter={
         operationMemoPollTimer = null;
         operationMemoState.dateKey = "";
         operationMemoState.items = [];
+        operationMemoState.loading = false;
+        operationMemoState.slmsLoadedAt = 0;
+        operationMemoState.slmsEvents = [];
         closeOperationMemoAlert();
         clearOperationMemoHighlights();
         renderOperationCommonMemos();
@@ -4968,6 +5064,10 @@ window.SeduHubAdapter={
       function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var Y=now.getFullYear(); var M=String(now.getMonth()+1).padStart(2,'0'); var D=String(now.getDate()).padStart(2,'0'); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+Y+"."+M+"."+D+" ("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); updateTimelinePosition(); }
       
       function updateTimelinePosition() {
+         if (isTeacherViewActive() && window.innerWidth <= 768) {
+           document.getElementById('liveTimeline').style.display = 'none';
+           return;
+         }
          if (!document.getElementById('timelineToggle').checked) return;
          
          var now = new Date();
@@ -5050,9 +5150,15 @@ window.SeduHubAdapter={
       }
       var lastSuccessfulSchedule = null;
       function loadData(n,r,requestOptions){
-        var requestId = ++scheduleLoadSequence;
         var sessionKey = getScheduleSessionKey();
+        if (scheduleInFlight && (!r || scheduleInFlight.force) && scheduleInFlight.sheet === n && scheduleInFlight.session === sessionKey && scheduleInFlight.requestId === scheduleLoadSequence) {
+          return scheduleInFlight.promise;
+        }
+        var requestId = ++scheduleLoadSequence;
         operationMemoLoadSequence++;
+        operationMemoState.loading = false;
+        if (operationMemoPollTimer) clearTimeout(operationMemoPollTimer);
+        operationMemoPollTimer = null;
         function isCurrentLoad() { return requestId === scheduleLoadSequence && currentSheetName === n && sessionKey === getScheduleSessionKey(); }
         var attendanceManualRefreshId = requestOptions && typeof requestOptions === "object"
           ? Number(requestOptions.attendanceManualRefreshId || 0)
@@ -5088,8 +5194,11 @@ window.SeduHubAdapter={
 
         var method = teacherName ? "getTeacherGridData" : "getFixedGridData";
         var params = teacherName ? [n, teacherName, r] : [n, r];
-        callServer(method, params).then(function(d){ 
+        var flight = { sheet: n, session: sessionKey, requestId: requestId, force: !!r, attendanceManualRefreshId: attendanceManualRefreshId };
+        scheduleInFlight = flight;
+        flight.promise = callServer(method, params).then(function(d){
           if (!isCurrentLoad()) return;
+          attendanceManualRefreshId = flight.attendanceManualRefreshId;
           if (!d || d.error) throw new Error(d && d.error || "시간표 응답이 비어 있습니다.");
           if (d && !d.error && !d.__teacherViewLogged) recordTeacherViewAfterSuccessfulLoad(teacherName || authState.teacherName, n);
           if (d && !d.error) {
@@ -5099,11 +5208,13 @@ window.SeduHubAdapter={
           processData(d, r, attendanceManualRefreshId);
         }).catch(function(err){
           if (!isCurrentLoad()) return;
+          attendanceManualRefreshId = flight.attendanceManualRefreshId;
           var retained = lastSuccessfulSchedule && lastSuccessfulSchedule.sheet === n && lastSuccessfulSchedule.session === sessionKey;
           if (retained) {
             lastData = lastSuccessfulSchedule.data;
             currentVersion = String(lastData.version || "").split("_T_")[0];
             renderTable(lastData, true);
+            loadOperationMemosForCurrentSheet(true, { silent: true });
             document.body.classList.remove('loading-protected');
             document.getElementById('loading').style.display = 'none';
             document.getElementById('mobileLoading').style.display = 'none';
@@ -5119,7 +5230,10 @@ window.SeduHubAdapter={
             processData({ error: true, headers: [], grid: {}, version: "ERROR" }, r, attendanceManualRefreshId);
           }
           alert((retained ? "시간표 갱신 실패: 이전 시간표를 표시합니다. 새로고침해 주세요.\n" : "시간표를 불러오지 못했습니다. 새로고침해 주세요.\n") + (err && err.message ? err.message : err));
+        }).finally(function() {
+          if (scheduleInFlight === flight) scheduleInFlight = null;
         });
+        return flight.promise;
       }
       
       function processData(d, isRefresh, attendanceManualRefreshId){
@@ -5172,7 +5286,7 @@ window.SeduHubAdapter={
         document.getElementById('mobileLoading').style.display = 'none';
         document.getElementById('refreshBtn').classList.remove('spinning'); 
         if(pollingTimer)clearInterval(pollingTimer); 
-        pollingTimer=setInterval(checkUpdate,30000); 
+        pollingTimer=setInterval(checkUpdate,60000);
       }
       function checkUpdate(){
         var c=document.getElementById('mainSheetSelector').value;
@@ -5286,6 +5400,14 @@ window.SeduHubAdapter={
       function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false,true); }
       function refreshData(markReplySeen){
         if(!currentSheetName) return;
+        if (markReplySeen === false && (document.hidden || document.getElementById('mainPage').style.display === 'none')) return;
+        if (scheduleInFlight && scheduleInFlight.force && scheduleInFlight.sheet === currentSheetName && scheduleInFlight.session === getScheduleSessionKey() && scheduleInFlight.requestId === scheduleLoadSequence) {
+          if (markReplySeen !== false && canCurrentUserSubmitAttendance()) {
+            attendancePendingManualRefreshId = ++attendanceManualRefreshSequence;
+            scheduleInFlight.attendanceManualRefreshId = attendancePendingManualRefreshId;
+          }
+          return scheduleInFlight.promise;
+        }
         document.getElementById('refreshBtn').classList.add('spinning');
         var manualRefreshId = 0;
         if (markReplySeen !== false && canCurrentUserSubmitAttendance()) {
@@ -8074,6 +8196,20 @@ window.SeduHubAdapter={
           lookupPane.innerHTML = "";
           lookupPane.style.display = "none";
         }
+        // The visible mobile projection owns its DOM. Desktop is rebuilt from
+        // current data at the breakpoint, never constructed as a hidden cache.
+        if (isTeacherViewActive() && window.innerWidth <= 768) {
+          renderTeacherMobileView(data);
+          syncStudentSelection();
+          if (isRefresh && container) {
+            var mobileScrollPosition = lastScrollPosition;
+            setTimeout(function() { container.scrollTop = mobileScrollPosition; }, 0);
+          }
+          updateTimelinePosition();
+          applyOperationMemoHighlights();
+          if (document.getElementById('searchInput').value.trim()) searchTable();
+          return;
+        }
         var now = new Date(); var currentH = now.getHours();
         var isToday = false;
         var match = currentSheetName.match(/(\d+)\/(\d+)/);
@@ -8236,6 +8372,7 @@ window.SeduHubAdapter={
         var active = isTeacherViewActive() && window.innerWidth <= 768;
 
         if (!active) {
+          mobileWrap.innerHTML = "";
           mobileWrap.style.display = 'none';
           table.style.display = '';
           timeline.style.display = document.getElementById('timelineToggle').checked ? timeline.style.display : 'none';

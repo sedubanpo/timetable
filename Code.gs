@@ -572,27 +572,52 @@ function getLegacyTeacherNamesForAuth_(loginId) {
   return teacherNames;
 }
 
-function authenticateFirebaseTeacher_(idToken, skipRoster) {
-  var lookupUrl = "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(FIREBASE_API_KEY);
-  var response = UrlFetchApp.fetch(lookupUrl, {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify({ idToken: idToken }),
-    muteHttpExceptions: true
-  });
-  var code = response.getResponseCode();
-  var body = response.getContentText() || "{}";
-  if (code < 200 || code >= 300) {
-    throw new Error("FIREBASE_AUTH_FAILED");
+// Fixed labels and numeric durations only: never include identity or request data.
+function measureAuthStage_(stage, operation) {
+  var startedAt = Date.now();
+  var succeeded = false;
+  try {
+    var result = operation();
+    succeeded = true;
+    return result;
+  } finally {
+    try {
+      var elapsed = Date.now() - startedAt;
+      if ((stage === "auth_lookup" || stage === "auth_documents") &&
+          isFinite(elapsed) && elapsed >= 0 && typeof console !== "undefined" &&
+          typeof console.log === "function") {
+        console.log(JSON.stringify({ stage: stage, durationMs: elapsed, succeeded: succeeded }));
+      }
+    } catch (diagnosticError) { /* Diagnostics must not affect authorization. */ }
   }
-  var lookup = JSON.parse(body);
-  var user = lookup && lookup.users && lookup.users[0];
-  if (!user || !user.localId) throw new Error("FIREBASE_AUTH_FAILED");
-  if (user.disabled === true) throw new Error("FIREBASE_BLOCKED: 비활성화된 Firebase 계정입니다.");
+}
+
+function authenticateFirebaseTeacher_(idToken, skipRoster) {
+  var user = measureAuthStage_("auth_lookup", function() {
+    var lookupUrl = "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(FIREBASE_API_KEY);
+    var response = UrlFetchApp.fetch(lookupUrl, {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify({ idToken: idToken }),
+      muteHttpExceptions: true
+    });
+    var code = response.getResponseCode();
+    var body = response.getContentText() || "{}";
+    if (code < 200 || code >= 300) {
+      throw new Error("FIREBASE_AUTH_FAILED");
+    }
+    var lookup = JSON.parse(body);
+    var user = lookup && lookup.users && lookup.users[0];
+    if (!user || !user.localId) throw new Error("FIREBASE_AUTH_FAILED");
+    if (user.disabled === true) throw new Error("FIREBASE_BLOCKED: 비활성화된 Firebase 계정입니다.");
+    return user;
+  });
 
   var uid = String(user.localId || "").trim();
   var email = String(user.email || "").trim();
-  var identityDocuments = fetchFirebaseIdentityDocuments_(idToken, uid);
+  var identityDocuments = measureAuthStage_("auth_documents", function() {
+    return fetchFirebaseIdentityDocuments_(idToken, uid);
+  });
   var userDoc = identityDocuments[0];
   var profileDoc = identityDocuments[1];
   var accessDoc = identityDocuments[2];
@@ -666,7 +691,6 @@ function authenticateTeacher(id, password, idToken, deferRoster) {
   var sheet = ss.getSheetByName("Teachers");
   if (!sheet) sheet = ss.getSheets()[0];
   var data = sheet.getDataRange().getValues();
-  var teacherNames = [];
   var matchedAccount = null;
   for (var i = 1; i < data.length; i++) {
     var dbId = String(data[i][0]).replace(/[^0-9]/g, "");
@@ -674,7 +698,6 @@ function authenticateTeacher(id, password, idToken, deferRoster) {
     if (dbId.length === 8) dbId = "010" + dbId;
 
     var dbName = String(data[i][1]).trim();
-    if (dbName && teacherNames.indexOf(dbName) === -1) teacherNames.push(dbName);
     var dbPw = sanitizePassword_(data[i][6]);
     // 비밀번호 공란 시 아이디(dbId)로 대체
     if (dbPw === "") dbPw = dbId;
@@ -688,7 +711,6 @@ function authenticateTeacher(id, password, idToken, deferRoster) {
   }
   if (matchedAccount) {
     var isMaster = inputIdClean === "01042327428";
-    teacherNames.sort();
     return {
       ok: true,
       success: true,
@@ -787,23 +809,72 @@ function getTeacherSheetNames(teacherName, forceRefresh) {
     if (!selectedTeacher) return getSheetNames();
 
     var cache = CacheService.getScriptCache();
-    var cacheKey = "TEACHER_SHEETS_V2_" + selectedTeacher;
+    var cacheKey = "TEACHER_SHEETS_V3_" + selectedTeacher;
     if (!forceRefresh) {
-      var cached = cache.get(cacheKey);
-      if (cached) return JSON.parse(cached);
+      var cached = scheduleCacheGet_(cache, cacheKey);
+      if (cached) {
+        try { var parsed = JSON.parse(cached); if (Array.isArray(parsed)) return parsed; } catch (cacheError) {}
+      }
     }
 
+    // Preserve the existing two-stage normalization: this function used to pass
+    // selectedTeacher into getTeacherGridData, which normalizes it again.
+    var gridTeacher = normalizeTeacherName_(selectedTeacher);
     var names = getSheetNames();
     var filtered = names.filter(function(sheetName) {
       if (String(sheetName || "").indexOf("사본") !== -1) return false;
-      var data = getTeacherGridData(sheetName, selectedTeacher, forceRefresh);
-      return data && !data.error && teacherGridHasItems_(data);
+      var base = getFixedGridData(sheetName, forceRefresh);
+      if (!base || base.error) return false;
+      if (!gridTeacher) return teacherGridHasItems_(base);
+      return getScheduleTeacherMembership_(sheetName, base, forceRefresh).indexOf(gridTeacher) !== -1;
     });
-    cache.put(cacheKey, JSON.stringify(filtered), 120);
+    scheduleCachePut_(cache, cacheKey, JSON.stringify(filtered), 120);
     return filtered;
   } catch (e) {
     return [];
   }
+}
+
+// Shared per-sheet membership, never a per-teacher filtered grid. Only the first
+// valid teacher header in each visible room/hour participates, just as in the
+// teacher view. Base version is checked even when this compact cache is warm.
+function getScheduleTeacherMembership_(sheetName, base, forceRefresh) {
+  var cache = CacheService.getScriptCache();
+  var key = "SCHEDULE_TEACHERS_V1_" + sheetName;
+  if (!forceRefresh) {
+    var cached = scheduleCacheGet_(cache, key);
+    if (cached) {
+      try {
+        var parsed = JSON.parse(cached);
+        if (parsed.version === base.version && Array.isArray(parsed.teachers) &&
+            parsed.teachers.every(function(name) { return typeof name === "string"; })) return parsed.teachers;
+      } catch (cacheError) {}
+    }
+  }
+  var teachers = [];
+  var headers = base.headers || [];
+  var grid = base.grid || {};
+  for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
+    var row = grid[h] || [];
+    for (var i = 0; i < headers.length; i++) {
+      var list = row[i] || [];
+      var teacherItem = list.find(function(item) { return isTeacherHeader_(item || ""); });
+      if (!teacherItem) continue;
+      var name = normalizeTeacherName_(extractTeacherName_(teacherItem));
+      if (teachers.indexOf(name) === -1) teachers.push(name);
+    }
+  }
+  scheduleCachePut_(cache, key, JSON.stringify({ version: base.version, teachers: teachers }), 21600);
+  return teachers;
+}
+
+function scheduleCacheGet_(cache, key) {
+  try { return cache.get(key); } catch (cacheError) { return null; }
+}
+
+function scheduleCachePut_(cache, key, value, seconds) {
+  // CacheService limits are best-effort optimizations, not data-read failures.
+  try { cache.put(key, value, seconds); } catch (cacheError) {}
 }
 
 function getTeacherViewLogSheet_() {
@@ -858,14 +929,19 @@ function getTeacherViewLogs_(teacherName, limit) {
   try {
     var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("강사열람로그");
     if (!logSheet) return [];
-    var values = logSheet.getDataRange().getDisplayValues();
-    if (!values || values.length <= 1) return [];
     var selectedTeacher = String(teacherName || "").trim();
     var maxRows = Math.max(1, Math.min(parseInt(limit, 10) || 120, 300));
-    var rows = values.slice(1).filter(function(row) {
-      if (!selectedTeacher) return true;
-      return String((row && row[1]) || "").trim() === selectedTeacher;
-    });
+    var lastRow = logSheet.getLastRow();
+    if (lastRow <= 1) return [];
+    // A sparse teacher may match only old rows. Keep that scan to one service
+    // call; unfiltered history can read just the requested tail.
+    var count = selectedTeacher ? lastRow - 1 : Math.min(lastRow - 1, maxRows);
+    var rows = logSheet.getRange(lastRow - count + 1, 1, count, 4).getDisplayValues();
+    if (selectedTeacher) {
+      rows = rows.filter(function(row) {
+        return String((row && row[1]) || "").trim() === selectedTeacher;
+      });
+    }
     return rows.slice(-maxRows).reverse().map(function(row) {
       return {
         viewedAt: String((row && row[0]) || ""),
@@ -989,6 +1065,40 @@ function buildStudentCardStatusKey_(sheetName, studentName) {
   return String(sheetName || "").trim() + "||" + String(studentName || "").trim();
 }
 
+function findStudentCardRows_(sheet, lastRow, column, text) {
+  if (lastRow <= 1) return [];
+  // Literal substring search is a candidate superset of trimmed equality,
+  // retaining legacy padded cells. Validate exact identities after reading.
+  return sheet.getRange(2, column, lastRow - 1, 1).createTextFinder(text)
+    .matchCase(true).matchEntireCell(false).useRegularExpression(false)
+    .matchFormulaText(false).findAll().map(function(cell) { return cell.getRow(); });
+}
+
+function readStudentCardRows_(sheet, rowNumbers, width) {
+  var ordered = rowNumbers.sort(function(a, b) { return a - b; }).filter(function(row, i, rows) {
+    return i === 0 || row !== rows[i - 1];
+  });
+  var runs = 0;
+  ordered.forEach(function(row, i) { if (i === 0 || row !== ordered[i - 1] + 1) runs++; });
+  // Scattered historical candidates must not cause one RPC per row. A bounded
+  // span is a safe superset; callers still validate every row's exact identity.
+  if (runs > 3) {
+    var first = ordered[0];
+    return sheet.getRange(first, 1, ordered[ordered.length - 1] - first + 1, width)
+      .getDisplayValues().map(function(values, i) { return { row: first + i, values: values }; });
+  }
+  var result = [];
+  for (var i = 0; i < ordered.length;) {
+    var start = ordered[i];
+    var end = i + 1;
+    while (end < ordered.length && ordered[end] === ordered[end - 1] + 1) end++;
+    var values = sheet.getRange(start, 1, end - i, width).getDisplayValues();
+    for (var j = 0; j < values.length; j++) result.push({ row: start + j, values: values[j] });
+    i = end;
+  }
+  return result;
+}
+
 // google.script.run cannot call underscore-suffixed private functions.
 function getStudentCardStatuses(sheetName) {
   return getStudentCardStatuses_(sheetName);
@@ -1004,10 +1114,13 @@ function getStudentCardStatuses_(sheetName) {
     if (!targetSheet) return {};
     var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("학생카드발송로그");
     if (!logSheet) return {};
-    var values = logSheet.getDataRange().getDisplayValues();
-    if (!values || values.length <= 1) return {};
+    var lastRow = logSheet.getLastRow();
+    if (lastRow <= 1) return {};
+    var matches = findStudentCardRows_(logSheet, lastRow, 1, targetSheet);
+    var values = readStudentCardRows_(logSheet, matches, 5);
     var statuses = {};
-    values.slice(1).forEach(function(row) {
+    values.forEach(function(entry) {
+      var row = entry.values;
       var rowSheet = String((row && row[0]) || "").trim();
       var student = String((row && row[1]) || "").trim();
       if (!rowSheet || !student || rowSheet !== targetSheet) return;
@@ -1032,21 +1145,35 @@ function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
   lock.waitLock(5000);
   try {
   var logSheet = getStudentCardStatusSheet_();
-  var values = logSheet.getDataRange().getDisplayValues();
+  var lastRow = logSheet.getLastRow();
   var key = buildStudentCardStatusKey_(targetSheet, student);
+  // The key can disagree with A/B in legacy rows, so union both candidates.
+  // No persistent row index: resolve current positions while holding the lock.
+  var values;
+  if (lastRow > 1 && (targetSheet.indexOf("||") !== -1 || student.indexOf("||") !== -1)) {
+    // Legacy concatenated keys have ambiguous splits when an identity itself
+    // contains the delimiter. Preserve those historical collisions exactly.
+    values = logSheet.getRange(2, 1, lastRow - 1, 6).getDisplayValues()
+      .map(function(row, i) { return { row: i + 2, values: row }; });
+  } else {
+    var matches = findStudentCardRows_(logSheet, lastRow, 6, key)
+      .concat(findStudentCardRows_(logSheet, lastRow, 2, student));
+    values = readStudentCardRows_(logSheet, matches, 6);
+  }
   var tz = Session.getScriptTimeZone() || "Asia/Seoul";
   var timestamp = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss");
   var payload = [targetSheet, student, sent ? "1" : "0", timestamp, String(loginId || "").trim(), key];
   var foundRow = 0;
 
   // Readers use the final row for a key; repair compatibility with old duplicates.
-  for (var r = values.length - 1; r >= 1; r--) {
-    var rowKey = String((values[r] && values[r][5]) || "").trim();
+  for (var r = values.length - 1; r >= 0; r--) {
+    var row = values[r].values;
+    var rowKey = String((row && row[5]) || "").trim();
     if (!rowKey) {
-      rowKey = buildStudentCardStatusKey_(values[r][0], values[r][1]);
+      rowKey = buildStudentCardStatusKey_(row[0], row[1]);
     }
     if (rowKey === key) {
-      foundRow = r + 1;
+      foundRow = values[r].row;
       break;
     }
   }
@@ -1069,7 +1196,7 @@ function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
 function getSheetNames() {
   try {
     var cache = CacheService.getScriptCache();
-    var cached = cache.get(SCHEDULE_SHEET_NAMES_CACHE_KEY);
+    var cached = scheduleCacheGet_(cache, SCHEDULE_SHEET_NAMES_CACHE_KEY);
     if (cached) {
       try {
         var parsed = JSON.parse(cached);
@@ -1082,7 +1209,7 @@ function getSheetNames() {
       .filter(function(n) { 
         return !n.includes("-엑세스") && !n.includes("업무") && !n.includes("데이터") && !n.includes("@") && (n.match(/\d/) !== null); 
       });
-    if (names.length) cache.put(SCHEDULE_SHEET_NAMES_CACHE_KEY, JSON.stringify(names), SCHEDULE_SHEET_NAMES_CACHE_TTL_SECONDS);
+    if (names.length) scheduleCachePut_(cache, SCHEDULE_SHEET_NAMES_CACHE_KEY, JSON.stringify(names), SCHEDULE_SHEET_NAMES_CACHE_TTL_SECONDS);
     return names;
   } catch (e) { return ["ERROR: " + e.message]; }
 }
@@ -1098,20 +1225,25 @@ function scheduleContentRevision_(values) {
   }).join("");
 }
 
-function checkDataVersion(sheetName) {
+function scheduleRevisionSnapshot_(sheetName) {
   try {
     var cache = CacheService.getScriptCache();
     var key = scheduleRevisionCacheKey_(sheetName);
-    var cached = cache.get(key);
-    if (cached) return cached;
+    var cached = scheduleCacheGet_(cache, key);
+    if (cached) return { version: cached };
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = sheetName ? ss.getSheetByName(sheetName) : null;
-    if (!sheet) return "ERROR";
-    var revision = scheduleContentRevision_(sheet.getDataRange().getDisplayValues());
+    if (!sheet) return { version: "ERROR" };
+    var values = sheet.getDataRange().getDisplayValues();
+    var revision = scheduleContentRevision_(values);
     // Share one short-lived scan across viewers while detecting ordinary cell edits.
-    cache.put(key, revision, 15);
-    return revision;
-  } catch (e) { return "ERROR"; }
+    scheduleCachePut_(cache, key, revision, 15);
+    return { version: revision, values: values };
+  } catch (e) { return { version: "ERROR" }; }
+}
+
+function checkDataVersion(sheetName) {
+  return scheduleRevisionSnapshot_(sheetName).version;
 }
 
 function parseScheduleStartHour_(timeText) {
@@ -1137,21 +1269,31 @@ function getFixedGridData(sheetName, forceRefresh) {
   try {
     var cache = CacheService.getScriptCache();
     var cacheKey = "SHEET_DATA_V64_" + sheetName;
+    var snapshot = null;
 
     if (!forceRefresh) {
-      var cachedJSON = cache.get(cacheKey);
+      var cachedJSON = scheduleCacheGet_(cache, cacheKey);
       if (cachedJSON) {
-        var cachedGrid = JSON.parse(cachedJSON);
-        if (cachedGrid.version === checkDataVersion(sheetName)) return cachedGrid;
+        try {
+          var cachedGrid = JSON.parse(cachedJSON);
+          if (cachedGrid && Array.isArray(cachedGrid.headers) && cachedGrid.grid &&
+              typeof cachedGrid.grid === "object" && !Array.isArray(cachedGrid.grid) &&
+              typeof cachedGrid.version === "string") {
+            snapshot = scheduleRevisionSnapshot_(sheetName);
+            if (cachedGrid.version === snapshot.version) return cachedGrid;
+          }
+        } catch (cacheError) {}
       }
     }
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = sheetName ? ss.getSheetByName(sheetName) : null;
-    if (!sheet) return { error: "시트를 찾을 수 없습니다." };
-
     // V40 로직 그대로 사용 (getDisplayValues 사용)
-    var values = sheet.getDataRange().getDisplayValues();
+    var values = snapshot && snapshot.values;
+    if (!values) {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = sheetName ? ss.getSheetByName(sheetName) : null;
+      if (!sheet) return { error: "시트를 찾을 수 없습니다." };
+      values = sheet.getDataRange().getDisplayValues();
+    }
     if (!values || values.length === 0) return { headers: [], grid: {}, version: 0 };
 
     var headerRowIndex = -1;
@@ -1245,10 +1387,10 @@ function getFixedGridData(sheetName, forceRefresh) {
     var result = {
       headers: classrooms.map(function(c) { return c.name; }),
       grid: gridData,
-      version: scheduleContentRevision_(values)
+      version: snapshot && snapshot.values ? snapshot.version : scheduleContentRevision_(values)
     };
-    cache.put(scheduleRevisionCacheKey_(sheetName), result.version, 15);
-    try { cache.put(cacheKey, JSON.stringify(result), 21600); } catch (e) {}
+    scheduleCachePut_(cache, scheduleRevisionCacheKey_(sheetName), result.version, 15);
+    scheduleCachePut_(cache, cacheKey, JSON.stringify(result), 21600);
     return result;
   } catch (e) { return { error: "SERVER_ERR: " + e.message }; }
 }

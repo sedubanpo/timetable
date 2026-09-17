@@ -612,6 +612,8 @@ const serverSandbox = {
   }
 };
 vm.createContext(serverSandbox);
+vm.runInContext(extractFunction(server, "scheduleCacheGet_"), serverSandbox);
+vm.runInContext(extractFunction(server, "scheduleCachePut_"), serverSandbox);
 vm.runInContext(extractFunction(server, "scheduleContentRevision_"), serverSandbox);
 vm.runInContext(extractFunction(server, "scheduleRevisionCacheKey_"), serverSandbox);
 vm.runInContext(extractFunction(server, "parseScheduleStartHour_"), serverSandbox);

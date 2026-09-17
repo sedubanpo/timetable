@@ -19,6 +19,15 @@ const sheet = {
   getLastRow() { return rows.length; },
   getRange(row, col, count, width) {
     return {
+      createTextFinder(text) {
+        return {
+          matchCase(value) { assert.equal(value, true); return this; },
+          matchEntireCell(value) { assert.equal(value, false); return this; },
+          useRegularExpression(value) { assert.equal(value, false); return this; },
+          matchFormulaText(value) { assert.equal(value, false); return this; },
+          findAll() { return rows.slice(row - 1, row - 1 + count).flatMap((item, i) => String(item[col - 1] || '').includes(text) ? [{ getRow: () => row + i }] : []); }
+        };
+      },
       getDisplayValues: () => rows.slice(row - 1, row - 1 + count).map(item => item.slice(col - 1, col - 1 + width)),
       setValues(values) { assert(locked, 'sheet writes must hold script lock'); rows[row - 1] = values[0]; }
     };

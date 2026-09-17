@@ -78,7 +78,26 @@ async function read(statuses) {
 
   let locked = false, failRead = false, failWrite = false;
   let rows = [['sheet','student','sent','at','by','key']];
-  const sheet = { getDataRange() { if (failRead) throw new Error('permission'); return { getDisplayValues: () => rows }; }, appendRow(row) { assert(locked); if (failWrite) throw new Error('write failed'); rows.push(row); } };
+  const sheet = {
+    getLastRow() { return rows.length; },
+    getRange(row, col, count, width) {
+      assert(col >= 1 && col + width - 1 <= 6, 'card operations remain within six schema columns');
+      return {
+        createTextFinder(text) {
+          return {
+            matchCase(value) { assert.equal(value, true); return this; },
+            matchEntireCell(value) { assert.equal(value, false); return this; },
+            useRegularExpression(value) { assert.equal(value, false); return this; },
+            matchFormulaText(value) { assert.equal(value, false); return this; },
+            findAll() { if (failRead) throw new Error('permission'); return rows.slice(row - 1, row - 1 + count).flatMap((item, i) => String(item[col - 1] || '').includes(text) ? [{ getRow: () => row + i }] : []); }
+          };
+        },
+        getDisplayValues() { if (failRead) throw new Error('permission'); return rows.slice(row - 1, row - 1 + count).map(item => item.slice(col - 1, col - 1 + width)); },
+        setValues(values) { assert(locked); if (failWrite) throw new Error('write failed'); rows[row - 1] = values[0]; }
+      };
+    },
+    appendRow(row) { assert(locked); if (failWrite) throw new Error('write failed'); rows.push(row); }
+  };
   const server = { SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet }), flush() { assert(locked); } }, LockService: { getScriptLock: () => ({ waitLock() { assert(!locked); locked=true; }, releaseLock() { assert(locked); locked=false; } }) }, Session: { getScriptTimeZone: () => 'Asia/Seoul' }, Utilities: { formatDate: () => 'now' } };
   vm.createContext(server); vm.runInContext(fs.readFileSync(path.join(root,'Code.gs'),'utf8'),server);
   assert.equal(typeof server.getStudentCardStatuses, 'function');
