@@ -633,7 +633,7 @@ assert(liteBoundary.rows.some((row) => row.hour === 23), "lite API must include 
 assert(!/for\s*\(var\s+(?:h|hour|hh|sh|t|time)\s*=\s*9\s*;[^\n]*<=\s*23/.test(index), "client schedule consumers must not retain the old 09:00-23:00 range");
 assert(!/for\s*\(var\s+h\s*=\s*9\s*;[^\n]*<=\s*23/.test(server), "server schedule consumers must not retain the old 09:00-23:00 range");
 
-assert(index.includes('id="attendanceInboxRefresh"') && index.includes("function refreshAttendanceInbox(button)"), "attendance inbox must provide a scoped manual refresh");
+assert(index.includes('id="attendanceInboxRefresh"') && /function refreshAttendanceInbox\(button(?:, resultOverride)?\)/.test(index), "attendance inbox must provide a scoped manual refresh");
 assert(index.includes('value="RESOLVED">처리 완료') && index.includes("전체 기록"), "attendance inbox must retain and expose completed records");
 assert(index.includes('title.textContent = isDesk ? "출결 전달함 · 데스크" : "내 출결 전달함"'), "attendance inbox must adapt to desk and teacher roles");
 assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(role)'), "desk and staff roles must receive attendance processing mode");

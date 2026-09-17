@@ -11,6 +11,7 @@ function fixture() {
   run(`authState={loggedIn:true,isMaster:true,loginId:'qa'};getActiveTeacherName=()=>'';currentSheetName='9/17';
     closeOperationMemoAlert=clearOperationMemoHighlights=renderOperationCommonMemos=calendarSync=recordTeacherViewAfterSuccessfulLoad=renderOperationMemoList=renderOperationMemoSourceSummary=applyOperationMemoHighlights=showOperationMemoPopupIfNeeded=()=>{};
     renderTable=()=>{};isTeacherViewActive=canCurrentUserSubmitAttendance=()=>false;
+    loadSharedSubjectIcons=()=>Promise.resolve();
     globalThis.applied=[];processData=d=>applied.push(d.version);
     globalThis.calls=[];callServer=()=>new Promise((resolve,reject)=>calls.push({resolve,reject}));
     globalThis.memoCalls=[];fetchOperationMemos=()=>new Promise(resolve=>memoCalls.push(resolve));fetchSlmsOperationMemos=()=>Promise.resolve([]);`);

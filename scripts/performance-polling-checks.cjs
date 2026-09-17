@@ -11,6 +11,7 @@ async function verify(file) {
   const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
   run(`authState={loggedIn:true,isMaster:true,loginId:'qa'};currentSheetName='9/17';
     renderTable=resetVisitorLookupIndexCache=syncLookupDimmingState=()=>{};
+    loadSharedSubjectIcons=()=>Promise.resolve();
     isStudentImageModalOpen=()=>false;
     loadOperationMemosForCurrentSheet=()=>Promise.resolve([]);loadStudentEnrollmentStatusWarnings=()=>Promise.resolve(false);
     globalThis.requests=[];callServer=(method,args)=>new Promise((resolve,reject)=>requests.push({method,args,resolve,reject}));

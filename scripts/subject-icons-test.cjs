@@ -1,0 +1,32 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+async function verify(file){
+ const html=fs.readFileSync(file,'utf8');
+ const block=html.slice(html.indexOf('      var sharedSubjectIcons ='),html.indexOf('      function getDistinctColor'));
+ const scope={URL,Promise,setTimeout,clearTimeout,authState:{loggedIn:true,loginId:'qa'},firebaseEmailForLoginId:id=>id+'@test.local',escapeHtml:s=>String(s).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/</g,'&lt;'),getSubjectEmoji:()=> 'fallback',document:{querySelectorAll:()=>[]}};
+ let reads=0,resolveRead,authListener;
+ const user={uid:'u1',email:'qa@test.local'};
+ scope.getLiveFirebaseAuth=()=>Promise.resolve({currentUser:user,onAuthStateChanged(fn){authListener=fn;return ()=>{};}});
+ scope.getLiveFirebaseFirestore=()=>Promise.resolve({collection(name){assert.equal(name,'sharedIconAssets');return {where(field,op,value){assert.equal(value,'SUBJECT');return {get(options){assert.equal(options.source,'server');reads++;return new Promise(r=>resolveRead=r);}};}};}});
+ vm.createContext(scope);vm.runInContext(block,scope);
+ const url='https://firebasestorage.googleapis.com/v0/b/fir-lms-prod.firebasestorage.app/o/icon?alt=media';
+ const row=(name,extra={})=>({category:'SUBJECT',status:'ACTIVE',lookupKey:'subject:'+name,imageUrl:url,...extra});
+ const rows=[row('사회'),row('사회:transparent',{imageUrl:url+'&transparent=1',aliases:['윤리']}),row('물리'),row('수학',{status:'DELETED'}),row('bad',{imageUrl:'javascript:alert(1)'})];
+ const map=scope.buildSharedSubjectIconMap(rows);
+ assert.match(map['사회'].imageUrl,/transparent/);assert.equal(map['윤리'],map['사회']);assert.equal(map.bad,undefined);assert.equal(map['수학'],undefined);
+ assert.equal(scope.sharedSubjectCandidates('생윤').at(-1),'사회');assert.equal(scope.sharedSubjectCandidates('물리Ⅰ').at(-1),'물리');
+ const pending=scope.loadSharedSubjectIcons(false);assert.equal(scope.loadSharedSubjectIcons(false),pending);
+ for(let i=0;i<10;i++)await Promise.resolve();assert.equal(reads,1);
+ resolveRead({docs:rows.map(data=>({data:()=>data}))});await pending;
+ assert.match(scope.getSubjectBadgeHtml('생윤'),/<img/);assert.match(scope.getSubjectBadgeHtml('생윤'),/생윤/);
+ await scope.loadSharedSubjectIcons(false);assert.equal(reads,1);
+ const forced=scope.loadSharedSubjectIcons(true);for(let i=0;i<10;i++)await Promise.resolve();assert.equal(reads,2);
+ scope.authState.loginId='different';scope.resetSharedSubjectIcons();
+ resolveRead({docs:rows.map(data=>({data:()=>data}))});await forced;
+ assert.doesNotMatch(scope.getSubjectBadgeHtml('생윤'),/<img/);
+ scope.authState.loggedIn=false;await scope.loadSharedSubjectIcons();assert.equal(reads,2);
+ assert.match(scope.getSubjectBadgeHtml('unknown'),/fallback/);
+ assert.equal((html.match(/var subjBadge = getSubjectBadgeHtml\(subject\);/g)||[]).length,2);
+ assert.match(html,/this.hidden=true;this.nextElementSibling.hidden=false/);
+ console.log(file+': exact/alias/family, transparent priority, safe URLs, one read, forced refresh, stale-account discard, fallback and both render paths PASS');
+}
+(async()=>{await verify('Index.html');await verify('docs/index.html');})().catch(e=>{console.error(e);process.exitCode=1;});

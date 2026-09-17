@@ -1,5 +1,7 @@
 # Live Timetable Design Tokens
 
+Current no-scroll toolbar spacing: 3px gaps, 52px countdown, 2px horizontal clock/countdown margins, 4px action padding. Search retains DOM order before attendance messages at tablet widths as well as desktop/mobile. Earlier dated receipts below describe superseded arrangements where they conflict with the latest refinement.
+
 ## Toolbar arrangement — 2026-09-16
 
 Preserve existing button colors, 6px radii and 40px targets. Put frequent actions (hours export, timetable card, memo, teacher dashboard) after top-row navigation. A full-width flex break starts the second row: search aligned under Home, then remaining actions; icon-only fullscreen is last at right. Keep direct-child search and Home for visitor-mode compatibility. Countdown width is one third of the former 250px (83.33px), with compact mm:ss text and full accessible description. Empty-room button is omitted. No timetable-cell redesign.
@@ -78,6 +80,15 @@ The timetable uses compact borders as its primary depth system. Enrollment alert
 
 ## 8. Tomorrow review dashboard
 
+## Toolbar attendance delta — 2026-09-17
+
+Latest refinement (supersedes the earlier toolbar sizing and placement below): all right-hand commands sit in first-row groups, with 9px labels below 18px icons and 48px minimum-width/44px-height targets. Second row contains search and received-message strip only, plus an attendance-only refresh control. Teacher name is a distinct rounded navy-tinted label within each bubble. Search border is 2px primary navy. Refresh reuses the existing attendance query, not schedule refresh; loading disables the control and result remains accessible/visible. The first row has no horizontal scrolling: compact M/D(weekday) clock date, hidden role badge and home-only logout reserve desktop width. Date navigation is one pale navy segmented group with 40×44px controls, 11px labels above 16px SVG icons, 12px outer/8px inner rounding, and a navy Today control. At narrow widths controls wrap without clipping or shrinking hit areas. On phone widths the search and message strip stack to preserve usable widths.
+
+Preserve the navy identity and timetable. First-row switches use 10px labels above 36×20px switches in 44px-tall hit areas. Four 40px icon actions (hours/card/memo/review) follow refresh; dashboard joins second-row actions. Search uses a 1px muted navy border (#94a3b8), pale navy surface (#f4f6fb), 14px radius, 44px height, 700 weight and an authored SVG search icon. Focus uses the primary navy outline. Second row contains search, one 44px-tall message strip, and remaining actions. Only today's actual received reports appear, newest first, with no hour lanes or empty-hour placeholders. Message bubbles use a soft #eef2f8 surface, 18px rounding, 40px hit targets and no accent stripe. Horizontal overflow keeps all messages reachable. Narrow layouts wrap the strip to full width; table scrolling remains independent. Current-time marker and 1:1 gold/student selection are unchanged.
+
 The review modal is a dense operational surface, not a separate visual product. Its primary region is an error timetable with the same time × room mental model as the live timetable. Navy headers retain the existing navigation authority; rose surfaces identify immediate errors and amber surfaces identify review-level warnings. Table boundaries remain `1px` dividers because they encode coordinates. Nested issue cards use low-opacity ring and depth shadows rather than another hard container border.
 
 The hierarchy is fixed: summary metrics → current-error timetable → next review stages and source status. Error cards always expose issue type, class type/subject, teacher, affected student, and a corrective reason. At narrow widths the modal and secondary dashboard stack vertically, while the two-dimensional error timetable keeps sticky time/room headers and scrolls inside its named region. Interactive tabs and close controls keep at least a `40px` hit area and use the existing `0.96` press scale.
+# Account-managed subject icons (2026-09-17)
+
+Subject badges use ACTIVE SUBJECT records from fir-lms-prod sharedIconAssets. Exact normalized names and configured aliases precede subject-family fallbacks; transparent variants take priority. The existing dense navy badge uses a 16px image rather than expanding the timetable to the account manager's suggested 20–28px size. Subject text is retained. Missing, failed, or unavailable images preserve the existing emoji. Reads run independently of timetable loading, once per authenticated account session, with manual refresh and account-change invalidation; no added polling. Both deployment surfaces use the same helper.

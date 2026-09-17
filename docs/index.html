@@ -1491,6 +1491,109 @@
       .loading-bar-container .loading-text-overlay { color:#0f1746; }
       .fullscreen-btn { width:40px; min-width:40px; padding:0; justify-content:center; }
       .ticker-wrap { cursor:default; }
+
+      /* Scoped operational toolbar: keep search a direct child for visitor mode. */
+      body:not(.visitor-lookup-mode) .top-bar { gap:8px 6px; }
+      body:not(.visitor-lookup-mode) .digital-clock { margin:0 4px; flex-direction:column; align-items:flex-start; gap:0; }
+      body:not(.visitor-lookup-mode) .clock-date { font-size:10px; }
+      body:not(.visitor-lookup-mode) .clock-time { font-size:16px; }
+      .top-bar .nav-group { margin-right:0; }
+      .top-bar .nav-btn { padding:6px 8px; font-size:12px; }
+      .top-bar .role-badge { font-size:10px; padding:5px 6px; }
+      .top-bar .toggle-wrapper { position:relative; flex-direction:column-reverse; justify-content:center; gap:4px; min-height:44px; min-width:44px; margin-left:0 !important; }
+      .top-bar .toggle-wrapper span { font-size:10px; line-height:12px; color:var(--primary); white-space:nowrap; }
+      .top-bar .toggle-input { display:block; position:absolute; width:1px; height:1px; opacity:0; }
+      .top-bar .toggle-input:focus-visible + .toggle-switch { outline:3px solid var(--accent); outline-offset:3px; }
+      .top-bar > .refresh-container { margin-left:auto; }
+      .top-bar > .primary-actions { flex-wrap:nowrap; margin-left:0; }
+      .primary-actions > button { width:40px; min-width:40px; height:40px; padding:0; justify-content:center; }
+      .primary-actions > button > span { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+      body:not(.visitor-lookup-mode) .top-bar > .search-wrapper { order:0; flex:0 1 232px; min-width:180px; max-width:280px; }
+      body:not(.visitor-lookup-mode) .search-input { height:44px; padding:10px 14px 10px 42px; border:1px solid #94a3b8; border-radius:14px; font:700 13px/1.4 Pretendard,sans-serif; color:var(--primary); background:#f4f6fb; caret-color:var(--primary); }
+      body:not(.visitor-lookup-mode) .search-input::placeholder { color:#475569; font-weight:700; }
+      .toolbar-search-icon { position:absolute; left:14px; top:13px; width:18px; height:18px; color:var(--primary); pointer-events:none; }
+      .visitor-lookup-mode .toolbar-search-icon { display:none; }
+      .top-bar .search-input:focus-visible { outline:2px solid var(--primary); outline-offset:2px; background:#fff; }
+      .attendance-window { display:flex; align-items:center; flex:1 1 220px; min-width:0; height:44px; color:var(--primary); }
+      .attendance-window[hidden] { display:none !important; }
+      .attendance-window-items { display:flex; align-items:center; gap:6px; overflow-x:auto; overflow-y:hidden; min-width:0; max-width:100%; height:44px; scrollbar-width:auto; }
+      .attendance-window-items::-webkit-scrollbar { height:3px; }
+      .attendance-window-items::-webkit-scrollbar-thumb { background:#94a3b8; border-radius:3px; }
+      .attendance-window-items::-webkit-scrollbar-track { background:transparent; }
+      .attendance-window-chip { flex:none; display:flex; gap:6px; align-items:center; max-width:250px; min-width:40px; height:40px; padding:0 12px; border:0; border-radius:18px 18px 18px 6px; background:#eef2f8; color:var(--primary); font:500 12px/1.3 Pretendard,sans-serif; cursor:pointer; }
+      .attendance-window-chip strong { flex:none; font-size:11px; font-weight:700; }
+      .attendance-window-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .attendance-window-chip:hover { background:#e2e8f3; }
+      .attendance-window-chip:focus-visible, .attendance-chat-thread:focus-visible { outline:2px solid var(--primary); outline-offset:-2px; }
+      .attendance-window-empty { font-size:11px; color:#64748b; padding:0 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      #liveTimeline { height:2px; background:var(--accent); box-shadow:none; backdrop-filter:none; }
+      #liveTimeline::before { left:0; width:8px; height:8px; background:var(--accent); border:2px solid white; box-shadow:none; }
+      #liveTimeline::after { content:attr(data-time); right:8px; top:-19px; padding:4px 8px; border-radius:5px 5px 0 5px; background:var(--primary); color:white; font:700 11px/1.3 Pretendard,sans-serif; font-variant-numeric:tabular-nums; letter-spacing:0; box-shadow:none; }
+      @media (max-width:1100px) {
+        .attendance-window { flex-basis:220px; }
+        .top-bar > .action-group { margin-left:auto; }
+      }
+      @media (max-width:600px) {
+        body:not(.visitor-lookup-mode) .top-bar > .search-wrapper { order:0; }
+        body:not(.visitor-lookup-mode) .top-bar > .search-wrapper { flex:1 1 100%; max-width:none; }
+        .attendance-window { flex-basis:100%; }
+        .top-bar > .action-group { width:100%; justify-content:flex-end; }
+      }
+
+      .top-bar > .primary-actions, .top-bar > .action-group { flex-wrap:nowrap; gap:4px; margin-left:0; }
+      .top-bar .primary-actions > button, .top-bar .action-group > button { flex:none; width:auto; min-width:48px; height:44px; padding:4px 6px; flex-direction:column; justify-content:center; gap:3px; position:relative; }
+      .top-bar .primary-actions > button > span, .top-bar .action-group > button > span { display:block; position:static; width:auto; height:auto; overflow:visible; clip-path:none; font-size:9px; line-height:11px; font-weight:600; white-space:nowrap; }
+      .top-bar .primary-actions .icon, .top-bar .action-group .icon { width:18px; height:18px; }
+      .top-bar .action-group > button > .attendance-inbox-count { position:absolute; right:0; top:-4px; display:none; padding:1px 3px; font-size:8px; }
+      .top-bar .action-group > button > .attendance-inbox-count.is-visible { display:inline-flex; }
+      body:not(.visitor-lookup-mode) .search-input { border:2px solid var(--primary); }
+      .attendance-window-chip strong { padding:4px 6px; border-radius:9px; background:#dce4f2; color:var(--primary); }
+      .attendance-message-tools { display:flex; align-items:center; gap:6px; position:relative; }
+      .attendance-message-tools[hidden] { display:none !important; }
+      .attendance-message-refresh { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:48px; height:44px; padding:4px; border:1px solid #cbd5e1; border-radius:10px; background:#f4f6fb; color:var(--primary); cursor:pointer; }
+      .attendance-message-refresh svg { width:18px; height:18px; }
+      .attendance-message-refresh span { font-size:9px; white-space:nowrap; }
+      .attendance-message-refresh:disabled { opacity:.55; cursor:wait; }
+      .attendance-message-refresh:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+      #attendanceMessagesRefreshResult:not(:empty) { position:absolute; right:0; top:100%; z-index:120; width:240px; padding:8px; border-radius:8px; background:#fff; color:var(--primary); box-shadow:0 4px 14px rgba(0,0,0,.12); font-size:11px; }
+      #attendanceMessagesRefreshResult.error { color:#b91c1c; }
+
+      .toolbar-first-row { display:flex; flex:0 0 100%; flex-wrap:wrap; align-items:center; gap:3px; min-width:0; max-width:100%; overflow:visible; }
+      .toolbar-first-row > * { flex-shrink:0; }
+      .toolbar-first-row > .loading-bar-container { flex-basis:52px; width:52px; max-width:52px; margin:0 2px; }
+      body:not(.visitor-lookup-mode) .toolbar-first-row > .digital-clock { margin:0 2px; }
+      .toolbar-first-row .primary-actions > button, .toolbar-first-row .action-group > button { padding-inline:4px; }
+      .toolbar-first-row #roleBadge { display:none !important; }
+      .top-bar .nav-group { display:flex; gap:2px; padding:4px; border-radius:12px; background:#eef2f8; }
+      .top-bar .nav-group .nav-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-width:40px; height:44px; padding:4px; border:0; border-radius:8px; background:transparent; color:var(--primary); font-size:11px; line-height:14px; }
+      .top-bar .nav-group .nav-btn svg { width:16px; height:16px; }
+      .top-bar .nav-group .nav-btn:hover { background:#dce4f2; }
+      .top-bar .nav-group .nav-btn-today { background:var(--primary); color:white; }
+      .top-bar .nav-group .nav-btn-today:hover { background:#21365e; }
+      .top-bar .nav-group .nav-btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+      .toolbar-first-row #teacherPicker { min-width:0; max-width:160px; }
+      .toolbar-first-row .teacher-picker-trigger { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      @media (max-width:1100px) {
+        .toolbar-first-row > .primary-actions, .toolbar-first-row > .action-group { display:contents !important; }
+        .toolbar-first-row > .refresh-container { margin-left:0 !important; }
+      }
+      .toolbar-first-row > .refresh-container { margin-left:auto; }
+      .toolbar-first-row > .primary-actions, .toolbar-first-row > .action-group { display:flex; flex-wrap:nowrap; gap:3px; margin-left:0; max-width:none; }
+      .top-bar > .toolbar-row-break { display:none; }
+      .visitor-lookup-mode .top-bar > .toolbar-first-row { display:contents !important; position:static; transform:none; }
+      .visitor-lookup-mode .toolbar-first-row > * { display:none !important; }
+      .visitor-lookup-mode .toolbar-first-row > .toolbar-home { display:flex !important; position:absolute; left:20px; top:50%; transform:translateY(-50%); }
+      .visitor-lookup-mode .toolbar-first-row > #digitalClock { display:flex !important; position:absolute; right:28px; top:50%; transform:translateY(-50%); margin:0; }
+      .visitor-lookup-mode .toolbar-first-row .clock-date, .visitor-lookup-mode .toolbar-first-row .clock-time { color:white; }
+      @media (max-width:600px) {
+        .attendance-window { flex:1 1 220px; }
+        .visitor-lookup-mode .toolbar-first-row > #digitalClock { display:none !important; }
+        .visitor-lookup-mode .toolbar-first-row > .toolbar-home { position:static; transform:none; }
+      }
+      .subject-badge { white-space:nowrap; }
+      .shared-subject-icon { display:inline-grid; place-items:center; width:16px; height:16px; margin-right:2px; vertical-align:middle; }
+      .shared-subject-icon img { width:16px; height:16px; object-fit:contain; border-radius:3px; }
+      .shared-subject-icon [hidden] { display:none!important; }
     </style>
   </head>
   <body>
@@ -1515,6 +1618,7 @@
           <button id="gateAllModeBtn" class="gate-btn secondary" onclick="completeAccessSelection('all')">전체 시간표로 접근</button>
           <div id="gateRoleTip" class="gate-tip"></div>
         </div>
+        <button id="teacherLogoutBtn" type="button" class="gate-btn secondary" onclick="logoutTeacher()" style="display:none;">로그아웃</button>
       </div>
     </div>
     <div id="mobileLoading">
@@ -1771,14 +1875,19 @@
          <div class="ticker" id="noticeText">S-LMS 공지사항</div>
       </div>
       <div class="top-bar">
-        <div onclick="goHome()" style="cursor:pointer; display:flex; align-items:center;">
+        <div class="toolbar-first-row" role="group" aria-label="시간표 도구">
+        <div class="toolbar-home" onclick="goHome()" style="cursor:pointer; display:flex; align-items:center;">
              <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="header-logo-img">
              <span style="margin-left:5px; font-weight:bold; color:#0f1746;">HOME</span>
         </div>
         <div id="digitalClock" class="digital-clock"></div>
         <div class="loading-bar-container"><div class="loading-bar-fill" id="loadingBar"></div><div class="loading-text-overlay" id="loadingText">30:00</div></div>
         
-        <div class="nav-group"><button class="nav-btn" onclick="navigateDay(1)">◀ 어제</button><button class="nav-btn nav-btn-today" onclick="navigateDay(0)">오늘</button><button class="nav-btn" onclick="navigateDay(-1)">내일 ▶</button></div>
+        <div class="nav-group" role="group" aria-label="날짜 이동">
+          <button type="button" class="nav-btn" onclick="navigateDay(1)" aria-label="어제"><span>어제</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6-6 6 6 6M4 12h16"/></svg></button>
+          <button type="button" class="nav-btn nav-btn-today" onclick="navigateDay(0)" aria-label="오늘"><span>오늘</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 10h16m-11 5 2 2 4-4"/></svg></button>
+          <button type="button" class="nav-btn" onclick="navigateDay(-1)" aria-label="내일"><span>내일</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6 6 6-6 6M4 12h16"/></svg></button>
+        </div>
         
         <select id="mainSheetSelector" class="sheet-select" onchange="changeSheet()" hidden aria-hidden="true" tabindex="-1"></select>
         <div id="calendarPicker" class="calendar-picker">
@@ -1800,7 +1909,6 @@
           </div>
         </div>
         <button id="teacherLoginBtn" class="nav-btn" onclick="openAuthModal()">강사 로그인</button>
-        <button id="teacherLogoutBtn" class="nav-btn" onclick="logoutTeacher()" style="display:none;">로그아웃</button>
         
         <label id="privacyControl" class="toggle-wrapper" style="margin-left:5px;" title="학생 이름 블러 처리"><input type="checkbox" id="privacyToggle" class="toggle-input" onchange="togglePrivacy()"><div class="toggle-switch"></div><span>🔒 보안</span></label>
         <label class="toggle-wrapper" style="margin-left:5px;" title="현재 시간선 표시"><input type="checkbox" id="timelineToggle" class="toggle-input" checked onchange="toggleTimeline()"><div class="toggle-switch"></div><span>시간선 ON</span></label>
@@ -1817,19 +1925,14 @@
           <button id="operationMemoBtn" class="operation-memo-btn" onclick="openOperationMemoModal()" style="display:none;" title="운영 메모">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L15 3.586A2 2 0 0013.586 3H4zm9 1.5V7h2.5L13 4.5zM6 10a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z"/></svg><span>운영 메모</span>
           </button>
-          <button id="teacherViewLogBtn" class="review-btn" onclick="openTeacherViewLogModal()" style="display:none;" aria-label="강사 대시보드" title="강사 대시보드">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>강사 대시보드</span>
-          </button>
-        </div><div class="toolbar-row-break" aria-hidden="true"></div><div class="search-wrapper"><input type="text" class="search-input" id="searchInput" placeholder="🔍 학생/강사 검색" onkeyup="searchTable()"></div>
-        <div id="attendanceRefreshNotice" class="attendance-refresh-notice" role="status" aria-live="assertive">
-          <div class="attendance-refresh-notice-main"><div class="attendance-refresh-notice-title">데스크 답변이 도착했습니다</div><div id="attendanceRefreshNoticeCopy" class="attendance-refresh-notice-copy">최신 상태 확인을 위해 새로고침해 주세요.</div></div>
-          <button type="button" onclick="refreshData()">새로고침</button>
-        </div>
-        
-        <div class="action-group">
-
           <button class="review-btn" onclick="runScheduleReview()" title="시간표 점검">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>시간표 점검</span>
+          </button>
+        </div>
+        <div class="action-group">
+
+          <button id="teacherViewLogBtn" class="review-btn" onclick="openTeacherViewLogModal()" style="display:none;" aria-label="강사 대시보드" title="강사 대시보드">
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>강사 대시보드</span>
           </button>
 
           <button class="capture-btn admin-toolbar-hidden" onclick="captureScreen()" title="이미지 저장">
@@ -1858,8 +1961,16 @@
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a2 2 0 00-2 2v9a2 2 0 002 2h3.586l2.707 2.707a1 1 0 001.414 0L13.414 16H17a2 2 0 002-2V5a2 2 0 00-2-2H3zm3 5a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg><span>출결 전달함</span><span id="attendanceInboxCount" class="attendance-inbox-count"></span>
           </button>
           <button class="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 (F11)" aria-label="전체화면">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>전체화면</span>
           </button>
+        </div>
+        </div>
+<div class="toolbar-row-break" aria-hidden="true"></div><div class="search-wrapper"><svg class="toolbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input type="search" class="search-input" id="searchInput" aria-label="학생 또는 강사 검색" placeholder="학생 / 강사 검색" oninput="searchTable()"></div>
+        <section id="attendanceWindow" class="attendance-window" aria-label="오늘 접수된 출결 메시지" hidden></section>
+        <div id="attendanceMessageTools" class="attendance-message-tools" hidden><button class="attendance-message-refresh" type="button" onclick="refreshAttendanceMessages(this)" title="시간표를 다시 불러오지 않고 출결 메시지만 새로고침" aria-label="출결 메시지만 새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5 8a8 8 0 0 1 13-3l2 3M4 16l2 3a8 8 0 0 0 13-3"/></svg><span>메시지 갱신</span></button><span id="attendanceMessagesRefreshResult" role="status" aria-live="polite"></span></div>
+        <div id="attendanceRefreshNotice" class="attendance-refresh-notice" role="status" aria-live="assertive">
+          <div class="attendance-refresh-notice-main"><div class="attendance-refresh-notice-title">데스크 답변이 도착했습니다</div><div id="attendanceRefreshNoticeCopy" class="attendance-refresh-notice-copy">최신 상태 확인을 위해 새로고침해 주세요.</div></div>
+          <button type="button" onclick="refreshData()">새로고침</button>
         </div>
       </div>
       <div id="operationCommonMemoStrip" class="operation-common-memo-strip" aria-live="polite">
@@ -2836,6 +2947,79 @@
         badge.textContent = String(count);
         badge.classList.toggle("is-visible", count > 0);
       }
+
+      var attendanceWindowRenderKey = "";
+      var attendanceWindowReports = null;
+      function attendanceWindowMessages(reports, now) {
+        var today = attendanceLocalDateKey(now);
+        return (reports || []).filter(function(report) {
+          return attendanceReportDateKey(report) === today;
+        }).slice().sort(function(a, b) {
+          return Number(b.reportedAtMs || 0) - Number(a.reportedAtMs || 0);
+        });
+      }
+      function renderAttendanceWindow(force) {
+        var host = document.getElementById("attendanceWindow");
+        if (!host) return;
+        var state = attendanceRealtimeState;
+        var allowed = authState.loggedIn && !authState.isLookup && state.firebaseAdmin;
+        host.hidden = !allowed;
+        var tools = document.getElementById("attendanceMessageTools");
+        if (tools) tools.hidden = !allowed;
+        if (!allowed) { host.replaceChildren(); attendanceWindowRenderKey = ""; return; }
+        var now = new Date();
+        var privacy = document.body.classList.contains("privacy-active");
+        var key = [attendanceLocalDateKey(now), privacy, state.loading, state.error].join("|");
+        if (!force && attendanceWindowRenderKey === key && attendanceWindowReports === state.reports) return;
+        attendanceWindowRenderKey = key;
+        attendanceWindowReports = state.reports;
+        if (state.loading || state.error) {
+          host.innerHTML = "<div class='attendance-window-empty' role='status'>" +
+            (state.error ? "출결 연결 확인 필요 · 전달함에서 다시 확인해 주세요." : "출결 메시지 불러오는 중…") + "</div>";
+          return;
+        }
+        var focused = host.contains(document.activeElement) ? document.activeElement.dataset.reportId : "";
+        var previous = host.querySelector(".attendance-window-items");
+        var scrollLeft = previous ? previous.scrollLeft : 0;
+        var reports = attendanceWindowMessages(state.reports, now);
+        var chips = reports.map(function(report) {
+          var teacher = attendanceReporterLabel(report).replace(/\s*강사$/, "T");
+          var detail = privacy ? "학생 정보 보호 중" : [report.studentName || "학생", report.status || "기타", report.note || ""].filter(Boolean).join(" · ");
+          var hour = report.hour !== null && report.hour !== undefined && String(report.hour).trim() !== "" && Number.isFinite(Number(report.hour)) ? Number(report.hour) + "시 · " : "";
+          return "<button type='button' class='attendance-window-chip' data-report-id='" + escapeHtml(report.__id) +
+            "' title='" + escapeHtml(hour + teacher + " · " + detail) +
+            "' aria-label='" + escapeHtml(hour + teacher + " · " + detail + " 상세 보기") +
+            "'><strong>" + escapeHtml(teacher) + "</strong><span>" + escapeHtml(detail) + "</span></button>";
+        }).join("");
+        host.innerHTML = chips ? "<div class='attendance-window-items' aria-label='오늘 접수된 출결 메시지 " + reports.length + "건 · 좌우로 더 보기'>" + chips + "</div>" :
+          "<span class='attendance-window-empty'>오늘 접수된 출결 메시지가 없습니다.</span>";
+        host.onclick = function(event) {
+          var button = event.target.closest("button[data-report-id]");
+          if (button && host.contains(button)) openAttendanceWindowDetail(button.dataset.reportId);
+        };
+        var items = host.querySelector(".attendance-window-items");
+        if (items) items.scrollLeft = scrollLeft;
+        if (focused) {
+          var replacement = Array.from(host.querySelectorAll("button")).find(function(el) { return el.dataset.reportId === focused; });
+          if (replacement) replacement.focus({ preventScroll: true });
+        }
+      }
+      function openAttendanceWindowDetail(id) {
+        if (!authState.loggedIn || authState.isLookup || !attendanceRealtimeState.firebaseAdmin) return;
+        var report = (attendanceRealtimeState.reports || []).find(function(item) { return item.__id === id; });
+        if (!report) return;
+        attendanceInboxView = "chat";
+        attendanceInboxSelectedDateKey = attendanceReportDateKey(report);
+        attendanceInboxDateStripInitialized = false;
+        document.getElementById("attendanceInboxSearch").value = "";
+        document.getElementById("attendanceInboxStateFilter").value = "ALL";
+        openAttendanceDialog("attendanceInboxModal");
+        renderAttendanceInbox();
+        var article = Array.from(document.querySelectorAll("#attendanceInboxList [data-attendance-report-id]")).find(function(el) {
+          return el.getAttribute("data-attendance-report-id") === id;
+        });
+        if (article) { article.tabIndex = -1; article.scrollIntoView({ block: "nearest" }); article.focus({ preventScroll:true }); }
+      }
       function openAttendanceInbox() {
         if (!authState.loggedIn || authState.isLookup) return;
         if (!attendanceRealtimeState.firebaseAdmin) attendanceInboxView = "chat";
@@ -3002,6 +3186,7 @@
         }).join("") + "</tbody></table></div>";
       }
       function renderAttendanceInbox() {
+        renderAttendanceWindow();
         var modal = document.getElementById("attendanceInboxModal");
         if (modal && modal.style.display !== "flex") return;
         var list = document.getElementById("attendanceInboxList");
@@ -3113,15 +3298,19 @@
         // Moving an edited report in the sort order must not strand keyboard focus.
         if (focused && focused.isConnected && document.activeElement !== focused && list.contains(focused)) focused.focus({ preventScroll: true });
       }
-      function refreshAttendanceInbox(button) {
+      function refreshAttendanceMessages(button) {
+        return refreshAttendanceInbox(button, document.getElementById("attendanceMessagesRefreshResult"));
+      }
+      function refreshAttendanceInbox(button, resultOverride) {
         if (!authState.loggedIn || authState.isLookup || !attendanceRealtimeState.uid) return;
         if (button && button.disabled) return;
         var sequence = attendanceConnectionSequence;
         var uid = attendanceRealtimeState.uid;
         var mode = attendanceRealtimeState.mode;
         var isCurrent = function() { return sequence === attendanceConnectionSequence && uid === attendanceRealtimeState.uid; };
-        var result = document.getElementById("attendanceInboxRefreshResult");
+        var result = resultOverride || document.getElementById("attendanceInboxRefreshResult");
         var label = button && button.querySelector("span");
+        var originalLabel = label && label.textContent;
         if (button) button.disabled = true;
         if (label) label.textContent = "불러오는 중";
         if (result) {
@@ -3130,9 +3319,9 @@
         }
         attendanceRealtimeState.loading = true;
         renderAttendanceInbox();
-        getLiveFirebaseFirestore().then(function(db) {
+        return getLiveFirebaseFirestore().then(function(db) {
           if (!isCurrent()) return;
-          return buildAttendanceReportsQuery(db, mode, uid).get().then(function(snapshot) {
+          return buildAttendanceReportsQuery(db, mode, uid).get({ source: "server" }).then(function(snapshot) {
             if (!isCurrent()) return;
             applyAttendanceReportsSnapshot(snapshot, uid, mode);
             return attendanceRealtimeState.firebaseAdmin ? Promise.resolve() : markAttendanceDeskRepliesSeen();
@@ -3151,7 +3340,7 @@
           if (window.console && console.warn) console.warn("출결 전달함 새로고침 실패:", error);
         }).finally(function() {
           if (button) button.disabled = false;
-          if (label) label.textContent = "새로고침";
+          if (label) label.textContent = originalLabel;
         });
       }
       function saveAttendanceInboxReply(button) {
@@ -4535,6 +4724,7 @@ window.SeduHubAdapter={
         });
       }
       function logoutTeacher() {
+        resetSharedSubjectIcons();
         resetStudentEnrollmentStatus();
         studentCardStatusSequence++;
         studentCardStatusContext = "";
@@ -4810,6 +5000,7 @@ window.SeduHubAdapter={
         });
       }
       function applyRoleUi() {
+        loadSharedSubjectIcons(false);
         loadNotice();
         calendarSync();
         refreshOptionalTeacherRoster();
@@ -4821,7 +5012,7 @@ window.SeduHubAdapter={
         var roleBadge = document.getElementById('roleBadge');
         var loginBtn = document.getElementById('teacherLoginBtn');
         var logoutBtn = document.getElementById('teacherLogoutBtn');
-        var homeWrap = document.querySelector('.top-bar > div:first-child');
+        var homeWrap = document.querySelector('.toolbar-home');
         var teacherSel = document.getElementById('teacherViewSelector');
         var searchInput = document.getElementById('searchInput');
         var privacyControl = document.getElementById('privacyControl');
@@ -5014,7 +5205,7 @@ window.SeduHubAdapter={
         else c.classList.remove('dimming-enabled');
       }
       function toggleDimming(){ syncLookupDimmingState(); }
-      function togglePrivacy() { document.body.classList.toggle('privacy-active'); selectedTimetableStudent = null; syncStudentSelection(); }
+      function togglePrivacy() { document.body.classList.toggle('privacy-active'); selectedTimetableStudent = null; syncStudentSelection(); renderAttendanceWindow(true); }
       
       function toggleTimeline() {
          var line = document.getElementById('liveTimeline');
@@ -5147,9 +5338,10 @@ window.SeduHubAdapter={
       }
       function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= SCHEDULE_START_HOUR && hour <= SCHEDULE_END_HOUR) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(false); timeLeft = 1800; } } else { setCountdownText("대기", "업데이트 대기중 (운영시간 외)"); document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
       function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; setCountdownText(String(min).padStart(2,"0") + ":" + String(sec).padStart(2,"0"), "다음 업데이트까지 " + min + "분 " + sec + "초"); }
-      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var Y=now.getFullYear(); var M=String(now.getMonth()+1).padStart(2,'0'); var D=String(now.getDate()).padStart(2,'0'); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+Y+"."+M+"."+D+" ("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); updateTimelinePosition(); }
+      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var M=now.getMonth()+1; var D=now.getDate(); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+M+"/"+D+"("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); updateTimelinePosition(); }
       
       function updateTimelinePosition() {
+         renderAttendanceWindow();
          if (isTeacherViewActive() && window.innerWidth <= 768) {
            document.getElementById('liveTimeline').style.display = 'none';
            return;
@@ -5160,6 +5352,7 @@ window.SeduHubAdapter={
          var h = now.getHours();
          var m = now.getMinutes();
          var line = document.getElementById('liveTimeline');
+         line.dataset.time = "현재 " + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
          if(h < SCHEDULE_START_HOUR || h > SCHEDULE_END_HOUR) { line.style.display = 'none'; return; }
          
          var table = document.getElementById('scheduleTable');
@@ -5485,6 +5678,7 @@ window.SeduHubAdapter={
 
       function changeSheet(){ var value = document.getElementById('mainSheetSelector').value; if(!value) return; loadData(value,false,true); }
       function refreshData(markReplySeen){
+        if (markReplySeen !== false) loadSharedSubjectIcons(true);
         if(!currentSheetName) return;
         if (markReplySeen === false && (document.hidden || document.getElementById('mainPage').style.display === 'none')) return;
         if (scheduleInFlight && scheduleInFlight.force && scheduleInFlight.sheet === currentSheetName && scheduleInFlight.session === getScheduleSessionKey() && scheduleInFlight.requestId === scheduleLoadSequence) {
@@ -8207,6 +8401,107 @@ window.SeduHubAdapter={
         return "";
       }
       function getSubjectEmoji(subj) { if (/^(생윤|윤사|생활과윤리|윤리와사상|사회|한국사|역사|사탐|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사)$/.test(subj)) return "🌏"; if (/^(수학|수[12IⅠⅡ]|미적|기하|확통)/.test(subj)) return "📐"; if (/^(과학|물리|화학|생명|지구|물$|화$|생$|지$)/.test(subj)) return "🧪"; if (/^(국어|언매|화작)$/.test(subj)) return "📚"; if (subj === "영어") return "🅰️"; return "✏️"; }
+      var sharedSubjectIcons = { key:"", uid:"", generation:0, map:Object.create(null), loaded:false, pending:null, unsubscribe:null };
+      function normalizeSharedSubjectName(value) {
+        return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+      }
+      function buildSharedSubjectIconMap(rows) {
+        var map = Object.create(null), aliases = Object.create(null);
+        rows.filter(function(row) { return row.category === "SUBJECT" && row.status === "ACTIVE"; }).sort(function(a,b) {
+          return Number(/:transparent$/.test(a.lookupKey || "")) - Number(/:transparent$/.test(b.lookupKey || ""));
+        }).forEach(function(row) {
+          var key = String(row.lookupKey || "");
+          if (!/^subject:/.test(key)) return;
+          var url;
+          try { url = new URL(row.imageUrl || ""); } catch (_) { return; }
+          if (url.protocol !== "https:" || url.username || url.password ||
+              ["firebasestorage.googleapis.com","storage.googleapis.com"].indexOf(url.hostname) === -1 ||
+              url.pathname.indexOf("fir-lms-prod") === -1) return;
+          var name = normalizeSharedSubjectName(key.slice(8).replace(/:transparent$/, ""));
+          if (!name) return;
+          var asset = { imageUrl:url.href, name:name };
+          map[name] = asset;
+          (Array.isArray(row.aliases) ? row.aliases : []).forEach(function(alias) {
+            var normalized = normalizeSharedSubjectName(alias);
+            if (normalized) aliases[normalized] = asset;
+          });
+        });
+        Object.keys(aliases).forEach(function(alias) { if (!map[alias]) map[alias] = aliases[alias]; });
+        return map;
+      }
+      function sharedSubjectCandidates(subject) {
+        var name = normalizeSharedSubjectName(subject), base = name.replace(/[12ⅰⅱ]+$/, "");
+        var family = "";
+        if (/^(수학|수i|수ii|수|미적|기하|확통)/.test(base)) family = "수학";
+        else if (/^(국어|언매|화작|문학|독서)/.test(base)) family = "국어";
+        else if (/^(영어|영문)/.test(base)) family = "영어";
+        else if (/^(물리|물$)/.test(base)) family = "물리";
+        else if (/^(화학|화$)/.test(base)) family = "화학";
+        else if (/^(생명|생물|생$)/.test(base)) family = "생명";
+        else if (/^(지구|지$)/.test(base)) family = "지구과학";
+        else if (/^(한국지리|세계지리|한지|세지|지리)$/.test(base)) family = "지리";
+        else if (/^(동아시아사|동사)$/.test(base)) family = "역사";
+        else if (/^(생윤|윤사|생활과윤리|윤리와사상|사탐|사회|사회문화|사문|정치와법|정법|경제)$/.test(base)) family = "사회";
+        return [name,base,family].filter(function(value,index,list) { return value && list.indexOf(value) === index; });
+      }
+      function sharedSubjectIconContent(subject) {
+        var asset = null;
+        if (authState.loggedIn && !authState.isLookup && sharedSubjectIcons.key === String(authState.loginId || "")) {
+          sharedSubjectCandidates(subject).some(function(key) { asset = sharedSubjectIcons.map[key]; return !!asset; });
+        }
+        var fallback = "<span" + (asset ? " hidden" : "") + ">" + escapeHtml(getSubjectEmoji(subject)) + "</span>";
+        return "<span class='shared-subject-icon' aria-hidden='true'>" +
+          (asset ? "<img src='" + escapeHtml(asset.imageUrl) + "' alt='' decoding='async' onerror='this.hidden=true;this.nextElementSibling.hidden=false'>" : "") +
+          fallback + "</span>" + escapeHtml(subject);
+      }
+      function getSubjectBadgeHtml(subject) {
+        return subject ? "<span class='subject-badge' data-subject='" + escapeHtml(subject) + "'>" + sharedSubjectIconContent(subject) + "</span>" : "";
+      }
+      function refreshSharedSubjectBadges() {
+        document.querySelectorAll(".subject-badge[data-subject]").forEach(function(badge) {
+          badge.innerHTML = sharedSubjectIconContent(badge.getAttribute("data-subject"));
+        });
+      }
+      function resetSharedSubjectIcons() {
+        if (sharedSubjectIcons.unsubscribe) sharedSubjectIcons.unsubscribe();
+        sharedSubjectIcons = { key:"", uid:"", generation:sharedSubjectIcons.generation+1, map:Object.create(null), loaded:false, pending:null, unsubscribe:null };
+        refreshSharedSubjectBadges();
+      }
+      function loadSharedSubjectIcons(force) {
+        if (!authState.loggedIn || authState.isLookup) {
+          if (sharedSubjectIcons.key) resetSharedSubjectIcons();
+          return Promise.resolve();
+        }
+        var key = String(authState.loginId || "");
+        if (sharedSubjectIcons.key !== key) { resetSharedSubjectIcons(); sharedSubjectIcons.key = key; }
+        if (sharedSubjectIcons.pending) return sharedSubjectIcons.pending;
+        if (sharedSubjectIcons.loaded && !force) return Promise.resolve();
+        var state = sharedSubjectIcons;
+        function current() { return sharedSubjectIcons === state && authState.loggedIn && !authState.isLookup && String(authState.loginId || "") === key; }
+        var timer;
+        var read = getLiveFirebaseAuth().then(function(auth) {
+          if (!current()) return;
+          var user = auth.currentUser;
+          if (!user || String(user.email || "").toLowerCase() !== firebaseEmailForLoginId(key).toLowerCase()) throw new Error("SUBJECT_ICON_IDENTITY_MISMATCH");
+          state.uid = user.uid;
+          if (!state.unsubscribe) state.unsubscribe = auth.onAuthStateChanged(function(nextUser) {
+            if (current() && (!nextUser || nextUser.uid !== state.uid)) resetSharedSubjectIcons();
+          });
+          return getLiveFirebaseFirestore().then(function(db) {
+            if (!current() || !auth.currentUser || auth.currentUser.uid !== user.uid) return;
+            return db.collection("sharedIconAssets").where("category", "==", "SUBJECT").get({ source:"server" });
+          });
+        });
+        state.pending = Promise.race([read, new Promise(function(_,reject) { timer=setTimeout(function(){reject(new Error("SUBJECT_ICON_TIMEOUT"));},8000); })]).then(function(snapshot) {
+          if (!current() || !snapshot) return;
+          state.map = buildSharedSubjectIconMap(snapshot.docs.map(function(doc) { return doc.data() || {}; }));
+          state.loaded = true;
+          refreshSharedSubjectBadges();
+        }).catch(function() {
+          // Icons are optional; retain the same-session cache or the existing emoji.
+        }).finally(function() { clearTimeout(timer); if (current()) state.pending = null; });
+        return state.pending;
+      }
       function getDistinctColor(str) { var hash = 0; for (var i=0; i<str.length; i++) hash = str.charCodeAt(i) + ((hash<<5)-hash); var hue = (Math.abs(hash)*137.508)%360; return "hsl(" + hue + ", 75%, 93%)"; }
       function escapeRegExp(value) {
         return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -8227,7 +8522,7 @@ window.SeduHubAdapter={
         if (isTeacherHeader(rawText)) {
           var subject = getSubjectName(rawText);
           var content = displayText.replace(subject, "").trim();
-          var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + escapeHtml(subject) + "</span>" : "";
+          var subjBadge = getSubjectBadgeHtml(subject);
           element.innerHTML = subjBadge + " <span class='teacher-name'>" + mark(content) + "</span>" + badgeHtml;
           return;
         }
@@ -8847,7 +9142,7 @@ window.SeduHubAdapter={
         visitorLookupShowFullDay = !!enabled;
         document.body.classList.toggle('visitor-lookup-show-full', visitorLookupShowFullDay);
         var searchInput = document.getElementById('searchInput');
-        var homeWrap = document.querySelector('.top-bar > div:first-child');
+        var homeWrap = document.querySelector('.toolbar-home');
         var loading = document.getElementById('loading');
         var mainPage = document.getElementById('mainPage');
         if (searchInput) searchInput.placeholder = visitorLookupShowFullDay ? "조회용 전체 시간표 확인 중" : "🔍 학생명 검색";
@@ -10773,7 +11068,7 @@ window.SeduHubAdapter={
           var typeInfo = getTypeBadge(displayText); var typeBadgeHtml = "";
           if (typeInfo) { typeBadgeHtml = typeInfo.html; displayText = displayText.replace(typeInfo.keyword, "").trim(); }
           var subject = getSubjectName(displayText); var content = displayText.replace(subject, "").trim(); 
-          var subjBadge = subject ? "<span class='subject-badge'>" + getSubjectEmoji(subject) + " " + escapeHtml(subject) + "</span>" : "";
+          var subjBadge = getSubjectBadgeHtml(subject);
           itemDiv.innerHTML = typeBadgeHtml + subjBadge + " <span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
         } else { 
           itemDiv.classList.add("is-student");
