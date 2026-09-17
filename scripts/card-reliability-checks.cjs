@@ -46,17 +46,17 @@ async function read(statuses) {
   run(`markStudentCardSentStatus('Alice',true,{silent:true});globalThis.count=requests.length;markStudentCardSentStatus('Bob',true);`);
   assert.equal(run('requests.length'), run('count'), 'write lock blocks second write');
   assert.equal(run('studentCardSentMap.Alice.sent'), false, 'no optimistic success');
-  run(`requests.at(-1).reject(new Error('lost response'));`);
+  run(`requests.at(-1).reject(Object.assign(new Error('lost response'),{operationId:'op-1',datasetId:'dataset-A'}));`);
   await flush();
   assert.equal(run('requests.at(-1).method'), 'getStudentCardStatuses');
   assert.equal(run('studentCardStatusLoading'), true, 'lock retained through reconciliation');
-  run(`requests.at(-1).resolve({Alice:{sent:true,updatedAt:'confirmed'}});`);
+  run(`requests.at(-1).resolve({Alice:{sent:true,updatedAt:'confirmed',operationId:'op-1',datasetId:'dataset-A'}});`);
   await flush();
   assert.equal(run('studentCardSentMap.Alice.updatedAt'), 'confirmed');
   assert.equal(run('canChangeStudentCardStatus()'), true);
-  run(`markStudentCardSentStatus('Alice',false,{silent:true}).catch(e=>globalThis.failure=e.code);requests.at(-1).reject(new Error('lost'));`);
+  run(`markStudentCardSentStatus('Alice',false,{silent:true}).catch(e=>globalThis.failure=e.code);requests.at(-1).reject(Object.assign(new Error('lost'),{operationId:'expected-op',datasetId:'dataset-A'}));`);
   await flush();
-  run(`requests.at(-1).resolve({Alice:{sent:true}});`);
+  run(`requests.at(-1).resolve({Alice:{sent:false,operationId:'wrong-op',datasetId:'dataset-A'}});`);
   await flush();
   assert.equal(run('failure'), 'CARD_STATUS_MISMATCH');
   assert.match(run('studentCardStatusError'), /異|다릅니다/);
@@ -76,8 +76,8 @@ async function read(statuses) {
   assert.equal(run('Object.keys(studentCardSentMap).length'), 0, 'reconciliation cannot cross session');
   assert.equal(run('requests.filter(r=>r.method==="setStudentCardSentStatus").length'), 4, 'mutations never replayed');
 
-  let locked = false, failRead = false, failWrite = false;
-  let rows = [['sheet','student','sent','at','by','key']];
+  let failRead = false;
+  let rows = [['sheet','student','sent','at','by','key'], ['day','Alice','1','legacy','editor','day||Alice']];
   const sheet = {
     getLastRow() { return rows.length; },
     getRange(row, col, count, width) {
@@ -93,19 +93,22 @@ async function read(statuses) {
           };
         },
         getDisplayValues() { if (failRead) throw new Error('permission'); return rows.slice(row - 1, row - 1 + count).map(item => item.slice(col - 1, col - 1 + width)); },
-        setValues(values) { assert(locked); if (failWrite) throw new Error('write failed'); rows[row - 1] = values[0]; }
+        setValues() { assert.fail('legacy writes are retired'); }
       };
     },
-    appendRow(row) { assert(locked); if (failWrite) throw new Error('write failed'); rows.push(row); }
+    appendRow() { assert.fail('legacy writes are retired'); }
   };
-  const server = { SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet }), flush() { assert(locked); } }, LockService: { getScriptLock: () => ({ waitLock() { assert(!locked); locked=true; }, releaseLock() { assert(locked); locked=false; } }) }, Session: { getScriptTimeZone: () => 'Asia/Seoul' }, Utilities: { formatDate: () => 'now' } };
+  const server = { SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sheet }), flush() { assert.fail('legacy flush is retired'); } }, LockService: { getScriptLock() { assert.fail('retired writes must not acquire a lock'); } } };
   vm.createContext(server); vm.runInContext(fs.readFileSync(path.join(root,'Code.gs'),'utf8'),server);
   assert.equal(typeof server.getStudentCardStatuses, 'function');
   assert.equal(typeof server.setStudentCardSentStatus, 'function');
-  assert.equal(server.setStudentCardSentStatus('day','Alice',true,'').sent,true);
   assert.equal(server.getStudentCardStatuses('day').Alice.sent,true);
   failRead=true; assert.throws(()=>server.getStudentCardStatuses('day'),/permission/);
-  failRead=false; failWrite=true; assert.throws(()=>server.setStudentCardSentStatus('day','Bob',true,''),/write failed/);
-  assert.equal(locked,false,'failed mutation releases lock');
-  console.log('Card reliability checks passed: native wrappers, read preservation/context isolation, unknown lock, reconciliation success/mismatch/unknown, session races, server locks.');
+  server.SpreadsheetApp.getActiveSpreadsheet = () => assert.fail('retired writes must not touch Sheets');
+  for (const method of ['setStudentCardSentStatus', 'setStudentCardSentStatus_']) {
+    for (const args of [['day','Alice',true,''], ['day','Bob',false,'editor'], ['', '', true, '']]) {
+      assert.throws(() => server[method](...args), error => error.code === 'CARD_STORAGE_MOVED' && /새로고침/.test(error.message));
+    }
+  }
+  console.log('Card reliability checks passed: native wrappers, read preservation/context isolation, unknown lock, reconciliation success/mismatch/unknown, session races, legacy writer retirement without Sheet/lock access.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

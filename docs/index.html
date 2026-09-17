@@ -2049,6 +2049,103 @@
         });
         return liveFirebaseFirestorePromise;
       }
+      // Card history has a single authoritative provider. Never fall back to GAS.
+      var liveCardBindings = Object.create(null);
+      var liveCardPending = Object.create(null);
+      function liveCardDeadline(promise) {
+        return new Promise(function(resolve, reject) {
+          var timer = setTimeout(function() { var e = new Error('Card server deadline'); e.code = 'API_TIMEOUT'; reject(e); }, 20000);
+          Promise.resolve(promise).then(function(value) { clearTimeout(timer); resolve(value); }, function(error) { clearTimeout(timer); reject(error); });
+        });
+      }
+      function liveCardHash(name) {
+        return crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([String(name || '').trim()]))).then(function(bytes) {
+          return Array.from(new Uint8Array(bytes)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+        });
+      }
+      function liveCardDataset(snapshot) {
+        var data = snapshot.exists && snapshot.data();
+        if (!data || data.migrationComplete !== true || !/^[A-Za-z0-9_-]{1,80}$/.test(data.activeDatasetId || '')) { var error = new Error('Card migration is not ready'); error.code = 'CARD_STORAGE_NOT_READY'; throw error; }
+        return data.activeDatasetId;
+      }
+      function liveCardRecord(snapshot, datasetId, sheetName) {
+        if (!snapshot.exists || (snapshot.metadata && (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites))) throw new Error('Card server record unavailable');
+        var data = snapshot.data();
+        if (data.sheetName !== sheetName || typeof data.studentName !== 'string' || typeof data.sent !== 'boolean' ||
+          !Number.isInteger(data.revision) || data.revision < 1 || typeof data.operationId !== 'string' || !data.updatedAt || typeof data.updatedAt.toDate !== 'function') throw new Error('Invalid card record');
+        var displayedAt = data.revision === 1 && typeof data.legacyUpdatedAt === 'string' && data.legacyUpdatedAt.trim()
+          ? data.legacyUpdatedAt : data.updatedAt.toDate().toISOString();
+        return Object.assign({}, data, { updatedAt: displayedAt, datasetId: datasetId });
+      }
+      function callFirebaseCard(method, args) {
+        var sheetName = String(args[0] || '').trim();
+        var studentName = String(args[1] || '').trim();
+        var session = getScheduleSessionKey();
+        var operationId = 'card-' + crypto.randomUUID();
+        var datasetId, auth, user, key;
+        function checkSession() {
+          if (!auth.currentUser || auth.currentUser !== user || session !== getScheduleSessionKey()) throw new Error('Card session changed');
+        }
+        function serverRead(ref) {
+          checkSession();
+          return liveCardDeadline(ref.get({ source: 'server' })).then(function(snapshot) {
+            checkSession();
+            if (snapshot.metadata && (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites)) throw new Error('Card server unavailable');
+            return snapshot;
+          });
+        }
+        return liveCardDeadline(Promise.all([getLiveFirebaseAuth(), getLiveFirebaseFirestore()])).then(function(values) {
+          auth = values[0]; user = auth.currentUser;
+          checkSession();
+          if (!sheetName || (method === 'setStudentCardSentStatus' && !studentName)) throw new Error('Missing card identity');
+          var db = values[1];
+          key = JSON.stringify([session, user.uid, sheetName]);
+          if (liveCardPending[key]) throw new Error('Card write is still pending');
+          var config = db.doc('liveTimetableCardConfig/banpo');
+          return serverRead(config).then(function(snapshot) {
+            datasetId = liveCardDataset(snapshot);
+            if (method === 'setStudentCardSentStatus' && liveCardBindings[key] !== datasetId) throw new Error('Card dataset changed; refresh required');
+            return Promise.all([liveCardHash(sheetName), liveCardHash(studentName)]);
+          }).then(function(ids) {
+            checkSession();
+            var collection = db.collection('liveTimetableCardStores/' + datasetId + '/sheets/' + ids[0] + '/statuses');
+            if (method === 'getStudentCardStatuses') {
+              return serverRead(collection).then(function(snapshot) {
+                var result = Object.create(null);
+                snapshot.forEach(function(doc) { var record = liveCardRecord(doc, datasetId, sheetName); result[record.studentName] = record; });
+                liveCardBindings[key] = datasetId;
+                return result;
+              });
+            }
+            var target = collection.doc(ids[1]);
+            checkSession();
+            liveCardPending[key] = true;
+            var transaction = db.runTransaction(function(tx) {
+              checkSession();
+              return Promise.all([tx.get(config), tx.get(target)]).then(function(snapshots) {
+                checkSession();
+                if (liveCardDataset(snapshots[0]) !== datasetId) throw new Error('Card dataset changed; refresh required');
+                var previous = snapshots[1].exists ? snapshots[1].data() : null;
+                if (previous && (previous.sheetName !== sheetName || previous.studentName !== studentName || !Number.isInteger(previous.revision))) throw new Error('Invalid card identity');
+                var record = { sheetName: sheetName, studentName: studentName, sent: !!args[2], updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user.uid, operationId: operationId, revision: previous ? previous.revision + 1 : 1 };
+                ['legacyUpdatedAt', 'legacyUpdatedBy'].forEach(function(field) { if (previous && Object.prototype.hasOwnProperty.call(previous, field)) record[field] = previous[field]; });
+                checkSession();
+                tx.set(target, record);
+              });
+            });
+            // A deadline cannot cancel a Firestore transaction. Block refresh/replay until it settles.
+            transaction.then(function() { delete liveCardPending[key]; }, function() { delete liveCardPending[key]; });
+            return liveCardDeadline(transaction).then(function() { return serverRead(config); }).then(function(snapshot) {
+              if (liveCardDataset(snapshot) !== datasetId) throw new Error('Card dataset changed');
+              return serverRead(target);
+            }).then(function(snapshot) {
+              var record = liveCardRecord(snapshot, datasetId, sheetName);
+              if (record.operationId !== operationId || record.sent !== !!args[2]) throw new Error('Card operation confirmation mismatch');
+              return record;
+            });
+          });
+        }).catch(function(error) { error.operationId = operationId; error.datasetId = datasetId; throw error; });
+      }
       function normalizeEnrollmentStudentName(name) {
         return String(name || "").replace(/[‘’“”'`]/g, "").replace(/[()\[\]{}<>]/g, "").replace(/\s+/g, "").trim().toLowerCase();
       }
@@ -3963,6 +4060,7 @@
       }
       function callServer(method, args, verifiedToken) {
         var a = Array.isArray(args) ? args : [];
+        if (method === "getStudentCardStatuses" || method === "setStudentCardSentStatus") return callFirebaseCard(method, a);
         var scopedRead = method === "getFixedGridData" || method === "getTeacherGridData" || method === "getTeacherSheetNames";
         if (scopedRead && authState.loggedIn && !authState.isLookup && verifiedToken === undefined) {
           return getLiveFirebaseAuth().then(function(auth) {
@@ -4077,18 +4175,6 @@
           }, { timeoutMs: 15000, retries: 1 }).then(function(res){
             if (!res || !res.ok) throw apiResponseError(res, "강사 열람 집계 수정값 저장 실패");
             return res.override || null;
-          });
-        }
-        if (method === "getStudentCardStatuses") {
-          return apiJsonp({ action: "student_card_statuses", sheet: a[0] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
-            if (!res || !res.ok) throw apiResponseError(res, "학생 카드 발송 상태 조회 실패");
-            return res.statuses || {};
-          });
-        }
-        if (method === "setStudentCardSentStatus") {
-          return apiJsonp({ action: "student_card_mark", sheet: a[0] || "", student: a[1] || "", sent: a[2] ? "1" : "0", loginId: a[3] || "" }, { timeoutMs: 15000, retries: 1 }).then(function(res){
-            if (!res || !res.ok) throw apiResponseError(res, "학생 카드 발송 상태 저장 실패");
-            return res.status || null;
           });
         }
         if (method === "checkDataVersion") {
@@ -6209,7 +6295,7 @@ window.SeduHubAdapter={
         return statuses;
       }
       function getStudentCardErrorDetail(error) {
-        var labels = { API_TIMEOUT: "응답 시간 초과", API_NETWORK: "연결 오류", API_SERVER: "서버 오류" };
+        var labels = { API_TIMEOUT: "응답 시간 초과", API_NETWORK: "연결 오류", API_SERVER: "서버 오류", CARD_STORAGE_NOT_READY: "발송 기록 저장소 준비 필요" };
         var label = labels[error && error.code] || "응답 확인 불가";
         var requestId = String(error && error.requestId || "");
         return " (" + label + (/^[A-Za-z0-9_-]{1,80}$/.test(requestId) ? " · 요청 " + requestId : "") + ")";
@@ -6349,7 +6435,8 @@ window.SeduHubAdapter={
             studentCardSentMap = validateStudentCardStatuses(statuses);
             studentCardStatusKnown = true;
             var confirmed = studentCardSentMap[studentName];
-            if (confirmed && confirmed.sent === !!sent) {
+            if (confirmed && confirmed.sent === !!sent && err.operationId && err.datasetId &&
+              confirmed.operationId === err.operationId && confirmed.datasetId === err.datasetId) {
               studentCardStatusError = "";
               return confirmed;
             }

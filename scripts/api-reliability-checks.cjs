@@ -13,7 +13,7 @@ async function main(){
  f.advance(31500);assert.equal(f.scripts.length,2);f.reply(0,{ok:true,data:{version:'late'}});assert.equal((await p).data.version,'late');
  f.reply(1,{ok:true,data:{version:'ignored'}});f.advance(65000);
  assert(!JSON.stringify(f.window.__seduApiDiagnostics).includes('SECRET'));assert(!JSON.stringify(f.window.__seduApiDiagnostics).includes('PRIVATE'));
- f=fixture();p=f.ctx.apiJsonp({action:'student_card_mark'},{timeoutMs:15000,retries:1}).catch(e=>e);
+ f=fixture();p=f.ctx.apiJsonp({action:'teacher_view_override_set'},{timeoutMs:15000,retries:1}).catch(e=>e);
  f.scripts[0].onerror();f.advance(64000);assert.equal(f.scripts.length,1);f.advance(65000);
  assert.equal((await p).code,'API_NETWORK');
  f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1});
@@ -39,9 +39,9 @@ async function main(){
  run(`authState.loginId='other';loadData('day',true);`);await flush();assert.equal(run('lastData.version'),'ERROR');
  const rpcSource=html.slice(html.indexOf('      function callServer('),html.indexOf('      window.onload'));
  run(rpcSource);
- const runner={withSuccessHandler(fn){this.success=fn;return this;},withFailureHandler(fn){this.failure=fn;return this;},getStudentCardStatuses(){}};
+ const runner={withSuccessHandler(fn){this.success=fn;return this;},withFailureHandler(fn){this.failure=fn;return this;},getSheetNames(){}};
  s.google={script:{run:runner}};s.window.google=s.google;s.setTimeout=(fn,ms)=>{s.nativeTimer=fn;assert.equal(ms,65000);return 1;};
- run("globalThis.rpcResult='pending';callServer('getStudentCardStatuses',['day']).then(()=>rpcResult='success').catch(e=>rpcResult=e.code)");
+ run("globalThis.rpcResult='pending';callServer('getSheetNames',[]).then(()=>rpcResult='success').catch(e=>rpcResult=e.code)");
  s.nativeTimer();await flush();assert.equal(s.rpcResult,'API_TIMEOUT');runner.success({});await flush();assert.equal(s.rpcResult,'API_TIMEOUT');
  console.log('PASS late first response, bounded retry/deadline, no mutation replay, transient-only read retry, redacted diagnostics, retained same-context grid, native error retention, cross-date/account isolation.');
 }

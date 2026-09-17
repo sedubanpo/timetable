@@ -1138,59 +1138,11 @@ function getStudentCardStatuses_(sheetName) {
 }
 
 function setStudentCardSentStatus_(sheetName, studentName, sent, loginId) {
-  var targetSheet = String(sheetName || "").trim();
-  var student = String(studentName || "").trim();
-  if (!targetSheet || !student) return null;
-  var lock = LockService.getScriptLock();
-  lock.waitLock(5000);
-  try {
-  var logSheet = getStudentCardStatusSheet_();
-  var lastRow = logSheet.getLastRow();
-  var key = buildStudentCardStatusKey_(targetSheet, student);
-  // The key can disagree with A/B in legacy rows, so union both candidates.
-  // No persistent row index: resolve current positions while holding the lock.
-  var values;
-  if (lastRow > 1 && (targetSheet.indexOf("||") !== -1 || student.indexOf("||") !== -1)) {
-    // Legacy concatenated keys have ambiguous splits when an identity itself
-    // contains the delimiter. Preserve those historical collisions exactly.
-    values = logSheet.getRange(2, 1, lastRow - 1, 6).getDisplayValues()
-      .map(function(row, i) { return { row: i + 2, values: row }; });
-  } else {
-    var matches = findStudentCardRows_(logSheet, lastRow, 6, key)
-      .concat(findStudentCardRows_(logSheet, lastRow, 2, student));
-    values = readStudentCardRows_(logSheet, matches, 6);
-  }
-  var tz = Session.getScriptTimeZone() || "Asia/Seoul";
-  var timestamp = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss");
-  var payload = [targetSheet, student, sent ? "1" : "0", timestamp, String(loginId || "").trim(), key];
-  var foundRow = 0;
-
-  // Readers use the final row for a key; repair compatibility with old duplicates.
-  for (var r = values.length - 1; r >= 0; r--) {
-    var row = values[r].values;
-    var rowKey = String((row && row[5]) || "").trim();
-    if (!rowKey) {
-      rowKey = buildStudentCardStatusKey_(row[0], row[1]);
-    }
-    if (rowKey === key) {
-      foundRow = values[r].row;
-      break;
-    }
-  }
-
-  if (foundRow) logSheet.getRange(foundRow, 1, 1, payload.length).setValues([payload]);
-  else logSheet.appendRow(payload);
-  SpreadsheetApp.flush();
-
-  return {
-    studentName: student,
-    sent: !!sent,
-    updatedAt: timestamp,
-    updatedBy: String(loginId || "").trim()
-  };
-  } finally {
-    lock.releaseLock();
-  }
+  // Retire every legacy write entry point, including already-open clients.
+  // The original sheet remains a read-only archive; Firebase owns new writes.
+  var error = new Error("CARD_STORAGE_MOVED: 발송 기록 저장소가 Firebase로 변경되었습니다. 시간표를 새로고침한 뒤 다시 시도해 주세요.");
+  error.code = "CARD_STORAGE_MOVED";
+  throw error;
 }
 
 function getSheetNames() {

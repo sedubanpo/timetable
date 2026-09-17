@@ -63,17 +63,13 @@ function originalRead(rows, day) {
   });
   return result;
 }
-function originalWrite(rows, day, student, sent, editor) {
-  rows = copy(rows); day = String(day || '').trim(); student = String(student || '').trim();
-  const key = day + '||' + student;
-  const payload = [day, student, sent ? '1' : '0', 'now', String(editor || '').trim(), key];
-  let index = -1;
-  for (let i = rows.length - 1; i >= 1; i--) {
-    const r = rows[i], k = String(r[5] || '').trim() || String(r[0] || '').trim() + '||' + String(r[1] || '').trim();
-    if (k === key) { index = i; break; }
-  }
-  if (index < 0) rows.push(payload); else rows[index] = payload;
-  return rows;
+function assertRetired(h, day, student, sent = true) {
+  const before = copy(h.state.rows);
+  assert.throws(() => h.scope.setStudentCardSentStatus(day, student, sent, 'editor'), error => error.code === 'CARD_STORAGE_MOVED' && /새로고침/.test(error.message));
+  assert.deepEqual(h.state.rows, before, 'retired writer preserves archive');
+  assert.deepEqual(h.state.events, []);
+  assert.deepEqual(h.state.reads, []);
+  assert.deepEqual(h.state.finds, []);
 }
 const rows = [header];
 for (let i = 0; i < 10000; i++) rows.push(['old-' + i, 'Other-' + i, '0', 'old', 'editor', 'old-' + i + '||Other-' + i]);
@@ -97,10 +93,7 @@ for (const dataset of [rows, [header], [], [header, ...rows.slice(1).reverse()]]
   }
   for (const s of [student, student.toLowerCase(), 'Bob', 'missing', student + 'tail']) {
     const h = harness(dataset);
-    h.scope.setStudentCardSentStatus(day, s, true, ' editor ');
-    assert.deepEqual(copy(h.state.rows), originalWrite(dataset, day, s, true, ' editor '));
-    assert(['write', 'append'].includes(h.state.events[1]));
-    assert.deepEqual(h.state.events, ['lock', h.state.events[1], 'flush', 'release']);
+    assertRetired(h, day, s);
     parity++;
   }
 }
@@ -108,37 +101,35 @@ const moving = harness(rows);
 for (const [d, s, legacyDate, legacyStudent] of [['a', 'b||c', 'a||b', 'c'], ['a||b', 'c', 'a', 'b||c'], ['a', 'b||', 'a||b', '']]) {
   const dataset = [header, [legacyDate, legacyStudent, '0', '', '', '']];
   const h = harness(dataset);
-  h.scope.setStudentCardSentStatus(d, s, true, '');
-  assert.deepEqual(copy(h.state.rows), originalWrite(dataset, d, s, true, ''), 'ambiguous legacy delimiter split retains original key behavior');
+  assertRetired(h, d, s);
 }
-moving.scope.setStudentCardSentStatus(day, student, true, '');
+assertRetired(moving, day, student);
 moving.state.rows = [header, ['inserted', 'Other', '', '', '', ''], ...moving.state.rows.slice(1).reverse()];
-let expected = originalWrite(moving.state.rows, day, student, false, '');
-moving.scope.setStudentCardSentStatus(day, student, false, '');
-assert.deepEqual(copy(moving.state.rows), expected, 'no stale cached row after insertion/sort');
+assertRetired(moving, day, student, false);
+assert.deepEqual(copy(moving.scope.getStudentCardStatuses(day)), originalRead(moving.state.rows, day), 'archive reads follow current sorted rows');
 for (const fail of ['find', 'read', 'write', 'flush', 'lock']) {
   const h = harness(rows); h.state.fail = fail;
-  assert.throws(() => h.scope.setStudentCardSentStatus(day, student, true, ''), new RegExp(fail + ' failed'));
+  assertRetired(h, day, student);
   assert.equal(h.state.locked, false);
-  if (fail !== 'lock') assert.equal(h.state.events.at(-1), 'release');
   if (fail === 'find' || fail === 'read') assert.throws(() => h.scope.getStudentCardStatuses(day), /학생카드 발송 기록을 읽지 못했습니다/);
 }
 const missing = harness([header]); missing.state.missing = true;
 assert.deepEqual(copy(missing.scope.getStudentCardStatuses(day)), {});
-missing.scope.setStudentCardSentStatus(day, student, true, '');
-assert.equal(missing.state.rows.length, 2); assert.equal(missing.state.rows[1][5], day + '||' + student);
+assertRetired(missing, day, student);
+assert.equal(missing.state.rows.length, 1);
 const blank = harness(rows);
-assert.equal(blank.scope.setStudentCardSentStatus('', student, true, ''), null);
+assertRetired(blank, '', student);
 assert.equal(blank.state.events.length, 0);
 const metrics = {};
 for (const mode of ['read', 'write']) {
   const h = harness(rows);
-  if (mode === 'read') h.scope.getStudentCardStatuses(day); else h.scope.setStudentCardSentStatus(day, student, true, '');
+  if (mode === 'read') h.scope.getStudentCardStatuses(day); else assertRetired(h, day, student);
   metrics[mode] = { historyRows: rows.length - 1, originalCells: rows.length * 6, transferredCells: h.state.reads.reduce((sum, r) => sum + r.count * r.width, 0), payloadReadCalls: h.state.reads.length, finderCalls: h.state.finds.length };
   assert(metrics[mode].transferredCells < metrics[mode].originalCells / 10, 'sparse candidates with span fallback still reduce fixture transfer');
   assert(metrics[mode].payloadReadCalls <= 3);
 }
-assert.equal(metrics.read.finderCalls, 1); assert.equal(metrics.write.finderCalls, 2);
+assert.equal(metrics.read.finderCalls, 1); assert.equal(metrics.write.finderCalls, 0);
+assert.equal(metrics.write.transferredCells, 0);
 const contiguous = harness([header, ...Array.from({ length: 100 }, () => [day, student, '0', '', '', ''])]);
 contiguous.scope.getStudentCardStatuses(day);
 assert.equal(contiguous.state.reads.length, 1, 'contiguous matches batch into one payload read');
@@ -146,7 +137,7 @@ const scatteredRows = [header, ...Array.from({ length: 1000 }, (_, i) => [i % 10
 for (const mode of ['read', 'write']) {
   const h = harness(scatteredRows);
   if (mode === 'read') assert.deepEqual(copy(h.scope.getStudentCardStatuses(day)), originalRead(scatteredRows, day));
-  else { h.scope.setStudentCardSentStatus(day, student, true, ''); assert.deepEqual(copy(h.state.rows), originalWrite(scatteredRows, day, student, true, '')); }
+  else assertRetired(h, day, student);
   assert(h.state.reads.length <= 3, '100 scattered candidates must not produce 100 RPCs');
 }
-console.log(JSON.stringify({ result: 'PASS', parityCases: parity, metrics, covered: 'trim/blank legacy keys, conflicting keys, duplicates, case, regex literals, partial matches, reverse finder order, sorted/inserted rows, empty/missing, errors, locks, flush, contiguous batches' }, null, 2));
+console.log(JSON.stringify({ result: 'PASS', parityCases: parity, metrics, covered: 'archive read parity: duplicates, case, regex literals, partial matches, reverse finder order, sorted/inserted rows, empty/missing, errors, contiguous batches; retired writes preserve archive without reads, writes, locks, or flush' }, null, 2));

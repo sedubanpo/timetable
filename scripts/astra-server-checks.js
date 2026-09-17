@@ -78,16 +78,16 @@ assert(scope.getTeacherGridData('9/5(토)', '테스트', false).grid[8][0].inclu
 rows = [['sheet', 'student', 'sent', 'at', 'by', 'key'],
   ['9/5(토)', '학생A', '0', '', '', '9/5(토)||학생A'],
   ['9/5(토)', '학생A', '0', '', '', '9/5(토)||학생A']];
-assert(scope.setStudentCardSentStatus_('9/5(토)', '학생A', true, 'admin').sent);
-assert(scope.getStudentCardStatuses_('9/5(토)')['학생A'].sent, 'legacy duplicate must not mask new save');
-scope.setStudentCardSentStatus_('9/5(토)', '학생B', true, 'admin');
-scope.setStudentCardSentStatus_('9/5(토)', '학생B', false, 'admin');
-assert.equal(rows.filter(row => row[1] === '학생B').length, 1);
-assert.equal(scope.getStudentCardStatuses_('9/5(토)')['학생B'].sent, false);
+assert.throws(() => scope.setStudentCardSentStatus_('9/5(토)', '학생A', true, 'admin'), /CARD_STORAGE_MOVED/);
+assert.equal(scope.getStudentCardStatuses_('9/5(토)')['학생A'].sent, false, 'legacy archive remains unchanged');
+assert.throws(() => scope.setStudentCardSentStatus_('9/5(토)', '학생B', true, 'admin'), /CARD_STORAGE_MOVED/);
+assert.throws(() => scope.setStudentCardSentStatus_('9/5(토)', '학생B', false, 'admin'), /CARD_STORAGE_MOVED/);
+assert.equal(rows.filter(row => row[1] === '학생B').length, 0);
+assert.equal(scope.getStudentCardStatuses_('9/5(토)')['학생B'], undefined);
 rows = [['sheet', 'teacher', 'state', 'count', 'at', 'by']];
 assert.equal(scope.setTeacherViewOverride_('9/5(토)', '테스트', 'viewed', 2, '01012345678').count, 2,
   'web-app override must work with null document lock');
-assert.equal(acquisitions, 4);
-assert.equal(flushed, 4);
+assert.equal(acquisitions, 1);
+assert.equal(flushed, 1);
 assert.equal(locked, false);
-console.log('Astra server checks passed: content revisions, cache invalidation, teacher polling, script locks, duplicate card state.');
+console.log('Astra server checks passed: content revisions, cache invalidation, teacher polling, override script locks, retired card writes.');
