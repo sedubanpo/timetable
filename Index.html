@@ -1594,6 +1594,15 @@
       .shared-subject-icon { display:inline-grid; place-items:center; width:16px; height:16px; margin-right:2px; vertical-align:middle; }
       .shared-subject-icon img { width:16px; height:16px; object-fit:contain; border-radius:3px; }
       .shared-subject-icon [hidden] { display:none!important; }
+      .preview-note-editor { margin:12px 0; padding:12px; border:1px solid #cbd5e1; border-radius:12px; color:#172554; }
+      .preview-note-editor summary { cursor:pointer; font-weight:700; min-height:32px; }
+      .preview-note-editor p { font-size:12px; line-height:1.5; }
+      .preview-note-field { margin-top:12px; }
+      .preview-note-field label { display:block; font-size:13px; line-height:1.6; }
+      .preview-note-field textarea { display:block; width:100%; box-sizing:border-box; padding:8px; border:1px solid #94a3b8; border-radius:8px; font:inherit; resize:vertical; }
+      .preview-note-field input { min-height:24px; vertical-align:middle; }
+      #absenceNoticePreview { position:relative; isolation:isolate; overflow:hidden; }
+      #absenceNoticePreview::before { content:""; position:absolute; inset:0; z-index:-1; background:url('https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png') center/75% auto no-repeat; opacity:.06; pointer-events:none; }
     </style>
   </head>
   <body>
@@ -1720,6 +1729,7 @@
           <input id="absenceNoticeSearch" type="text" placeholder="학생명 검색 (결석예고/당일취소 대상)" onkeyup="filterAbsenceNoticeList()">
           <button class="msg-copy-btn" style="margin-top:0;" onclick="copyAbsenceNoticeText()">문구 복사</button>
           <button class="msg-copy-btn" style="margin-top:0; background:#0ea5e9;" onclick="downloadAbsenceNoticeImage()">이미지 저장</button>
+          <button class="msg-copy-btn" style="margin-top:0;" onclick="copyAbsenceNoticeImage()">이미지 복사</button>
         </div>
         <div id="absenceNoticeList" class="absence-notice-list"></div>
         <div id="absenceNoticePreview"></div>
@@ -6206,6 +6216,7 @@
         }
       }
       function openStudentImageModal() {
+        previewNoteDrafts = Object.create(null);
         if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
         buildStudentImageMap();
         studentCardHideNote = false;
@@ -6282,6 +6293,7 @@
         }
       }
       function openAbsenceNoticeModal() {
+        previewNoteDrafts = Object.create(null);
         if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
         buildAbsenceNoticeMap();
         document.getElementById('absenceNoticeModal').style.display = 'flex';
@@ -6327,6 +6339,7 @@
         }
       }
       function renderAbsenceNoticePreview(name) {
+        renderPreviewNoteEditor("absence",name,absenceNoticeMap[name] || [],document.getElementById("absenceNoticePreview"));
         selectedAbsenceNoticeStudent = name;
         var target = (absenceNoticeMap[name] || []).slice().sort(function(a,b){ return a.hour - b.hour; });
         var preview = document.getElementById('absenceNoticePreview');
@@ -6361,7 +6374,7 @@
             teacher: v.teacher,
             classType: v.classType,
             status: v.status,
-            note: v.note || ""
+            note: previewNoteHidden("absence",name,v) ? "" : previewNoteValue("absence",name,v)
           });
         });
         var sourceDate = parseTeacherLogTargetDate(sheetLabel, new Date()) || new Date();
@@ -6371,7 +6384,7 @@
         function fmtDate(d) {
           return (d.getMonth() + 1) + "/" + d.getDate() + "(" + weekdays[d.getDay()] + ")";
         }
-        var firstLine = "내일 수업의 " + statusText + " 접수 내용을 확인했습니다.";
+        var firstLine = sheetLabel + " 수업의 " + statusText + " 접수 내용을 확인했습니다.";
         var policyLines = [];
         if (hasCancel) policyLines.push("당일취소 수업은 수강료가 정상 책정됩니다.");
         if (hasAbsent) policyLines.push("결석예고 수업은 해당 시간 수강료가 책정되지 않습니다.");
@@ -6406,23 +6419,7 @@
             }).join("") +
             (hasCancel ? "<div class='absence-card-period'>당일취소 수업의 보강 가능 기간은 " + fmtDate(makeupStart) + "부터 " + fmtDate(makeupEnd) + "까지입니다.</div>" : "") +
           "</div>";
-        currentAbsenceNoticeText =
-          "안녕하세요, 에스학원입니다.\n\n" +
-          "To. " + name + " 학생/학부모님\n" +
-          sheetLabel + " 수업 관련하여 " + statusText + " 접수 내용을 확인했습니다.\n\n" +
-          "대상 시간\n" +
-          mergedSlots.map(function(v) {
-            var timeText = v.startHour + ":00-" + v.endHour + ":00";
-            var cls = v.subject + (v.teacher ? " " + v.teacher + "T" : "") + (v.classType ? " · " + v.classType : "");
-            var noteText = v.note ? (" / 비고: " + v.note) : "";
-            return "- " + timeText + " / " + v.room + " / " + cls + " / " + v.status + noteText;
-          }).join("\n") + "\n\n" +
-          (hasCancel ? "당일취소 수업은 수강료가 정상 책정됩니다.\n" : "") +
-          (hasAbsent ? "결석예고 수업은 해당 시간 수강료가 책정되지 않습니다.\n" : "") +
-          "결석·취소 수업은 2주 이내 보강이 가능하며, 기존 정규 수업 외 시간으로 조율됩니다.\n" +
-          (hasCancel ? ("당일취소 수업의 보강 가능 기간은 " + fmtDate(makeupStart) + "부터 " + fmtDate(makeupEnd) + "까지입니다.\n") : "") +
-          "안내 내용이 실제와 다르다면 학원으로 바로 연락 부탁드립니다.\n\n" +
-          "감사합니다.\n문의: 010-4232-7428";
+        currentAbsenceNoticeText = "안녕하세요, 에스학원입니다.\n" + name + " 학생의 " + sheetLabel + " " + statusText + " 접수 내용을 확인했습니다.\n자세한 수업 시간과 안내 사항은 첨부 이미지를 확인해 주세요.\n변경 사항은 학원으로 연락 부탁드립니다.";
         textarea.value = currentAbsenceNoticeText;
       }
       function copyAbsenceNoticeText() {
@@ -6851,17 +6848,23 @@
         var merged = [];
         schedules.forEach(function(s){
           var title = (s.subject || "수업") + (s.teacher ? "(" + s.teacher + "T)" : "");
-          var noteText = hideNote ? "" : (s.note || "");
-          var key = [title, s.room, noteText, s.classType || ""].join("||");
+          var timeNote = previewNoteValue("card",studentName,s);
+          var noteText = hideNote || previewNoteHidden("card",studentName,s) ? "" : timeNote;
+          var key = [title, s.room, s.classType || "", s.school || ""].join("||");
           if (!merged.length) {
-            merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: noteText, classType: s.classType || "", school: s.school || "" });
+            merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: noteText, timeNote:timeNote, classType: s.classType || "", school: s.school || "" });
             return;
           }
           var last = merged[merged.length - 1];
-          if (last.key === key && last.start === s.hour && last.end === s.hour + 1) return;
-          if (last.key === key && last.end === s.hour) last.end = s.hour + 1;
-          else merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: noteText, classType: s.classType || "", school: s.school || "" });
+          if (last.key === key && (last.end === s.hour || (last.start === s.hour && last.end === s.hour + 1))) {
+            last.end = Math.max(last.end,s.hour + 1);
+            if (noteText && last.note.split(" / ").indexOf(noteText) === -1) last.note = [last.note,noteText].filter(Boolean).join(" / ");
+            if (timeNote && last.timeNote.split(" / ").indexOf(timeNote) === -1) last.timeNote = [last.timeNote,timeNote].filter(Boolean).join(" / ");
+          }
+          else merged.push({ start: s.hour, end: s.hour + 1, key: key, title: title, room: s.room, note: noteText, timeNote:timeNote, classType: s.classType || "", school: s.school || "" });
         });
+        merged.forEach(function(block){var time=getCardNoteTimeRange(block);block.start=time.start;block.end=time.end;});
+        merged.sort(function(a,b){return a.start-b.start;});
         var timelineRows = [];
         for (var i = 0; i < merged.length; i++) {
           var block = merged[i];
@@ -6926,7 +6929,7 @@
       }
       function renderStudentCardRowsHtml(timelineRows) {
         return timelineRows.map(function(m){
-          var duration = Math.max(1, m.end - m.start);
+          var duration = m.end - m.start;
           var isMutedClass = /자습|자기주도학습|테스트/.test(String(m.title || "")) || /자습|자기주도학습|테스트/.test(String(m.classType || ""));
           var isSelfStudyVisual = m.isBreak || /자습|자기주도학습/.test(String(m.title || "")) || /자습|자기주도학습/.test(String(m.classType || ""));
           var note = m.note ? "<div class='student-preview-note-box'>비고 · " + m.note + "</div>" : "";
@@ -6945,7 +6948,7 @@
           else if (!typeText) typeText = duration + "시간";
           if (isSelfStudyVisual) {
             return "<div class='student-preview-row" + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-                "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>시</div><div class='student-preview-time'>" + m.start + ":00~" + m.end + ":00</div></div>" +
+                "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>시</div><div class='student-preview-time'>" + formatCardHour(m.start) + "~" + formatCardHour(m.end) + "</div></div>" +
                 "<div class='student-preview-cell student-preview-cell-subject'>자습</div>" +
                 "<div class='student-preview-cell student-preview-cell-teacher'>-</div>" +
                 "<div class='student-preview-cell student-preview-cell-type'>" + duration + "시간</div>" +
@@ -6953,7 +6956,7 @@
                 "<div class='student-preview-cell student-preview-cell-room'>-</div></div>";
           }
 	          return "<div class='student-preview-row " + themeClass + (m.isBreak ? " student-preview-break" : "") + (isMutedClass ? " student-preview-muted" : "") + "'>" +
-	              "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>" + timeIcon + "</div><div class='student-preview-time'>" + m.start + ":00~" + m.end + ":00</div></div>" +
+	              "<div class='student-preview-time-wrap'><div class='student-preview-time-icon'>" + timeIcon + "</div><div class='student-preview-time'>" + formatCardHour(m.start) + "~" + formatCardHour(m.end) + "</div></div>" +
 	              "<div class='student-preview-cell student-preview-cell-subject student-preview-heading-subject'>" + subjectText + "</div>" +
 	              "<div class='student-preview-cell student-preview-cell-teacher'>" + (teacherName || "-") + "</div>" +
 	              "<div class='student-preview-cell student-preview-cell-type'>" + getStudentCardClassBadgeHtml(typeText) + "</div>" +
@@ -6964,6 +6967,7 @@
         }).join("");
       }
       function renderStudentImagePreview(name) {
+        renderPreviewNoteEditor("card",name,studentImageScheduleMap[name] || [],document.getElementById("studentImagePreview"));
         var preview = document.getElementById('studentImagePreview');
         selectedStudentForImage = name;
         if (!name) { preview.innerHTML = ""; syncStudentCardActionButtons(); return; }
@@ -7027,11 +7031,11 @@
         function exportTimeCell(start, end, label, color) {
           return "<div style='display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:center;min-width:0;'>" +
             "<div style='width:46px;height:46px;border-radius:999px;background:" + color + ";color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:950;'>" + label + "</div>" +
-            "<div style='font-size:22px;line-height:1.1;font-weight:950;color:#061638;white-space:nowrap;letter-spacing:-.02em;'>" + start + ":00~" + end + ":00</div>" +
+            "<div style='font-size:22px;line-height:1.1;font-weight:950;color:#061638;white-space:nowrap;letter-spacing:-.02em;'>" + formatCardHour(start) + "~" + formatCardHour(end) + "</div>" +
           "</div>";
         }
         var rows = model.timelineRows.map(function(item) {
-          var duration = Math.max(1, item.end - item.start);
+          var duration = item.end - item.start;
           var subjectText = item.title || "";
           var teacherName = "";
           var teacherMatch = subjectText.match(/^(.*)\((.*)T\)$/);
@@ -11259,7 +11263,51 @@
       
       // Only use an unambiguous half-hour range contained in the merged grid block.
       // Single arrival times and conflicting ranges leave scheduled hours unchanged.
-      function getExportTimeRange(entry) {
+      var previewNoteDrafts = Object.create(null);
+      function previewNoteKey(kind, name, row) {
+        return JSON.stringify([getScheduleSessionKey(), currentSheetName, kind, name, row.subject, row.teacher, row.room, row.classType, row.note || ""]);
+      }
+      function previewNoteValue(kind, name, row) {
+        var draft = previewNoteDrafts[previewNoteKey(kind,name,row)];
+        return draft ? draft.text : String(row.note || "");
+      }
+      function previewNoteHidden(kind, name, row) {
+        var draft = previewNoteDrafts[previewNoteKey(kind,name,row)];
+        return !!(draft && draft.hidden);
+      }
+      function renderPreviewNoteEditor(kind, name, rows, anchor) {
+        var id = kind + "NoteEditor", editor = document.getElementById(id);
+        if (!editor) { editor = document.createElement("details"); editor.id=id; editor.className="preview-note-editor"; anchor.parentNode.insertBefore(editor,anchor); }
+        var wasOpen=editor.open;
+        editor.replaceChildren();
+        var summary=document.createElement("summary"); summary.textContent="비고 임시 편집"; editor.appendChild(summary);
+        var hint=document.createElement("p"); hint.textContent="이 창의 미리보기·이미지에만 반영됩니다. 원본 시간표는 바뀌지 않으며, 창을 다시 열면 초기화됩니다."; editor.appendChild(hint);
+        var seen=new Set();
+        rows.forEach(function(row){
+          var key=previewNoteKey(kind,name,row); if(seen.has(key))return; seen.add(key);
+          var group=document.createElement("div"); group.className="preview-note-field";
+          var label=document.createElement("label"); label.textContent=[row.subject,row.teacher ? row.teacher+"T" : "",row.room].filter(Boolean).join(" · ");
+          var input=document.createElement("textarea"); input.value=previewNoteValue(kind,name,row); input.rows=2; input.setAttribute("aria-label",label.textContent+" 비고"); label.appendChild(input); group.appendChild(label);
+          var hideLabel=document.createElement("label"), hide=document.createElement("input"); hide.type="checkbox"; hide.checked=previewNoteHidden(kind,name,row); hideLabel.appendChild(hide); hideLabel.appendChild(document.createTextNode(" 이 비고 숨김")); group.appendChild(hideLabel);
+          function update(){ previewNoteDrafts[key]={text:input.value,hidden:hide.checked}; if(kind==="absence")renderAbsenceNoticePreview(name);else renderStudentImagePreview(name); }
+          input.onchange=update;hide.onchange=update;editor.appendChild(group);
+        });
+        editor.open=wasOpen;
+      }
+      function formatCardHour(value) {
+        return String(Math.floor(value)).padStart(2,"0")+":"+String(Math.round((value%1)*60)).padStart(2,"0");
+      }
+      function getCardNoteTimeRange(block) {
+        return getExportTimeRange({start:block.start,end:block.end,note:block.timeNote || block.note}, .5);
+      }
+      function copyAbsenceNoticeImage() {
+        if (!selectedAbsenceNoticeStudent) { alert("먼저 학생을 선택하세요."); return; }
+        if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem==="undefined") { alert("이 브라우저에서는 이미지 복사를 지원하지 않습니다. 이미지 저장을 이용해 주세요."); return; }
+        var target=document.getElementById("absenceNoticePreview");
+        var blobPromise=waitForImagesInElement(target,3000).then(function(){return html2canvas(target,{scale:Math.max(2,window.devicePixelRatio||1),backgroundColor:"#ffffff",useCORS:true});}).then(function(canvas){return new Promise(function(resolve,reject){canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error("PNG_FAILED"));},"image/png");});});
+        navigator.clipboard.write([new ClipboardItem({"image/png":blobPromise})]).then(function(){alert("이미지를 복사했습니다.");}).catch(function(){alert("이미지 복사가 허용되지 않았습니다. 브라우저 권한을 확인하거나 이미지 저장을 이용해 주세요.");});
+      }
+      function getExportTimeRange(entry, tolerance) {
         var fallback = { start: entry.start, end: entry.end };
         var timeToken = "(오전|오후)?\\s*(\\d+)(?::(\\d+)|\\s*시(?:\\s*(\\d+)\\s*분?)?)";
         var pattern = new RegExp("(?:^|[^\\d:])" + timeToken + "\\s*[-~～–—]\\s*" + timeToken + "(?![\\d:])", "g");
@@ -11279,7 +11327,7 @@
           var matchedRanges = [];
           starts.forEach(function(start) {
             ends.forEach(function(end) {
-              if (start >= entry.start && end <= entry.end && end > start) {
+              if (start >= Math.max(0,entry.start-(tolerance || 0)) && end <= Math.min(24,entry.end+(tolerance || 0)) && end > start) {
                 var key = start + ":" + end;
                 matchedRanges.push({ start: start, end: end, key: key });
               }
