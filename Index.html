@@ -1630,6 +1630,12 @@
       .top-bar > .toolbar-row-break { display:none; }
       .visitor-lookup-mode .top-bar > .toolbar-first-row { display:contents !important; position:static; transform:none; }
       .visitor-lookup-mode .toolbar-first-row > * { display:none !important; }
+      .visitor-lookup-mode .toolbar-first-row > #roomOverviewBtn { display:flex !important; position:absolute; left:170px; top:50%; transform:translateY(-50%); min-height:44px; }
+      @media (max-width:600px) {
+        .visitor-lookup-mode .top-bar { flex-wrap:wrap; }
+        .visitor-lookup-mode .toolbar-first-row > #roomOverviewBtn { position:static; transform:none; margin-left:auto; }
+        .visitor-lookup-mode .top-bar > .search-wrapper { flex:1 1 100%; }
+      }
       .visitor-lookup-mode .toolbar-first-row > .toolbar-home { display:flex !important; position:absolute; left:20px; top:50%; transform:translateY(-50%); }
       .visitor-lookup-mode .toolbar-first-row > #digitalClock { display:flex !important; position:absolute; right:28px; top:50%; transform:translateY(-50%); margin:0; }
       .visitor-lookup-mode .toolbar-first-row .clock-date, .visitor-lookup-mode .toolbar-first-row .clock-time { color:white; }
@@ -1930,7 +1936,7 @@
     </div>
     <section id="roomOverviewPage" hidden aria-labelledby="roomOverviewTitle">
       <header class="room-overview-head">
-        <button type="button" id="roomOverviewBack" onclick="closeRoomOverview()">← 내 시간표</button>
+        <button type="button" id="roomOverviewBack" onclick="closeRoomOverview()">← 시간표</button>
         <div><h1 id="roomOverviewTitle">전체 강의실</h1><p id="roomOverviewDate"></p></div>
         <button type="button" id="roomOverviewRefresh" onclick="loadRoomOverview(true)">새로고침</button>
       </header>
@@ -2073,7 +2079,7 @@
       let lastScrollPosition = 0;
       let lastResponsiveMobile = window.innerWidth <= 768;
       let responsiveResizeFrame = null;
-      let authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "" };
+      let authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "", lookupRoomToken: "" };
       let dashboardAdminSessionRefreshPromise = null;
       let availableTeacherNames = [];
       let accessMode = "";
@@ -4358,7 +4364,7 @@
       }
       var roomOverviewRequest = 0, roomOverviewData = null, roomOverviewBuilding = "전체", roomOverviewSheet = "";
       function openRoomOverview() {
-        if (!authState.loggedIn || authState.isLookup || !currentSheetName) return;
+        if (!authState.loggedIn || !currentSheetName) return;
         roomOverviewSheet = currentSheetName;
         roomOverviewBuilding = "전체";
         document.getElementById('roomOverviewPage').hidden = false;
@@ -4381,7 +4387,7 @@
         }
       }
       function loadRoomOverview(force) {
-        if (!authState.loggedIn || authState.isLookup || document.getElementById('roomOverviewPage').hidden) return;
+        if (!authState.loggedIn || document.getElementById('roomOverviewPage').hidden) return;
         var request = ++roomOverviewRequest, loginId = authState.loginId;
         var status = document.getElementById('roomOverviewStatus');
         var button = document.getElementById('roomOverviewRefresh');
@@ -4400,7 +4406,7 @@
           if (first) first.scrollIntoView({block:'center',inline:'center'});
         }).catch(function() {
           if (request !== roomOverviewRequest || authState.loginId !== loginId) return;
-          status.textContent = '시간표를 불러오지 못했습니다. 새로고침으로 다시 시도해 주세요.';
+          status.textContent = '시간표를 불러오지 못했습니다. 새로고침 후에도 계속되면 다시 로그인해 주세요.';
         }).finally(function() { if (request === roomOverviewRequest) button.disabled = false; });
       }
       function roomOverviewRoomBuilding(room) {
@@ -4460,6 +4466,11 @@
       function callServer(method, args, verifiedToken) {
         var a = Array.isArray(args) ? args : [];
         if (method === "getAuthenticatedRoomOccupancy" && verifiedToken === undefined) {
+          if (!authState.loggedIn) return Promise.reject(new Error("다시 로그인해 주세요."));
+          if (authState.isLookup) {
+            if (!authState.lookupRoomToken) return Promise.reject(new Error("다시 로그인해 주세요."));
+            return callServer(method, a, "");
+          }
           return getLiveFirebaseAuth().then(function(auth) {
             if (!auth.currentUser || !authState.loggedIn || authState.isLookup) throw new Error("다시 로그인해 주세요.");
             return auth.currentUser.getIdToken();
@@ -4474,7 +4485,7 @@
           }).then(function(token) { return callServer(method, a, token); });
         }
         if (hasGasRunner()) {
-          if (method === "getAuthenticatedRoomOccupancy") a = [a[0], a[1], verifiedToken];
+          if (method === "getAuthenticatedRoomOccupancy") a = [a[0], a[1], verifiedToken, authState.isLookup ? authState.lookupRoomToken : ""];
           if (method === "authenticateTeacher") a = [a[0], a[1], a[2], true];
           if (scopedRead && verifiedToken) {
             if (method === "getTeacherSheetNames") {
@@ -4512,7 +4523,7 @@
           });
         }
         if (method === "getAuthenticatedRoomOccupancy") {
-          return apiJsonp({ action:"room_occupancy", sheet:a[0] || "", refresh:a[1] ? "1" : "0", idToken:verifiedToken || "" }, {timeoutMs:25000,retries:1}).then(function(res) {
+          return apiJsonp({ action:"room_occupancy", sheet:a[0] || "", refresh:a[1] ? "1" : "0", idToken:verifiedToken || "", lookupRoomToken:authState.isLookup ? authState.lookupRoomToken : "" }, {timeoutMs:25000,retries:1}).then(function(res) {
             if (!res || !res.ok || !res.data) throw apiResponseError(res, "강의실 조회 실패");
             return res.data;
           });
@@ -4883,6 +4894,7 @@
           authState.teacherName = res.teacherName || "";
           authState.loginId = res.loginId || loginId;
           authState.dashboardAdminToken = res.dashboardAdminToken || "";
+          authState.lookupRoomToken = res.lookupRoomToken || "";
           authState.teacherRosterUnavailable = !!res.teacherRosterUnavailable;
           if (!authState.isMaster && !authState.isLookup) accessMode = "teacher";
           startAttendanceRealtime();
@@ -4948,7 +4960,7 @@
         liveFirebaseLogoutPromise = getLiveFirebaseAuth().then(function(auth) { return auth.signOut(); }).catch(function(error) {
           if (window.console && console.warn) console.warn("Firebase 로그아웃 실패:", error);
         });
-        authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "" };
+        authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "", lookupRoomToken: "" };
         clearVisitorLookupReturnTimer();
         visitorLookupShowFullDay = false;
         visitorLookupSelectedIndex = 0;
@@ -5208,8 +5220,8 @@
       }
       function applyRoleUi() {
         var roomButton = document.getElementById('roomOverviewBtn');
-        if (roomButton) roomButton.style.display = authState.loggedIn && !authState.isLookup && !authState.isMaster ? '' : 'none';
-        if (!authState.loggedIn || authState.isLookup) closeRoomOverview(false);
+        if (roomButton) roomButton.style.display = authState.loggedIn ? '' : 'none';
+        if (!authState.loggedIn) closeRoomOverview(false);
         loadSharedSubjectIcons(false);
         loadNotice();
         calendarSync();

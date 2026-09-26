@@ -47,6 +47,8 @@ const scope = {
 };
 vm.createContext(scope);
 vm.runInContext(source, scope);
+// Stable capability for legacy-result equivalence; real issuance is covered by room-overview-test.
+scope.issueLookupRoomToken_ = () => 'lookup-test-capability';
 const plain = value => JSON.parse(JSON.stringify(value));
 
 // Restore exactly the removed list bookkeeping to form a legacy reference.

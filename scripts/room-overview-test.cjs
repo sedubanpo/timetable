@@ -8,12 +8,30 @@ vm.createContext(c);
 for(const name of ['getSubjectName_','isTeacherHeader_','extractTeacherName_','normalizeTeacherName_','getAuthenticatedRoomOccupancy'])vm.runInContext(serverFunction(name),c);
 assert.throws(()=>c.getAuthenticatedRoomOccupancy('9/26',false,''),/UNAUTHORIZED/);assert.equal(reads,0);
 const result=c.getAuthenticatedRoomOccupancy('9/26',false,'valid');const json=JSON.stringify(result);
+const tokens=new Map();
+c.Utilities={getUuid:()=> '12345678-1234-1234-1234-123456789abc'};
+c.CacheService={getScriptCache:()=>({put(key,value,ttl){assert.equal(ttl,21600);tokens.set(key,value);},get:key=>tokens.get(key)})};
+vm.runInContext(serverFunction('issueLookupRoomToken_'),c);
+const capability=c.issueLookupRoomToken_();
+assert.match(capability,/^[a-f0-9]{64}$/);
+const lookup=c.getAuthenticatedRoomOccupancy('9/26',false,'',capability);
+assert.equal(lookup.rows.find(r=>r.hour===13).cells[0].lessons[0].own,false);
+assert(!JSON.stringify(lookup).includes('비밀'));
+const beforeRejected=reads;
+assert.throws(()=>c.getAuthenticatedRoomOccupancy('9/26',false,'','forged'),/로그인/);
+tokens.clear();
+assert.throws(()=>c.getAuthenticatedRoomOccupancy('9/26',false,'',capability),/로그인/);
+assert.equal(reads,beforeRejected);
 for(const secret of ['개인정보학생','비밀고3','상담내용','비밀학생','학생비밀','private','student','count'])assert(!json.includes(secret),secret+' must be absent');
 const row=result.rows.find(r=>r.hour===13);assert(row.cells[0].occupied);assert(row.cells[0].lessons[0].own);assert.equal(row.cells[0].lessons[0].subject,'수학');assert(!row.cells[1].occupied);assert(row.cells[2].occupied);assert.equal(row.cells[2].lessons.length,0);
 const {extract}=require('./toolbar-attendance-test.cjs');
 const html=fs.readFileSync('Index.html','utf8'),mirror=fs.readFileSync('docs/index.html','utf8');
 for(const name of ['openRoomOverview','closeRoomOverview','loadRoomOverview','roomOverviewRoomBuilding','selectRoomOverviewBuilding','renderRoomOverview','callServer'])assert(mirror.includes(extract(name)),name+' mirror parity');
 assert(html.includes('<i></i><i></i><i></i><i></i><i></i>'));assert(html.includes('실제 학생 수가 아닙니다'));
+assert(html.includes("roomButton.style.display = authState.loggedIn ? '' : 'none'"));
+assert(!extract('openRoomOverview').includes('authState.isLookup'));
+assert(html.includes('.visitor-lookup-mode .toolbar-first-row > #roomOverviewBtn { display:flex !important;'));
+assert(extract('callServer').includes('lookupRoomToken:authState.isLookup ? authState.lookupRoomToken'));
 assert(extract('loadRoomOverview').includes('request !== roomOverviewRequest'));assert(extract('closeRoomOverview').includes('roomOverviewData = null'));
 console.log('PASS: authenticated projection, no student/notes/count leakage, real occupancy, own class, fixed placeholders, request isolation, mirror parity');
 async function lifecycle(){
@@ -34,3 +52,20 @@ async function lifecycle(){
   console.log('PASS: close during load, account switch isolation, failure/retry, button restoration');
 }
 lifecycle().catch(e=>{console.error(e);process.exitCode=1;});
+async function roleTransport(){
+  for(const role of ['LOOKUP','ADMIN','STAFF','DESK','TEACHER']) {
+    let params,authCalls=0;
+    const client={authState:{loggedIn:true,isLookup:role==='LOOKUP',lookupRoomToken:'cap'},
+      getLiveFirebaseAuth:async()=>{authCalls++;return {currentUser:{getIdToken:async()=> 'firebase'}};},
+      hasGasRunner:()=>false,apiJsonp:async p=>{params=p;return {ok:true,data:{rooms:[],rows:[]}};}};
+    vm.createContext(client);vm.runInContext(extract('callServer'),client);
+    await client.callServer('getAuthenticatedRoomOccupancy',['9/26',true]);
+    assert.equal(params.lookupRoomToken,role==='LOOKUP'?'cap':'');
+    assert.equal(params.idToken,role==='LOOKUP'?'':'firebase');
+    assert.equal(authCalls,role==='LOOKUP'?0:1);
+    client.authState.loggedIn=false;
+    await assert.rejects(client.callServer('getAuthenticatedRoomOccupancy',[]),/로그인/);
+  }
+  console.log('PASS: lookup/admin/staff/desk/teacher authenticated transport and logged-out rejection');
+}
+roleTransport().catch(e=>{console.error(e);process.exitCode=1;});

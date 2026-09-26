@@ -157,7 +157,7 @@ function dispatchApiRequest_(params) {
 
     if (action === "room_occupancy") {
       return jsonOutput_({ ok: true, data: getAuthenticatedRoomOccupancy(
-        String(params.sheet || ""), String(params.refresh || "") === "1", String(params.idToken || "")
+        String(params.sheet || ""), String(params.refresh || "") === "1", String(params.idToken || ""), String(params.lookupRoomToken || "")
       ) }, params);
     }
 
@@ -688,6 +688,7 @@ function authenticateTeacher(id, password, idToken, deferRoster) {
       name: "조회용",
       isMaster: false,
       isLookup: true,
+      lookupRoomToken: issueLookupRoomToken_(),
       role: "LOOKUP",
       teacherNames: []
     };
@@ -755,8 +756,22 @@ function getAuthenticatedTeacherSheets(teacherName, forceRefresh, idToken) {
 }
 
 // Separate allowlisted response: never return student rows, notes, counts or raw headers.
-function getAuthenticatedRoomOccupancy(sheetName, forceRefresh, idToken) {
-  var identity = authenticateFirebaseTeacher_(idToken, true);
+function issueLookupRoomToken_() {
+  var token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, "");
+  CacheService.getScriptCache().put("LOOKUP_ROOM_V1_" + token, "2371", 21600);
+  return token;
+}
+
+function getAuthenticatedRoomOccupancy(sheetName, forceRefresh, idToken, lookupRoomToken) {
+  var identity;
+  if (lookupRoomToken) {
+    if (!/^[a-f0-9]{64}$/.test(lookupRoomToken) || CacheService.getScriptCache().get("LOOKUP_ROOM_V1_" + lookupRoomToken) !== "2371") {
+      throw new Error("조회용 로그인이 만료되었습니다. 다시 로그인해 주세요.");
+    }
+    identity = { teacherName: "" };
+  } else {
+    identity = authenticateFirebaseTeacher_(idToken, true);
+  }
   if (!sheetName) throw new Error("SHEET_REQUIRED");
   var base = getFixedGridData(sheetName, forceRefresh);
   if (!base || base.error) throw new Error("강의실 시간표를 불러오지 못했습니다.");
