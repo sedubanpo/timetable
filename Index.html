@@ -371,6 +371,54 @@
       .ticker { display: inline-block; white-space: nowrap; padding-left: 100%; animation: ticker 30s linear infinite; color: #fff; font-size: 0.85rem; font-weight: 500; }
       @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
       /* 메인 페이지 */
+      #roomOverviewPage[hidden] { display:none; }
+      #roomOverviewBtn { min-height:44px; }
+      #roomOverviewTable caption { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+      #roomOverviewPage { position:fixed; inset:0; z-index:1100; background:#f7f9fc; color:#152343; display:flex; flex-direction:column; padding:16px; box-sizing:border-box; }
+      .room-overview-head { display:flex; align-items:center; gap:18px; padding-bottom:12px; }
+      .room-overview-head h1 { font-size:20px; margin:0 0 3px; }
+      .room-overview-head p { margin:0; font-size:13px; font-weight:700; }
+      .room-overview-head > button:last-child { margin-left:auto; }
+      #roomOverviewPage button { min-height:44px; padding:8px 14px; background:white; border:1px solid #c4cddd; border-radius:8px; color:#152343; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+      #roomOverviewPage button:hover { background:#e7edf8; }
+      #roomOverviewPage button:disabled { opacity:.55; cursor:wait; }
+      #roomOverviewPage :focus-visible { outline:3px solid #235ac2; outline-offset:2px; }
+      .room-overview-tools { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+      #roomOverviewBuildings { display:flex; gap:6px; }
+      #roomOverviewBuildings button[aria-pressed="true"] { background:#152343; color:white; border-color:#152343; }
+      .room-overview-tools p,.room-overview-privacy { font-size:12px; color:#465675; margin:8px 0; }
+      .room-overview-tools strong { color:#1749a0; }
+      #roomOverviewStatus { margin:0; font-size:14px; }
+      #roomOverviewStatus:not(:empty) { padding:14px 0; }
+      #roomOverviewScroll { flex:1; min-height:0; overflow:auto; border:1px solid #ccd5e3; scrollbar-color:#a4b3ca #edf1f7; }
+      #roomOverviewTable { width:100% !important; min-width:calc(54px + var(--room-count, 15) * 86px) !important; border-collapse:separate; border-spacing:0; table-layout:fixed; font-variant-numeric:tabular-nums; }
+      #roomOverviewTable th,#roomOverviewTable td { padding:4px; border-right:1px solid #dfe5ef; border-bottom:1px solid #dfe5ef; vertical-align:top; }
+      #roomOverviewTable thead th { position:sticky; top:0; z-index:2; background:#152343; color:white; height:38px; vertical-align:middle; font-size:12px; }
+      #roomOverviewTable tr > th:first-child { position:sticky; left:0; width:54px; box-sizing:border-box; z-index:1; background:#edf2fa; font-size:12px; color:#152343; }
+      #roomOverviewTable thead tr > th:first-child { z-index:3; background:#152343; color:white; }
+      #roomOverviewTable tbody th small { display:block; margin-top:4px; font-weight:400; color:#52627d; }
+      #roomOverviewTable tbody th { top:auto; }
+      #roomOverviewTable th,#roomOverviewTable td { letter-spacing:normal !important; transition:none; }
+      #roomOverviewTable td { background:white; height:116px; }
+      #roomOverviewTable td.room-unused { background:#f1f4f8; }
+      .room-lesson { min-height:112px; padding:6px; box-sizing:border-box; background:#e6edf9; overflow:hidden; border-radius:4px; }
+      .room-lesson.is-own { box-shadow:inset 0 0 0 2px #235ac2; background:#dae7ff; }
+      .room-lesson strong,.room-lesson small { display:block; font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+      .room-lesson small { font-size:11px; color:#405778; }
+      .room-anonymous { display:grid; gap:8px; margin:10px 3px 3px; filter:blur(4px); user-select:none; pointer-events:none; }
+      .room-anonymous i { display:block; height:5px; width:86%; background:#8799b7; border-radius:3px; }
+      .room-anonymous i:nth-child(even) { width:68%; }
+      @media(max-width:600px) {
+        #roomOverviewPage { padding:10px 6px; }
+        .room-overview-head { gap:8px; padding-bottom:8px; }
+        .room-overview-head h1 { font-size:17px; }
+        #roomOverviewPage button { padding:8px 10px; font-size:12px; }
+        .room-overview-tools { flex-wrap:wrap; gap:0; }
+        .room-overview-tools p { margin:7px 0 2px; }
+        .room-overview-privacy { font-size:11px; line-height:1.5; }
+        #roomOverviewTable { min-width:calc(48px + var(--room-count, 15) * 98px) !important; width:100% !important; }
+        #roomOverviewTable tr > th:first-child { width:48px; }
+      }
       #mainPage { display: none; flex-direction: column; height: 100%; z-index: 1; }
       .top-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(5px); padding: 8px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-shrink: 0; z-index: 100; flex-wrap: wrap;}
       .header-logo-img { height: 24px; cursor: pointer; margin-right: 5px;}
@@ -1880,6 +1928,20 @@
         <div class="close-modal" onclick="closeOperationMemoModal()">닫기</div>
       </div>
     </div>
+    <section id="roomOverviewPage" hidden aria-labelledby="roomOverviewTitle">
+      <header class="room-overview-head">
+        <button type="button" id="roomOverviewBack" onclick="closeRoomOverview()">← 내 시간표</button>
+        <div><h1 id="roomOverviewTitle">전체 강의실</h1><p id="roomOverviewDate"></p></div>
+        <button type="button" id="roomOverviewRefresh" onclick="loadRoomOverview(true)">새로고침</button>
+      </header>
+      <div class="room-overview-tools">
+        <div id="roomOverviewBuildings" aria-label="관 선택"></div>
+        <p><strong>내 수업</strong> 테두리로 표시 · 빈 칸은 수업 없음</p>
+      </div>
+      <p class="room-overview-privacy">학생 정보는 제공되지 않습니다. 블러 5줄은 고정된 예시이며 실제 학생 수가 아닙니다.</p>
+      <p id="roomOverviewStatus" role="status"></p>
+      <div id="roomOverviewScroll" tabindex="0" role="region" aria-label="시간별 전체 강의실 시간표, 좌우로 스크롤"><table id="roomOverviewTable"></table></div>
+    </section>
     <div id="mainPage">
       <div class="ticker-wrap" aria-label="S-LMS 공지사항">
          <div class="ticker" id="noticeText">S-LMS 공지사항</div>
@@ -1918,6 +1980,7 @@
             <div id="teacherPickerOptions" class="teacher-picker-options" aria-label="강사 선택"></div>
           </div>
         </div>
+        <button id="roomOverviewBtn" type="button" class="nav-btn" style="display:none" onclick="openRoomOverview()">전체 강의실</button>
         <button id="teacherLoginBtn" class="nav-btn" onclick="openAuthModal()">강사 로그인</button>
         
         <label id="privacyControl" class="toggle-wrapper" style="margin-left:5px;" title="학생 이름 블러 처리"><input type="checkbox" id="privacyToggle" class="toggle-input" onchange="togglePrivacy()"><div class="toggle-switch"></div><span>🔒 보안</span></label>
@@ -2683,7 +2746,7 @@
         submit.disabled = true;
         result.classList.remove("error");
         result.textContent = "데스크에 전달하는 중입니다.";
-        Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
+        return Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
           var db = values[0];
           var user = values[1].currentUser;
           if (!user || !isCurrent()) throw new Error("로그인 세션을 다시 확인해 주세요.");
@@ -2691,6 +2754,7 @@
           var ref = db.collection("liveTimetableAttendanceReports").doc(id);
           var eventRef = ref.collection("events").doc();
           return db.runTransaction(function(transaction) {
+            if (!isCurrent() || values[1].currentUser !== user) throw new Error("로그인 세션이 변경되었습니다.");
             return transaction.get(ref).then(function(snapshot) {
               var previous = snapshot.exists ? snapshot.data() : null;
               var revision = Number(previous && previous.teacherRevision || 0) + 1;
@@ -2723,7 +2787,13 @@
                 payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                 payload.createdAtMs = nowMs;
               }
-              transaction.set(ref, payload, { merge: true });
+              if (previous) {
+                // A resend updates only fields permitted by the report rules.
+                transaction.update(ref, {
+                  status: status, note: note, teacherRevision: revision, deskState: "NEW",
+                  reportedAt: payload.reportedAt, reportedAtMs: nowMs
+                });
+              } else transaction.set(ref, payload);
               transaction.set(eventRef, {
                 type: "TEACHER_SUBMITTED",
                 reporterUid: user.uid,
@@ -2782,14 +2852,18 @@
         renderAttendanceInbox();
       }
       function resolveAttendanceRealtimeMode(db, user) {
-        return Promise.all([
-          user.getIdTokenResult().catch(function() { return { claims: {} }; }),
-          db.collection("users").doc(user.uid).get().catch(function() { return null; })
-        ]).then(function(values) {
-          var claims = values[0] && values[0].claims ? values[0].claims : {};
-          var userData = values[1] && values[1].exists ? (values[1].data() || {}) : {};
-          var role = String(claims.role || userData.role || "").toUpperCase();
-          return claims.isAdmin === true || ["ADMIN", "STAFF", "DESK"].indexOf(role) !== -1 ? "admin" : "teacher";
+        // Match Firestore's current user-document policy, never stale token claims.
+        return db.collection("users").doc(user.uid).get({ source: "server" }).then(function(snapshot) {
+          if (!snapshot.exists) throw new Error("계정 권한 정보를 찾을 수 없습니다.");
+          var data = snapshot.data() || {};
+          if (data.active === false || data.isActive === false ||
+              ["INACTIVE", "DISABLED", "RETIRED", "RESIGNED", "SUSPENDED", "퇴사", "퇴직", "휴직"].indexOf(data.status) !== -1 ||
+              ["INACTIVE", "RETIRED", "RESIGNED", "TERMINATED", "LEAVE", "ON_LEAVE", "퇴사", "퇴직", "휴직"].indexOf(data.employmentStatus) !== -1) {
+            throw new Error("비활성 계정입니다. 계정 관리에서 상태를 확인해 주세요.");
+          }
+          if (["ADMIN", "STAFF", "DESK"].indexOf(data.role) !== -1) return "admin";
+          if (data.role === "TEACHER" || data.role === "INSTRUCTOR") return "teacher";
+          throw new Error("출결 전달함 이용 권한을 확인할 수 없습니다.");
         });
       }
       function buildAttendanceReportsQuery(db, mode, uid) {
@@ -2833,7 +2907,7 @@
         var loginId = authState.loginId;
         var isCurrent = function() { return sequence === attendanceConnectionSequence && authState.loggedIn && authState.loginId === loginId; };
         attendanceRealtimeState.loading = true;
-        Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
+        return Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
           if (!isCurrent()) return;
           var db = values[0];
           var user = values[1].currentUser;
@@ -3312,12 +3386,13 @@
         return refreshAttendanceInbox(button, document.getElementById("attendanceMessagesRefreshResult"));
       }
       function refreshAttendanceInbox(button, resultOverride) {
-        if (!authState.loggedIn || authState.isLookup || !attendanceRealtimeState.uid) return;
+        if (!authState.loggedIn || authState.isLookup) return;
         if (button && button.disabled) return;
         var sequence = attendanceConnectionSequence;
         var uid = attendanceRealtimeState.uid;
         var mode = attendanceRealtimeState.mode;
-        var isCurrent = function() { return sequence === attendanceConnectionSequence && uid === attendanceRealtimeState.uid; };
+        var loginId = authState.loginId;
+        var isCurrent = function() { return authState.loggedIn && authState.loginId === loginId && sequence === attendanceConnectionSequence && uid === attendanceRealtimeState.uid; };
         var result = resultOverride || document.getElementById("attendanceInboxRefreshResult");
         var label = button && button.querySelector("span");
         var originalLabel = label && label.textContent;
@@ -3329,7 +3404,29 @@
         }
         attendanceRealtimeState.loading = true;
         renderAttendanceInbox();
-        return getLiveFirebaseFirestore().then(function(db) {
+        return Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
+          var db = values[0];
+          var user = values[1].currentUser;
+          if (!isCurrent()) return;
+          if (!user) throw new Error("로그인 세션을 확인해 주세요.");
+          return resolveAttendanceRealtimeMode(db, user).then(function(nextMode) {
+            if (!isCurrent() || values[1].currentUser !== user) return;
+            if (uid !== user.uid || mode !== nextMode || attendanceRealtimeState.error || !attendanceRealtimeState.unsubscribe) {
+              var connection = startAttendanceRealtime();
+              sequence = attendanceConnectionSequence;
+              uid = attendanceRealtimeState.uid;
+              return Promise.resolve(connection).then(function() {
+                if (sequence !== attendanceConnectionSequence || !authState.loggedIn || authState.loginId !== loginId) return;
+                uid = attendanceRealtimeState.uid;
+                mode = attendanceRealtimeState.mode;
+                if (attendanceRealtimeState.error || !uid) throw new Error("출결 연결을 복구하지 못했습니다.");
+                return db;
+              });
+            }
+            return db;
+          });
+        }).then(function(db) {
+          if (!db) return;
           if (!isCurrent()) return;
           return buildAttendanceReportsQuery(db, mode, uid).get({ source: "server" }).then(function(snapshot) {
             if (!isCurrent()) return;
@@ -3342,6 +3439,7 @@
         }).catch(function(error) {
           if (!isCurrent()) return;
           attendanceRealtimeState.loading = false;
+          attendanceRealtimeState.error = error && error.message ? error.message : "권한 확인 또는 조회 실패";
           if (result) {
             result.textContent = "새로고침하지 못했습니다. 기존 내역은 그대로 표시됩니다. 잠시 후 다시 시도해 주세요.";
             result.classList.add("error");
@@ -3367,13 +3465,14 @@
         if (!id) return;
         button.disabled = true;
         button.textContent = "보내는 중";
-        Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
+        return Promise.all([getLiveFirebaseFirestore(), getLiveFirebaseAuth()]).then(function(values) {
           var db = values[0];
           var user = values[1].currentUser;
           if (!user || user.uid !== uid || sequence !== attendanceConnectionSequence) throw new Error("로그인 세션 없음");
           var ref = db.collection("liveTimetableAttendanceReports").doc(id);
           var eventRef = ref.collection("events").doc();
           return db.runTransaction(function(transaction) {
+            if (values[1].currentUser !== user || sequence !== attendanceConnectionSequence) throw new Error("로그인 세션이 변경되었습니다.");
             return transaction.get(ref).then(function(snapshot) {
               if (!snapshot.exists) throw new Error("REPORT_NOT_FOUND");
               var report = snapshot.data() || {};
@@ -4257,8 +4356,115 @@
           populateTeacherSelector();
         });
       }
+      var roomOverviewRequest = 0, roomOverviewData = null, roomOverviewBuilding = "전체", roomOverviewSheet = "";
+      function openRoomOverview() {
+        if (!authState.loggedIn || authState.isLookup || !currentSheetName) return;
+        roomOverviewSheet = currentSheetName;
+        roomOverviewBuilding = "전체";
+        document.getElementById('roomOverviewPage').hidden = false;
+        document.getElementById('mainPage').inert = true;
+        document.getElementById('roomOverviewDate').textContent = roomOverviewSheet;
+        document.getElementById('roomOverviewBack').focus();
+        loadRoomOverview(false);
+      }
+      function closeRoomOverview(restoreFocus) {
+        roomOverviewRequest++;
+        roomOverviewData = null;
+        var page = document.getElementById('roomOverviewPage');
+        if (!page) return;
+        var wasOpen = !page.hidden;
+        page.hidden = true;
+        document.getElementById('roomOverviewTable').innerHTML = '';
+        if (wasOpen) {
+          document.getElementById('mainPage').inert = false;
+          if (restoreFocus !== false) document.getElementById('roomOverviewBtn').focus();
+        }
+      }
+      function loadRoomOverview(force) {
+        if (!authState.loggedIn || authState.isLookup || document.getElementById('roomOverviewPage').hidden) return;
+        var request = ++roomOverviewRequest, loginId = authState.loginId;
+        var status = document.getElementById('roomOverviewStatus');
+        var button = document.getElementById('roomOverviewRefresh');
+        button.disabled = true;
+        status.textContent = '강의실 시간표를 불러오는 중입니다.';
+        roomOverviewData = null;
+        document.getElementById('roomOverviewTable').innerHTML = '';
+        document.getElementById('roomOverviewBuildings').innerHTML = '';
+        return callServer('getAuthenticatedRoomOccupancy', [roomOverviewSheet, !!force]).then(function(data) {
+          if (request !== roomOverviewRequest || !authState.loggedIn || authState.loginId !== loginId) return;
+          if (!data || !Array.isArray(data.rooms) || !Array.isArray(data.rows)) throw new Error('INVALID_OCCUPANCY');
+          roomOverviewData = data;
+          status.textContent = data.rows.some(function(row) { return row.cells.some(function(cell) { return cell.occupied; }); }) ? '' : '이 날짜에는 등록된 수업이 없습니다.';
+          renderRoomOverview();
+          var first = document.querySelector('#roomOverviewTable .is-own');
+          if (first) first.scrollIntoView({block:'center',inline:'center'});
+        }).catch(function() {
+          if (request !== roomOverviewRequest || authState.loginId !== loginId) return;
+          status.textContent = '시간표를 불러오지 못했습니다. 새로고침으로 다시 시도해 주세요.';
+        }).finally(function() { if (request === roomOverviewRequest) button.disabled = false; });
+      }
+      function roomOverviewRoomBuilding(room) {
+        var match = String(room).match(/^([1-9]관)/);
+        return match ? match[1] : '본관';
+      }
+      function selectRoomOverviewBuilding(building) {
+        roomOverviewBuilding = building;
+        renderRoomOverview();
+        document.getElementById('roomOverviewScroll').scrollLeft = 0;
+        var selected = document.querySelector('#roomOverviewBuildings button[aria-pressed="true"]');
+        if (selected) selected.focus();
+      }
+      function renderRoomOverview() {
+        var data = roomOverviewData;
+        if (!data) return;
+        var groups = ['전체'];
+        data.rooms.forEach(function(room) { var group = roomOverviewRoomBuilding(room); if (groups.indexOf(group) < 0) groups.push(group); });
+        if (groups.indexOf(roomOverviewBuilding) < 0) roomOverviewBuilding = '전체';
+        var host = document.getElementById('roomOverviewBuildings');
+        host.replaceChildren();
+        groups.forEach(function(group) {
+          var button = document.createElement('button'); button.type = 'button'; button.textContent = group;
+          button.setAttribute('aria-pressed', String(group === roomOverviewBuilding));
+          button.onclick = function() { selectRoomOverviewBuilding(group); };
+          host.appendChild(button);
+        });
+        var indices = data.rooms.map(function(_, i) { return i; }).filter(function(i) { return roomOverviewBuilding === '전체' || roomOverviewRoomBuilding(data.rooms[i]) === roomOverviewBuilding; });
+        var active = data.rows.filter(function(row) { return row.cells.some(function(cell) { return cell.occupied; }); });
+        var min = active.length ? Math.max(8, active[0].hour - 1) : 8;
+        var max = active.length ? Math.min(23, active[active.length - 1].hour + 1) : 23;
+        var rows = data.rows.filter(function(row) { return row.hour >= min && row.hour <= max; });
+        var html = '<caption class="sr-only">강의실별 수업 유무. 블러는 실제 학생 수와 무관한 고정 예시입니다.</caption><thead><tr><th scope="col">시간</th>';
+        indices.forEach(function(i) { html += '<th scope="col">' + escapeHtml(data.rooms[i]) + '</th>'; });
+        html += '</tr></thead><tbody>';
+        rows.forEach(function(row) {
+          html += '<tr><th scope="row">' + row.hour + ':00<small>~' + (row.hour + 1) + ':00</small></th>';
+          indices.forEach(function(i) {
+            var cell = row.cells[i] || {occupied:false,lessons:[]};
+            if (!cell.occupied) { html += '<td class="room-unused" aria-label="수업 없음"></td>'; return; }
+            var lessons = cell.lessons && cell.lessons.length ? cell.lessons : [{teacher:'',subject:'',own:false}];
+            html += '<td>';
+            lessons.forEach(function(lesson) {
+              html += '<div class="room-lesson' + (lesson.own ? ' is-own' : '') + '">';
+              if (lesson.own) html += '<small>내 수업</small>';
+              html += lesson.teacher ? '<strong>' + escapeHtml(lesson.teacher) + 'T</strong><small>' + escapeHtml(lesson.subject || '수업') + '</small>' : '<strong>사용 중</strong>';
+              html += '<div class="room-anonymous" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>';
+            });
+            html += '</td>';
+          });
+          html += '</tr>';
+        });
+        var table = document.getElementById('roomOverviewTable');
+        table.style.setProperty('--room-count', indices.length || 1);
+        table.innerHTML = html + '</tbody>';
+      }
       function callServer(method, args, verifiedToken) {
         var a = Array.isArray(args) ? args : [];
+        if (method === "getAuthenticatedRoomOccupancy" && verifiedToken === undefined) {
+          return getLiveFirebaseAuth().then(function(auth) {
+            if (!auth.currentUser || !authState.loggedIn || authState.isLookup) throw new Error("다시 로그인해 주세요.");
+            return auth.currentUser.getIdToken();
+          }).then(function(token) { return callServer(method, a, token); });
+        }
         if (method === "getStudentCardStatuses" || method === "setStudentCardSentStatus") return callFirebaseCard(method, a);
         var scopedRead = method === "getFixedGridData" || method === "getTeacherGridData" || method === "getTeacherSheetNames";
         if (scopedRead && authState.loggedIn && !authState.isLookup && verifiedToken === undefined) {
@@ -4268,6 +4474,7 @@
           }).then(function(token) { return callServer(method, a, token); });
         }
         if (hasGasRunner()) {
+          if (method === "getAuthenticatedRoomOccupancy") a = [a[0], a[1], verifiedToken];
           if (method === "authenticateTeacher") a = [a[0], a[1], a[2], true];
           if (scopedRead && verifiedToken) {
             if (method === "getTeacherSheetNames") {
@@ -4302,6 +4509,12 @@
             }
             try { runner[method].apply(runner, a); }
             catch (error) { rpcFinish(error, true); }
+          });
+        }
+        if (method === "getAuthenticatedRoomOccupancy") {
+          return apiJsonp({ action:"room_occupancy", sheet:a[0] || "", refresh:a[1] ? "1" : "0", idToken:verifiedToken || "" }, {timeoutMs:25000,retries:1}).then(function(res) {
+            if (!res || !res.ok || !res.data) throw apiResponseError(res, "강의실 조회 실패");
+            return res.data;
           });
         }
         if (method === "getSheetNames") {
@@ -4717,6 +4930,7 @@
         });
       }
       function logoutTeacher() {
+        closeRoomOverview(false);
         resetSharedSubjectIcons();
         resetStudentEnrollmentStatus();
         studentCardStatusSequence++;
@@ -4993,6 +5207,9 @@
         });
       }
       function applyRoleUi() {
+        var roomButton = document.getElementById('roomOverviewBtn');
+        if (roomButton) roomButton.style.display = authState.loggedIn && !authState.isLookup && !authState.isMaster ? '' : 'none';
+        if (!authState.loggedIn || authState.isLookup) closeRoomOverview(false);
         loadSharedSubjectIcons(false);
         loadNotice();
         calendarSync();

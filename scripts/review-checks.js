@@ -289,7 +289,7 @@ assert(!index.includes("관리자에게 학생 권한 매핑을 요청해 주세
 assert(index.includes('return mode === "admin" ? query : query.where("reporterUid", "==", uid);'), "the attendance history listener must retain all desk records while keeping teacher reads reporter-scoped");
 assert(index.includes('.doc(attendanceReportId(context, user.uid)).get()'), "opening a composer must directly recover an older report outside the capped realtime state query");
 assert(index.includes('<option value="RESOLVED">처리 완료</option>'), "the attendance history must expose resolved records");
-assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(role)'), "attendance inbox access must follow Firebase desk roles instead of spreadsheet schedule-management permission");
+assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(data.role)'), "attendance inbox access must follow current Firebase user-document desk roles instead of stale claims or spreadsheet permission");
 assert(!extractFunction(appScript, "resolveLiveFirebaseIdToken").includes("return \"\";\n        });"), "Firebase login failures must not silently fall back to a stale prior identity");
 assert(extractFunction(appScript, "logoutTeacher").includes("auth.signOut()"), "logging out of the timetable must also sign out Firebase");
 assert(index.includes("assertLiveFirebaseIdentity(res)"), "the timetable identity must be bound to the signed-in Firebase account before realtime starts");
@@ -636,7 +636,7 @@ assert(!/for\s*\(var\s+h\s*=\s*9\s*;[^\n]*<=\s*23/.test(server), "server schedul
 assert(index.includes('id="attendanceInboxRefresh"') && /function refreshAttendanceInbox\(button(?:, resultOverride)?\)/.test(index), "attendance inbox must provide a scoped manual refresh");
 assert(index.includes('value="RESOLVED">처리 완료') && index.includes("전체 기록"), "attendance inbox must retain and expose completed records");
 assert(index.includes('title.textContent = isDesk ? "출결 전달함 · 데스크" : "내 출결 전달함"'), "attendance inbox must adapt to desk and teacher roles");
-assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(role)'), "desk and staff roles must receive attendance processing mode");
+assert(index.includes('["ADMIN", "STAFF", "DESK"].indexOf(data.role)'), "desk and staff roles must receive attendance processing mode");
 assert(index.includes("if (attendanceInboxBtn) attendanceInboxBtn.style.display = '';"), "signed-in teachers must be able to open their sent attendance records");
 assert(index.includes('id="absenceNoticeBtn"') && index.includes("setToolbarButtonDisplay(absenceNoticeBtn, 'none')"), "teacher accounts must hide the absence notice toolbar action");
 assert(index.includes('id="attendanceReportBtn"') && index.includes("setToolbarButtonDisplay(attendanceReportBtn, 'none')"), "teacher accounts must hide the attendance summary toolbar action");

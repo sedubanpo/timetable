@@ -10,7 +10,9 @@ async function test() {
   const originalReports = [{__id:'preserved'}];
   const context = {
     authState:{loggedIn:true,isLookup:false}, attendanceConnectionSequence:1,
-    attendanceRealtimeState:{uid:'admin',mode:'admin',firebaseAdmin:true,reports:originalReports},
+    attendanceRealtimeState:{uid:'admin',mode:'admin',firebaseAdmin:true,reports:originalReports,unsubscribe(){}},
+    getLiveFirebaseAuth:()=>Promise.resolve({currentUser:{uid:'admin'}}),
+    resolveAttendanceRealtimeMode:()=>Promise.resolve('admin'),
     document:{getElementById:()=>result}, window:{console:null},
     renderAttendanceInbox(){}, getLiveFirebaseFirestore:()=>Promise.resolve({}),
     buildAttendanceReportsQuery:()=>({get(options){
@@ -27,15 +29,15 @@ async function test() {
   let pending = context.refreshAttendanceMessages(button);
   assert(button.disabled);
   assert.equal(context.refreshAttendanceMessages(button),undefined);
-  await Promise.resolve(); resolveRead({}); await pending;
+  while (!resolveRead) await Promise.resolve(); resolveRead({}); await pending;
   assert.equal(reads,1); assert.equal(applied,1);
   assert.equal(label.textContent,'메시지 갱신'); assert(!button.disabled);
   assert(result.textContent.includes('방금'));
   rejectRead=true; await context.refreshAttendanceMessages(button);
   assert.equal(context.attendanceRealtimeState.reports,originalReports);
   assert(result.textContent.includes('기존 내역은 그대로')); assert(!button.disabled);
-  rejectRead=false; pending=context.refreshAttendanceMessages(button);
-  await Promise.resolve(); context.attendanceConnectionSequence++; resolveRead({}); await pending;
+  rejectRead=false; context.attendanceRealtimeState.error=''; resolveRead=null; pending=context.refreshAttendanceMessages(button);
+  while (!resolveRead) await Promise.resolve(); context.attendanceConnectionSequence++; resolveRead({}); await pending;
   assert.equal(applied,1); assert.equal(result.textContent,'');
   context.authState.loggedIn=false;
   assert.equal(context.refreshAttendanceMessages(button),undefined); assert.equal(reads,3);

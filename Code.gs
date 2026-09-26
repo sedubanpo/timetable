@@ -155,6 +155,12 @@ function dispatchApiRequest_(params) {
       return jsonOutput_({ ok: true, version: checkDataVersion(targetSheet) }, params);
     }
 
+    if (action === "room_occupancy") {
+      return jsonOutput_({ ok: true, data: getAuthenticatedRoomOccupancy(
+        String(params.sheet || ""), String(params.refresh || "") === "1", String(params.idToken || "")
+      ) }, params);
+    }
+
     if (action === "grid") {
       var sheetName = String(params.sheet || "").trim();
       if (!sheetName) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
@@ -626,7 +632,7 @@ function authenticateFirebaseTeacher_(idToken, skipRoster) {
   var rawRole = asString_(userDoc.role || "INSTRUCTOR").toUpperCase();
   var status = asString_(userDoc.status || "ACTIVE").toUpperCase();
 
-  if (!Object.keys(userDoc).length || status !== "ACTIVE" || ["ADMIN", "STAFF", "INSTRUCTOR", "TEACHER"].indexOf(rawRole) < 0) {
+  if (!Object.keys(userDoc).length || status !== "ACTIVE" || ["ADMIN", "STAFF", "DESK", "INSTRUCTOR", "TEACHER"].indexOf(rawRole) < 0) {
     throw new Error("FIREBASE_BLOCKED: 비활성화된 계정입니다.");
   }
   if (Object.prototype.hasOwnProperty.call(apps, "liveTimetable") && apps.liveTimetable === false) {
@@ -746,6 +752,33 @@ function getAuthenticatedTeacherSheets(teacherName, forceRefresh, idToken) {
   var selected = identity.isMaster ? String(teacherName || "").trim() : identity.teacherName;
   if (!selected) throw new Error("TEACHER_IDENTITY_REQUIRED");
   return getTeacherSheetNames(selected, forceRefresh);
+}
+
+// Separate allowlisted response: never return student rows, notes, counts or raw headers.
+function getAuthenticatedRoomOccupancy(sheetName, forceRefresh, idToken) {
+  var identity = authenticateFirebaseTeacher_(idToken, true);
+  if (!sheetName) throw new Error("SHEET_REQUIRED");
+  var base = getFixedGridData(sheetName, forceRefresh);
+  if (!base || base.error) throw new Error("강의실 시간표를 불러오지 못했습니다.");
+  var rooms = (base.headers || []).map(function(header, index) {
+    var name = String(header || "").trim();
+    return /^(?:(?:본관|[1-9]관)\s*)?[0-9]+\s*강의실$/.test(name) ? name : (index + 1) + "강의실";
+  });
+  var rows = [];
+  for (var hour = SCHEDULE_START_HOUR; hour <= SCHEDULE_END_HOUR; hour++) {
+    var row = (base.grid || {})[hour] || [];
+    rows.push({ hour: hour, cells: rooms.map(function(room, index) {
+      var items = Array.isArray(row[index]) ? row[index] : [];
+      var headers = items.filter(function(item) { return isTeacherHeader_(item); });
+      var lessons = headers.map(function(header) {
+        var teacher = extractTeacherName_(header);
+        return { teacher: teacher, subject: getSubjectName_(header),
+          own: normalizeTeacherName_(teacher) === normalizeTeacherName_(identity.teacherName) };
+      });
+      return { occupied: items.some(function(item) { return String(item || "").trim() !== ""; }), lessons: lessons };
+    }) });
+  }
+  return { rooms: rooms, rows: rows };
 }
 
 function getTeacherGridData(sheetName, teacherName, forceRefresh) {
