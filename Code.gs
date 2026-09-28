@@ -27,9 +27,69 @@ function doGet(e) {
       .setFaviconUrl("https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png");
 }
 
+// Server-to-server snapshot export. Never expose this through JSONP or accept a client grid.
+function doPost(e) {
+  try {
+    var envelope = JSON.parse(e.postData.contents || "{}");
+    var secret = PropertiesService.getScriptProperties().getProperty("TIMETABLE_SNAPSHOT_SECRET") || "";
+    if (secret.length < 32 || typeof envelope.body !== "string" || envelope.body.length > 2000) throw new Error("UNAUTHORIZED");
+    var expected = Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(envelope.body, secret)).replace(/=+$/, "");
+    if (typeof envelope.signature !== "string" || expected.length !== envelope.signature.length) throw new Error("UNAUTHORIZED");
+    var different = 0;
+    for (var c = 0; c < expected.length; c++) different |= expected.charCodeAt(c) ^ envelope.signature.charCodeAt(c);
+    if (different) throw new Error("UNAUTHORIZED");
+    var request = JSON.parse(envelope.body);
+    if (request.action !== "snapshot_export" || Math.abs(Date.now() - Number(request.issuedAt)) > 120000 || !isFinite(Number(request.issuedAt))) throw new Error("UNAUTHORIZED");
+    return jsonOutput_({ ok:true, snapshots:exportScheduleSnapshots_(String(request.sheet || "")) });
+  } catch (error) { return jsonOutput_({ ok:false, error:"SNAPSHOT_EXPORT_FAILED" }); }
+}
+
+function issueSnapshotLookupToken_() {
+  var secret = PropertiesService.getScriptProperties().getProperty("TIMETABLE_SNAPSHOT_SECRET") || "";
+  if (secret.length < 32) return ""; // Existing lookup login remains usable before provisioning.
+  var body = Utilities.base64EncodeWebSafe(JSON.stringify({aud:"timetable-snapshot-lookup",exp:Date.now()+21600000})).replace(/=+$/, "");
+  return body + "." + Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret)).replace(/=+$/, "");
+}
+
+function exportScheduleSnapshots_(requestedSheet) {
+  var now = new Date(), names = getSheetNames(), targets = [];
+  if (requestedSheet) {
+    if (names.indexOf(requestedSheet) < 0 || !/^\d{1,2}\/\d{1,2}(?:\(|\s|$)/.test(requestedSheet)) throw new Error("INVALID_SHEET");
+    var parts = requestedSheet.match(/^(\d{1,2})\/(\d{1,2})/), year = Number(Utilities.formatDate(now,"Asia/Seoul","yyyy"));
+    var candidates = [year-1,year,year+1].map(function(y){return new Date(Date.UTC(y,Number(parts[1])-1,Number(parts[2]),-9));});
+    candidates.sort(function(a,b){return Math.abs(a-now)-Math.abs(b-now);});
+    targets.push({sheet:requestedSheet,date:Utilities.formatDate(candidates[0],"Asia/Seoul","yyyy-MM-dd")});
+  } else {
+    for (var d=0;d<2;d++) {
+      var date = new Date(now.getTime()+d*86400000), prefix=Utilities.formatDate(date,"Asia/Seoul","M/d");
+      var matches=names.filter(function(name){return name===prefix || name.indexOf(prefix+"(")===0 || name.indexOf(prefix+" ")===0;});
+      if (matches.length>1) throw new Error("AMBIGUOUS_SHEET");
+      if (matches.length===1) targets.push({sheet:matches[0],date:Utilities.formatDate(date,"Asia/Seoul","yyyy-MM-dd")});
+    }
+  }
+  if (!targets.length) throw new Error("NO_SHEETS");
+  return targets.map(function(target) {
+    var capturedAt=Date.now(), base=getFixedGridData(target.sheet,true);
+    if (!base || base.error || !base.headers || !base.headers.length || !base.version || !base.grid) throw new Error("INCOMPLETE_GRID");
+    var owners={}, grid={}, rows=[];
+    var rooms=base.headers.map(function(name,i){return /^(?:(?:본관|[1-9]관)\s*)?[0-9]+\s*강의실$/.test(String(name).trim()) ? String(name).trim() : (i+1)+"강의실";});
+    for (var h=8;h<=23;h++) {
+      owners[h]=[];
+      grid[h]=base.headers.map(function(_,i){return (base.grid[h] || [])[i] || [];});
+      rows.push({hour:h,cells:grid[h].map(function(items){
+        var headers=items.filter(isTeacherHeader_);
+        owners[h].push(headers.map(function(item){return normalizeTeacherName_(extractTeacherName_(item));}).filter(function(value,i,list){return list.indexOf(value)===i;}));
+        return {occupied:items.length>0,lessons:headers.map(function(item){return {teacher:extractTeacherName_(item),subject:getSubjectName_(item),own:false};})};
+      })});
+    }
+    return {schema:1,sheet:target.sheet,date:target.date,capturedAt:capturedAt,data:{headers:base.headers,grid:grid,version:String(base.version)},owners:owners,rooms:{rooms:rooms,rows:rows}};
+  });
+}
+
 function handleApiRequest_(params) {
   params = params || {};
   params._serverStartedAt = Date.now();
+  params._stageMs = {};
   var requestId = String(params.requestId || "");
   params._requestId = /^[A-Za-z0-9_-]{1,80}$/.test(requestId) ? requestId : Utilities.getUuid();
   var action = String(params.action || "grid").toLowerCase();
@@ -41,8 +101,19 @@ function handleApiRequest_(params) {
     try {
       console.log(JSON.stringify({ event: "timetable_api", requestId: params._requestId,
         action: knownActions.indexOf(action) >= 0 ? action : "unknown",
-        serverMs: Math.max(0, Date.now() - params._serverStartedAt) }));
+        serverMs: Math.max(0, Date.now() - params._serverStartedAt), stages: params._stageMs }));
     } catch (loggingError) { /* Diagnostics must not turn a successful API call into a failure. */ }
+  }
+}
+
+function measureScheduleStage_(params, stage, operation) {
+  var started = Date.now();
+  try { return operation(); }
+  finally {
+    if (["authorization", "grid", "audit"].indexOf(stage) >= 0) {
+      params._stageMs = params._stageMs || {};
+      params._stageMs[stage] = Math.max(0, Date.now() - started);
+    }
   }
 }
 
@@ -166,19 +237,23 @@ function dispatchApiRequest_(params) {
       if (!sheetName) return jsonOutput_({ ok: false, error: "SHEET_REQUIRED" }, params);
       var teacherName = String(params.teacher || "").trim();
       if (params.idToken) {
-        var gridIdentity = authenticateFirebaseTeacher_(String(params.idToken), true);
+        var gridIdentity = measureScheduleStage_(params, "authorization", function() {
+          return authenticateFirebaseTeacher_(String(params.idToken), true);
+        });
         if (!gridIdentity.isMaster) teacherName = gridIdentity.teacherName;
       }
       var auditTeacherName = String(params.auditTeacher || "").trim();
       var auditLoginId = String(params.auditLoginId || "").trim();
       var forceRefresh = String(params.refresh || "") === "1";
       var lite = String(params.lite || "1") !== "0";
-      var payload = teacherName
+      var payload = measureScheduleStage_(params, "grid", function() { return teacherName
         ? getTeacherGridData(sheetName, teacherName, forceRefresh)
-        : getFixedGridData(sheetName, forceRefresh);
+        : getFixedGridData(sheetName, forceRefresh); });
       if (!payload || payload.error) return jsonOutput_({ ok: false, error: payload && payload.error ? payload.error : "GRID_ERROR" }, params);
-      var canonicalAuditTeacher = resolveTeacherViewAuditName_(auditTeacherName, auditLoginId);
-      var viewLogged = canonicalAuditTeacher ? logTeacherView_(canonicalAuditTeacher, sheetName, auditLoginId) : false;
+      var viewLogged = measureScheduleStage_(params, "audit", function() {
+        var canonicalAuditTeacher = resolveTeacherViewAuditName_(auditTeacherName, auditLoginId);
+        return canonicalAuditTeacher ? logTeacherView_(canonicalAuditTeacher, sheetName, auditLoginId) : false;
+      });
       if (lite) payload = toLitePayload_(payload);
       return jsonOutput_({ ok: true, data: payload, viewLogged: viewLogged }, params);
     }
@@ -227,6 +302,7 @@ function jsonOutput_(obj, params) {
   if (params && params._requestId) {
     obj.requestId = params._requestId;
     obj.serverMs = Math.max(0, Date.now() - params._serverStartedAt);
+    obj.stageMs = params._stageMs || {};
   }
   var callback = String((params && params.callback) || "").trim();
   if (callback) {
@@ -689,6 +765,7 @@ function authenticateTeacher(id, password, idToken, deferRoster) {
       isMaster: false,
       isLookup: true,
       lookupRoomToken: issueLookupRoomToken_(),
+      snapshotLookupToken: issueSnapshotLookupToken_(),
       role: "LOOKUP",
       teacherNames: []
     };

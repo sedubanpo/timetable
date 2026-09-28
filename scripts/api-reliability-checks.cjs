@@ -10,9 +10,13 @@ function fixture(){
 }
 async function main(){
  let f=fixture(),p=f.ctx.apiJsonp({action:'grid',idToken:'SECRET',sheet:'PRIVATE'},{timeoutMs:25000,retries:1});
- f.advance(31500);assert.equal(f.scripts.length,2);f.reply(0,{ok:true,data:{version:'late'}});assert.equal((await p).data.version,'late');
- f.reply(1,{ok:true,data:{version:'ignored'}});f.advance(65000);
+ f.advance(60000);assert.equal(f.scripts.length,1);f.reply(0,{ok:true,data:{version:'late'}});assert.equal((await p).data.version,'late');
+ f.advance(65000);
  assert(!JSON.stringify(f.window.__seduApiDiagnostics).includes('SECRET'));assert(!JSON.stringify(f.window.__seduApiDiagnostics).includes('PRIVATE'));
+ f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1});f.scripts[0].onerror();f.advance(1500);
+ assert.equal(f.scripts.length,2);f.reply(1,{ok:true,stageMs:{authorization:12,grid:5,audit:0,private:'SECRET'}});
+ await p;assert.equal(f.window.__seduApiDiagnostics.at(-1).stageMs.grid,5);
+ assert(!JSON.stringify(f.window.__seduApiDiagnostics).includes('SECRET'));
  f=fixture();p=f.ctx.apiJsonp({action:'teacher_view_override_set'},{timeoutMs:15000,retries:1}).catch(e=>e);
  f.scripts[0].onerror();f.advance(64000);assert.equal(f.scripts.length,1);f.advance(65000);
  assert.equal((await p).code,'API_NETWORK');
@@ -20,19 +24,20 @@ async function main(){
  f.reply(0,{ok:false,error:'Service temporarily unavailable'});f.advance(1500);assert.equal(f.scripts.length,2);
  f.reply(1,{ok:true});assert.equal((await p).ok,true);
  f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1});
- f.advance(31500);f.reply(0,{ok:false,error:'Service temporarily unavailable'});
+ f.advance(30000);f.reply(0,{ok:false,error:'Service temporarily unavailable'});f.advance(31500);
  f.reply(1,{ok:true,data:{version:'second'}});assert.equal((await p).data.version,'second');
  f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1});f.reply(0,{ok:false,error:'UNAUTHORIZED'});assert.equal((await p).error,'UNAUTHORIZED');f.advance(65000);assert.equal(f.scripts.length,1);
- f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1}).catch(e=>e);f.advance(65000);assert.equal((await p).code,'API_TIMEOUT');assert.equal(f.scripts.length,2);
+ f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1}).catch(e=>e);f.advance(65000);assert.equal((await p).code,'API_TIMEOUT');assert.equal(f.scripts.length,1);
  const app=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(s=>s.trim()).pop();
- const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{style:{},value:'',classList:{add(){},remove(){}}});return elements.get(id);};
+ const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{setAttribute(){},style:{},value:'',classList:{add(){},remove(){}}});return elements.get(id);};
  const s={window:{innerWidth:1440,addEventListener(){}},document:{getElementById:el,addEventListener(){},body:{classList:{add(){},remove(){}}}},localStorage:{getItem(){return null;}},console,alert(){},setTimeout(){},clearTimeout(){},setInterval(){},clearInterval(){},URLSearchParams,Date,Promise,Set,Map};
  vm.createContext(s);vm.runInContext(app,s);
  const run=c=>vm.runInContext(c,s),flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
  run('renderTable=d=>{globalThis.renderedVersion=d.version;};');
  run(`authState={loggedIn:true,isMaster:true,loginId:'qa'};getActiveTeacherName=()=>'';closeOperationMemoAlert=clearOperationMemoHighlights=renderOperationCommonMemos=calendarSync=recordTeacherViewAfterSuccessfulLoad=()=>{};isTeacherViewActive=()=>false;globalThis.applied=[];processData=d=>{lastData=d;applied.push(d.version);};callServer=()=>Promise.resolve({headers:['room'],grid:{},version:'good'});loadData('day',true);`);
  await flush();assert.equal(run('lastData.version'),'good');
- run(`callServer=()=>Promise.reject(Error('API failure'));loadData('day',true);`);await flush();assert.equal(run('lastData.version'),'good');assert.equal(s.applied.length,1);assert(el('updateText').textContent.includes('갱신 실패'));
+ let alerts=0;s.alert=()=>alerts++;
+ run(`callServer=()=>Promise.reject(Error('API failure'));loadData('day',true);`);await flush();assert.equal(run('lastData.version'),'good');assert.equal(s.applied.length,1);assert(el('updateText').textContent.includes('갱신 실패'));assert.equal(alerts,0);
  run(`callServer=()=>Promise.resolve({error:'native server error'});loadData('day',true);`);await flush();assert.equal(run('lastData.version'),'good');
  run(`loadData('different-day',true);`);await flush();assert.equal(run('lastData.version'),'ERROR');
  run(`loadData('day',true);`);await flush();assert.equal(s.renderedVersion,'good');assert.equal(run('currentVersion'),'good');

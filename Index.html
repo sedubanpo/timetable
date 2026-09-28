@@ -373,6 +373,13 @@
       /* 메인 페이지 */
       #roomOverviewPage[hidden] { display:none; }
       #roomOverviewBtn { min-height:44px; }
+      #snapshotSaveBtn[hidden], .snapshot-notice[hidden] { display:none !important; }
+      .snapshot-notice { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px; background:#fff7ed; color:#7c2d12; border-bottom:1px solid #fed7aa; font-size:14px; }
+      .snapshot-notice > span { flex:1 1 240px; min-width:0; overflow-wrap:anywhere; }
+      .snapshot-notice button { min-height:40px; }
+      .snapshot-notice [hidden] { display:none !important; }
+      .snapshot-notice[data-source="live"] { background:#f3f6fb; color:#183b65; border-bottom-color:#dce5ef; }
+      #snapshotSourceLabel { font-size:12px; white-space:nowrap; }
       #roomOverviewTable caption { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
       #roomOverviewPage { position:fixed; inset:0; z-index:1100; background:#f7f9fc; color:#152343; display:flex; flex-direction:column; padding:16px; box-sizing:border-box; }
       .room-overview-head { display:flex; align-items:center; gap:18px; padding-bottom:12px; }
@@ -2039,6 +2046,9 @@
           <button id="attendanceInboxBtn" class="review-btn attendance-inbox-btn" onclick="openAttendanceInbox()" style="display:none;" title="보낸 출결과 접수·처리 기록 확인">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a2 2 0 00-2 2v9a2 2 0 002 2h3.586l2.707 2.707a1 1 0 001.414 0L13.414 16H17a2 2 0 002-2V5a2 2 0 00-2-2H3zm3 5a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg><span>출결 전달함</span><span id="attendanceInboxCount" class="attendance-inbox-count"></span>
           </button>
+          <button id="snapshotSaveBtn" class="review-btn" type="button" hidden onclick="saveScheduleSnapshot()" title="선택 날짜의 원본 시간표를 스냅샷으로 저장">
+            <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3h11l3 3v11H3zM6 3v5h7V3M6 17v-6h8v6"/></svg><span>스냅샷 저장</span>
+          </button>
           <button class="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 (F11)" aria-label="전체화면">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" /></svg><span>전체화면</span>
           </button>
@@ -2052,6 +2062,7 @@
           <button type="button" onclick="refreshData()">새로고침</button>
         </div>
       </div>
+      <div id="snapshotNotice" class="snapshot-notice" hidden role="status" aria-live="polite"><strong id="snapshotSourceLabel"></strong><span id="snapshotNoticeText"></span><button id="snapshotRetryBtn" type="button" class="nav-btn" onclick="refreshData()">최신 시간표 재시도</button></div>
       <div id="operationCommonMemoStrip" class="operation-common-memo-strip" aria-live="polite">
         <div class="operation-common-memo-icon">📣</div>
         <div id="operationCommonMemoContent" class="operation-common-memo-content"></div>
@@ -4241,6 +4252,15 @@
               setTimeout(function() { delete window[name]; }, 60000);
             });
             record(code || "response", startedAttempts, payload && payload.serverMs);
+            if (!code && payload && payload.stageMs) {
+              var diagnostics = window.__seduApiDiagnostics;
+              var entry = diagnostics[diagnostics.length - 1];
+              entry.stageMs = {};
+              ["authorization", "grid", "audit"].forEach(function(stage) {
+                var ms = Number(payload.stageMs[stage]);
+                if (isFinite(ms) && ms >= 0) entry.stageMs[stage] = ms;
+              });
+            }
             if (code) {
               var error = new Error((code === "API_NETWORK" ? "API 연결 실패" : "API 응답 시간 초과") + " [" + requestId + "]");
               error.code = code; error.requestId = requestId; reject(error);
@@ -4280,7 +4300,8 @@
               return encodeURIComponent(k) + "=" + encodeURIComponent(query[k]);
             }).join("&");
             // Keep all in-flight callbacks alive: a late first response can win.
-            if (maxAttempts > 1) timers.push(setTimeout(retry, attemptDelay));
+            // Slow is not failed: do not start another GAS execution while this one is pending.
+            // Retry only after onerror or an explicitly transient server response.
             record("start", index);
             document.head.appendChild(script);
           }
@@ -4396,8 +4417,13 @@
         roomOverviewData = null;
         document.getElementById('roomOverviewTable').innerHTML = '';
         document.getElementById('roomOverviewBuildings').innerHTML = '';
-        return callServer('getAuthenticatedRoomOccupancy', [roomOverviewSheet, !!force]).then(function(data) {
+        return withScheduleSnapshot(callServer('getAuthenticatedRoomOccupancy', [roomOverviewSheet, !!force]), roomOverviewSheet, '', function(result) {
+          if (request!==roomOverviewRequest || !authState.loggedIn || authState.loginId!==loginId) return;
+          roomOverviewData=result.data;renderRoomOverview();
+          status.textContent='저장본 표시 중 · '+new Date(result.savedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' 기준 · 최신 변경은 반영되지 않았을 수 있습니다.';
+        }, true).then(function(data) {
           if (request !== roomOverviewRequest || !authState.loggedIn || authState.loginId !== loginId) return;
+          if (data && data.__snapshotHandled) return;
           if (!data || !Array.isArray(data.rooms) || !Array.isArray(data.rows)) throw new Error('INVALID_OCCUPANCY');
           roomOverviewData = data;
           status.textContent = data.rows.some(function(row) { return row.cells.some(function(cell) { return cell.occupied; }); }) ? '' : '이 날짜에는 등록된 수업이 없습니다.';
@@ -4406,6 +4432,8 @@
           if (first) first.scrollIntoView({block:'center',inline:'center'});
         }).catch(function() {
           if (request !== roomOverviewRequest || authState.loginId !== loginId) return;
+          roomOverviewData=null;
+          document.getElementById('roomOverviewTable').innerHTML='';
           status.textContent = '시간표를 불러오지 못했습니다. 새로고침 후에도 계속되면 다시 로그인해 주세요.';
         }).finally(function() { if (request === roomOverviewRequest) button.disabled = false; });
       }
@@ -4895,6 +4923,7 @@
           authState.loginId = res.loginId || loginId;
           authState.dashboardAdminToken = res.dashboardAdminToken || "";
           authState.lookupRoomToken = res.lookupRoomToken || "";
+          authState.snapshotLookupToken = res.snapshotLookupToken || "";
           authState.teacherRosterUnavailable = !!res.teacherRosterUnavailable;
           if (!authState.isMaster && !authState.isLookup) accessMode = "teacher";
           startAttendanceRealtime();
@@ -5219,6 +5248,8 @@
         });
       }
       function applyRoleUi() {
+        updateSnapshotSaveAccess();
+        if (!authState.loggedIn) { snapshotView=null; setSnapshotNotice(null); }
         var roomButton = document.getElementById('roomOverviewBtn');
         if (roomButton) roomButton.style.display = authState.loggedIn ? '' : 'none';
         if (!authState.loggedIn) closeRoomOverview(false);
@@ -5650,6 +5681,96 @@
         });
       }
       var lastSuccessfulSchedule = null;
+      // Independent Firebase endpoint: reading a saved copy never calls Apps Script.
+      var snapshotView = null, snapshotSaveBusy = false;
+      var SNAPSHOT_API_URL = 'https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableSnapshotApi';
+      function snapshotRequest(action, sheet, teacher) {
+        var session = getScheduleSessionKey();
+        var controller = new AbortController();
+        var timer = setTimeout(function(){controller.abort();}, action === 'save' ? 95000 : 12000);
+        return Promise.resolve().then(function() {
+          if (!authState.loggedIn) throw new Error('UNAUTHORIZED');
+          if (authState.isLookup) {
+            if (!authState.snapshotLookupToken) throw new Error('LOOKUP_RELOGIN_REQUIRED');
+            return { lookupToken:authState.snapshotLookupToken };
+          }
+          return getLiveFirebaseAuth().then(function(auth) {
+            if (!auth.currentUser) throw new Error('UNAUTHORIZED');
+            return auth.currentUser.getIdToken().then(function(token){return {token:token};});
+          });
+        }).then(function(identity) {
+          if (controller.signal.aborted || session !== getScheduleSessionKey()) throw new Error('SESSION_CHANGED');
+          return fetch(SNAPSHOT_API_URL, {method:'POST',signal:controller.signal,cache:'no-store',
+            headers:Object.assign({'Content-Type':'application/json'},identity.token?{Authorization:'Bearer '+identity.token}:{}),
+            body:JSON.stringify({action:action,sheet:sheet,teacher:teacher||'',lookupToken:identity.lookupToken||''})});
+        }).then(function(response){return response.json();}).then(function(result){
+          if (session !== getScheduleSessionKey()) throw new Error('SESSION_CHANGED');
+          if (!result || !result.ok) throw new Error(result && result.error || 'SNAPSHOT_UNAVAILABLE');
+          return result;
+        }).finally(function(){clearTimeout(timer);});
+      }
+      function setSnapshotNotice(savedAt, message) {
+        var bar = document.getElementById('snapshotNotice');
+        if (!bar) return;
+        var backupAt = savedAt || (snapshotView && snapshotView.savedAt);
+        var liveReady = typeof lastSuccessfulSchedule !== 'undefined' && lastSuccessfulSchedule && lastSuccessfulSchedule.sheet === currentSheetName && lastSuccessfulSchedule.session === getScheduleSessionKey();
+        bar.hidden = !backupAt && !message && !liveReady;
+        var label = document.getElementById('snapshotSourceLabel');
+        if (label) label.textContent = backupAt ? '백업 시간표' : (liveReady ? '실시간 시간표' : '시간표 확인 중');
+        bar.setAttribute('data-source', backupAt ? 'backup' : 'live');
+        var retry = document.getElementById('snapshotRetryBtn');
+        if (retry) retry.hidden = !backupAt;
+        savedAt = backupAt;
+        var stamp = savedAt ? new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(savedAt)) : '';
+        document.getElementById('snapshotNoticeText').textContent = message || (savedAt ? (stamp + ' 저장 · 최신 변경 내용은 반영되지 않았을 수 있습니다.' + (Date.now()-savedAt>7200000 ? ' · 저장 후 2시간이 지났습니다.' : '')) : '원본 조회 기준 · 자동 갱신');
+      }
+      function updateSnapshotSaveAccess() {
+        var button=document.getElementById('snapshotSaveBtn'), session=getScheduleSessionKey();
+        if (!button) return;
+        button.hidden=true;
+        if (!authState.loggedIn || authState.isLookup) return;
+        Promise.all([getLiveFirebaseAuth(),getLiveFirebaseFirestore()]).then(function(values){
+          var user=values[0].currentUser;
+          if (!user) return;
+          return values[1].collection('users').doc(user.uid).get({source:'server'}).then(function(doc){
+            if (session!==getScheduleSessionKey() || values[0].currentUser!==user) return;
+            var data=doc.exists?doc.data():{};
+            button.hidden=!(data.role==='ADMIN' && data.status==='ACTIVE');
+          });
+        }).catch(function(){});
+      }
+      function saveScheduleSnapshot() {
+        if (snapshotSaveBusy || !currentSheetName) return;
+        var button=document.getElementById('snapshotSaveBtn'), sheet=currentSheetName, session=getScheduleSessionKey();
+        snapshotSaveBusy=true;button.disabled=true;button.setAttribute('aria-busy','true');
+        setSnapshotNotice(null,'원본을 다시 읽어 저장하고 있습니다.');
+        return snapshotRequest('save',sheet).then(function(result){
+          if (session!==getScheduleSessionKey() || sheet!==currentSheetName) return;
+          if (!result.saved || !result.saved.some(function(item){return item.sheet===sheet;})) throw new Error('SAVE_FAILED');
+          if (snapshotView) setSnapshotNotice(snapshotView.savedAt);
+          else setSnapshotNotice(null,'스냅샷 저장 완료 · 다음 조회 지연 시 이 저장본을 사용할 수 있습니다.');
+        }).catch(function(error){
+          if (session!==getScheduleSessionKey() || sheet!==currentSheetName) return;
+          setSnapshotNotice(null,(snapshotView?'저장본 표시 중 · ':'')+(error.message==='SAVE_IN_PROGRESS'?'다른 저장 작업이 진행 중입니다. 잠시 후 다시 시도해 주세요.':'저장하지 못했습니다. 기존 저장본은 유지됩니다. 잠시 후 다시 시도해 주세요.'));
+        }).finally(function(){snapshotSaveBusy=false;button.disabled=false;button.removeAttribute('aria-busy');});
+      }
+      function withScheduleSnapshot(live, sheet, teacher, accept, roomView) {
+        var finished=false, pending=null;
+        function fallback(){
+          if (pending) return pending;
+          pending=snapshotRequest(roomView?'rooms':'read',sheet,teacher).then(function(result){
+            if (finished) return false;
+            if (!result.data || !Number.isFinite(result.savedAt) || Date.now()-result.savedAt>86400000 || result.savedAt>Date.now()+60000 || result.sheet!==sheet) return false;
+            accept(result);return true;
+          }).catch(function(){return false;});
+          return pending;
+        }
+        var timer=setTimeout(fallback,8000);
+        return live.then(function(value){finished=true;return value;},function(error){
+          if (/AUTH|FORBIDDEN|BLOCKED|권한|로그인/i.test(String(error && error.message))) {finished=true;throw error;}
+          return fallback().then(function(used){finished=true;if(used)return {__snapshotHandled:true};throw error;});
+        }).finally(function(){clearTimeout(timer);finished=true;});
+      }
       function loadData(n,r,requestOptions){
         var sessionKey = getScheduleSessionKey();
         if (scheduleInFlight && (!r || scheduleInFlight.force) && scheduleInFlight.sheet === n && scheduleInFlight.session === sessionKey && scheduleInFlight.requestId === scheduleLoadSequence) {
@@ -5665,6 +5786,7 @@
           ? Number(requestOptions.attendanceManualRefreshId || 0)
           : 0;
         currentSheetName=n; 
+        if (!snapshotView || snapshotView.sheet!==n || snapshotView.session!==sessionKey) {snapshotView=null;setSnapshotNotice(null);}
         operationMemoState.dateKey = "";
         operationMemoState.items = [];
         operationMemoState.manualItems = [];
@@ -5688,8 +5810,10 @@
         var teacherName = getActiveTeacherName();
         var cacheKey = n + "::" + (teacherName || "__ALL__");
         if(!r&&clientCache[cacheKey]){ 
+          snapshotView=null;setSnapshotNotice(null);
           lastSuccessfulSchedule = { sheet: n, session: sessionKey, data: clientCache[cacheKey] };
           processData(clientCache[cacheKey], r, attendanceManualRefreshId);
+          setSnapshotNotice(null);
           return; 
         } 
 
@@ -5697,18 +5821,33 @@
         var params = teacherName ? [n, teacherName, r] : [n, r];
         var flight = { sheet: n, session: sessionKey, requestId: requestId, force: !!r, attendanceManualRefreshId: attendanceManualRefreshId };
         scheduleInFlight = flight;
-        flight.promise = callServer(method, params).then(function(d){
+        flight.promise = withScheduleSnapshot(callServer(method, params).then(function(value){
+          if (!value || value.error) throw new Error(value && value.error || '시간표 응답이 비어 있습니다.');
+          return value;
+        }), n, teacherName, function(result) {
           if (!isCurrentLoad()) return;
+          snapshotView={sheet:n,session:sessionKey,savedAt:result.savedAt};
+          // Saved data is display-only; never enter live caches or acknowledge desk replies.
+          processData(result.data, false, 0);
+          setSnapshotNotice(result.savedAt);
+        }, false).then(function(d){
+          if (!isCurrentLoad()) return;
+          if (d && d.__snapshotHandled) return;
           attendanceManualRefreshId = flight.attendanceManualRefreshId;
           if (!d || d.error) throw new Error(d && d.error || "시간표 응답이 비어 있습니다.");
+          snapshotView=null;setSnapshotNotice(null);
           if (d && !d.error && !d.__teacherViewLogged) recordTeacherViewAfterSuccessfulLoad(teacherName || authState.teacherName, n);
           if (d && !d.error) {
             clientCache[cacheKey]=d;
             lastSuccessfulSchedule = { sheet: n, session: sessionKey, data: d };
           }
           processData(d, r, attendanceManualRefreshId);
+          setSnapshotNotice(null);
         }).catch(function(err){
           if (!isCurrentLoad()) return;
+          if (snapshotView && /AUTH|FORBIDDEN|BLOCKED|권한|로그인/i.test(String(err && err.message))) {
+            snapshotView=null;setSnapshotNotice(null);lastSuccessfulSchedule=null;
+          }
           attendanceManualRefreshId = flight.attendanceManualRefreshId;
           var retained = lastSuccessfulSchedule && lastSuccessfulSchedule.sheet === n && lastSuccessfulSchedule.session === sessionKey;
           if (retained) {
@@ -5730,7 +5869,7 @@
           } else {
             processData({ error: true, headers: [], grid: {}, version: "ERROR" }, r, attendanceManualRefreshId);
           }
-          alert((retained ? "시간표 갱신 실패: 이전 시간표를 표시합니다. 새로고침해 주세요.\n" : "시간표를 불러오지 못했습니다. 새로고침해 주세요.\n") + (err && err.message ? err.message : err));
+          if (!retained) alert("시간표를 불러오지 못했습니다. 새로고침해 주세요.\n" + (err && err.message ? err.message : err));
         }).finally(function() {
           if (scheduleInFlight === flight) scheduleInFlight = null;
         });
@@ -5743,6 +5882,7 @@
           if (scheduleLoadSucceeded) document.getElementById('updateText').textContent = '업데이트 확인됨!';
           if(!d || d.error) { d = { headers: [], grid: {}, version: "ERROR" }; } 
           lastData=d; 
+          setSnapshotNotice(snapshotView && snapshotView.savedAt);
           resetVisitorLookupIndexCache();
           visitorLookupStudyRefreshing = false;
           currentVersion=String(d.version || "").split("_T_")[0]; 
@@ -5792,6 +5932,7 @@
       function checkUpdate(){
         var c=document.getElementById('mainSheetSelector').value;
         if(!c || versionCheckPending || document.hidden || document.getElementById('mainPage').style.display === 'none') return;
+        if (snapshotView) { if (!scheduleInFlight) loadData(c,true); return; }
         var sessionKey = getScheduleSessionKey();
         var requestId = scheduleLoadSequence;
         versionCheckPending = true;

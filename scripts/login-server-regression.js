@@ -32,6 +32,7 @@ vm.createContext(scope);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../Code.gs'),'utf8'),scope);
 scope.attachDashboardAdminSession_=x=>x;
 scope.issueLookupRoomToken_=()=> 'lookup-test-capability';
+scope.issueSnapshotLookupToken_=()=> 'snapshot-test-capability';
 scope.isApiAuthorized_=()=>true;
 let checks=0;
 function check(fn){fn();checks++;}

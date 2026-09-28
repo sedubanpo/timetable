@@ -41,6 +41,7 @@ async function lifecycle(){
   const client={roomOverviewRequest:0,roomOverviewData:null,roomOverviewSheet:'9/26',authState:{loggedIn:true,loginId:'teacher'},
     document:{getElementById:id=>elements[id],querySelector:()=>null},
     callServer:()=>fail?Promise.reject(Error('offline')):new Promise(resolve=>resolveRead=resolve),
+    withScheduleSnapshot:live=>live,
     renderRoomOverview(){rendered++;}
   };
   vm.createContext(client);vm.runInContext(extract('loadRoomOverview')+'\n'+extract('closeRoomOverview'),client);

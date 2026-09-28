@@ -1,0 +1,3 @@
+{
+  "functions": [{ "source": "snapshot-functions", "codebase": "live-timetable-snapshots" }]
+}

@@ -1,5 +1,9 @@
 # Live Timetable Design Tokens
 
+## Snapshot fallback — 2026-09-28
+
+Preserve the operational toolbar and table. The ADMIN-only snapshot save button uses the existing icon-above-small-label control. A separate wrapping status strip beneath the toolbar identifies a saved copy with its Korean-time capture timestamp, warns after 2 hours, and retains a 40px retry control. Use a quiet warm surface (#fff7ed), dark readable text (#7c2d12), and a bottom separator (#fed7aa), never a decorative side stripe or modal. Announce changes through a polite status region; keep saved-view disclosure visible until a live response succeeds. No new animation or raster assets. Desktop and 390px mobile synthetic fixtures verified the status strip and save/failure/retry states.
+
 Current no-scroll toolbar spacing: 3px gaps, 52px countdown, 2px horizontal clock/countdown margins, 4px action padding. Search retains DOM order before attendance messages at tablet widths as well as desktop/mobile. Earlier dated receipts below describe superseded arrangements where they conflict with the latest refinement.
 
 ## Toolbar arrangement — 2026-09-16
