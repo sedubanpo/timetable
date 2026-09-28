@@ -33,6 +33,7 @@
 ### 재점검 및 내결함성 개선 · 2026-09-28
 
 - 이전 운영 실패 두 건은 14:32 UTC(28.10초), 14:35 UTC(36.60초)에 일반 `UNAVAILABLE`만 남겼다. 원본 요청 제한 75초보다 짧으며, 당시 로그로는 전송 오류·JSON 변환 오류·Firestore 오류를 확정할 수 없다. 타임아웃으로 단정하지 않는다. 14:41 UTC 실행은 HTTP 200, 16.09초에 완료됐다.
+- 9/29 00:00 KST 구 버전 작업에서 실패가 재현됐다. `snapshotSourceFormat`에 HTTP 200 / `text/html; charset=utf-8`이 기록되어 Apps Script 원본 경로가 JSON 대신 HTML을 반환했음을 확인했다. 이 재현의 실패 지점은 확정됐지만, 앞선 두 실행도 같은 내부 원인이었는지는 소급 확정할 수 없다. 00:03 KST 새 버전 실행은 15.39초에 정상 완료되어 9/29·9/30 두 건 저장을 확인했다. HTML 본문은 저장하지 않고 실행 제한/요청 제한/인증 페이지/Google 오류 페이지 등의 고정 분류만 기록하도록 보강했다.
 - 자동 저장은 기존 2시간 주기를 유지하고 실패 시 60~120초 간격으로 최대 두 번 재시도한다. 최대 재시도 기간은 0으로 설정해 횟수 제한을 정확히 적용한다. 수동 저장과 겹치는 자동 작업도 조용히 건너뛰지 않고 재시도한다. [Cloud Scheduler 재시도 설정](https://docs.cloud.google.com/scheduler/docs/configuring/retry-jobs)
 - 실행 ID, 단계(임대/원본/검증/저장/목록/임대 해제), 안전한 오류 분류, 소요 시간만 기록한다. 개인정보·비밀값·원본 본문·원시 오류 메시지는 기록하지 않는다. 실패해도 마지막 정상 백업은 유지된다.
 - 엑셀 및 이미지 출력 라이브러리의 초기 `defer` 스크립트를 제거하고 내보내기를 누를 때 로드한다. 기존에는 이 스크립트가 `DOMContentLoaded`와 로그인/SSO 초기화를 지연시킬 수 있었다. 인증 SDK 로딩에는 20초 제한과 실패 후 새 요청으로 재시도하는 경로를 추가했다.
@@ -40,7 +41,7 @@
 - HOME은 로그인한 사용자를 캘린더로 돌려보낸다. 캘린더에 로그아웃을 표시하고 날짜를 Enter/Space로 선택할 수 있다.
 - 합성 CDN 지연 2초 시험: 기존 DOM 준비 2,050ms → 변경 후 17ms. 실제 Firebase 로그인 전체 시간이나 현장 기기 성능 수치가 아니다.
 - `scripts/entry-flow-ui-fixture.cjs`: 실제 페이지 UI에 합성 인증/시간표를 제공하고 원본 응답을 멈춘 채 PC와 390×844 모바일 흐름 검증. 모바일 문서 폭 390px, 백업 갱신 중 오버레이 없음, 실시간 라벨 복구 및 HOME 복귀 확인. 경고/오류 콘솔 없음. 자동 디자인 검사는 기존 전체 화면의 경고를 포함하므로 전체 디자인 무결성을 의미하지 않는다.
-- 추가 테스트: `node scripts/entry-resilience-test.cjs`, `node scripts/fast-entry-test.cjs`, `node scripts/snapshot-lifecycle-test.cjs`, 서버 11개 테스트 및 기존 17개 성능/기능 회귀 테스트 통과.
+- 추가 테스트: `node scripts/entry-resilience-test.cjs`, `node scripts/fast-entry-test.cjs`, `node scripts/snapshot-lifecycle-test.cjs`, 서버 12개 테스트(HTTP 200 HTML 거부·기존 백업 보존·복구 포함) 및 기존 17개 성능/기능 회귀 테스트 통과.
 
 ### 빠른 진입 개선 · 2026-09-28 배포
 

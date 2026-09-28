@@ -10,6 +10,14 @@ const core=require('./core');
 initializeApp();
 const secret=defineSecret('TIMETABLE_SNAPSHOT_SECRET');
 const source='https://script.google.com/macros/s/AKfycbyI3P-cTCEMrk0mqe3QTorgXQZGoaITzqs-oqCQQ3eIbsZofe8B3wj6WTruKaCfpmUIQA/exec';
+function sourceFormatKind(text) {
+  // Emit a fixed category only, never a title/body that could contain private data.
+  if (/maximum execution time/i.test(text)) return 'EXECUTION_LIMIT';
+  if (/too many requests|too many times|quota|rate limit/i.test(text)) return 'RATE_LIMIT';
+  if (/authorization is required|permission to access|accounts\.google\.com\/(?:ServiceLogin|v3\/signin)/i.test(text)) return 'AUTH_PAGE';
+  if (/Google Drive|Google Apps Script|unable to open|temporarily unavailable/i.test(text)) return 'GOOGLE_ERROR_PAGE';
+  return 'NON_JSON';
+}
 async function sync(sheet) {
   const db=getFirestore(), lease=db.collection('liveTimetableSnapshotJobs').doc('writer');
   const owner=crypto.randomUUID(), now=Date.now();
@@ -28,7 +36,12 @@ async function sync(sheet) {
     try { response=await fetch(source,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,signature}),signal:AbortSignal.timeout(75000)}); }
     catch(error) { console.warn('snapshotSourceTransport',{name:error.name||'Error',code:error.cause?.code||'UNKNOWN'});coreFail('SOURCE_UNAVAILABLE'); }
     if(!response.ok) {console.warn('snapshotSourceHttp',{status:response.status});coreFail('SOURCE_UNAVAILABLE');}
-    let payload;try{payload=await response.json();}catch{console.warn('snapshotSourceFormat',{status:response.status,contentType:response.headers?.get('content-type')||''});coreFail('SOURCE_UNAVAILABLE');}
+    const sourceText=await response.text();
+    let payload;try{payload=JSON.parse(sourceText);}catch{
+      console.warn('snapshotSourceFormat',{status:response.status,kind:sourceFormatKind(sourceText),
+        endpoint:String(response.url||'').startsWith('https://script.googleusercontent.com/')?'content':String(response.url||'').startsWith('https://script.google.com/')?'script':'other'});
+      coreFail('SOURCE_UNAVAILABLE');
+    }
     if(!payload.ok || !Array.isArray(payload.snapshots) || !payload.snapshots.length || payload.snapshots.length>2) coreFail('SOURCE_UNAVAILABLE');
     stage='validate';
     for(const snapshot of payload.snapshots) {
