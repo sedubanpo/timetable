@@ -21,9 +21,11 @@ async function sync(sheet) {
   try {
     const body=JSON.stringify({action:'snapshot_export',issuedAt:Date.now(),sheet:sheet||'',nonce:owner});
     const signature=crypto.createHmac('sha256',secret.value()).update(body).digest('base64url');
-    const response=await fetch(source,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,signature}),signal:AbortSignal.timeout(75000)});
+    let response;
+    try { response=await fetch(source,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,signature}),signal:AbortSignal.timeout(75000)}); }
+    catch(error) { console.warn('snapshotSourceTransport',{name:error.name||'Error',code:error.cause?.code||'UNKNOWN'});coreFail('SOURCE_UNAVAILABLE'); }
     if(!response.ok) coreFail('SOURCE_UNAVAILABLE');
-    const payload=await response.json();
+    let payload;try{payload=await response.json();}catch{console.warn('snapshotSourceFormat',{status:response.status,contentType:response.headers?.get('content-type')||''});coreFail('SOURCE_UNAVAILABLE');}
     if(!payload.ok || !Array.isArray(payload.snapshots) || !payload.snapshots.length || payload.snapshots.length>2) coreFail('SOURCE_UNAVAILABLE');
     for(const snapshot of payload.snapshots) {
       core.validate(snapshot);
