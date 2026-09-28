@@ -8,7 +8,7 @@ function fixture(){
   const ref=id=>({id,get:async()=>({exists:data.has(id),data:()=>data.get(id)})});
   const db={collection:c=>({doc:id=>ref(c+'/'+id),where:()=>({select:()=>({get:async()=>({docs:[...data].filter(([k])=>k.startsWith(c+'/')).map(([,d])=>({data:()=>d}))})})})}),runTransaction:async fn=>fn({get:r=>r.get(),set:(r,d)=>data.set(r.id,d),delete:r=>data.delete(r.id)})};
   data.set('users/u',{role:'ADMIN',status:'ACTIVE',name:'가상'});
-  const exports={},context={exports,console:{warn(){},error(){}},AbortSignal,Date,fetch:async(url,opts)=>{
+  const logs=[],exports={},context={exports,console:{warn(...a){logs.push(a);},error(...a){logs.push(a);},info(...a){logs.push(a);}},AbortSignal,Date,fetch:async(url,opts)=>{
     sourceCalls++;const envelope=JSON.parse(opts.body);assert.equal(envelope.signature,crypto.createHmac('sha256',secret).update(envelope.body).digest('base64url'));
     return {ok:true,json:async()=>failSource?{ok:false}:{ok:true,snapshots:[snapshot],sheets:[sheet,'10/3(토)'],catalogCapturedAt:now}};
   },require:name=>({
@@ -18,7 +18,7 @@ function fixture(){
   })[name]};
   vm.runInNewContext(fs.readFileSync(__dirname+'/index.js','utf8'),context);
   async function request(body,token='valid'){let status=200,result;await exports.timetableSnapshotApi({method:'POST',body,headers:{authorization:'Bearer '+token}},{set(){},status(s){status=s;return this;},json(v){result=v;return this;}});return {status,...result};}
-  return {data,sheet,snapshot,exports,request,fail(){failSource=true;},calls:()=>sourceCalls};
+  return {data,sheet,snapshot,exports,request,logs,fail(){failSource=true;},recover(){failSource=false;},calls:()=>sourceCalls};
 }
 test('manual ADMIN save, private read, failure preservation and fresh revocation',async()=>{
   const f=fixture();assert.equal((await f.request({action:'save',sheet:f.sheet})).ok,true);assert.equal(f.calls(),1);
@@ -31,9 +31,23 @@ test('manual ADMIN save, private read, failure preservation and fresh revocation
 });
 test('two-hour job and concurrent writer lease',async()=>{
   const f=fixture();assert.equal(f.exports.timetableSnapshotEveryTwoHours.config.schedule,'0 */2 * * *');
+  assert.equal(f.exports.timetableSnapshotEveryTwoHours.config.retryCount,2);
+  assert.equal(f.exports.timetableSnapshotEveryTwoHours.config.minBackoffSeconds,60);
+  assert.equal(f.exports.timetableSnapshotEveryTwoHours.config.maxRetrySeconds,0);
   await f.exports.timetableSnapshotEveryTwoHours();assert.equal(f.calls(),1);
   f.data.set('liveTimetableSnapshotJobs/writer',{owner:'other',until:Date.now()+100000});
   assert.equal((await f.request({action:'save',sheet:f.sheet})).status,409);assert.equal(f.calls(),1);
+  await assert.rejects(f.exports.timetableSnapshotEveryTwoHours(),/SNAPSHOT_SYNC_FAILED/,'busy scheduled job must retry instead of silently skipping today/tomorrow');
+});
+test('failed scheduled run preserves snapshots; retry can recover; diagnostics contain no source data',async()=>{
+  const f=fixture();await f.exports.timetableSnapshotEveryTwoHours();
+  f.fail();await assert.rejects(f.exports.timetableSnapshotEveryTwoHours(),/SNAPSHOT_SYNC_FAILED/);
+  assert.equal(f.data.has('liveTimetableSnapshotJobs/writer'),false);
+  assert.equal((await f.request({action:'read',sheet:f.sheet})).data.version,'v1');
+  const failure=f.logs.find(a=>a[0]==='snapshotSyncStage');assert.equal(failure[1].stage,'source');
+  assert.equal(failure[1].code,'SOURCE_UNAVAILABLE');
+  assert(!JSON.stringify(f.logs).includes('학생A'));assert(!JSON.stringify(f.logs).includes('fixture-secret'));
+  f.recover();await f.exports.timetableSnapshotEveryTwoHours();
 });
 test('bootstrap verifies fresh identity and returns date-only metadata without Apps Script',async()=>{
   const f=fixture();await f.request({action:'save',sheet:f.sheet});

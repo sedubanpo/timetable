@@ -1,5 +1,9 @@
 # Live Timetable Design Tokens
 
+## Entry resilience — 2026-09-28
+
+Preserve the existing visual language. A visible, authorized timetable remains usable during refresh; loading overlays are for first entry or a different date only. Backup-to-live replacement preserves the viewport rather than jumping to the current hour. HOME returns authenticated users to the calendar; logout remains on that calendar. Active dates support Enter/Space. Export dependencies load only on export, not before DOM readiness or SSO. SDK failures have a bounded wait and a working retry. PC and 390px synthetic teacher flows verified login, calendar, backup, failed origin, nonblocking refresh and live recovery; no production teacher password was used.
+
 ## Snapshot-first entry — 2026-09-28
 
 Keep the existing calendar layout. Display verified saved date names immediately; refresh the original catalog without an overlay or forced navigation. Use a small polite status line and existing 40px retry button for unavailable catalogs. Teachers enter their calendar directly after verified sign-in. Day entry queries snapshots immediately, retaining the explicit backup source label until the original response succeeds. Desktop and mobile synthetic checks keep the origin pending to verify calendar interaction; this is not a production latency benchmark.

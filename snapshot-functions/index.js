@@ -13,30 +13,45 @@ const source='https://script.google.com/macros/s/AKfycbyI3P-cTCEMrk0mqe3QTorgXQZ
 async function sync(sheet) {
   const db=getFirestore(), lease=db.collection('liveTimetableSnapshotJobs').doc('writer');
   const owner=crypto.randomUUID(), now=Date.now();
+  let stage='lease';
+  try {
   await db.runTransaction(async tx=>{
     const current=await tx.get(lease);
     if(current.exists && current.data().until>now) coreFail('SAVE_IN_PROGRESS');
     tx.set(lease,{owner,until:now+180000});
   });
   try {
+    stage='source';
     const body=JSON.stringify({action:'snapshot_export',issuedAt:Date.now(),sheet:sheet||'',nonce:owner});
     const signature=crypto.createHmac('sha256',secret.value()).update(body).digest('base64url');
     let response;
     try { response=await fetch(source,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,signature}),signal:AbortSignal.timeout(75000)}); }
     catch(error) { console.warn('snapshotSourceTransport',{name:error.name||'Error',code:error.cause?.code||'UNKNOWN'});coreFail('SOURCE_UNAVAILABLE'); }
-    if(!response.ok) coreFail('SOURCE_UNAVAILABLE');
+    if(!response.ok) {console.warn('snapshotSourceHttp',{status:response.status});coreFail('SOURCE_UNAVAILABLE');}
     let payload;try{payload=await response.json();}catch{console.warn('snapshotSourceFormat',{status:response.status,contentType:response.headers?.get('content-type')||''});coreFail('SOURCE_UNAVAILABLE');}
     if(!payload.ok || !Array.isArray(payload.snapshots) || !payload.snapshots.length || payload.snapshots.length>2) coreFail('SOURCE_UNAVAILABLE');
+    stage='validate';
     for(const snapshot of payload.snapshots) {
       core.validate(snapshot);
       if(sheet ? snapshot.sheet!==sheet : !core.dates().includes(snapshot.date)) coreFail('INVALID_SNAPSHOT');
     }
     const saved=[];
+    stage='save';
     for(const snapshot of payload.snapshots) { await core.save(db,snapshot); saved.push({sheet:snapshot.sheet,savedAt:snapshot.capturedAt}); }
+    stage='catalog';
     await core.saveCatalog(db,payload.sheets,payload.catalogCapturedAt);
+    console.info('snapshotSyncComplete',{run:owner,elapsedMs:Date.now()-now,count:saved.length});
     return saved;
   } finally {
-    await db.runTransaction(async tx=>{const current=await tx.get(lease);if(current.data()?.owner===owner)tx.delete(lease);});
+    try {await db.runTransaction(async tx=>{const current=await tx.get(lease);if(current.data()?.owner===owner)tx.delete(lease);});}
+    catch(error){stage='release';throw error;}
+  }
+  } catch(error) {
+    // Never log raw upstream errors (which can contain URLs or response bodies).
+    const safeCodes=['SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','INVALID_SNAPSHOT','SNAPSHOT_TOO_LARGE','INVALID_SHEET'];
+    const code=safeCodes.includes(error.code)?error.code:(Number.isInteger(error.code)?'GRPC_'+error.code:'UNAVAILABLE');
+    console.warn('snapshotSyncStage',{run:owner,stage,code,elapsedMs:Date.now()-now});
+    throw error;
   }
 }
 function coreFail(code){const e=new Error(code);e.code=code;throw e;}
@@ -80,6 +95,7 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
     res.status(code==='UNAUTHORIZED'?401:code==='FORBIDDEN'?403:code==='SNAPSHOT_NOT_FOUND'?404:code==='SAVE_IN_PROGRESS'?409:503).json({ok:false,error:code});
   }
 });
-exports.timetableSnapshotEveryTwoHours=onSchedule({schedule:'0 */2 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',timeoutSeconds:120,memory:'256MiB',maxInstances:1,retryCount:0,secrets:[secret]},async()=>{
-  try {await sync('');}catch(error){if(error.code==='SAVE_IN_PROGRESS')return;console.error('timetableSnapshotSync',{code:error.code||'UNAVAILABLE'});throw new Error('SNAPSHOT_SYNC_FAILED');}
+// Duration stays zero so retryCount is the exact cap, not a minimum within a retry window.
+exports.timetableSnapshotEveryTwoHours=onSchedule({schedule:'0 */2 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',timeoutSeconds:120,memory:'256MiB',maxInstances:1,retryCount:2,minBackoffSeconds:60,maxBackoffSeconds:120,maxRetrySeconds:0,secrets:[secret]},async()=>{
+  try {await sync('');}catch(error){console.error('timetableSnapshotSync',{code:error.code==='SAVE_IN_PROGRESS'?'SAVE_IN_PROGRESS':'FAILED'});throw new Error('SNAPSHOT_SYNC_FAILED');}
 });

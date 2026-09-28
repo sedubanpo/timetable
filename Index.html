@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script defer src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <script defer src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script>
       window.SEDU_OPERATION_MEMO_CONFIG = {
         provider: "supabase",
@@ -2199,22 +2197,25 @@
           return [];
         }
       }
+      var liveExternalScriptLoads = Object.create(null);
       function loadLiveExternalScriptOnce(src, test) {
         if (test()) return Promise.resolve();
-        return new Promise(function(resolve, reject) {
-          var existing = document.querySelector('script[src="' + src + '"]');
-          if (existing) {
-            existing.addEventListener("load", resolve, { once: true });
-            existing.addEventListener("error", function() { reject(new Error("Firebase SDK를 불러오지 못했습니다.")); }, { once: true });
-            return;
+        if (liveExternalScriptLoads[src]) return liveExternalScriptLoads[src];
+        var pending=new Promise(function(resolve,reject){
+          var script=document.createElement('script'),timer;
+          function finish(error){
+            clearTimeout(timer);script.onload=script.onerror=null;
+            if(error){script.remove();reject(error);}else resolve();
           }
-          var script = document.createElement("script");
-          script.src = src;
-          script.async = true;
-          script.onload = resolve;
-          script.onerror = function() { reject(new Error("Firebase SDK를 불러오지 못했습니다.")); };
+          script.src=src;script.async=true;
+          script.onload=function(){finish(test()?null:new Error('로그인 연결 도구를 불러오지 못했습니다. 다시 시도해 주세요.'));};
+          script.onerror=function(){finish(new Error('로그인 서버 연결을 확인한 뒤 다시 시도해 주세요.'));};
+          timer=setTimeout(function(){finish(new Error('로그인 서버 연결이 지연됩니다. 다시 시도해 주세요.'));},20000);
           document.head.appendChild(script);
         });
+        liveExternalScriptLoads[src]=pending;
+        pending.catch(function(){if(liveExternalScriptLoads[src]===pending)delete liveExternalScriptLoads[src];});
+        return pending;
       }
       function getLiveFirebaseAuth() {
         if (liveFirebaseAuthPromise) return liveFirebaseAuthPromise;
@@ -5299,6 +5300,8 @@
         });
       }
       function applyRoleUi() {
+        var introLogin=document.querySelector(".intro-login-btn");
+        if(introLogin){introLogin.disabled=false;introLogin.textContent=authState.loggedIn?"로그아웃":"강사 로그인";introLogin.onclick=authState.loggedIn?logoutTeacher:openAuthModal;}
         updateSnapshotSaveAccess();
         if (!authState.loggedIn) { snapshotView=null; setSnapshotNotice(null); }
         var roomButton = document.getElementById('roomOverviewBtn');
@@ -5517,9 +5520,35 @@
          else line.style.display = 'none';
       }
       function toggleEmptyMode() { document.body.classList.toggle('empty-mode-active'); }
+      // Export tools must never delay DOM readiness, Firebase login or SSO.
+      var exportLibraryLoads = Object.create(null);
+      function ensureExportLibrary(name) {
+        var sources={html2canvas:'https://html2canvas.hertzen.com/dist/html2canvas.min.js',XLSX:'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js'};
+        if(!sources[name])return Promise.reject(new Error('알 수 없는 내보내기 도구입니다.'));
+        if(window[name])return Promise.resolve(window[name]);
+        if(exportLibraryLoads[name])return exportLibraryLoads[name];
+        var pending=new Promise(function(resolve,reject){
+          var script=document.createElement('script'),timer;
+          function finish(error){
+            clearTimeout(timer);script.onload=script.onerror=null;
+            if(error){script.remove();reject(error);}else resolve(window[name]);
+          }
+          script.async=true;script.src=sources[name];
+          script.onload=function(){finish(window[name]?null:new Error('내보내기 도구를 불러오지 못했습니다.'));};
+          script.onerror=function(){finish(new Error('내보내기 도구를 불러오지 못했습니다. 다시 시도해 주세요.'));};
+          timer=setTimeout(function(){finish(new Error('내보내기 도구 연결이 지연됩니다. 다시 시도해 주세요.'));},15000);
+          document.head.appendChild(script);
+        });
+        exportLibraryLoads[name]=pending;
+        pending.catch(function(){if(exportLibraryLoads[name]===pending)delete exportLibraryLoads[name];});
+        return pending;
+      }
+      function renderExportCanvas(element, options) {
+        return ensureExportLibrary('html2canvas').then(function(render){return render(element,options);});
+      }
       function captureScheduleTableCanvas() {
         var element = document.getElementById('tableContainer');
-        return html2canvas(element, { scrollY: -window.scrollY, scale: 2, backgroundColor: "#ffffff", useCORS: true });
+        return renderExportCanvas(element, { scrollY: -window.scrollY, scale: 2, backgroundColor: "#ffffff", useCORS: true });
       }
       function captureScreen() {
         var btn = document.querySelector('.capture-btn');
@@ -5696,13 +5725,18 @@
           renderCalendar();
         }catch(e){console.error(e);} 
       }
-      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
+      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.setAttribute('role','button'); C.tabIndex=0; C.setAttribute('aria-label',(M+1)+'월 '+d+'일 시간표'); C.onclick=function(){handleDateClick(K);}; C.onkeydown=function(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();handleDateClick(K);}}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
       function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ s=s.filter(function(name){return !isLookupHiddenSheetName(name);}); if(!s.length)return; } if(s.length===1)loadData(s[0],true,true); else showVersionModal(s); }
       function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
       function nextMonth(){ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); }
-      function goHome(){ document.getElementById('mainPage').style.display='none'; document.getElementById('loginGate').style.display='flex'; if(pollingTimer)clearInterval(pollingTimer); }
+      function goHome(){
+        scheduleLoadSequence++;scheduleInFlight=null;
+        if(pollingTimer)clearInterval(pollingTimer);
+        if(authState.loggedIn){startAppAfterAuth();return;}
+        document.getElementById('mainPage').style.display='none';document.getElementById('loginGate').style.display='flex';
+      }
 
       function getTeacherViewAuditRequest(sheetName) {
         if (!authState.loggedIn || authState.isLookup) return null;
@@ -5812,7 +5846,7 @@
           pending=snapshotRequest(roomView?'rooms':'read',sheet,teacher).then(function(result){
             if (finished) return false;
             if (!result.data || !Number.isFinite(result.savedAt) || Date.now()-result.savedAt>86400000 || result.savedAt>Date.now()+60000 || result.sheet!==sheet) return false;
-            accept(result);return true;
+            return accept(result)!==false;
           }).catch(function(){return false;});
           return pending;
         }
@@ -5837,8 +5871,11 @@
         var attendanceManualRefreshId = requestOptions && typeof requestOptions === "object"
           ? Number(requestOptions.attendanceManualRefreshId || 0)
           : 0;
+        var retainDisplay = currentSheetName===n && (
+          (snapshotView && snapshotView.session===sessionKey && Date.now()-snapshotView.savedAt<86400000) ||
+          (lastSuccessfulSchedule && lastSuccessfulSchedule.sheet===n && lastSuccessfulSchedule.session===sessionKey));
         currentSheetName=n; 
-        if (!snapshotView || snapshotView.sheet!==n || snapshotView.session!==sessionKey) {snapshotView=null;setSnapshotNotice(null);}
+        if (!snapshotView || snapshotView.sheet!==n || snapshotView.session!==sessionKey || Date.now()-snapshotView.savedAt>=86400000) {snapshotView=null;setSnapshotNotice(null);}
         operationMemoState.dateKey = "";
         operationMemoState.items = [];
         operationMemoState.manualItems = [];
@@ -5851,12 +5888,12 @@
         document.getElementById('mainPage').style.display='flex'; 
         document.getElementById('mainSheetSelector').value=n; 
         calendarSync();
-        document.getElementById('loading').style.display='flex'; 
-        if (window.innerWidth <= 768) document.getElementById('mobileLoading').style.display = 'flex';
+        document.getElementById('loading').style.display=retainDisplay?'none':'flex';
+        document.getElementById('mobileLoading').style.display = !retainDisplay && window.innerWidth <= 768 ? 'flex' : 'none';
         document.getElementById('refreshBtn').classList.add('spinning'); 
         document.getElementById('updateAlert').style.display='none'; 
         document.getElementById('updateText').style.display='none'; 
-        if (isTeacherViewActive()) document.body.classList.add('loading-protected');
+        if (isTeacherViewActive() && !retainDisplay) document.body.classList.add('loading-protected');
         else document.body.classList.remove('loading-protected');
         
         var teacherName = getActiveTeacherName();
@@ -5878,27 +5915,31 @@
           return value;
         }), n, teacherName, function(result) {
           if (!isCurrentLoad()) return;
+          // Never replace an already visible live result with an older backup.
+          if (retainDisplay && lastSuccessfulSchedule && lastSuccessfulSchedule.sheet===n && lastSuccessfulSchedule.session===sessionKey) return false;
+          if (retainDisplay && snapshotView && snapshotView.savedAt>=result.savedAt) return true;
           snapshotView={sheet:n,session:sessionKey,savedAt:result.savedAt};
           // Saved data is display-only; never enter live caches or acknowledge desk replies.
-          processData(result.data, false, 0);
+          processData(result.data, false, 0, !!retainDisplay);
           setSnapshotNotice(result.savedAt);
         }, false).then(function(d){
           if (!isCurrentLoad()) return;
           if (d && d.__snapshotHandled) return;
           attendanceManualRefreshId = flight.attendanceManualRefreshId;
           if (!d || d.error) throw new Error(d && d.error || "시간표 응답이 비어 있습니다.");
+          var preserveDisplay=!!retainDisplay || !!snapshotView;
           snapshotView=null;setSnapshotNotice(null);
           if (d && !d.error && !d.__teacherViewLogged) recordTeacherViewAfterSuccessfulLoad(teacherName || authState.teacherName, n);
           if (d && !d.error) {
             clientCache[cacheKey]=d;
             lastSuccessfulSchedule = { sheet: n, session: sessionKey, data: d };
           }
-          processData(d, r, attendanceManualRefreshId);
+          processData(d, r, attendanceManualRefreshId, preserveDisplay);
           setSnapshotNotice(null);
         }).catch(function(err){
           if (!isCurrentLoad()) return;
-          if (snapshotView && /AUTH|FORBIDDEN|BLOCKED|권한|로그인/i.test(String(err && err.message))) {
-            snapshotView=null;setSnapshotNotice(null);lastSuccessfulSchedule=null;
+          if (/AUTH|FORBIDDEN|BLOCKED|권한|로그인/i.test(String(err && err.message))) {
+            snapshotView=null;setSnapshotNotice(null);lastSuccessfulSchedule=null;clientCache={};
           }
           attendanceManualRefreshId = flight.attendanceManualRefreshId;
           var retained = lastSuccessfulSchedule && lastSuccessfulSchedule.sheet === n && lastSuccessfulSchedule.session === sessionKey;
@@ -5928,7 +5969,7 @@
         return flight.promise;
       }
       
-      function processData(d, isRefresh, attendanceManualRefreshId){
+      function processData(d, isRefresh, attendanceManualRefreshId, preserveDisplay){
         try { 
           var scheduleLoadSucceeded = !!(d && !d.error);
           if (scheduleLoadSucceeded) document.getElementById('updateText').textContent = '업데이트 확인됨!';
@@ -5938,7 +5979,7 @@
           resetVisitorLookupIndexCache();
           visitorLookupStudyRefreshing = false;
           currentVersion=String(d.version || "").split("_T_")[0]; 
-          renderTable(d, isRefresh); 
+          renderTable(d, isRefresh || !!preserveDisplay);
           loadOperationMemosForCurrentSheet(true, { silent: true, refreshSlms: !!isRefresh });
           loadStudentEnrollmentStatusWarnings().then(function(updated) {
             if (updated && lastData === d) renderTable(d, true);
@@ -6855,7 +6896,7 @@
         if (!selectedAbsenceNoticeStudent) { alert("먼저 학생을 선택하세요."); return; }
         var target = document.getElementById('absenceNoticePreview');
         if (!target || !target.innerHTML.trim()) { alert("저장할 안내 이미지가 없습니다."); return; }
-        html2canvas(target, {
+        renderExportCanvas(target, {
           scale: Math.max(2, window.devicePixelRatio || 1),
           backgroundColor: "#ffffff",
           useCORS: true,
@@ -8779,7 +8820,7 @@
         if (!attendanceReportPayload) { alert("먼저 보고를 생성하세요."); return; }
         var target = document.getElementById("attendanceReportPreview");
         if (!target || !target.innerHTML.trim()) { alert("저장할 이미지가 없습니다."); return; }
-        html2canvas(target, {
+        renderExportCanvas(target, {
           scale: Math.max(2, window.devicePixelRatio || 1),
           backgroundColor: "#ffffff",
           useCORS: true,
@@ -11521,6 +11562,7 @@
         return parts.join("-");
       }
       function exportScheduleToExcel() {
+        if (typeof XLSX === "undefined") return ensureExportLibrary("XLSX").then(exportScheduleToExcel).catch(function(error){alert(error.message);});
         if (!lastData) { alert("데이터를 불러오는 중입니다..."); return; }
 
         var dateMatch = currentSheetName.match(/(\d+\/\d+\([가-힣]\))/);
@@ -11726,7 +11768,7 @@
         if (!selectedAbsenceNoticeStudent) { alert("먼저 학생을 선택하세요."); return; }
         if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem==="undefined") { alert("이 브라우저에서는 이미지 복사를 지원하지 않습니다. 이미지 저장을 이용해 주세요."); return; }
         var target=document.getElementById("absenceNoticePreview");
-        var blobPromise=waitForImagesInElement(target,3000).then(function(){return html2canvas(target,{scale:Math.max(2,window.devicePixelRatio||1),backgroundColor:"#ffffff",useCORS:true});}).then(function(canvas){return new Promise(function(resolve,reject){canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error("PNG_FAILED"));},"image/png");});});
+        var blobPromise=waitForImagesInElement(target,3000).then(function(){return renderExportCanvas(target,{scale:Math.max(2,window.devicePixelRatio||1),backgroundColor:"#ffffff",useCORS:true});}).then(function(canvas){return new Promise(function(resolve,reject){canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error("PNG_FAILED"));},"image/png");});});
         navigator.clipboard.write([new ClipboardItem({"image/png":blobPromise})]).then(function(){alert("이미지를 복사했습니다.");}).catch(function(){alert("이미지 복사가 허용되지 않았습니다. 브라우저 권한을 확인하거나 이미지 저장을 이용해 주세요.");});
       }
       function getExportTimeRange(entry, tolerance) {

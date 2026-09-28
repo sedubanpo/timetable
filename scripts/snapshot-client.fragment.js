@@ -78,7 +78,7 @@
           pending=snapshotRequest(roomView?'rooms':'read',sheet,teacher).then(function(result){
             if (finished) return false;
             if (!result.data || !Number.isFinite(result.savedAt) || Date.now()-result.savedAt>86400000 || result.savedAt>Date.now()+60000 || result.sheet!==sheet) return false;
-            accept(result);return true;
+            return accept(result)!==false;
           }).catch(function(){return false;});
           return pending;
         }
