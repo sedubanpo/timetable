@@ -1697,7 +1697,7 @@
       </div>
     </div>
     <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-bg">
-    <div id="introPage"><div class="intro-container"><div class="intro-left"><img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="intro-logo"><div class="intro-title">에스에듀 반포관<br>실시간 시간표</div><div class="guide-box"><div class="guide-item"><span class="guide-icon">📅</span><span>우측 달력에서 <strong>진한 날짜</strong>를 클릭하여 조회하세요.</span></div><div class="guide-item"><span class="guide-icon">🔍</span><span><strong>검색창</strong>을 통해 학생/강사를 빠르게 찾을 수 있습니다.</span></div><div class="guide-item"><span class="guide-icon">⚡</span><span>데이터는 <strong>30분마다 자동 업데이트</strong> 됩니다.</span></div><div class="guide-item"><span class="guide-icon">🎨</span><span>강의실별/선생님별로 <strong>색상</strong>이 구분됩니다.</span></div></div><button class="intro-login-btn" onclick="openAuthModal()">강사 로그인</button></div><div class="intro-right"><div id="introLoading"><div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div style="margin-top:10px; font-weight:bold; color:#555;">일정을 불러오는 중입니다...</div></div><div class="cal-header"><button class="cal-nav-btn" onclick="prevMonth()">&lt;</button><div class="cal-title" id="calTitle"></div><button class="cal-nav-btn" onclick="nextMonth()">&gt;</button></div><div id="calendarLoadStatus" role="status" aria-live="polite" style="font-size:13px;color:#42526b;margin:8px 0;min-height:20px"></div><button id="calendarRetryBtn" type="button" class="nav-btn" hidden onclick="startAppAfterAuth()">날짜 목록 다시 확인</button><div class="calendar-grid" id="calendarGrid"></div></div></div></div>
+    <div id="introPage"><div class="intro-container"><div class="intro-left"><img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="intro-logo"><div class="intro-title">에스에듀 반포관<br>실시간 시간표</div><div class="guide-box"><div class="guide-item"><span class="guide-icon">📅</span><span>우측 달력에서 <strong>진한 날짜</strong>를 클릭하여 조회하세요.</span></div><div class="guide-item"><span class="guide-icon">🔍</span><span><strong>검색창</strong>을 통해 학생/강사를 빠르게 찾을 수 있습니다.</span></div><div class="guide-item"><span class="guide-icon">⚡</span><span>데이터는 <strong>30분마다 자동 업데이트</strong> 됩니다.</span></div><div class="guide-item"><span class="guide-icon">🎨</span><span>강의실별/선생님별로 <strong>색상</strong>이 구분됩니다.</span></div></div><button class="intro-login-btn" onclick="openAuthModal()">강사 로그인</button></div><div class="intro-right"><div id="introLoading"><div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div style="margin-top:10px; font-weight:bold; color:#555;">일정을 불러오는 중입니다...</div></div><div class="cal-header"><button class="cal-nav-btn" onclick="prevMonth()">&lt;</button><div class="cal-title" id="calTitle"></div><button class="cal-nav-btn" onclick="nextMonth()">&gt;</button></div><div id="calendarLoadStatus" role="status" aria-live="polite" style="font-size:13px;color:#42526b;margin:8px 0;min-height:20px"></div><button id="calendarRetryBtn" type="button" class="nav-btn" hidden onclick="startAppAfterAuth(true)">날짜 목록 새로고침</button><div class="calendar-grid" id="calendarGrid"></div></div></div></div>
     
     <div id="versionModal"><div class="modal-box"><div class="modal-title">시간표 버전을 선택하세요</div><div class="version-list" id="versionList"></div><div class="close-modal" onclick="closeModal()">취소</div></div></div>
     <div id="messageModal"><div class="msg-box"><div class="modal-title">등원 안내 문자 생성 완료 🎉</div><div style="color:#666; font-size:0.85rem; margin-bottom:10px;">* 아래 내용을 복사해서 사용하세요.</div><textarea id="generatedMsg" class="msg-textarea" readonly></textarea><button class="msg-copy-btn" onclick="copyMessage()">📋 전체 복사하기</button><div class="close-modal" onclick="closeMsgModal()">닫기</div></div></div>
@@ -4874,7 +4874,7 @@
           return response.json();
         }).then(function(result){
           if(!result.ok || !result.identity || !result.identity.firebaseUid)throw new Error('BOOTSTRAP_UNAVAILABLE');
-          return Object.assign({},result.identity,{startupSheets:result.sheets||[],startupSavedSheets:result.savedSheets||[]});
+          return Object.assign({},result.identity,{startupSheets:result.sheets||[],startupSavedSheets:result.savedSheets||[],startupCatalogSavedAt:result.catalogSavedAt||0});
         }).catch(function(error){
           if(error.code==='ACCESS_DENIED')throw error;
           // Compatibility path for unavailable/not-yet-deployed fast API; never on a denial.
@@ -4883,7 +4883,7 @@
       }
       function rememberTimetableBootstrap(res) {
         clientCache={};lastSuccessfulSchedule=null;snapshotView=null;scheduleLoadSequence++;
-        timetableStartup={loginId:res.loginId,sheets:Array.isArray(res.startupSheets)?res.startupSheets.slice():[]};
+        timetableStartup={loginId:res.loginId,sheets:Array.isArray(res.startupSheets)?res.startupSheets.slice():[],catalogSavedAt:Number(res.startupCatalogSavedAt)||0};
       }
       function setCalendarLoadStatus(text, retry) {
         var status=document.getElementById('calendarLoadStatus'),button=document.getElementById('calendarRetryBtn');
@@ -4896,7 +4896,7 @@
         saveSheetNamesCache(names);populateMainSheetSelector(currentSheetName);renderCalendar();calendarSync();
         return true;
       }
-      function startAppAfterAuth() {
+      function startAppAfterAuth(forceCatalog) {
         var sequence=++timetableStartupSequence, session=getScheduleSessionKey(), liveApplied=false;
         document.getElementById('introPage').style.display='flex';
         document.getElementById('mainPage').style.display='none';
@@ -4904,6 +4904,13 @@
         var startup=timetableStartup && timetableStartup.loginId===authState.loginId ? timetableStartup.sheets : [];
         var initial=startup.length?startup:(sheetNamesLoaded?availableSheets:loadSheetNamesCache());
         initApp(initial);
+        // A verified recent catalog is already enough to draw the calendar. Avoid
+        // another Apps Script request on every login/Home; manual refresh is explicit.
+        var savedAt=startup.length && timetableStartup.catalogSavedAt;
+        if(!forceCatalog && savedAt && savedAt<=Date.now()+60000 && Date.now()-savedAt<7200000){
+          setCalendarLoadStatus('저장된 날짜 목록입니다. 새 날짜가 없으면 목록을 새로고침하세요.',true);
+          return Promise.resolve();
+        }
         setCalendarLoadStatus(initial.length?'날짜를 선택하세요. 최신 날짜 목록은 확인 중입니다.':'저장된 날짜 목록을 확인하고 있습니다.');
         function current(){return authState.loggedIn && sequence===timetableStartupSequence && session===getScheduleSessionKey();}
         // Both sources update only the calendar, never navigate away from an already-open day.
@@ -4913,6 +4920,7 @@
         callServer('getSheetNames',[]).then(function(names){
           if(!current())return;
           if(!applyStartupSheetNames(names))throw new Error('EMPTY_SHEETS');
+          timetableStartup={loginId:authState.loginId,sheets:names.slice(),catalogSavedAt:Date.now()};
           liveApplied=true;setCalendarLoadStatus('날짜를 선택하세요.');
           // Do not scan every sheet on entry. Availability is checked when a date is opened.
         }).catch(function(){
@@ -4950,7 +4958,7 @@ window.SeduHubAdapter={
   authState.teacherRosterUnavailable=!!res.teacherRosterUnavailable;
   availableTeacherNames=(res.teacherNames||[]).slice();startAttendanceRealtime();
   completeAccessSelection(res.isMaster?'all':'teacher');
-  const today=getTodaySheetNameFromMap(sheetMap);if(today)loadData(today,true,true);
+  const today=getTodaySheetNameFromMap(sheetMap);if(today)loadData(today,true,{preferServerCache:true});
  },async signOut(){await (await getLiveFirebaseAuth()).signOut();logoutTeacher();}
 };
       function submitTeacherLogin(source) {
@@ -5744,8 +5752,8 @@ window.SeduHubAdapter={
         }catch(e){console.error(e);} 
       }
       function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.setAttribute('role','button'); C.tabIndex=0; C.setAttribute('aria-label',(M+1)+'월 '+d+'일 시간표'); C.onclick=function(){handleDateClick(K);}; C.onkeydown=function(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();handleDateClick(K);}}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
-      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ s=s.filter(function(name){return !isLookupHiddenSheetName(name);}); if(!s.length)return; } if(s.length===1)loadData(s[0],true,true); else showVersionModal(s); }
-      function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,true);closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
+      function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ s=s.filter(function(name){return !isLookupHiddenSheetName(name);}); if(!s.length)return; } if(s.length===1)loadData(s[0],true,{preferServerCache:true}); else showVersionModal(s); }
+      function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,{preferServerCache:true});closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
       function prevMonth(){ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); }
       function nextMonth(){ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); }
@@ -5876,8 +5884,9 @@ window.SeduHubAdapter={
         }).finally(function(){clearTimeout(timer);finished=true;});
       }
       function loadData(n,r,requestOptions){
+        var forceOrigin=!!r && !(requestOptions && requestOptions.preferServerCache);
         var sessionKey = getScheduleSessionKey();
-        if (scheduleInFlight && (!r || scheduleInFlight.force) && scheduleInFlight.sheet === n && scheduleInFlight.session === sessionKey && scheduleInFlight.requestId === scheduleLoadSequence) {
+        if (scheduleInFlight && (!forceOrigin || scheduleInFlight.force) && scheduleInFlight.sheet === n && scheduleInFlight.session === sessionKey && scheduleInFlight.requestId === scheduleLoadSequence) {
           return scheduleInFlight.promise;
         }
         var requestId = ++scheduleLoadSequence;
@@ -5925,8 +5934,8 @@ window.SeduHubAdapter={
         } 
 
         var method = teacherName ? "getTeacherGridData" : "getFixedGridData";
-        var params = teacherName ? [n, teacherName, r] : [n, r];
-        var flight = { sheet: n, session: sessionKey, requestId: requestId, force: !!r, attendanceManualRefreshId: attendanceManualRefreshId };
+        var params = teacherName ? [n, teacherName, forceOrigin] : [n, forceOrigin];
+        var flight = { sheet: n, session: sessionKey, requestId: requestId, force: forceOrigin, attendanceManualRefreshId: attendanceManualRefreshId };
         scheduleInFlight = flight;
         flight.promise = withScheduleSnapshot(callServer(method, params).then(function(value){
           if (!value || value.error) throw new Error(value && value.error || '시간표 응답이 비어 있습니다.');
@@ -6043,7 +6052,7 @@ window.SeduHubAdapter={
       function checkUpdate(){
         var c=document.getElementById('mainSheetSelector').value;
         if(!c || versionCheckPending || document.hidden || document.getElementById('mainPage').style.display === 'none') return;
-        if (snapshotView) { if (!scheduleInFlight) loadData(c,true); return; }
+        if (snapshotView) { if (!scheduleInFlight) loadData(c,true,{preferServerCache:true}); return; }
         var sessionKey = getScheduleSessionKey();
         var requestId = scheduleLoadSequence;
         versionCheckPending = true;

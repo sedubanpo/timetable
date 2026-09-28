@@ -13,7 +13,7 @@
           return response.json();
         }).then(function(result){
           if(!result.ok || !result.identity || !result.identity.firebaseUid)throw new Error('BOOTSTRAP_UNAVAILABLE');
-          return Object.assign({},result.identity,{startupSheets:result.sheets||[],startupSavedSheets:result.savedSheets||[]});
+          return Object.assign({},result.identity,{startupSheets:result.sheets||[],startupSavedSheets:result.savedSheets||[],startupCatalogSavedAt:result.catalogSavedAt||0});
         }).catch(function(error){
           if(error.code==='ACCESS_DENIED')throw error;
           // Compatibility path for unavailable/not-yet-deployed fast API; never on a denial.
@@ -22,7 +22,7 @@
       }
       function rememberTimetableBootstrap(res) {
         clientCache={};lastSuccessfulSchedule=null;snapshotView=null;scheduleLoadSequence++;
-        timetableStartup={loginId:res.loginId,sheets:Array.isArray(res.startupSheets)?res.startupSheets.slice():[]};
+        timetableStartup={loginId:res.loginId,sheets:Array.isArray(res.startupSheets)?res.startupSheets.slice():[],catalogSavedAt:Number(res.startupCatalogSavedAt)||0};
       }
       function setCalendarLoadStatus(text, retry) {
         var status=document.getElementById('calendarLoadStatus'),button=document.getElementById('calendarRetryBtn');
@@ -35,7 +35,7 @@
         saveSheetNamesCache(names);populateMainSheetSelector(currentSheetName);renderCalendar();calendarSync();
         return true;
       }
-      function startAppAfterAuth() {
+      function startAppAfterAuth(forceCatalog) {
         var sequence=++timetableStartupSequence, session=getScheduleSessionKey(), liveApplied=false;
         document.getElementById('introPage').style.display='flex';
         document.getElementById('mainPage').style.display='none';
@@ -43,6 +43,13 @@
         var startup=timetableStartup && timetableStartup.loginId===authState.loginId ? timetableStartup.sheets : [];
         var initial=startup.length?startup:(sheetNamesLoaded?availableSheets:loadSheetNamesCache());
         initApp(initial);
+        // A verified recent catalog is already enough to draw the calendar. Avoid
+        // another Apps Script request on every login/Home; manual refresh is explicit.
+        var savedAt=startup.length && timetableStartup.catalogSavedAt;
+        if(!forceCatalog && savedAt && savedAt<=Date.now()+60000 && Date.now()-savedAt<7200000){
+          setCalendarLoadStatus('저장된 날짜 목록입니다. 새 날짜가 없으면 목록을 새로고침하세요.',true);
+          return Promise.resolve();
+        }
         setCalendarLoadStatus(initial.length?'날짜를 선택하세요. 최신 날짜 목록은 확인 중입니다.':'저장된 날짜 목록을 확인하고 있습니다.');
         function current(){return authState.loggedIn && sequence===timetableStartupSequence && session===getScheduleSessionKey();}
         // Both sources update only the calendar, never navigate away from an already-open day.
@@ -52,6 +59,7 @@
         callServer('getSheetNames',[]).then(function(names){
           if(!current())return;
           if(!applyStartupSheetNames(names))throw new Error('EMPTY_SHEETS');
+          timetableStartup={loginId:authState.loginId,sheets:names.slice(),catalogSavedAt:Date.now()};
           liveApplied=true;setCalendarLoadStatus('날짜를 선택하세요.');
           // Do not scan every sheet on entry. Availability is checked when a date is opened.
         }).catch(function(){

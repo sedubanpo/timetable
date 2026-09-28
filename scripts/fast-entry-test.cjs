@@ -9,7 +9,7 @@ const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
 function fixture(){
   let calls=[],elements=new Map(),resolveNames,resolveQuick;
   const el=id=>{if(!elements.has(id))elements.set(id,{style:{}});return elements.get(id);};
-  const c={Promise,Error,Object,Array,AbortController,setTimeout,clearTimeout,SNAPSHOT_API_URL:'https://example.invalid',
+  const c={Promise,Error,Object,Array,Date,AbortController,setTimeout,clearTimeout,SNAPSHOT_API_URL:'https://example.invalid',
     authState:{loggedIn:true,loginId:'teacher'},availableSheets:[],sheetNamesLoaded:false,currentSheetName:'',scheduleLoadSequence:0,
     document:{getElementById:el},getScheduleSessionKey:()=>c.authState.loginId,
     initApp:n=>{c.availableSheets=n;c.initial=n;},loadSheetNamesCache:()=>[],saveSheetNamesCache(){},buildSheetMapFromNames:n=>n,
@@ -32,6 +32,10 @@ function fixture(){
   f=fixture();f.c.fetch=async()=>{throw Error('network');};const p=f.c.authenticateTimetableFast('teacher','secret','token');await flush();assert.equal(f.calls[0].method,'authenticateTeacher');f.names({ok:true});await p;
   f=fixture();await f.c.startAppAfterAuth();f.c.authState.loginId='other';f.names(['private-old']);f.quick({sheets:['old']});await flush();assert.equal(f.c.availableSheets.length,0,'stale account callback ignored');
   f=fixture();await f.c.startAppAfterAuth();f.quick({sheets:['9/29(화)']});await flush();assert.equal(f.c.availableSheets[0],'9/29(화)','snapshot dates usable while original is pending');
+  f=fixture();f.c.rememberTimetableBootstrap({loginId:'teacher',startupSheets:['9/29(화)'],startupCatalogSavedAt:Date.now()-60000});
+  await f.c.startAppAfterAuth();assert.equal(f.calls.length,0,'recent catalog skips origin on login and Home');assert.equal(f.el('calendarRetryBtn').hidden,false);
+  await f.c.startAppAfterAuth(true);assert.equal(f.calls.length,1,'explicit calendar refresh still checks origin');
+  f=fixture();f.c.rememberTimetableBootstrap({loginId:'teacher',startupSheets:['9/29(화)'],startupCatalogSavedAt:Date.now()-7200001});await f.c.startAppAfterAuth();assert.equal(f.calls.length,1,'older catalog refreshes in background');
   const snapshotFragment=fs.readFileSync('scripts/snapshot-client.fragment.js','utf8');let delay;
   const timing={setTimeout:(fn,ms)=>{delay=ms;return 1;},clearTimeout(){},Date,Intl,Promise,Number};vm.createContext(timing);vm.runInContext(snapshotFragment,timing);
   timing.withScheduleSnapshot(new Promise(()=>{}),'9/28(월)','',()=>{},false);assert.equal(delay,0);

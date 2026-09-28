@@ -23,5 +23,8 @@ function tick(){for(const [id,t]of timers)if(t.ms===0){timers.delete(id);t.fn();
   c.live[3].resolve({version:'old-live'});c.live[4].resolve({headers:['room'],grid:{},version:'new-live'});await flush();assert.equal(run('lastData.version'),'new-live');
   run("snapshotRequest=(action,sheet)=>Promise.resolve({sheet,savedAt:Date.now(),data:{version:'older-backup'}});loadData('9/29(화)',true)");tick();await flush();assert.equal(run('lastData.version'),'new-live','visible live result is not downgraded to backup');
   c.live[5].reject(Error('FIREBASE_BLOCKED'));await flush();assert.equal(run('lastData.version'),'ERROR','revocation clears even a live cached view');assert.equal(run('Object.keys(clientCache).length'),0);
+  run("globalThis.calls=[];callServer=(method,params)=>{calls.push(params);return new Promise(()=>{});};loadData('9/30(수)',true,{preferServerCache:true})");
+  assert.equal(c.calls[0].at(-1),false,'ordinary date entry uses revision-checked origin cache');
+  run("loadData('9/30(수)',true)");assert.equal(c.calls[1].at(-1),true,'manual refresh still forces origin and supersedes non-force flight');
   console.log('PASS integrated snapshot display, live recovery, cache separation, timeout retention, revoked access clearing, stale account/date rejection');
 })().catch(e=>{console.error(e);process.exitCode=1;});
