@@ -40,7 +40,8 @@ function doPost(e) {
     if (different) throw new Error("UNAUTHORIZED");
     var request = JSON.parse(envelope.body);
     if (request.action !== "snapshot_export" || Math.abs(Date.now() - Number(request.issuedAt)) > 120000 || !isFinite(Number(request.issuedAt))) throw new Error("UNAUTHORIZED");
-    return jsonOutput_({ ok:true, snapshots:exportScheduleSnapshots_(String(request.sheet || "")) });
+    var snapshots = exportScheduleSnapshots_(String(request.sheet || ""));
+    return jsonOutput_({ ok:true, snapshots:snapshots, sheets:getSheetNames(), catalogCapturedAt:Date.now() });
   } catch (error) { return jsonOutput_({ ok:false, error:"SNAPSHOT_EXPORT_FAILED" }); }
 }
 

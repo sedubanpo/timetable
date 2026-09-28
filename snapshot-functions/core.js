@@ -81,4 +81,28 @@ async function read(db, sheet, who, teacher, roomView, now = Date.now()) {
   if (snap.sheet!==sheet || snap.date!==date) fail('INVALID_SNAPSHOT');
   return project(snap,who,teacher,roomView,now);
 }
-module.exports={COLLECTION,dates,dateForSheet,key,verifyLookup,identity,validate,project,save,read};
+function sheetNames(names) {
+  if (!Array.isArray(names) || names.length > 1500) return [];
+  return [...new Set(names.filter(s=>typeof s==='string' && s.length<=100 && /^\d{1,2}\/\d{1,2}(?:\(|\s|$)/.test(s)))];
+}
+async function saveCatalog(db, names, capturedAt, now=Date.now()) {
+  const sheets=sheetNames(names);
+  if (!sheets.length || !Number.isFinite(capturedAt) || capturedAt>now+60000 || now-capturedAt>MAX_AGE) return;
+  const ref=db.collection('liveTimetableSnapshotJobs').doc('catalog');
+  await db.runTransaction(async tx=>{
+    const old=await tx.get(ref);
+    if (old.exists && old.data().capturedAt>=capturedAt) return;
+    tx.set(ref,{sheets,capturedAt});
+  });
+}
+async function catalog(db, now=Date.now()) {
+  const [metadata,recent]=await Promise.all([
+    db.collection('liveTimetableSnapshotJobs').doc('catalog').get(),
+    db.collection(COLLECTION).where('capturedAt','>=',now-MAX_AGE).select('sheet','date','capturedAt').get()
+  ]);
+  const saved=recent.docs.map(d=>d.data()).filter(d=>d.capturedAt<=now+60000 && sheetNames([d.sheet]).length && d.date===dateForSheet(d.sheet,now));
+  const meta=metadata.data()||{};
+  const sheets=meta.capturedAt<=now+60000 && now-meta.capturedAt<=7*MAX_AGE ? sheetNames(meta.sheets) : [];
+  return {sheets:sheetNames(sheets.concat(saved.map(d=>d.sheet))),savedSheets:saved.map(d=>({sheet:d.sheet,savedAt:d.capturedAt})),catalogSavedAt:meta.capturedAt||null};
+}
+module.exports={COLLECTION,dates,dateForSheet,key,verifyLookup,identity,validate,project,save,read,sheetNames,saveCatalog,catalog};

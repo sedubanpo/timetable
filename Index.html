@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script defer src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script defer src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script>
       window.SEDU_OPERATION_MEMO_CONFIG = {
         provider: "supabase",
@@ -1671,7 +1671,7 @@
       <div class="gate-glass">
         <img class="gate-logo" src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" alt="SEDU">
         <div class="gate-title">시간표 접근 인증</div>
-        <div class="gate-sub">로그인 검증 후 접근 모드를 선택할 수 있습니다.</div>
+        <div class="gate-sub">강사 계정은 로그인 후 바로 시간표를 확인할 수 있습니다.</div>
         <label class="gate-field-label" for="gateIdInput">아이디 (휴대폰 번호)</label>
         <input id="gateIdInput" class="gate-input" type="text" inputmode="tel" autocomplete="username" placeholder="아이디 (휴대폰 번호)" onkeydown="if(event.key==='Enter') submitTeacherLogin('gate');">
         <label class="gate-field-label" for="gatePwInput">비밀번호</label>
@@ -1699,7 +1699,7 @@
       </div>
     </div>
     <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-bg">
-    <div id="introPage"><div class="intro-container"><div class="intro-left"><img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="intro-logo"><div class="intro-title">에스에듀 반포관<br>실시간 시간표</div><div class="guide-box"><div class="guide-item"><span class="guide-icon">📅</span><span>우측 달력에서 <strong>진한 날짜</strong>를 클릭하여 조회하세요.</span></div><div class="guide-item"><span class="guide-icon">🔍</span><span><strong>검색창</strong>을 통해 학생/강사를 빠르게 찾을 수 있습니다.</span></div><div class="guide-item"><span class="guide-icon">⚡</span><span>데이터는 <strong>30분마다 자동 업데이트</strong> 됩니다.</span></div><div class="guide-item"><span class="guide-icon">🎨</span><span>강의실별/선생님별로 <strong>색상</strong>이 구분됩니다.</span></div></div><button class="intro-login-btn" onclick="openAuthModal()">강사 로그인</button></div><div class="intro-right"><div id="introLoading"><div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div style="margin-top:10px; font-weight:bold; color:#555;">일정을 불러오는 중입니다...</div></div><div class="cal-header"><button class="cal-nav-btn" onclick="prevMonth()">&lt;</button><div class="cal-title" id="calTitle"></div><button class="cal-nav-btn" onclick="nextMonth()">&gt;</button></div><div class="calendar-grid" id="calendarGrid"></div></div></div></div>
+    <div id="introPage"><div class="intro-container"><div class="intro-left"><img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="intro-logo"><div class="intro-title">에스에듀 반포관<br>실시간 시간표</div><div class="guide-box"><div class="guide-item"><span class="guide-icon">📅</span><span>우측 달력에서 <strong>진한 날짜</strong>를 클릭하여 조회하세요.</span></div><div class="guide-item"><span class="guide-icon">🔍</span><span><strong>검색창</strong>을 통해 학생/강사를 빠르게 찾을 수 있습니다.</span></div><div class="guide-item"><span class="guide-icon">⚡</span><span>데이터는 <strong>30분마다 자동 업데이트</strong> 됩니다.</span></div><div class="guide-item"><span class="guide-icon">🎨</span><span>강의실별/선생님별로 <strong>색상</strong>이 구분됩니다.</span></div></div><button class="intro-login-btn" onclick="openAuthModal()">강사 로그인</button></div><div class="intro-right"><div id="introLoading"><div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div style="margin-top:10px; font-weight:bold; color:#555;">일정을 불러오는 중입니다...</div></div><div class="cal-header"><button class="cal-nav-btn" onclick="prevMonth()">&lt;</button><div class="cal-title" id="calTitle"></div><button class="cal-nav-btn" onclick="nextMonth()">&gt;</button></div><div id="calendarLoadStatus" role="status" aria-live="polite" style="font-size:13px;color:#42526b;margin:8px 0;min-height:20px"></div><button id="calendarRetryBtn" type="button" class="nav-btn" hidden onclick="startAppAfterAuth()">날짜 목록 다시 확인</button><div class="calendar-grid" id="calendarGrid"></div></div></div></div>
     
     <div id="versionModal"><div class="modal-box"><div class="modal-title">시간표 버전을 선택하세요</div><div class="version-list" id="versionList"></div><div class="close-modal" onclick="closeModal()">취소</div></div></div>
     <div id="messageModal"><div class="msg-box"><div class="modal-title">등원 안내 문자 생성 완료 🎉</div><div style="color:#666; font-size:0.85rem; margin-bottom:10px;">* 아래 내용을 복사해서 사용하세요.</div><textarea id="generatedMsg" class="msg-textarea" readonly></textarea><button class="msg-copy-btn" onclick="copyMessage()">📋 전체 복사하기</button><div class="close-modal" onclick="closeMsgModal()">닫기</div></div></div>
@@ -3585,7 +3585,7 @@
         return getLiveFirebaseAuth().then(function(auth) {
           var user = auth.currentUser;
           var expectedEmail = firebaseEmailForLoginId(loginResponse && loginResponse.loginId);
-          if (!user || String(user.email || "").toLowerCase() !== String(expectedEmail || "").toLowerCase()) {
+          if (!user || (loginResponse.firebaseUid ? user.uid !== loginResponse.firebaseUid : String(user.email || "").toLowerCase() !== String(expectedEmail || "").toLowerCase())) {
             throw new Error("Firebase 계정과 시간표 계정이 일치하지 않습니다. 다시 로그인해 주세요.");
           }
           return loginResponse;
@@ -4636,7 +4636,9 @@
         }
         return Promise.reject(new Error("지원하지 않는 서버 메서드: " + method));
       }
-      window.onload = function() { 
+      window.onload = function initializeTimetablePage() {
+        if(initializeTimetablePage.done)return;initializeTimetablePage.done=true;
+        getLiveFirebaseAuth().catch(function(){});
         setTimeout(function(){ var t=document.querySelector('.kakao-tooltip'); if(t) t.style.opacity=1; }, 1000);
         setTimeout(function(){ var t=document.querySelector('.kakao-tooltip'); if(t) t.style.opacity=0; }, 4000);
         updateClock(); setInterval(updateClock, 1000);
@@ -4657,6 +4659,8 @@
         if (tableContainer) tableContainer.addEventListener('scroll', updateTimelinePosition);
         document.addEventListener('click', function(){ closeAllNoteBubbles(); });
       };
+      window.initializeTimetablePage=window.onload;
+      document.addEventListener('DOMContentLoaded',window.initializeTimetablePage,{once:true});
       window.addEventListener('resize', function() {
         if (responsiveResizeFrame) cancelAnimationFrame(responsiveResizeFrame);
         responsiveResizeFrame = requestAnimationFrame(function() {
@@ -4854,28 +4858,66 @@
         document.getElementById('authPwInput').value = "";
         stopLoginProgress('auth', false);
       }
-      function startAppAfterAuth() {
-        document.getElementById('introPage').style.display = 'flex';
-        document.getElementById('mainPage').style.display = 'none';
-        document.getElementById('introLoading').style.display = 'flex';
-        if (sheetNamesLoaded) {
-          initApp(availableSheets);
-          return;
-        }
-        callServer("getSheetNames", []).then(function(names){
-          saveSheetNamesCache(names);
-          sheetNamesLoaded = true;
-          initApp(names);
-        }).catch(function(err){
-          var cachedNames = loadSheetNamesCache();
-          if (cachedNames.length) {
-            sheetNamesLoaded = true;
-            initApp(cachedNames);
-            alert("시간표 서버 응답이 지연되어 마지막 정상 목록을 불러왔습니다. 잠시 후 페이지를 새로고침해 최신 목록을 확인해 주세요.");
-            return;
+      // Startup metadata contains date names only, never student rows or reusable credentials.
+      var timetableStartup = null, timetableStartupSequence = 0, timetableLoginSequence = 0;
+      function authenticateTimetableFast(loginId, password, idToken) {
+        if (!idToken) return callServer('authenticateTeacher',[loginId,password,idToken]);
+        var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},6000);
+        return fetch(SNAPSHOT_API_URL,{method:'POST',signal:controller.signal,cache:'no-store',
+          headers:{'Content-Type':'application/json',Authorization:'Bearer '+idToken},body:JSON.stringify({action:'bootstrap'})
+        }).then(function(response){
+          if(response.status===401 || response.status===403) {
+            var denied=new Error('계정 상태 또는 시간표 접근 권한을 확인해 주세요.');denied.code='ACCESS_DENIED';throw denied;
           }
-          alert("시간표 목록 로딩 실패: " + (err && err.message ? err.message : err) + "\n잠시 후 다시 시도해 주세요.");
+          if(!response.ok)throw new Error('BOOTSTRAP_UNAVAILABLE');
+          return response.json();
+        }).then(function(result){
+          if(!result.ok || !result.identity || !result.identity.firebaseUid)throw new Error('BOOTSTRAP_UNAVAILABLE');
+          return Object.assign({},result.identity,{startupSheets:result.sheets||[],startupSavedSheets:result.savedSheets||[]});
+        }).catch(function(error){
+          if(error.code==='ACCESS_DENIED')throw error;
+          // Compatibility path for unavailable/not-yet-deployed fast API; never on a denial.
+          return callServer('authenticateTeacher',[loginId,password,idToken]);
+        }).finally(function(){clearTimeout(timer);});
+      }
+      function rememberTimetableBootstrap(res) {
+        clientCache={};lastSuccessfulSchedule=null;snapshotView=null;scheduleLoadSequence++;
+        timetableStartup={loginId:res.loginId,sheets:Array.isArray(res.startupSheets)?res.startupSheets.slice():[]};
+      }
+      function setCalendarLoadStatus(text, retry) {
+        var status=document.getElementById('calendarLoadStatus'),button=document.getElementById('calendarRetryBtn');
+        if(status)status.textContent=text||'';
+        if(button)button.hidden=!retry;
+      }
+      function applyStartupSheetNames(names) {
+        if(!Array.isArray(names) || !names.length || names.some(function(n){return typeof n!=='string' || n.indexOf('ERROR')===0;}))return false;
+        availableSheets=names.slice();sheetNamesLoaded=true;sheetMap=buildSheetMapFromNames(availableSheets);
+        saveSheetNamesCache(names);populateMainSheetSelector(currentSheetName);renderCalendar();calendarSync();
+        return true;
+      }
+      function startAppAfterAuth() {
+        var sequence=++timetableStartupSequence, session=getScheduleSessionKey(), liveApplied=false;
+        document.getElementById('introPage').style.display='flex';
+        document.getElementById('mainPage').style.display='none';
+        document.getElementById('introLoading').style.display='none';
+        var startup=timetableStartup && timetableStartup.loginId===authState.loginId ? timetableStartup.sheets : [];
+        var initial=startup.length?startup:(sheetNamesLoaded?availableSheets:loadSheetNamesCache());
+        initApp(initial);
+        setCalendarLoadStatus(initial.length?'날짜를 선택하세요. 최신 날짜 목록은 확인 중입니다.':'저장된 날짜 목록을 확인하고 있습니다.');
+        function current(){return authState.loggedIn && sequence===timetableStartupSequence && session===getScheduleSessionKey();}
+        // Both sources update only the calendar, never navigate away from an already-open day.
+        var quick=initial.length?Promise.resolve():snapshotRequest('bootstrap','').then(function(result){
+          if(current() && !liveApplied && applyStartupSheetNames(result.sheets))setCalendarLoadStatus('저장된 날짜 목록 · 최신 목록 확인 중');
+        }).catch(function(){});
+        callServer('getSheetNames',[]).then(function(names){
+          if(!current())return;
+          if(!applyStartupSheetNames(names))throw new Error('EMPTY_SHEETS');
+          liveApplied=true;setCalendarLoadStatus('날짜를 선택하세요.');
+          // Do not scan every sheet on entry. Availability is checked when a date is opened.
+        }).catch(function(){
+          quick.finally(function(){if(current())setCalendarLoadStatus(availableSheets.length?'저장된 날짜 목록입니다. 최신 목록을 다시 확인할 수 있습니다.':'날짜 목록을 불러오지 못했습니다. 다시 시도해 주세요.',true);});
         });
+        return Promise.resolve();
       }
       function completeAccessSelection(mode) {
         if (!authState.loggedIn) { alert("먼저 로그인 검증을 완료하세요."); return; }
@@ -4903,10 +4945,12 @@
           ? !!document.getElementById('rememberLoginToggle').checked
           : !!document.getElementById('rememberLoginToggleAuth').checked;
         if (!loginId || !password) { alert("아이디와 비밀번호를 입력하세요."); return; }
+        var loginSequence=++timetableLoginSequence;
         startLoginProgress(fromGate ? 'gate' : 'auth');
         resolveLiveFirebaseIdToken(normalizedLoginId, password).then(function(idToken) {
-          return callServer("authenticateTeacher", [normalizedLoginId, password, idToken]);
+          return authenticateTimetableFast(normalizedLoginId, password, idToken);
         }).then(function(res) {
+          if(loginSequence!==timetableLoginSequence)return;
           if (!res || !res.ok) {
             stopLoginProgress(fromGate ? 'gate' : 'auth', false);
             alert((res && res.message) || "로그인에 실패했습니다.");
@@ -4914,7 +4958,8 @@
           }
           return assertLiveFirebaseIdentity(res);
         }).then(function(res) {
-          if (!res) return;
+          if (!res || loginSequence!==timetableLoginSequence) return;
+          rememberTimetableBootstrap(res);
           resetStudentEnrollmentStatus();
           authState.loggedIn = true;
           authState.isMaster = !!res.isMaster;
@@ -4938,6 +4983,10 @@
               stopLoginProgress('gate', true);
               startAppAfterAuth();
               return;
+            }
+            if(!authState.isMaster){
+              document.getElementById('gateRoleWrap').style.display='none';
+              stopLoginProgress('gate',true);completeAccessSelection('teacher');return;
             }
             var gateWrap = document.getElementById('gateRoleWrap');
             var allBtn = document.getElementById('gateAllModeBtn');
@@ -4966,11 +5015,13 @@
           applyRoleUi();
           stopLoginProgress(fromGate ? 'gate' : 'auth', true);
         }).catch(function(err){
+          if(loginSequence!==timetableLoginSequence)return;
           alert("로그인 오류: " + (err && err.message ? err.message : err));
           stopLoginProgress(fromGate ? 'gate' : 'auth', false);
         });
       }
       function logoutTeacher() {
+        timetableLoginSequence++;timetableStartupSequence++;timetableStartup=null;teacherCalendarRequestId++;
         closeRoomOverview(false);
         resetSharedSubjectIcons();
         resetStudentEnrollmentStatus();
@@ -5641,8 +5692,8 @@
           
           currentDate = new Date(targetYear, targetMonth, 1);
           applyRoleUi();
-          if (isTeacherViewActive()) updateTeacherCalendarAvailability(true);
-          else renderCalendar(); 
+          teacherCalendarReady=false;teacherCalendarSheets=[];teacherCalendarSheetMap={};teacherCalendarRequestId++;
+          renderCalendar();
         }catch(e){console.error(e);} 
       }
       function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.onclick=function(){handleDateClick(K);}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
@@ -5765,7 +5816,8 @@
           }).catch(function(){return false;});
           return pending;
         }
-        var timer=setTimeout(fallback,8000);
+        // Start with the saved copy immediately while the live request is already in flight.
+        var timer=setTimeout(fallback,0);
         return live.then(function(value){finished=true;return value;},function(error){
           if (/AUTH|FORBIDDEN|BLOCKED|권한|로그인/i.test(String(error && error.message))) {finished=true;throw error;}
           return fallback().then(function(used){finished=true;if(used)return {__snapshotHandled:true};throw error;});

@@ -11,7 +11,7 @@ loadOperationMemosForCurrentSheet=()=>Promise.resolve();renderTable=()=>{};
 globalThis.applied=[];processData=d=>{lastData=d;applied.push(d.version)};
 globalThis.live=[];callServer=()=>new Promise((resolve,reject)=>live.push({resolve,reject}));
 snapshotRequest=(action,sheet)=>Promise.resolve({sheet,savedAt:Date.now(),data:{headers:['room'],grid:{},version:'snapshot'}});`);
-function tick(){for(const [id,t]of timers)if(t.ms===8000){timers.delete(id);t.fn();}}
+function tick(){for(const [id,t]of timers)if(t.ms===0){timers.delete(id);t.fn();}}
 (async()=>{
   run("loadData('9/28(월)',true)");tick();await flush();assert.equal(run('snapshotView.sheet'),'9/28(월)');assert.equal(run('Object.keys(clientCache).length'),0);assert.equal(run('lastSuccessfulSchedule'),null);
   c.live[0].resolve({headers:['room'],grid:{},version:'live'});await flush();assert.equal(run('snapshotView'),null);assert.equal(run('lastData.version'),'live');assert.equal(el('snapshotNotice').hidden,false);assert.equal(el('snapshotSourceLabel').textContent,'실시간 시간표');

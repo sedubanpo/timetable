@@ -31,6 +31,7 @@ async function sync(sheet) {
     }
     const saved=[];
     for(const snapshot of payload.snapshots) { await core.save(db,snapshot); saved.push({sheet:snapshot.sheet,savedAt:snapshot.capturedAt}); }
+    await core.saveCatalog(db,payload.sheets,payload.catalogCapturedAt);
     return saved;
   } finally {
     await db.runTransaction(async tx=>{const current=await tx.get(lease);if(current.data()?.owner===owner)tx.delete(lease);});
@@ -44,13 +45,25 @@ async function authenticate(req) {
   let user;try{user=await getAuth().verifyIdToken(token,true);}catch{coreFail('UNAUTHORIZED');}
   const db=getFirestore();
   const docs=await Promise.all(['users','userProfiles','userAppAccess'].map(c=>db.collection(c).doc(user.uid).get()));
-  return core.identity(docs[0].data()||{},docs[1].data()||{},docs[2].data()||{});
+  const account=docs[0].data()||{}, profile=docs[1].data()||{}, access=docs[2].data()||{};
+  const who=core.identity(account,profile,access);
+  const name=String(account.name||profile.displayName||access.instructorName||'').trim();
+  let loginId=String(account.loginId||profile.instructorId||String(user.email||'').split('@')[0]||user.uid).trim();
+  if (/^\d[\d -]+$/.test(loginId)) { loginId=loginId.replace(/\D/g,''); if(loginId.length===8)loginId='010'+loginId; else if(loginId.length===10 && loginId.startsWith('10'))loginId='0'+loginId; }
+  who.login={ok:true,success:true,authSource:'firebase',firebaseUid:user.uid,loginId,teacherName:name,name,
+    isMaster:who.full,isLookup:false,role:who.full?'ADMIN':'TEACHER',teacherNames:[],teacherRosterDeferred:who.full};
+  return who;
 }
 exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:100,memory:'256MiB',maxInstances:3,cors:true,secrets:[secret]},async(req,res)=>{
   res.set('Cache-Control','no-store');
   if(req.method!=='POST')return res.status(405).json({ok:false,error:'METHOD_NOT_ALLOWED'});
   try {
     const who=await authenticate(req), {action,sheet,teacher}=req.body||{};
+    if(action==='bootstrap') {
+      // Identity is verified before any date metadata is read; no Apps Script dependency.
+      let dates;try{dates=await core.catalog(getFirestore());}catch{dates={sheets:[],savedSheets:[],catalogSavedAt:null};}
+      return res.json({ok:true,identity:who.login||null,...dates});
+    }
     if(!['read','rooms','save'].includes(action))coreFail('INVALID_ACTION');
     core.dateForSheet(sheet);
     if(action==='save') {

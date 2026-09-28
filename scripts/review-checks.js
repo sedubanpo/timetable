@@ -210,8 +210,8 @@ assert(index.includes('withFirestoreTimeout(loadPage("", []), 20000'), "enrollme
 assert(index.includes('{ timeoutMs: 10000, retries: 2 }'), "sheet list API must retry transient Apps Script failures without extending the current worst-case wait");
 assert(index.includes("AKfycbyI3P-cTCEMrk0mqe3QTorgXQZGoaITzqs-oqCQQ3eIbsZofe8B3wj6WTruKaCfpmUIQA"), "client must use the refreshed public Apps Script deployment");
 assert(index.includes("saveSheetNamesCache(names);"), "successful sheet lists must be cached for recovery");
-assert(index.includes("var cachedNames = loadSheetNamesCache();"), "sheet list timeout must recover from the last successful list");
-assert(index.includes("마지막 정상 목록을 불러왔습니다"), "degraded sheet list recovery must be disclosed to the user");
+assert(index.includes("sheetNamesLoaded?availableSheets:loadSheetNamesCache()"), "cached sheet list must render before origin timeout");
+assert(index.includes("저장된 날짜 목록입니다"), "degraded sheet list recovery must be disclosed to the user");
 assert(server.includes("SCHEDULE_SHEET_NAMES_CACHE_TTL_SECONDS = 300"), "sheet list server reads must be cached briefly");
 assert(index.includes("isMobile !== lastResponsiveMobile"), "resize breakpoint guard missing");
 assert(index.includes("escapeHtml(entry.name)"), "mobile teacher names must be escaped");

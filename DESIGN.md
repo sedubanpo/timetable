@@ -1,5 +1,9 @@
 # Live Timetable Design Tokens
 
+## Snapshot-first entry — 2026-09-28
+
+Keep the existing calendar layout. Display verified saved date names immediately; refresh the original catalog without an overlay or forced navigation. Use a small polite status line and existing 40px retry button for unavailable catalogs. Teachers enter their calendar directly after verified sign-in. Day entry queries snapshots immediately, retaining the explicit backup source label until the original response succeeds. Desktop and mobile synthetic checks keep the origin pending to verify calendar interaction; this is not a production latency benchmark.
+
 ## Snapshot fallback — 2026-09-28
 
 Preserve the operational toolbar and table. The ADMIN-only snapshot save button uses the existing icon-above-small-label control. A separate wrapping status strip beneath the toolbar identifies a saved copy with its Korean-time capture timestamp, warns after 2 hours, and retains a 40px retry control. Use a quiet warm surface (#fff7ed), dark readable text (#7c2d12), and a bottom separator (#fed7aa), never a decorative side stripe or modal. Announce changes through a polite status region; keep saved-view disclosure visible until a live response succeeds. No new animation or raster assets. Desktop and 390px mobile synthetic fixtures verified the status strip and save/failure/retry states.

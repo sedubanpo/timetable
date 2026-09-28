@@ -82,7 +82,8 @@
           }).catch(function(){return false;});
           return pending;
         }
-        var timer=setTimeout(fallback,8000);
+        // Start with the saved copy immediately while the live request is already in flight.
+        var timer=setTimeout(fallback,0);
         return live.then(function(value){finished=true;return value;},function(error){
           if (/AUTH|FORBIDDEN|BLOCKED|권한|로그인/i.test(String(error && error.message))) {finished=true;throw error;}
           return fallback().then(function(used){finished=true;if(used)return {__snapshotHandled:true};throw error;});
