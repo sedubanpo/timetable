@@ -31,3 +31,7 @@ test('last known good preserved on invalid or older writes; date-key isolation',
   const result=await core.read(db,good.sheet,{full:true},'',false,now);assert.equal(result.savedAt,now);
   await assert.rejects(core.read(db,'9/29(화)',{full:true},'',false,now));
 });
+
+test('KST rest boundary is 01:00 inclusive to 09:00 exclusive',()=>{
+  for(const [stamp,expected] of [['2026-09-29T15:59:59Z',false],['2026-09-29T16:00:00Z',true],['2026-09-29T23:59:59Z',true],['2026-09-30T00:00:00Z',false],['2026-09-30T01:00:00Z',false]]) assert.equal(core.isSnapshotRestTime(Date.parse(stamp)),expected,stamp);
+});

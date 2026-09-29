@@ -21,6 +21,7 @@
         }).finally(function(){clearTimeout(timer);});
       }
       function rememberTimetableBootstrap(res) {
+        closeSnapshotHistory();
         clientCache={};lastSuccessfulSchedule=null;snapshotView=null;scheduleLoadSequence++;
         timetableStartup={loginId:res.loginId,sheets:Array.isArray(res.startupSheets)?res.startupSheets.slice():[],catalogSavedAt:Number(res.startupCatalogSavedAt)||0};
       }

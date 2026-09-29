@@ -18,7 +18,7 @@ function sourceFormatKind(text) {
   if (/Google Drive|Google Apps Script|unable to open|temporarily unavailable/i.test(text)) return 'GOOGLE_ERROR_PAGE';
   return 'NON_JSON';
 }
-async function sync(sheet) {
+async function sync(sheet, actor) {
   const db=getFirestore(), lease=db.collection('liveTimetableSnapshotJobs').doc('writer');
   const owner=crypto.randomUUID(), now=Date.now();
   let stage='lease';
@@ -35,14 +35,18 @@ async function sync(sheet) {
     let response;
     try { response=await fetch(source,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body,signature}),signal:AbortSignal.timeout(75000)}); }
     catch(error) { console.warn('snapshotSourceTransport',{name:error.name||'Error',code:error.cause?.code||'UNKNOWN'});coreFail('SOURCE_UNAVAILABLE'); }
-    if(!response.ok) {console.warn('snapshotSourceHttp',{status:response.status});coreFail('SOURCE_UNAVAILABLE');}
+    if(!response.ok) {console.warn('snapshotSourceHttp',{status:response.status});coreFail(response.status===429?'SOURCE_RATE_LIMIT':'SOURCE_UNAVAILABLE');}
     const sourceText=await response.text();
     let payload;try{payload=JSON.parse(sourceText);}catch{
       console.warn('snapshotSourceFormat',{status:response.status,kind:sourceFormatKind(sourceText),
         endpoint:String(response.url||'').startsWith('https://script.googleusercontent.com/')?'content':String(response.url||'').startsWith('https://script.google.com/')?'script':'other'});
+      coreFail(sourceFormatKind(sourceText)==='RATE_LIMIT'?'SOURCE_RATE_LIMIT':'SOURCE_UNAVAILABLE');
+    }
+    if(!payload.ok || !Array.isArray(payload.snapshots) || !payload.snapshots.length || payload.snapshots.length>2) {
+      const reasons=['UNAUTHORIZED','INVALID_SHEET','AMBIGUOUS_SHEET','NO_SHEETS','INCOMPLETE_GRID'];
+      console.warn('snapshotSourceRejected',{reason:reasons.includes(payload.error)?payload.error:'EXPORT_FAILED'});
       coreFail('SOURCE_UNAVAILABLE');
     }
-    if(!payload.ok || !Array.isArray(payload.snapshots) || !payload.snapshots.length || payload.snapshots.length>2) coreFail('SOURCE_UNAVAILABLE');
     stage='validate';
     for(const snapshot of payload.snapshots) {
       core.validate(snapshot);
@@ -50,18 +54,18 @@ async function sync(sheet) {
     }
     const saved=[];
     stage='save';
-    for(const snapshot of payload.snapshots) { await core.save(db,snapshot); saved.push({sheet:snapshot.sheet,savedAt:snapshot.capturedAt}); }
+    for(const snapshot of payload.snapshots) { const written=await core.save(db,snapshot,Date.now(),actor); saved.push({sheet:snapshot.sheet,savedAt:snapshot.capturedAt,outcome:written?'saved':'already-newer'}); }
     stage='catalog';
-    await core.saveCatalog(db,payload.sheets,payload.catalogCapturedAt);
+    try{await core.saveCatalog(db,payload.sheets,payload.catalogCapturedAt);}catch{console.warn('snapshotCatalogUnavailable',{stage:'catalog'});}
     console.info('snapshotSyncComplete',{run:owner,elapsedMs:Date.now()-now,count:saved.length});
     return saved;
   } finally {
     try {await db.runTransaction(async tx=>{const current=await tx.get(lease);if(current.data()?.owner===owner)tx.delete(lease);});}
-    catch(error){stage='release';throw error;}
+    catch(error){console.warn('snapshotLeaseReleaseUnavailable',{stage:'release'});}
   }
   } catch(error) {
     // Never log raw upstream errors (which can contain URLs or response bodies).
-    const safeCodes=['SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','INVALID_SNAPSHOT','SNAPSHOT_TOO_LARGE','INVALID_SHEET'];
+    const safeCodes=['SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','SOURCE_RATE_LIMIT','INVALID_SNAPSHOT','SNAPSHOT_TOO_LARGE','INVALID_SHEET'];
     const code=safeCodes.includes(error.code)?error.code:(Number.isInteger(error.code)?'GRPC_'+error.code:'UNAVAILABLE');
     console.warn('snapshotSyncStage',{run:owner,stage,code,elapsedMs:Date.now()-now});
     throw error;
@@ -94,21 +98,33 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
       let dates;try{dates=await core.catalog(getFirestore());}catch{dates={sheets:[],savedSheets:[],catalogSavedAt:null};}
       return res.json({ok:true,identity:who.login||null,...dates});
     }
-    if(!['read','rooms','save'].includes(action))coreFail('INVALID_ACTION');
+    if(!['read','rooms','save','history'].includes(action))coreFail('INVALID_ACTION');
     core.dateForSheet(sheet);
+    if(action==='history') {
+      if(who.role!=='ADMIN')coreFail('FORBIDDEN');
+      return res.json({ok:true,...await core.history(getFirestore(),sheet)});
+    }
     if(action==='save') {
       if(who.role!=='ADMIN')coreFail('FORBIDDEN');
-      return res.json({ok:true,saved:await sync(sheet)});
+      const actor={name:who.login.name||'관리자',source:req.body.receipt?'manual-capture':'manual-origin'};
+      if(req.body.receipt) {
+        const snapshot=core.verifyReceipt(req.body.receipt,secret.value(),sheet);
+        const written=await core.save(getFirestore(),snapshot,Date.now(),actor);
+        return res.json({ok:true,saved:[{sheet,savedAt:snapshot.capturedAt}],outcome:written?'saved':'already-newer'});
+      }
+      const saved=await sync(sheet,actor);
+      return res.json({ok:true,saved,outcome:saved.every(item=>item.outcome==='already-newer')?'already-newer':'saved'});
     }
     return res.json({ok:true,...await core.read(getFirestore(),sheet,who,teacher,action==='rooms')});
   }catch(error){
-    const known=['UNAUTHORIZED','FORBIDDEN','INVALID_ACTION','INVALID_SHEET','INVALID_SNAPSHOT','SNAPSHOT_NOT_FOUND','SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','SNAPSHOT_TOO_LARGE'];
+    const known=['UNAUTHORIZED','FORBIDDEN','INVALID_ACTION','INVALID_SHEET','INVALID_SNAPSHOT','SNAPSHOT_NOT_FOUND','SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','SOURCE_RATE_LIMIT','INVALID_RECEIPT','RECEIPT_EXPIRED','SNAPSHOT_TOO_LARGE'];
     const code=known.includes(error.code)?error.code:'UNAVAILABLE';
     console.warn('timetableSnapshotApi',{code});
     res.status(code==='UNAUTHORIZED'?401:code==='FORBIDDEN'?403:code==='SNAPSHOT_NOT_FOUND'?404:code==='SAVE_IN_PROGRESS'?409:503).json({ok:false,error:code});
   }
 });
 // Duration stays zero so retryCount is the exact cap, not a minimum within a retry window.
-exports.timetableSnapshotEveryTwoHours=onSchedule({schedule:'0 */2 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',timeoutSeconds:120,memory:'256MiB',maxInstances:1,retryCount:2,minBackoffSeconds:60,maxBackoffSeconds:120,maxRetrySeconds:0,secrets:[secret]},async()=>{
+exports.timetableSnapshotEveryTwoHours=onSchedule({schedule:'0 0,10-22/2 * * *',timeZone:'Asia/Seoul',region:'asia-northeast3',timeoutSeconds:120,memory:'256MiB',maxInstances:1,retryCount:2,minBackoffSeconds:60,maxBackoffSeconds:120,maxRetrySeconds:0,secrets:[secret]},async()=>{
+  if(core.isSnapshotRestTime(Date.now())) {console.info('snapshotSyncRestHours');return;}
   try {await sync('');}catch(error){console.error('timetableSnapshotSync',{code:error.code==='SAVE_IN_PROGRESS'?'SAVE_IN_PROGRESS':'FAILED'});throw new Error('SNAPSHOT_SYNC_FAILED');}
 });

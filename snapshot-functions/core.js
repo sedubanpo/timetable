@@ -4,6 +4,10 @@ const COLLECTION = 'liveTimetableSnapshots';
 const MAX_AGE = 24 * 60 * 60 * 1000;
 function fail(code) { const error = new Error(code); error.code = code; throw error; }
 function normalize(s) { return String(s || '').replace(/\u00a0/g,' ').trim().replace(/\s+/g,'').replace(/선생님$/i,'').replace(/T$/i,'').replace(/[·ㆍ•]/g,'').toLowerCase(); }
+function isSnapshotRestTime(now=Date.now()) {
+  const hour=new Date(now+9*3600000).getUTCHours();
+  return hour>=1 && hour<9;
+}
 function dates(now = Date.now()) {
   return [0,1].map(offset => new Date(now + 9*3600000 + offset*86400000).toISOString().slice(0,10));
 }
@@ -62,14 +66,41 @@ function project(snapshot, who, teacher = '', roomView = false, now = Date.now()
   });
   return {data,savedAt:snapshot.capturedAt,sheet:snapshot.sheet,date:snapshot.date};
 }
-async function save(db, snapshot, now = Date.now()) {
+function verifyReceipt(receipt, secret, sheet, now=Date.now()) {
+  if (!receipt || typeof receipt.body!=='string' || Buffer.byteLength(receipt.body)>900000 || typeof receipt.signature!=='string') fail('INVALID_RECEIPT');
+  const expected=crypto.createHmac('sha256',secret).update(receipt.body).digest('base64url');
+  if (receipt.signature.length!==expected.length || !crypto.timingSafeEqual(Buffer.from(receipt.signature),Buffer.from(expected))) fail('INVALID_RECEIPT');
+  let payload;try{payload=JSON.parse(receipt.body);}catch{fail('INVALID_RECEIPT');}
+  if (payload.aud!=='timetable-snapshot-capture' || payload.snapshot?.sheet!==sheet) fail('INVALID_RECEIPT');
+  validate(payload.snapshot,now);
+  if (now-payload.snapshot.capturedAt>7200000) fail('RECEIPT_EXPIRED');
+  return payload.snapshot;
+}
+function changedCells(previous, next) {
+  if (!previous) return null;
+  let count=0;
+  for(let h=8;h<=23;h++) for(let i=0;i<Math.max(previous.data.headers.length,next.data.headers.length);i++) {
+    if (previous.data.headers[i]!==next.data.headers[i] || JSON.stringify(previous.data.grid[h]?.[i]||[])!==JSON.stringify(next.data.grid[h]?.[i]||[])) count++;
+  }
+  return count;
+}
+async function history(db,sheet,now=Date.now()) {
+  const doc=await db.collection(COLLECTION).doc(key(sheet,dateForSheet(sheet,now))).get();
+  const value=doc.data()||{};
+  return {items:value.history||[],legacySavedAt:value.history?.length?null:value.capturedAt||null};
+}
+async function save(db, snapshot, now = Date.now(), actor = {name:'자동 저장',source:'scheduled'}) {
   validate(snapshot,now);
   const ref=db.collection(COLLECTION).doc(key(snapshot.sheet,snapshot.date));
   return db.runTransaction(async tx=>{
     const old=await tx.get(ref);
     if (old.exists && old.data().capturedAt >= snapshot.capturedAt) return false;
+    let previous;try{previous=old.exists?JSON.parse(old.data().json):null;}catch{previous=null;}
+    const entry={savedAt:now,capturedAt:snapshot.capturedAt,date:snapshot.date,changes:changedCells(previous,snapshot),actor:String(actor.name||'관리자').slice(0,100),source:actor.source||'scheduled'};
+    // A bounded metadata history commits atomically with the last known good snapshot.
+    const entries=[entry,...(old.data()?.history||[])].slice(0,50);
     // Store serialized grids: Firestore does not accept arrays nested directly in arrays.
-    tx.set(ref,{sheet:snapshot.sheet,date:snapshot.date,capturedAt:snapshot.capturedAt,json:JSON.stringify(snapshot)});
+    tx.set(ref,{sheet:snapshot.sheet,date:snapshot.date,capturedAt:snapshot.capturedAt,json:JSON.stringify(snapshot),history:entries});
     return true;
   });
 }
@@ -105,4 +136,4 @@ async function catalog(db, now=Date.now()) {
   const sheets=meta.capturedAt<=now+60000 && now-meta.capturedAt<=7*MAX_AGE ? sheetNames(meta.sheets) : [];
   return {sheets:sheetNames(sheets.concat(saved.map(d=>d.sheet))),savedSheets:saved.map(d=>({sheet:d.sheet,savedAt:d.capturedAt})),catalogSavedAt:meta.capturedAt||null};
 }
-module.exports={COLLECTION,dates,dateForSheet,key,verifyLookup,identity,validate,project,save,read,sheetNames,saveCatalog,catalog};
+module.exports={isSnapshotRestTime,verifyReceipt,changedCells,history,COLLECTION,dates,dateForSheet,key,verifyLookup,identity,validate,project,save,read,sheetNames,saveCatalog,catalog};

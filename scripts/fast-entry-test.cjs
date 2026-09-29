@@ -13,7 +13,7 @@ function fixture(){
     authState:{loggedIn:true,loginId:'teacher'},availableSheets:[],sheetNamesLoaded:false,currentSheetName:'',scheduleLoadSequence:0,
     document:{getElementById:el},getScheduleSessionKey:()=>c.authState.loginId,
     initApp:n=>{c.availableSheets=n;c.initial=n;},loadSheetNamesCache:()=>[],saveSheetNamesCache(){},buildSheetMapFromNames:n=>n,
-    populateMainSheetSelector(){},renderCalendar(){},calendarSync(){},
+    populateMainSheetSelector(){},renderCalendar(){},calendarSync(){},closeSnapshotHistory(){},
     snapshotRequest:()=>new Promise(r=>resolveQuick=r),
     callServer:(method,args)=>{calls.push({method,args});return new Promise(r=>resolveNames=r);},
     fetch:async()=>({ok:true,status:200,json:async()=>({ok:true,identity:{ok:true,firebaseUid:'u',loginId:'teacher'},sheets:['9/28(월)']})})};

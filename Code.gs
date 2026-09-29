@@ -42,7 +42,10 @@ function doPost(e) {
     if (request.action !== "snapshot_export" || Math.abs(Date.now() - Number(request.issuedAt)) > 120000 || !isFinite(Number(request.issuedAt))) throw new Error("UNAUTHORIZED");
     var snapshots = exportScheduleSnapshots_(String(request.sheet || ""));
     return jsonOutput_({ ok:true, snapshots:snapshots, sheets:getSheetNames(), catalogCapturedAt:Date.now() });
-  } catch (error) { return jsonOutput_({ ok:false, error:"SNAPSHOT_EXPORT_FAILED" }); }
+  } catch (error) {
+    var allowed=["UNAUTHORIZED","INVALID_SHEET","AMBIGUOUS_SHEET","NO_SHEETS","INCOMPLETE_GRID"];
+    return jsonOutput_({ ok:false, error:allowed.indexOf(error.message)>=0?error.message:"SNAPSHOT_EXPORT_FAILED" });
+  }
 }
 
 function issueSnapshotLookupToken_() {
@@ -70,8 +73,13 @@ function exportScheduleSnapshots_(requestedSheet) {
   }
   if (!targets.length) throw new Error("NO_SHEETS");
   return targets.map(function(target) {
-    var capturedAt=Date.now(), base=getFixedGridData(target.sheet,true);
+    var base=getFixedGridData(target.sheet,true);
     if (!base || base.error || !base.headers || !base.headers.length || !base.version || !base.grid) throw new Error("INCOMPLETE_GRID");
+    return buildScheduleSnapshot_(base,target.sheet,target.date,base.capturedAt);
+  });
+}
+
+function buildScheduleSnapshot_(base,sheet,date,capturedAt) {
     var owners={}, grid={}, rows=[];
     var rooms=base.headers.map(function(name,i){return /^(?:(?:본관|[1-9]관)\s*)?[0-9]+\s*강의실$/.test(String(name).trim()) ? String(name).trim() : (i+1)+"강의실";});
     for (var h=8;h<=23;h++) {
@@ -83,8 +91,24 @@ function exportScheduleSnapshots_(requestedSheet) {
         return {occupied:items.length>0,lessons:headers.map(function(item){return {teacher:extractTeacherName_(item),subject:getSubjectName_(item),own:false};})};
       })});
     }
-    return {schema:1,sheet:target.sheet,date:target.date,capturedAt:capturedAt,data:{headers:base.headers,grid:grid,version:String(base.version)},owners:owners,rooms:{rooms:rooms,rows:rows}};
-  });
+    return {schema:1,sheet:sheet,date:date,capturedAt:capturedAt,data:{headers:base.headers,grid:grid,version:String(base.version)},owners:owners,rooms:{rooms:rooms,rows:rows}};
+}
+
+// Only attach to an authenticated, unfiltered administrator response. No extra sheet read.
+function attachSnapshotReceipt_(base,sheet) {
+  if (!base || base.error || !base.version || !isFinite(base.capturedAt)) return base;
+  try {
+    var secret=PropertiesService.getScriptProperties().getProperty("TIMETABLE_SNAPSHOT_SECRET") || "";
+    if (secret.length<32) return base;
+    var now=Date.now(), parts=sheet.match(/^(\d{1,2})\/(\d{1,2})/);
+    if (!parts) return base;
+    var year=Number(Utilities.formatDate(new Date(now),"Asia/Seoul","yyyy"));
+    var candidates=[year-1,year,year+1].map(function(y){return new Date(Date.UTC(y,Number(parts[1])-1,Number(parts[2]),-9));});
+    candidates.sort(function(a,b){return Math.abs(a-now)-Math.abs(b-now);});
+    var body=JSON.stringify({aud:"timetable-snapshot-capture",snapshot:buildScheduleSnapshot_(base,sheet,Utilities.formatDate(candidates[0],"Asia/Seoul","yyyy-MM-dd"),base.capturedAt)});
+    if (body.length>850000) return base;
+    return Object.assign({},base,{snapshotReceipt:{body:body,signature:Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret)).replace(/=+$/, ""),capturedAt:base.capturedAt}});
+  } catch (error) { return base; } // Saving capability must not break a successful timetable read.
 }
 
 function handleApiRequest_(params) {
@@ -255,6 +279,7 @@ function dispatchApiRequest_(params) {
         var canonicalAuditTeacher = resolveTeacherViewAuditName_(auditTeacherName, auditLoginId);
         return canonicalAuditTeacher ? logTeacherView_(canonicalAuditTeacher, sheetName, auditLoginId) : false;
       });
+      if (gridIdentity && gridIdentity.isMaster && !teacherName && !lite) payload=attachSnapshotReceipt_(payload,sheetName);
       if (lite) payload = toLitePayload_(payload);
       return jsonOutput_({ ok: true, data: payload, viewLogged: viewLogged }, params);
     }
@@ -823,7 +848,7 @@ function getAuthenticatedSchedule(sheetName, teacherName, forceRefresh, idToken)
   var identity = authenticateFirebaseTeacher_(idToken, true);
   var selected = identity.isMaster ? String(teacherName || "").trim() : identity.teacherName;
   if (!identity.isMaster && !selected) throw new Error("TEACHER_IDENTITY_REQUIRED");
-  return selected ? getTeacherGridData(sheetName, selected, forceRefresh) : getFixedGridData(sheetName, forceRefresh);
+  return selected ? getTeacherGridData(sheetName, selected, forceRefresh) : attachSnapshotReceipt_(getFixedGridData(sheetName, forceRefresh),sheetName);
 }
 
 function getAuthenticatedTeacherSheets(teacherName, forceRefresh, idToken) {
@@ -1312,11 +1337,12 @@ function scheduleRevisionSnapshot_(sheetName) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = sheetName ? ss.getSheetByName(sheetName) : null;
     if (!sheet) return { version: "ERROR" };
+    var capturedAt = Date.now();
     var values = sheet.getDataRange().getDisplayValues();
     var revision = scheduleContentRevision_(values);
     // Share one short-lived scan across viewers while detecting ordinary cell edits.
     scheduleCachePut_(cache, key, revision, 15);
-    return { version: revision, values: values };
+    return { version: revision, values: values, capturedAt: capturedAt };
   } catch (e) { return { version: "ERROR" }; }
 }
 
@@ -1346,7 +1372,7 @@ function parseScheduleStartHour_(timeText) {
 function getFixedGridData(sheetName, forceRefresh) {
   try {
     var cache = CacheService.getScriptCache();
-    var cacheKey = "SHEET_DATA_V64_" + sheetName;
+    var cacheKey = "SHEET_DATA_V65_" + sheetName;
     var snapshot = null;
 
     if (!forceRefresh) {
@@ -1358,7 +1384,14 @@ function getFixedGridData(sheetName, forceRefresh) {
               typeof cachedGrid.grid === "object" && !Array.isArray(cachedGrid.grid) &&
               typeof cachedGrid.version === "string") {
             snapshot = scheduleRevisionSnapshot_(sheetName);
-            if (cachedGrid.version === snapshot.version) return cachedGrid;
+            if (cachedGrid.version === snapshot.version && Number.isFinite(cachedGrid.capturedAt)) {
+              // A fresh identical scan can advance capture time; a version-cache hit cannot.
+              if (snapshot.values && Number.isFinite(snapshot.capturedAt)) {
+                cachedGrid.capturedAt=snapshot.capturedAt;
+                scheduleCachePut_(cache,cacheKey,JSON.stringify(cachedGrid),21600);
+              }
+              return cachedGrid;
+            }
           }
         } catch (cacheError) {}
       }
@@ -1366,10 +1399,12 @@ function getFixedGridData(sheetName, forceRefresh) {
 
     // V40 로직 그대로 사용 (getDisplayValues 사용)
     var values = snapshot && snapshot.values;
+    var capturedAt = snapshot && snapshot.capturedAt;
     if (!values) {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var sheet = sheetName ? ss.getSheetByName(sheetName) : null;
       if (!sheet) return { error: "시트를 찾을 수 없습니다." };
+      capturedAt = Date.now();
       values = sheet.getDataRange().getDisplayValues();
     }
     if (!values || values.length === 0) return { headers: [], grid: {}, version: 0 };
@@ -1465,6 +1500,7 @@ function getFixedGridData(sheetName, forceRefresh) {
     var result = {
       headers: classrooms.map(function(c) { return c.name; }),
       grid: gridData,
+      capturedAt: capturedAt,
       version: snapshot && snapshot.values ? snapshot.version : scheduleContentRevision_(values)
     };
     scheduleCachePut_(cache, scheduleRevisionCacheKey_(sheetName), result.version, 15);
