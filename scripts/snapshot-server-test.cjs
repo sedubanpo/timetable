@@ -2,7 +2,8 @@ const fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto'),
 const secret='test-only-'.repeat(5),now=Date.parse('2026-09-28T13:00:00Z');
 class Clock extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}
 const c={Date:Clock,console,PropertiesService:{getScriptProperties:()=>({getProperty:()=>secret})},Utilities:{
-  base64EncodeWebSafe:v=>Buffer.from(v).toString('base64url'),computeHmacSha256Signature:(s,k)=>crypto.createHmac('sha256',k).update(s).digest(),
+  Charset:{UTF_8:'UTF_8'},
+  base64EncodeWebSafe:v=>Buffer.from(v).toString('base64url'),computeHmacSha256Signature:(s,k,charset)=>{if(s!=='snapshot-protocol:9/30(수):한글:😀')assert.equal(charset,'UTF_8','all operational HMAC must explicitly use UTF-8');return crypto.createHmac('sha256',k).update(s).digest();},
   formatDate:(date,tz,format)=>{const d=new Date(+date+9*3600000);return format==='yyyy'?String(d.getUTCFullYear()):format==='M/d'?`${d.getUTCMonth()+1}/${d.getUTCDate()}`:d.toISOString().slice(0,10);}
 }};
 vm.createContext(c);vm.runInContext(fs.readFileSync('Code.gs','utf8'),c);
@@ -32,3 +33,9 @@ assert(c.dispatchApiRequest_({action:'grid',sheet:'9/28(월)',idToken:'token',li
 assert(!c.dispatchApiRequest_({action:'grid',sheet:'9/28(월)',idToken:'token',lite:'0',teacher:'가상'}).data.snapshotReceipt);
 assert(!c.dispatchApiRequest_({action:'grid',sheet:'9/28(월)',lite:'0'}).data.snapshotReceipt);
 console.log('PASS signed live capture, no extra origin reads, cached payload immutability, native/JSONP admin-only receipt and teacher/anonymous exclusion');
+
+const manualBody=JSON.stringify({action:'snapshot_export',issuedAt:now,sheet:'9/28(월)',nonce:'unicode'});
+c.exportScheduleSnapshots_=sheet=>{assert.equal(sheet,'9/28(월)');return [verified];};
+assert.equal(c.doPost(request(manualBody)).ok,true);
+assert.equal(c.snapshotEncodingDiagnostics_().explicitMatchesUtf8,true);
+console.log('PASS explicit UTF-8 on all production HMAC paths, Korean manual request and fixed non-secret runtime probe');

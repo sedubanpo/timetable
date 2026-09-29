@@ -33,7 +33,7 @@ function doPost(e) {
     var envelope = JSON.parse(e.postData.contents || "{}");
     var secret = PropertiesService.getScriptProperties().getProperty("TIMETABLE_SNAPSHOT_SECRET") || "";
     if (secret.length < 32 || typeof envelope.body !== "string" || envelope.body.length > 2000) throw new Error("UNAUTHORIZED");
-    var expected = Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(envelope.body, secret)).replace(/=+$/, "");
+    var expected = Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(envelope.body, secret, Utilities.Charset.UTF_8)).replace(/=+$/, "");
     if (typeof envelope.signature !== "string" || expected.length !== envelope.signature.length) throw new Error("UNAUTHORIZED");
     var different = 0;
     for (var c = 0; c < expected.length; c++) different |= expected.charCodeAt(c) ^ envelope.signature.charCodeAt(c);
@@ -48,11 +48,20 @@ function doPost(e) {
   }
 }
 
+// Fixed public test vector only: no configured secret, sheet access, or personal data.
+function snapshotEncodingDiagnostics_() {
+  var input="snapshot-protocol:9/30(수):한글:😀", key="timetable-protocol-test-only";
+  var expected="P5u_YlWJLA1uGadgXWEmodqUoN_RFEDIJx5Ean0wiMM";
+  var implicit=Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(input,key)).replace(/=+$/, "");
+  var explicit=Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(input,key,Utilities.Charset.UTF_8)).replace(/=+$/, "");
+  return {protocol:"hmac-sha256-utf8-v1",implicitMatchesUtf8:implicit===expected,explicitMatchesUtf8:explicit===expected};
+}
+
 function issueSnapshotLookupToken_() {
   var secret = PropertiesService.getScriptProperties().getProperty("TIMETABLE_SNAPSHOT_SECRET") || "";
   if (secret.length < 32) return ""; // Existing lookup login remains usable before provisioning.
   var body = Utilities.base64EncodeWebSafe(JSON.stringify({aud:"timetable-snapshot-lookup",exp:Date.now()+21600000})).replace(/=+$/, "");
-  return body + "." + Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret)).replace(/=+$/, "");
+  return body + "." + Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret,Utilities.Charset.UTF_8)).replace(/=+$/, "");
 }
 
 function exportScheduleSnapshots_(requestedSheet) {
@@ -107,7 +116,7 @@ function attachSnapshotReceipt_(base,sheet) {
     candidates.sort(function(a,b){return Math.abs(a-now)-Math.abs(b-now);});
     var body=JSON.stringify({aud:"timetable-snapshot-capture",snapshot:buildScheduleSnapshot_(base,sheet,Utilities.formatDate(candidates[0],"Asia/Seoul","yyyy-MM-dd"),base.capturedAt)});
     if (body.length>850000) return base;
-    return Object.assign({},base,{snapshotReceipt:{body:body,signature:Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret)).replace(/=+$/, ""),capturedAt:base.capturedAt}});
+    return Object.assign({},base,{snapshotReceipt:{body:body,signature:Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(body,secret,Utilities.Charset.UTF_8)).replace(/=+$/, ""),capturedAt:base.capturedAt}});
   } catch (error) { return base; } // Saving capability must not break a successful timetable read.
 }
 
@@ -152,6 +161,7 @@ function dispatchApiRequest_(params) {
     if (action === "ping") {
       return jsonOutput_({
         ok: true,
+        snapshotEncoding:params.snapshotProtocol==="1"?snapshotEncodingDiagnostics_():undefined,
         now: new Date().toISOString(),
         tz: Session.getScriptTimeZone() || "Asia/Seoul"
       }, params);
