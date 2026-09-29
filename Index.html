@@ -1690,6 +1690,119 @@
       .preview-note-field input { min-height:24px; vertical-align:middle; }
       #absenceNoticePreview { position:relative; isolation:isolate; overflow:hidden; }
       #absenceNoticePreview::before { content:""; position:absolute; inset:0; z-index:-1; background:url('https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png') center/75% auto no-repeat; opacity:.06; pointer-events:none; }
+      /* TEACHER_DASHBOARD_CSS_START */
+/* Teacher dashboard: an operational ledger, scoped to its full-screen dialog. */
+#teacherViewLogModal { inset:0; width:100%; height:100%; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#f4f5f7; color:#172236; }
+#teacherViewLogModal[open] { display:flex; }
+#teacherViewLogModal::backdrop { background:#17223680; }
+#teacherViewLogModal .teacher-log-box.dashboard { display:flex; flex-direction:column; width:100%; max-width:1440px; height:100%; max-height:none; margin:0 auto; padding:0; border:0; border-radius:0; overflow:hidden; box-shadow:none; background:#fff; text-align:left; }
+#teacherViewLogModal * { box-sizing:border-box; }
+#teacherViewLogModal h2, #teacherViewLogModal h3, #teacherViewLogModal p { margin:0; }
+#teacherViewLogModal h2 { font-size:24px; font-weight:750; letter-spacing:-.025em; line-height:1.4; }
+#teacherViewLogModal h3 { font-size:17px; font-weight:750; line-height:1.5; }
+#teacherViewLogModal p { color:#536176; font-size:13px; line-height:1.6; }
+#teacherViewLogModal button, #teacherViewLogModal select, #teacherViewLogModal input { font:inherit; }
+#teacherViewLogModal button { min-height:40px; padding:8px 14px; border:1px solid #c9ced7; border-radius:5px; background:#fff; color:#26364c; font-size:13px; font-weight:650; cursor:pointer; box-shadow:none; }
+#teacherViewLogModal button:hover { background:#edf1f6; }
+#teacherViewLogModal button:disabled { opacity:.5; cursor:wait; }
+#teacherViewLogModal :is(button,select,input,summary):focus-visible { outline:2px solid #2856a7; outline-offset:3px; }
+#teacherViewLogModal ::selection { background:#dce7fb; color:#102b56; }
+#teacherViewLogModal input { caret-color:#2856a7; }
+#teacherViewLogModal .td-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:26px 36px 22px; background:#172b49; color:#fff; flex-shrink:0; }
+#teacherViewLogModal #teacherLogWeekLabel { color:#c6d3e4; font-size:13px; margin-top:6px; }
+#teacherViewLogModal .td-close { display:flex; align-items:center; gap:8px; border-color:#76859b; background:transparent; color:#fff; flex-shrink:0; }
+#teacherViewLogModal .td-close:hover { background:#304561; }
+#teacherViewLogModal .teacher-dashboard-tabs { flex-shrink:0; display:flex; gap:28px; padding:0 36px; margin:0; border-bottom:1px solid #d5dbe3; }
+#teacherViewLogModal .teacher-dashboard-tab { padding:18px 0 15px; min-height:54px; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; font-size:15px; color:#536176; }
+#teacherViewLogModal .teacher-dashboard-tab.active { border-bottom-color:#172b49; color:#172b49; background:transparent; }
+#teacherViewLogModal .td-tools { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:16px 36px; border-bottom:1px solid #e0e4ea; flex-shrink:0; }
+#teacherViewLogModal .td-search { display:flex; align-items:center; gap:10px; flex:1; min-width:180px; max-width:460px; padding:0 12px; border:1px solid #c9ced7; border-radius:5px; color:#536176; }
+#teacherViewLogModal .td-search input { width:100%; height:40px; border:0; background:transparent; font-size:14px; color:#172236; outline-offset:0; }
+#teacherViewLogModal input::placeholder { color:#647086; opacity:1; }
+#teacherViewLogModal #teacherViewLogEditButton { margin-left:auto; }
+#teacherViewLogModal #teacherViewLogEditButton.is-active { background:#172b49; color:#fff; border-color:#172b49; }
+#teacherViewLogModal .teacher-log-list { flex:1; min-height:0; overflow:auto; padding:24px 36px 36px; display:block; opacity:1; transform:none; transition:none; overscroll-behavior:contain; scrollbar-color:#9ba8ba #f4f5f7; }
+#teacherViewLogModal .teacher-log-summary-grid { display:flex; flex-wrap:wrap; gap:0; padding:0 0 22px; margin:0 0 24px; border-bottom:1px solid #d5dbe3; }
+#teacherViewLogModal .teacher-log-summary-card { flex:1; min-width:140px; padding:0 24px 0 0; border:0; border-radius:0; background:transparent; }
+#teacherViewLogModal .teacher-log-summary-label { font-size:12px; color:#536176; font-weight:650; margin-bottom:6px; }
+#teacherViewLogModal .teacher-log-summary-value { font-size:24px; font-weight:700; color:#172236; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .teacher-log-summary-note { margin-top:6px; color:#536176; font-size:12px; font-weight:400; }
+#teacherViewLogModal .td-section { margin-bottom:32px; }
+#teacherViewLogModal .td-section-head { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+#teacherViewLogModal .td-section-head p { margin-top:4px; }
+#teacherViewLogModal label { font-size:12px; color:#536176; }
+#teacherViewLogModal select { margin-left:6px; max-width:100%; min-height:38px; padding:7px 28px 7px 10px; border:1px solid #c9ced7; border-radius:4px; background:#fff; color:#172236; font-size:13px; }
+#teacherViewLogModal .td-table-wrap { width:100%; overflow:auto; border-top:2px solid #243c5b; }
+#teacherViewLogModal .td-table { width:100%!important; min-width:500px!important; border-collapse:collapse; table-layout:fixed; font-size:14px; }
+#teacherViewLogModal .td-table :is(th,td) { padding:12px 16px; border:0; border-bottom:1px solid #e1e5eb; text-align:left; height:auto; position:static; vertical-align:middle; background:#fff; color:#172236; }
+#teacherViewLogModal .td-table thead th { background:#f3f5f8; color:#536176; font-size:12px; font-weight:650; white-space:nowrap; position:static; }
+#teacherViewLogModal .td-table th:first-child { width:20%; }
+#teacherViewLogModal .td-table th:nth-child(2) { width:22%; }
+#teacherViewLogModal .td-table th:nth-child(3):not(:last-child) { width:15%; }
+#teacherViewLogModal .td-table tbody th { font-weight:650; min-width:92px; }
+#teacherViewLogModal .td-table tbody tr:hover :is(th,td) { background:#f8fafc; }
+#teacherViewLogModal .td-table .td-number { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+#teacherViewLogModal .td-table .td-time { font-variant-numeric:tabular-nums; font-size:13px; color:#536176; }
+#teacherViewLogModal .td-state { font-size:13px; font-weight:600; white-space:nowrap; }
+#teacherViewLogModal .td-state.read { color:#316351; }
+#teacherViewLogModal .td-state.unread { color:#a23b26; }
+#teacherViewLogModal .td-period { padding-top:20px; border-top:1px solid #d5dbe3; }
+#teacherViewLogModal summary { padding:8px 0; cursor:pointer; color:#263c5b; font-size:14px; font-weight:600; }
+#teacherViewLogModal .td-period>summary { font-size:16px; }
+#teacherViewLogModal .td-period>summary span { color:#536176; font-size:13px; font-weight:400; margin-left:12px; }
+#teacherViewLogModal .teacher-log-analytics-grid { grid-template-columns:160px 1fr 1fr; gap:24px; margin-top:22px; }
+#teacherViewLogModal .teacher-log-rank-panel { border:0; border-radius:0; }
+#teacherViewLogModal .teacher-log-rank-head { background:#f3f5f8; color:#263c5b; border:0; }
+#teacherViewLogModal .teacher-log-rank-index { border-radius:0; background:transparent; color:#536176; }
+#teacherViewLogModal .teacher-log-rank-name { font-weight:600; }
+#teacherViewLogModal .td-empty { text-align:center; padding:48px 20px; color:#536176; line-height:1.8; }
+#teacherViewLogModal .td-empty progress { display:block; margin:24px auto 8px; accent-color:#243c5b; width:220px; max-width:100%; }
+#teacherViewLogModal .td-room-intro { display:flex; flex-wrap:wrap; gap:20px; align-items:center; justify-content:space-between; margin-bottom:16px; }
+#teacherViewLogModal .td-building-totals { display:flex; flex-wrap:wrap; gap:24px; font-size:12px; color:#536176; }
+#teacherViewLogModal .td-building-totals strong { display:block; margin-top:4px; font-size:20px; color:#172236; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .td-cache-note { padding-bottom:22px; margin-bottom:24px; border-bottom:1px solid #d5dbe3; }
+#teacherViewLogModal .td-filters { display:flex; gap:12px; flex-wrap:wrap; }
+#teacherViewLogModal .td-muted { color:#536176; font-size:12px; font-weight:400; }
+#teacherViewLogModal p.td-muted { margin-bottom:12px; }
+#teacherViewLogModal .td-room-details { margin:8px 0; font-size:13px; font-weight:400; }
+#teacherViewLogModal .td-room-details>div { display:flex; justify-content:space-between; gap:24px; padding:7px 0; border-bottom:1px solid #e1e5eb; }
+#teacherViewLogModal .td-room-details dd { margin:0; white-space:nowrap; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .td-notice { padding:14px 16px; margin-bottom:16px; background:#fff3e6; color:#704014; font-size:13px; border:1px solid #e6c99f; }
+#teacherViewLogModal .teacher-log-adjust-panel { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:0; padding:4px 0; border:0; background:none; }
+#teacherViewLogModal .teacher-log-adjust-panel input { border:1px solid #c9ced7; min-height:38px; border-radius:4px; width:70px; padding:8px; }
+#teacherViewLogModal .teacher-log-adjust-panel label { display:flex; align-items:center; gap:8px; }
+#teacherViewLogModal .teacher-log-skeleton-card { border:0; border-radius:0; box-shadow:none; }
+#teacherViewLogModal .teacher-log-skeleton-head { height:40px; background:#edf1f6; }
+#teacherViewLogModal .teacher-log-skeleton-row { height:46px; }
+@media(max-width:700px) {
+  #teacherViewLogModal .td-header { padding:18px 18px 16px; gap:12px; }
+  #teacherViewLogModal h2 { font-size:20px; }
+  #teacherViewLogModal .td-close { padding:8px; }
+  #teacherViewLogModal .td-close span { display:none; }
+  #teacherViewLogModal .teacher-dashboard-tabs { padding:0 18px; gap:24px; }
+  #teacherViewLogModal .td-tools { padding:12px 18px; gap:8px; }
+  #teacherViewLogModal .td-search { max-width:none; flex-basis:100%; }
+  #teacherViewLogModal .teacher-log-list { padding:20px 18px 28px; }
+  #teacherViewLogModal .teacher-log-summary-grid { gap:20px 0; }
+  #teacherViewLogModal .teacher-log-summary-card { flex-basis:50%; min-width:0; }
+  #teacherViewLogModal .teacher-log-summary-value { font-size:21px; }
+  #teacherViewLogModal .td-section-head { gap:10px; align-items:flex-start; }
+  #teacherViewLogModal .td-table { min-width:0!important; font-size:13px; }
+  #teacherViewLogModal .td-table :is(th,td) { padding:11px 7px; }
+  #teacherViewLogModal .td-table th:first-child { width:20%; }
+#teacherViewLogModal .td-table th:nth-child(2) { width:22%; }
+#teacherViewLogModal .td-table th:nth-child(3):not(:last-child) { width:15%; }
+#teacherViewLogModal .td-table tbody th { min-width:58px; }
+  #teacherViewLogModal .td-table thead th { white-space:normal; font-size:11px; }
+  #teacherViewLogModal .td-table .td-time { font-size:11px; overflow-wrap:anywhere; }
+  #teacherViewLogModal .td-state { font-size:11px; }
+  #teacherViewLogModal .td-rooms { min-width:450px!important; }
+  #teacherViewLogModal .td-rooms th:first-child { position:sticky; left:0; z-index:1; }
+  #teacherViewLogModal .teacher-log-analytics-grid { grid-template-columns:1fr; gap:20px; }
+  #teacherViewLogModal .td-period>summary span { display:block; margin:6px 0 0 16px; }
+}
+@media(prefers-reduced-motion:reduce) { #teacherViewLogModal * { animation:none!important; transition:none!important; } }
+      /* TEACHER_DASHBOARD_CSS_END */
     </style>
   </head>
   <body>
@@ -1910,30 +2023,24 @@
         <div id="attendanceInboxList" class="attendance-inbox-list"></div>
       </div>
     </div>
-    <div id="teacherViewLogModal">
+    <dialog id="teacherViewLogModal" aria-labelledby="teacherDashboardTitle" oncancel="event.preventDefault();closeTeacherViewLogModal()">
       <div class="modal-box teacher-log-box dashboard">
-        <div class="modal-title">강사 대시보드</div>
-        <div class="teacher-log-controls">
-          <div class="teacher-log-toolbar-left">
-            <div class="teacher-log-title-wrap">
-              <div class="teacher-log-kicker">열람 로그 및 강의실 배정 분석</div>
-              <div id="teacherLogWeekLabel" class="teacher-log-week-label">강사 대시보드 로딩 중</div>
-            </div>
-          </div>
-          <div class="teacher-log-toolbar-right">
-            <input id="teacherViewLogSearch" class="modal-search teacher-log-search" type="text" placeholder="강사명 또는 일자/강의실 검색" oninput="filterTeacherViewLogs()">
-            <button class="attendance-time-btn teacher-log-refresh" onclick="refreshTeacherViewLogs()">새로고침</button>
-            <button id="teacherViewLogEditButton" class="attendance-time-btn teacher-log-edit-toggle" type="button" onclick="toggleTeacherViewLogEditMode()" aria-pressed="false">집계 수정</button>
-          </div>
-        </div>
-        <div class="teacher-dashboard-tabs">
-          <button id="teacherDashboardLogTab" class="teacher-dashboard-tab active" onclick="setTeacherDashboardTab('log')">열람 로그</button>
-          <button id="teacherDashboardRoomTab" class="teacher-dashboard-tab" onclick="setTeacherDashboardTab('rooms')">강의실 현황</button>
+        <header class="td-header">
+          <div><h2 id="teacherDashboardTitle">강사 대시보드</h2><p id="teacherLogWeekLabel" aria-live="polite">열람 기록을 불러오는 중입니다.</p></div>
+          <button class="td-close" type="button" onclick="closeTeacherViewLogModal()" aria-label="강사 대시보드 닫기"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg><span>닫기</span></button>
+        </header>
+        <nav class="teacher-dashboard-tabs" aria-label="대시보드 메뉴">
+          <button id="teacherDashboardLogTab" class="teacher-dashboard-tab active" onclick="setTeacherDashboardTab('log')" aria-pressed="true">열람 확인</button>
+          <button id="teacherDashboardRoomTab" class="teacher-dashboard-tab" onclick="setTeacherDashboardTab('rooms')" aria-pressed="false">강의실 배정</button>
+        </nav>
+        <div class="td-tools">
+          <label class="td-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="teacherViewLogSearch" type="search" aria-label="대시보드 검색" placeholder="강사명 또는 날짜 검색" oninput="filterTeacherViewLogs()"></label>
+          <button id="teacherDashboardRefresh" type="button" onclick="refreshTeacherViewLogs()">기록 새로고침</button>
+          <button id="teacherViewLogEditButton" type="button" onclick="toggleTeacherViewLogEditMode()" aria-pressed="false">집계 수정</button>
         </div>
         <div id="teacherViewLogList" class="teacher-log-list"></div>
-        <div class="close-modal" onclick="closeTeacherViewLogModal()">닫기</div>
       </div>
-    </div>
+    </dialog>
     <div id="operationMemoModal">
       <div class="modal-box operation-memo-box">
         <div class="modal-title">운영 메모</div>
@@ -2174,6 +2281,15 @@
       let teacherDashboardEditMode = false;
       let teacherRoomStatsCache = null;
       let teacherRoomStatsLoading = false;
+      let teacherRoomStatsPromise = null;
+      let teacherRoomStatsRequest = 0;
+      let teacherRoomStatsContext = "";
+      let teacherDashboardLogRequest = 0;
+      let teacherDashboardReturnFocus = null;
+      let teacherDashboardStatusFilter = "all";
+      let teacherDashboardHistoryDate = "";
+      let teacherDashboardBuilding = "all";
+      let teacherDashboardRoomSort = "hours";
       let lateNightCollapsed = true;
       let lateNightAccessCode = "2371";
       let operationMemoState = { configured: false, provider: "", config: null, dateKey: "", items: [], manualItems: [], autoItems: [], sourceErrors: {}, slmsEvents: [], slmsLoadedAt: 0, loading: false, editingId: "", popupKey: "" };
@@ -5087,6 +5203,8 @@
         liveFirebaseLogoutPromise = getLiveFirebaseAuth().then(function(auth) { return auth.signOut(); }).catch(function(error) {
           if (window.console && console.warn) console.warn("Firebase 로그아웃 실패:", error);
         });
+        clearTeacherRoomPrivateCache();
+        document.getElementById("teacherViewLogModal").close();
         authState = { loggedIn: false, isMaster: false, isLookup: false, teacherName: "", loginId: "", dashboardAdminToken: "", lookupRoomToken: "" };
         clearVisitorLookupReturnTimer();
         visitorLookupShowFullDay = false;
@@ -8045,43 +8163,26 @@
           "</div>" +
         "</div>";
       }
-      function renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers) {
+      function renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers, keyword) {
         var viewedMap = {};
+        (currentDateLog ? currentDateLog.teachers : []).forEach(function(t) { viewedMap[normalizeTeacherLogName(t.teacherName)] = t; });
         var overrideMap = getTeacherViewOverrideMap(teacherViewOverridesCache);
-        if (currentDateLog) {
-          currentDateLog.teachers.forEach(function(teacher) {
-            viewedMap[normalizeTeacherLogName(teacher.teacherName)] = teacher;
-          });
-        }
-        var teacherCards = expectedTeachers.map(function(name) {
+        var query = String(keyword || '').trim().toLowerCase();
+        var names = expectedTeachers.filter(function(name) {
+          var viewed = !!viewedMap[normalizeTeacherLogName(name)];
+          return (teacherDashboardStatusFilter === 'all' || (teacherDashboardStatusFilter === 'missing' ? !viewed : viewed)) &&
+            (!query || (name + ' ' + currentSheetName).toLowerCase().includes(query));
+        }).sort(function(a,b) { return Number(!!viewedMap[a]) - Number(!!viewedMap[b]) || a.localeCompare(b,'ko'); });
+        var rows = names.map(function(name) {
           var teacher = viewedMap[normalizeTeacherLogName(name)];
-          var viewed = !!teacher;
           var override = overrideMap[getTeacherViewOverrideKey(currentSheetName, name)];
-          var detail = viewed ? (teacher.count + "회 · 최근 " + escapeTeacherLogHtml(teacher.lastViewed)) : "아직 열람 기록이 없습니다.";
-          if (override) detail = "관리자 수정 · " + (override.state === "viewed" ? (override.count + "회로 반영") : "미열람으로 반영");
-          return "<div class='teacher-log-status-card " + (viewed ? "viewed" : "missing") + "'>" +
-            "<div class='teacher-log-status-top'>" +
-              "<div class='teacher-log-status-name'>" + escapeTeacherLogHtml(name) + "</div>" +
-              "<div class='teacher-log-status-badge'>" + (viewed ? "열람" : "미열람") + "</div>" +
-            "</div>" +
-            "<div class='teacher-log-status-sub'>" + detail + "</div>" +
-            (override ? "<div class='teacher-log-manual-note'>관리자 조정</div>" : "") +
-            renderTeacherLogGauge(viewed ? teacher.count : 0) +
-            renderTeacherViewOverrideControls(name, teacher, override) +
-          "</div>";
-        }).join("");
-        if (!expectedTeachers.length) teacherCards = "<div class='teacher-empty'>현재 불러온 시간표에서 강사명을 찾지 못했습니다.</div>";
-        var meta = currentDateLog ? ("로그 강사 " + currentDateLog.teacherCount + "명 · 총 " + currentDateLog.totalViews + "회") : "열람 로그 없음";
-        var description = teacherDashboardEditMode
-          ? "수정 모드: 상태와 횟수를 저장하면 관리자 조정값으로 집계됩니다. 실제 강사 열람 로그는 보존됩니다."
-          : "시간표에 들어간 강사 기준으로 열람 여부를 대조합니다.";
-        return "<section class='teacher-log-current-panel'>" +
-          "<div class='teacher-log-current-head'>" +
-            "<div><div class='teacher-log-current-title'>" + escapeTeacherLogHtml(currentSheetName || "현재 시간표") + "</div><div class='teacher-log-current-meta'>" + description + "</div></div>" +
-            "<div class='teacher-log-current-meta'>" + meta + "</div>" +
-          "</div>" +
-          "<div class='teacher-log-status-grid'>" + teacherCards + "</div>" +
-        "</section>";
+          return '<tr><th scope="row">'+escapeTeacherLogHtml(name)+'</th><td><span class="td-state '+(teacher ? 'read' : 'unread')+'">'+(teacher ? '확인 완료' : '미열람')+'</span></td><td class="td-number">'+(teacher ? teacher.count : 0)+'회</td><td class="td-time">'+(override ? '관리자 조정' : teacher ? escapeTeacherLogHtml(teacher.lastViewed) : '아직 기록 없음')+'</td></tr>' +
+            (teacherDashboardEditMode ? '<tr class="td-edit-row"><td colspan="4">'+renderTeacherViewOverrideControls(name, teacher, override)+'</td></tr>' : '');
+        }).join('');
+        return '<section class="td-section"><div class="td-section-head"><div><h3>'+escapeTeacherLogHtml(currentSheetName || '현재 시간표')+' 열람 현황</h3><p>현재 시간표에 배정된 강사 · 미열람 우선 표시</p></div><label>열람 상태 <select id="teacherStatusSelect" aria-label="열람 상태" onchange="teacherDashboardStatusFilter=this.value;filterTeacherViewLogs()">'+['all','missing','viewed'].map(function(v,i) {return '<option value="'+v+'"'+(teacherDashboardStatusFilter===v?' selected':'')+'>'+['전체','미열람만','확인 완료만'][i]+'</option>';}).join('')+'</select></label></div>'+
+          (teacherDashboardEditMode ? '<p class="td-notice">상태와 횟수를 수정합니다. 실제 열람 기록은 보존됩니다.</p>' : '') +
+          '<div class="td-table-wrap"><table class="td-table"><thead><tr><th>강사</th><th>열람 상태</th><th class="td-number">횟수</th><th>최근 열람 · 한국시간</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+          (!rows ? '<p class="td-empty">'+(expectedTeachers.length?'조건에 맞는 강사가 없습니다. 검색어나 열람 상태를 변경해 주세요.':'현재 시간표에 배정된 강사가 없습니다.')+'</p>':'')+'</section>';
       }
       function syncTeacherDashboardEditButton() {
         var button = document.getElementById('teacherViewLogEditButton');
@@ -8161,52 +8262,29 @@
         saveTeacherViewOverrideFromCard(button);
       }
       function renderTeacherLogWeekStack(weeks) {
-        var referenceDate = getTeacherLogReferenceDate();
-        return "<div class='teacher-log-week-stack'>" + weeks.map(function(week) {
-          var weekTeacherCount = {};
-          var weekTotalViews = 0;
-          week.dates.forEach(function(dateGroup) {
-            weekTotalViews += dateGroup.totalViews;
-            dateGroup.teachers.forEach(function(teacher) {
-              weekTeacherCount[normalizeTeacherLogName(teacher.teacherName)] = true;
-            });
-          });
-          return "<section class='teacher-log-week-board'>" +
-            "<div class='teacher-log-week-head'><span>" + escapeTeacherLogHtml(week.label) + "</span><span>강사 " + Object.keys(weekTeacherCount).length + "명 · " + weekTotalViews + "회</span></div>" +
-            "<div class='teacher-log-date-grid'>" +
-              week.dates.map(function(dateGroup) {
-                var relativeLabel = getTeacherLogRelativeLabel(dateGroup.targetDateObj, referenceDate);
-                var diff = getTeacherLogDayDiff(dateGroup.targetDateObj, referenceDate);
-                var dateClass = diff === 0 ? " is-current" : (diff > 0 && diff <= 2 ? " is-upcoming" : "");
-                return "<article class='teacher-log-date-card" + dateClass + "'>" +
-                  "<div class='teacher-log-date-card-head'>" +
-                    "<div class='teacher-log-date-card-title'>" + escapeTeacherLogHtml(dateGroup.targetDateLabel) + (relativeLabel ? "<span class='teacher-log-date-card-badge'>" + relativeLabel + "</span>" : "") + "</div>" +
-                    "<div class='teacher-log-date-card-meta'>강사 " + dateGroup.teacherCount + "명<br>총 " + dateGroup.totalViews + "회</div>" +
-                  "</div>" +
-                  "<div class='teacher-log-date-teachers'>" +
-                    dateGroup.teachers.map(function(teacher) {
-                      return "<div class='teacher-log-mini-row'>" +
-                        "<div class='teacher-log-mini-name'>" + escapeTeacherLogHtml(teacher.teacherName) + "</div>" +
-                        "<div class='teacher-log-mini-side'><div class='teacher-log-mini-meta'>" + teacher.count + "회<br>" + escapeTeacherLogHtml(teacher.lastViewed) + "</div>" + renderTeacherLogGauge(teacher.count) + "</div>" +
-                      "</div>";
-                    }).join("") +
-                  "</div>" +
-                "</article>";
-              }).join("") +
-            "</div>" +
-          "</section>";
-        }).join("") + "</div>";
+        var dates = [].concat.apply([], weeks.map(function(w){return w.dates;}));
+        if (!dates.length) return '<p class="td-empty">검색 조건에 맞는 날짜별 기록이 없습니다.</p>';
+        var chosen = dates.find(function(d){return d.targetDateLabel===teacherDashboardHistoryDate;}) || dates.find(function(d){return d.targetDateLabel===currentSheetName;}) || dates[0];
+        teacherDashboardHistoryDate = chosen.targetDateLabel;
+        var options = weeks.map(function(w){return '<optgroup label="'+escapeTeacherLogHtml(w.label)+'">'+w.dates.map(function(d){return '<option'+(d===chosen?' selected':'')+' value="'+escapeTeacherLogHtml(d.targetDateLabel)+'">'+escapeTeacherLogHtml(d.targetDateLabel)+' · '+d.totalViews+'회</option>';}).join('')+'</optgroup>';}).join('');
+        return '<section class="td-section"><div class="td-section-head"><div><h3>날짜별 열람 기록</h3><p>시간표 날짜를 선택하면 해당 기록만 표시합니다.</p></div><label>시간표 날짜 <select id="teacherHistoryDateSelect" aria-label="기록 날짜" onchange="teacherDashboardHistoryDate=this.value;filterTeacherViewLogs()">'+options+'</select></label></div><div class="td-table-wrap"><table class="td-table"><thead><tr><th>강사</th><th class="td-number">열람 횟수</th><th>최근 열람 · 한국시간</th></tr></thead><tbody>'+chosen.teachers.map(function(t){return '<tr><th scope="row">'+escapeTeacherLogHtml(t.teacherName)+'</th><td class="td-number">'+t.count+'회</td><td class="td-time">'+escapeTeacherLogHtml(t.lastViewed)+'</td></tr>';}).join('')+'</tbody></table></div></section>';
       }
       function syncTeacherDashboardTabs() {
-        var logTab = document.getElementById('teacherDashboardLogTab');
-        var roomTab = document.getElementById('teacherDashboardRoomTab');
-        if (logTab) logTab.classList.toggle('active', teacherDashboardActiveTab === "log");
-        if (roomTab) roomTab.classList.toggle('active', teacherDashboardActiveTab === "rooms");
+        var rooms = teacherDashboardActiveTab === 'rooms';
+        [['teacherDashboardLogTab',!rooms],['teacherDashboardRoomTab',rooms]].forEach(function(item){
+          var el=document.getElementById(item[0]); if(el){el.classList.toggle('active',item[1]);el.setAttribute('aria-pressed',String(item[1]));}
+        });
+        var search=document.getElementById('teacherViewLogSearch');
+        if(search) search.placeholder=rooms?'강사명 또는 강의실 검색':'강사명 또는 날짜 검색';
+        var refresh=document.getElementById('teacherDashboardRefresh');
+        if(refresh) { refresh.textContent=rooms?'전체 날짜 다시 읽기':'기록 새로고침'; refresh.disabled=rooms&&teacherRoomStatsLoading; }
       }
       function setTeacherDashboardTab(tab) {
         teacherDashboardActiveTab = tab === "rooms" ? "rooms" : "log";
         syncTeacherDashboardTabs();
-        filterTeacherViewLogs();
+        syncTeacherDashboardEditButton();
+        if(teacherDashboardActiveTab === "rooms") loadTeacherRoomStats(false);
+        else filterTeacherViewLogs();
       }
       function getTeacherDashboardMonthSheets() {
         var reference = getTeacherLogReferenceDate();
@@ -8221,32 +8299,46 @@
           return parseTeacherLogTargetDate(a, reference) - parseTeacherLogTargetDate(b, reference);
         });
       }
-      function getTeacherRoomStatsStorageKey(sheets) {
-        var reference = getTeacherLogReferenceDate();
-        var monthKey = reference.getFullYear() + "-" + String(reference.getMonth() + 1).padStart(2, "0");
-        return "sedu_teacher_room_stats_v2::" + monthKey + "::" + (sheets || []).join("|");
+      function teacherRoomDateKey(sheet) {
+        var d=parseTeacherLogTargetDate(sheet,getTeacherLogReferenceDate());
+        return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
       }
-      function readTeacherRoomStatsFromStorage(sheets) {
-        try {
-          var raw = localStorage.getItem(getTeacherRoomStatsStorageKey(sheets));
-          if (!raw) return null;
-          var parsed = JSON.parse(raw);
-          if (!parsed || !parsed.stats || !Array.isArray(parsed.sheets)) return null;
-          if (!parsed.savedAt || Date.now() - parsed.savedAt > 5 * 60 * 1000) return null;
-          if (parsed.sheets.join("|") !== (sheets || []).join("|")) return null;
-          return parsed.stats;
-        } catch (e) {
-          return null;
-        }
+      function teacherRoomTodayKey(now) {
+        return new Date((now == null ? Date.now() : now)+9*3600000).toISOString().slice(0,10);
       }
-      function writeTeacherRoomStatsToStorage(sheets, stats) {
+      function teacherRoomCacheKey(sheet) {
+        return 'sedu_teacher_room_day_v3::'+encodeURIComponent(authState.loginId)+'::'+teacherRoomDateKey(sheet)+'::'+encodeURIComponent(sheet);
+      }
+      function readTeacherRoomDay(sheet) {
         try {
-          localStorage.setItem(getTeacherRoomStatsStorageKey(sheets), JSON.stringify({
-            savedAt: Date.now(),
-            sheets: sheets || [],
-            stats: stats
-          }));
-        } catch (e) {}
+          var entry=JSON.parse(localStorage.getItem(teacherRoomCacheKey(sheet))||'null');
+          if(!entry || entry.schema!==3 || !entry.bucket || !entry.savedAt) return null;
+          var now=Date.now(), day=teacherRoomDateKey(sheet), today=teacherRoomTodayKey(now);
+          if(entry.savedAt>now || now-entry.savedAt>120*86400000) return null;
+          // A past date is final only if it was fetched after that KST day ended.
+          var finalPast=day<today && teacherRoomTodayKey(entry.savedAt)>day;
+          if(!finalPast && (teacherRoomTodayKey(entry.savedAt)!==today || now-entry.savedAt>5*60000)) return null;
+          return entry;
+        } catch(e) { return null; }
+      }
+      function writeTeacherRoomDay(sheet,bucket) {
+        var entry={schema:3,savedAt:Date.now(),bucket:bucket};
+        try { localStorage.setItem(teacherRoomCacheKey(sheet),JSON.stringify(entry)); } catch(e) {}
+        return entry;
+      }
+      function clearTeacherRoomPrivateCache() {
+        teacherRoomStatsCache=null; teacherRoomStatsContext=''; teacherViewLogsCache=[]; teacherViewOverridesCache=[];
+        teacherRoomStatsRequest++; teacherRoomStatsLoading=false;
+        try { Object.keys(localStorage).filter(function(k){return k.indexOf('sedu_teacher_room_')===0;}).forEach(function(k){localStorage.removeItem(k);}); } catch(e) {}
+      }
+      function mergeTeacherRoomBucket(target, source) {
+        Object.keys(source).forEach(function(name){
+          var from=source[name], into=target[name];
+          if(!into) into=target[name]={teacherName:from.teacherName,totalSlots:0,dates:{},buildings:{},rooms:{}};
+          into.totalSlots+=from.totalSlots;
+          Object.assign(into.dates,from.dates);
+          ['buildings','rooms'].forEach(function(field){Object.keys(from[field]).forEach(function(k){into[field][k]=(into[field][k]||0)+from[field][k];});});
+        });
       }
       function getTeacherRoomMetaFromHeader(roomName) {
         var raw = String(roomName || "").trim();
@@ -8268,7 +8360,7 @@
         if (!force && clientCache[cacheKey] && clientCache[cacheKey].grid) return Promise.resolve(clientCache[cacheKey]);
         var sessionKey = getScheduleSessionKey();
         return callServer("getFixedGridData", [sheetName, !!force]).then(function(data) {
-          if (!data || data.error || !data.grid) throw new Error("시간표를 불러오지 못했습니다: " + sheetName);
+          if (!data || data.error || !data.grid) throw new Error(data && data.error ? String(data.error) : "시간표를 불러오지 못했습니다.");
           if (sessionKey !== getScheduleSessionKey()) throw new Error("로그인 상태가 변경되었습니다.");
           clientCache[cacheKey] = data;
           return data;
@@ -8307,139 +8399,77 @@
           });
         }
       }
-      function renderTeacherRoomStatsLoading(done, total) {
-        var list = document.getElementById('teacherViewLogList');
-        var weekLabel = document.getElementById('teacherLogWeekLabel');
-        if (weekLabel) weekLabel.textContent = "강의실 현황 집계 중 · " + done + "/" + total + "일";
-        if (list) {
-          list.classList.remove('is-ready');
-          list.innerHTML = "<div class='teacher-log-loading'><div class='teacher-log-spinner'></div><div style='margin-top:12px; color:#475569; font-weight:900;'>이번 달 시간표에서 강사별 강의실 배정을 집계하고 있습니다. " + done + "/" + total + "</div></div>";
-        }
+      function renderTeacherRoomStatsLoading(done,total) {
+        var list=document.getElementById('teacherViewLogList');
+        list.classList.add('is-ready');
+        document.getElementById('teacherLogWeekLabel').textContent='강의실 배정 집계 · '+done+' / '+total+'일';
+        list.innerHTML='<div class="td-empty" role="status"><h3>강의실 배정을 준비하고 있습니다.</h3><p>저장된 날짜는 재사용하고 필요한 날짜만 읽습니다.</p><progress aria-label="강의실 집계 진행" value="'+done+'" max="'+Math.max(1,total)+'"></progress><p>'+done+' / '+total+'일</p></div>';
       }
       function loadTeacherRoomStats(force) {
-        if (teacherRoomStatsLoading) return;
-        if (!force && teacherRoomStatsCache) {
-          renderTeacherRoomStats();
-          return;
-        }
-        var sheets = getTeacherDashboardMonthSheets();
-        var reference = getTeacherLogReferenceDate();
-        var stats = {
-          monthLabel: reference.getFullYear() + "년 " + (reference.getMonth() + 1) + "월",
-          sheetCount: sheets.length,
-          teachers: []
-        };
-        if (!sheets.length) {
-          teacherRoomStatsCache = stats;
-          if (teacherDashboardActiveTab === "rooms") renderTeacherRoomStats();
-          return;
-        }
-        if (!force) {
-          var stored = readTeacherRoomStatsFromStorage(sheets);
-          if (stored && stored.sheetCount === sheets.length) {
-            teacherRoomStatsCache = stored;
-            if (teacherDashboardActiveTab === "rooms") renderTeacherRoomStats();
-            return;
-          }
-        }
-        teacherRoomStatsLoading = true;
-        var sessionKey = getScheduleSessionKey();
-        var failedSheets = [];
-        var bucket = {};
-        var index = 0;
-        renderTeacherRoomStatsLoading(0, sheets.length);
-        function next() {
-          if (sessionKey !== getScheduleSessionKey()) { teacherRoomStatsLoading = false; return; }
-          if (index >= sheets.length) {
-            stats.teachers = Object.keys(bucket).map(function(name) {
-              var item = bucket[name];
-              item.dateCount = Object.keys(item.dates).length;
-              item.buildingList = Object.keys(item.buildings).sort(function(a, b) { return item.buildings[b] - item.buildings[a]; });
-              item.primaryBuilding = item.buildingList[0] || "";
-              item.roomList = Object.keys(item.rooms).map(function(room) {
-                var building = room.split(" ")[0] || "";
-                return { room: room, building: building, count: item.rooms[room] };
-              }).sort(function(a, b) {
-                if (b.count !== a.count) return b.count - a.count;
-                return a.room.localeCompare(b.room, "ko");
-              });
-              item.primaryRoom = item.roomList[0] || null;
-              return item;
-            }).sort(function(a, b) {
-              if (b.totalSlots !== a.totalSlots) return b.totalSlots - a.totalSlots;
-              return a.teacherName.localeCompare(b.teacherName, "ko");
-            });
-            teacherRoomStatsCache = stats;
-            if (!failedSheets.length) writeTeacherRoomStatsToStorage(sheets, stats);
-            teacherRoomStatsLoading = false;
-            if (teacherDashboardActiveTab === "rooms") renderTeacherRoomStats();
-            if (failedSheets.length) {
-              teacherRoomStatsCache = null;
-              alert("일부 시간표를 불러오지 못해 강의실 현황이 누락될 수 있습니다. 새로고침해 주세요. (" + failedSheets.length + "일)");
+        if(!authState.loggedIn || !authState.isMaster) { clearTeacherRoomPrivateCache(); return Promise.resolve(); }
+        var session=getScheduleSessionKey(), sheets=getTeacherDashboardMonthSheets();
+        var context=session+'::'+sheets.map(teacherRoomCacheKey).join('|');
+        if(teacherRoomStatsLoading && teacherRoomStatsContext===context) return teacherRoomStatsPromise;
+        var roomRequest=++teacherRoomStatsRequest;
+        teacherRoomStatsContext=context; teacherRoomStatsLoading=true; syncTeacherDashboardTabs();
+        var reference=getTeacherLogReferenceDate();
+        var stats={monthLabel:reference.getFullYear()+'년 '+(reference.getMonth()+1)+'월',sheetCount:sheets.length,teachers:[],failedSheets:[],reused:0,loaded:0};
+        var bucket={}, done=0;
+        function active(){return roomRequest===teacherRoomStatsRequest && authState.isMaster && session===getScheduleSessionKey() && context===teacherRoomStatsContext;}
+        teacherRoomStatsPromise=(async function(){
+          for(var sheet of sheets){
+            if(!active()) return;
+            var stored=!force && readTeacherRoomDay(sheet);
+            if(stored){mergeTeacherRoomBucket(bucket,stored.bucket);stats.reused++;}
+            else {
+              if(teacherDashboardActiveTab==='rooms') renderTeacherRoomStatsLoading(done,sheets.length);
+              try {
+                // Bypass the unbounded in-memory grid cache on a cache miss or explicit refresh.
+                var data=await getTeacherRoomSheetData(sheet,true);
+                if(!active()) return;
+                var daily={};collectTeacherRoomStatsFromGrid(sheet,data,daily);
+                writeTeacherRoomDay(sheet,daily); mergeTeacherRoomBucket(bucket,daily);stats.loaded++;
+              } catch(error){
+                if(!active()) return;
+                if(/UNAUTHORIZED|FORBIDDEN|PERMISSION|로그인|권한/.test(String(error&&error.message))) {clearTeacherRoomPrivateCache();throw error;}
+                stats.failedSheets.push(sheet);
+              }
             }
-            return;
+            done++;
           }
-          var sheetName = sheets[index++];
-          renderTeacherRoomStatsLoading(index - 1, sheets.length);
-          getTeacherRoomSheetData(sheetName, force).then(function(data) {
-            collectTeacherRoomStatsFromGrid(sheetName, data, bucket);
-          }).catch(function(err) {
-            failedSheets.push(sheetName);
-            console.warn("강의실 현황 집계 실패", sheetName, err);
-          }).then(next);
-        }
-        next();
+          if(!active()) return;
+          stats.teachers=Object.keys(bucket).map(function(name){
+            var item=bucket[name]; item.dateCount=Object.keys(item.dates).length;
+            item.buildingList=Object.keys(item.buildings).sort(function(a,b){return item.buildings[b]-item.buildings[a];});
+            item.primaryBuilding=item.buildingList[0]||'';
+            item.roomList=Object.keys(item.rooms).map(function(room){return {room:room,building:room.split(' ')[0],count:item.rooms[room]};}).sort(function(a,b){return b.count-a.count||a.room.localeCompare(b.room,'ko');});
+            item.primaryRoom=item.roomList[0]||null;return item;
+          });
+          stats.savedAt=Date.now();teacherRoomStatsCache=stats;
+          if(teacherDashboardActiveTab==='rooms') renderTeacherRoomStats();
+        })().catch(function(){
+          if(session===getScheduleSessionKey() && teacherDashboardActiveTab==='rooms') document.getElementById('teacherViewLogList').innerHTML='<p class="td-empty" role="alert">강의실 조회 권한을 확인하지 못했습니다. 다시 로그인해 주세요.</p>';
+        }).finally(function(){
+          if(roomRequest===teacherRoomStatsRequest){teacherRoomStatsLoading=false;syncTeacherDashboardTabs();}
+        });
+        return teacherRoomStatsPromise;
       }
       function renderTeacherRoomStats() {
-        var list = document.getElementById('teacherViewLogList');
-        var weekLabel = document.getElementById('teacherLogWeekLabel');
-        if (!list) return;
-        var keyword = String((document.getElementById('teacherViewLogSearch').value || "")).trim().toLowerCase();
-        var stats = teacherRoomStatsCache || { monthLabel: "", sheetCount: 0, teachers: [] };
-        var teachers = (stats.teachers || []).filter(function(item) {
-          if (!keyword) return true;
-          return [item.teacherName].concat(item.roomList.map(function(room) { return room.room; })).join(" ").toLowerCase().indexOf(keyword) > -1;
-        });
-        var totalSlots = teachers.reduce(function(sum, item) { return sum + item.totalSlots; }, 0);
-        if (weekLabel) weekLabel.textContent = (stats.monthLabel || "이번 달") + " · " + stats.sheetCount + "일 · 강사 " + teachers.length + "명 · 배정 " + formatTeacherRoomHours(totalSlots);
-        if (!stats.sheetCount) {
-          list.innerHTML = "<div class='teacher-empty'>이번 달로 인식되는 시간표 시트를 찾지 못했습니다.</div>";
-          list.classList.add('is-ready');
-          return;
-        }
-        var buildingTotals = { "본관": 0, "2관": 0, "3관": 0 };
-        teachers.forEach(function(item) {
-          Object.keys(item.buildings || {}).forEach(function(building) {
-            buildingTotals[building] = (buildingTotals[building] || 0) + item.buildings[building];
-          });
-        });
-        var cards = teachers.map(function(item) {
-          var rooms = item.roomList.slice(0, 8).map(function(room) {
-            return "<span class='teacher-room-stat-chip " + getTeacherRoomBuildingClass(room.building) + "'>" + escapeTeacherLogHtml(room.room) + " · " + formatTeacherRoomHours(room.count) + "</span>";
-          }).join("");
-          var primary = item.primaryRoom;
-          return "<article class='teacher-room-card'>" +
-            "<div class='teacher-room-card-head'>" +
-              "<div><div class='teacher-room-card-name'>" + escapeTeacherLogHtml(item.teacherName) + "</div><div class='teacher-log-summary-note'>" + item.buildingList.map(escapeTeacherLogHtml).join(" · ") + "</div></div>" +
-              "<div class='teacher-room-card-meta'>총 " + formatTeacherRoomHours(item.totalSlots) + "<br>" + item.dateCount + "일 배정</div>" +
-            "</div>" +
-            "<div class='teacher-room-primary " + getTeacherRoomBuildingClass(primary ? primary.building : item.primaryBuilding) + "'>" +
-              "<div class='teacher-room-primary-label'>주 사용 관-강의실</div>" +
-              "<div class='teacher-room-primary-value'>" + escapeTeacherLogHtml(primary ? primary.room : "배정 없음") + "</div>" +
-              "<div class='teacher-room-primary-meta'>" + (primary ? formatTeacherRoomHours(primary.count) + " · 전체의 " + Math.round((primary.count / Math.max(1, item.totalSlots)) * 100) + "%" : "-") + "</div>" +
-            "</div>" +
-            "<div class='teacher-room-chip-list'>" + (rooms || "<span class='teacher-room-stat-chip'>강의실 없음</span>") + "</div>" +
-          "</article>";
-        }).join("");
-        list.innerHTML =
-          "<div class='teacher-room-summary'>" +
-            "<div class='teacher-log-summary-card'><div class='teacher-log-summary-label'>집계 월</div><div class='teacher-log-summary-value'>" + escapeTeacherLogHtml(stats.monthLabel) + "</div><div class='teacher-log-summary-note'>시간표 " + stats.sheetCount + "일 기준</div></div>" +
-            "<div class='teacher-log-summary-card teacher-room-building-main'><div class='teacher-log-summary-label'>본관 배정</div><div class='teacher-log-summary-value'>" + formatTeacherRoomHours(buildingTotals["본관"] || 0) + "</div><div class='teacher-log-summary-note'>1~9강의실</div></div>" +
-            "<div class='teacher-log-summary-card teacher-room-building-2'><div class='teacher-log-summary-label'>2관 배정</div><div class='teacher-log-summary-value'>" + formatTeacherRoomHours(buildingTotals["2관"] || 0) + "</div><div class='teacher-log-summary-note'>2관 강의실</div></div>" +
-            "<div class='teacher-log-summary-card teacher-room-building-3'><div class='teacher-log-summary-label'>3관 배정</div><div class='teacher-log-summary-value'>" + formatTeacherRoomHours(buildingTotals["3관"] || 0) + "</div><div class='teacher-log-summary-note'>3관 강의실</div></div>" +
-          "</div>" +
-          "<div class='teacher-room-dashboard-grid'>" + (cards || "<div class='teacher-empty'>검색 결과가 없습니다.</div>") + "</div>";
-        requestAnimationFrame(function() { list.classList.add('is-ready'); });
+        var focusId=document.activeElement && document.activeElement.id;
+        var list=document.getElementById('teacherViewLogList'), stats=teacherRoomStatsCache;
+        if(!list || !stats || !authState.isMaster) return;
+        var keyword=document.getElementById('teacherViewLogSearch').value.trim().toLowerCase();
+        var teachers=stats.teachers.filter(function(t){return (!keyword || [t.teacherName].concat(t.roomList.map(function(r){return r.room;})).join(' ').toLowerCase().includes(keyword)) && (teacherDashboardBuilding==='all'||!!t.buildings[teacherDashboardBuilding]);}).sort(function(a,b){return teacherDashboardRoomSort==='name'?a.teacherName.localeCompare(b.teacherName,'ko'):b.totalSlots-a.totalSlots||a.teacherName.localeCompare(b.teacherName,'ko');});
+        document.getElementById('teacherLogWeekLabel').textContent=stats.monthLabel+' · 강의실 배정 분석';
+        var totals={'본관':0,'2관':0,'3관':0};stats.teachers.forEach(function(t){Object.keys(t.buildings).forEach(function(b){totals[b]=(totals[b]||0)+t.buildings[b];});});
+        var failed=stats.failedSheets||[];
+        list.innerHTML='<div class="td-room-intro"><div><h3>'+escapeTeacherLogHtml(stats.monthLabel)+' 배정 현황</h3><p>안준성 원장님 제외 · 시간표 '+(stats.sheetCount-failed.length)+'일 집계 · 강사 '+stats.teachers.length+'명</p></div><div class="td-building-totals">'+Object.keys(totals).map(function(b){return '<span>'+b+' <strong>'+formatTeacherRoomHours(totals[b])+'</strong></span>';}).join('')+'</div></div>'+
+          '<p class="td-cache-note">저장된 날짜 '+stats.reused+'일 재사용 · '+stats.loaded+'일 조회. 과거 날짜는 저장된 집계를 사용합니다. 수정된 과거 시간표는 ‘전체 날짜 다시 읽기’로 반영하세요.</p>'+
+          (failed.length?'<div class="td-notice" role="alert">'+failed.length+'일을 읽지 못해 부분 집계입니다. <button type="button" onclick="loadTeacherRoomStats(false)">누락 날짜 다시 시도</button><details><summary>누락 날짜 확인</summary>'+failed.map(escapeTeacherLogHtml).join(', ')+'</details></div>':'')+
+          '<div class="td-section-head"><h3>강사별 배정 <span class="td-muted">'+teachers.length+'명</span></h3><div class="td-filters"><label>사용 관 <select id="teacherBuildingSelect" aria-label="사용 관" onchange="teacherDashboardBuilding=this.value;renderTeacherRoomStats()">'+['all','본관','2관','3관'].map(function(v){return '<option value="'+v+'"'+(v===teacherDashboardBuilding?' selected':'')+'>'+(v==='all'?'전체 관':v)+'</option>';}).join('')+'</select></label><label>정렬 <select id="teacherRoomSortSelect" aria-label="강의실 배정 정렬" onchange="teacherDashboardRoomSort=this.value;renderTeacherRoomStats()"><option value="hours"'+(teacherDashboardRoomSort==='hours'?' selected':'')+'>배정 시간순</option><option value="name"'+(teacherDashboardRoomSort==='name'?' selected':'')+'>강사 이름순</option></select></label></div></div>'+
+          '<p class="td-muted">관 필터는 해당 관을 사용하는 강사를 찾습니다. 시간은 전체 관의 합계이며, 1칸을 1시간으로 집계합니다.</p><div class="td-table-wrap"><table class="td-table td-rooms"><thead><tr><th>강사</th><th class="td-number">배정 시간</th><th class="td-number">배정 일수</th><th>주 사용 강의실 / 전체 배정</th></tr></thead><tbody>'+teachers.map(function(t){return '<tr><th scope="row">'+escapeTeacherLogHtml(t.teacherName)+'</th><td class="td-number">'+t.totalSlots+'시간</td><td class="td-number">'+t.dateCount+'일</td><td><details><summary>'+escapeTeacherLogHtml(t.primaryRoom?t.primaryRoom.room:'배정 없음')+'<span class="td-muted"> · '+t.roomList.length+'개 강의실</span></summary><dl class="td-room-details">'+t.roomList.map(function(r){return '<div><dt>'+escapeTeacherLogHtml(r.room)+'</dt><dd>'+r.count+'시간</dd></div>';}).join('')+'</dl></details></td></tr>';}).join('')+'</tbody></table></div>'+(!teachers.length?'<p class="td-empty">'+(!stats.sheetCount?'이 달의 시간표가 없습니다. 캘린더에서 다른 날짜를 선택해 주세요.':'조건에 맞는 강사가 없습니다. 검색어나 관을 변경해 주세요.')+'</p>':'');
+        list.classList.add('is-ready');
+        if(focusId && document.getElementById(focusId))document.getElementById(focusId).focus({preventScroll:true});
       }
       function renderTeacherLogLoading(mode) {
         var list = document.getElementById('teacherViewLogList');
@@ -8462,46 +8492,19 @@
         filterTeacherViewLogs();
       }
       function filterTeacherViewLogs() {
-        var list = document.getElementById('teacherViewLogList');
-        var weekLabel = document.getElementById('teacherLogWeekLabel');
-        var keyword = String((document.getElementById('teacherViewLogSearch').value || "")).trim();
-        syncTeacherDashboardTabs();
-        syncTeacherDashboardEditButton();
-        if (teacherDashboardActiveTab === "rooms") {
-          if (teacherRoomStatsCache) renderTeacherRoomStats();
-          else loadTeacherRoomStats(false);
-          return;
-        }
-        renderTeacherLogLoading("skeleton");
-        requestAnimationFrame(function() {
-          var effectiveLogs = buildEffectiveTeacherViewLogs(teacherViewLogsCache, teacherViewOverridesCache);
-          var weeks = buildTeacherLogDashboardData(effectiveLogs, keyword);
-          var expectedTeachers = getCurrentScheduleTeacherNames();
-          var currentDateLog = findTeacherLogDateGroup(buildTeacherLogDashboardData(effectiveLogs, ""), currentSheetName);
-          if (!weeks.length) {
-            teacherViewLogWeekIndex = 0;
-            teacherViewLogSelectedDateIndex = 0;
-            if (weekLabel) weekLabel.textContent = keyword ? "검색 결과 없음" : "열람 기록 없음";
-            list.innerHTML = renderTeacherLogSummaryCards(currentDateLog, expectedTeachers) +
-              renderTeacherLogAnalytics(effectiveLogs, keyword) +
-              renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers) +
-              "<div class='teacher-empty'>" + (keyword ? "검색 결과가 없습니다." : "열람 기록이 없습니다.") + "</div>";
-            list.classList.add('is-ready');
-            return;
-          }
-          var totalDates = weeks.reduce(function(sum, week) { return sum + week.dates.length; }, 0);
-          var totalViews = weeks.reduce(function(sum, week) {
-            return sum + week.dates.reduce(function(dateSum, dateGroup) { return dateSum + dateGroup.totalViews; }, 0);
-          }, 0);
-          if (weekLabel) weekLabel.textContent = "전체 " + weeks.length + "주 · " + totalDates + "일 · " + totalViews + "회";
-          list.innerHTML = renderTeacherLogSummaryCards(currentDateLog, expectedTeachers) +
-            renderTeacherLogAnalytics(effectiveLogs, keyword) +
-            renderCurrentTeacherLogPanel(currentDateLog, expectedTeachers) +
-            renderTeacherLogWeekStack(weeks);
-          requestAnimationFrame(function() {
-            list.classList.add('is-ready');
-          });
-        });
+        var focusId=document.activeElement && document.activeElement.id;
+        if(!authState.isMaster) return;
+        var list=document.getElementById('teacherViewLogList'), keyword=document.getElementById('teacherViewLogSearch').value.trim();
+        syncTeacherDashboardTabs();syncTeacherDashboardEditButton();
+        if(teacherDashboardActiveTab==='rooms'){if(teacherRoomStatsCache && teacherRoomStatsContext.indexOf(getScheduleSessionKey()+'::')===0) renderTeacherRoomStats();else loadTeacherRoomStats(false);return;}
+        var logs=buildEffectiveTeacherViewLogs(teacherViewLogsCache,teacherViewOverridesCache);
+        var weeks=buildTeacherLogDashboardData(logs,keyword), expected=getCurrentScheduleTeacherNames();
+        var current=findTeacherLogDateGroup(buildTeacherLogDashboardData(logs,''),currentSheetName);
+        document.getElementById('teacherLogWeekLabel').textContent='현재 시간표 '+(currentSheetName||'미선택')+' · 열람 확인 및 기록';
+        list.innerHTML=renderTeacherLogSummaryCards(current,expected)+renderCurrentTeacherLogPanel(current,expected,keyword)+renderTeacherLogWeekStack(weeks)+
+          '<details class="td-period"><summary>전체 기록 통계 <span>평균 열람 · 최다 / 최저 조회</span></summary>'+renderTeacherLogAnalytics(logs,keyword)+'</details>';
+        list.classList.add('is-ready');
+        if(focusId && document.getElementById(focusId))document.getElementById(focusId).focus({preventScroll:true});
       }
       function selectTeacherLogDate(index) {
         teacherViewLogSelectedDateIndex = index;
@@ -8518,45 +8521,35 @@
         filterTeacherViewLogs();
       }
       function refreshTeacherViewLogs(raiseOnError) {
-        if (teacherDashboardActiveTab === "rooms") {
-          teacherRoomStatsCache = null;
-          return loadTeacherRoomStats(true);
-        }
-        var teacherFilter = getAdminSelectedTeacher();
-        renderTeacherLogLoading("spinner");
-        var requests = [callServer("getTeacherViewLogs", [teacherFilter, 180])];
-        requests.push(authState.isMaster
-          ? withDashboardAdminSession(function(token) { return callServer("getTeacherViewOverrides", [token]); })
-          : Promise.resolve([]));
-        return Promise.all(requests).then(function(results) {
-          renderTeacherViewLogs(results[0], results[1]);
-        }).catch(function(err) {
-          var message = err && err.message ? err.message : String(err || '');
-          if (isDashboardAdminSessionError(err) || message.indexOf('ADMIN_SESSION') > -1) {
-            alert('관리자 세션을 자동 갱신하지 못했습니다. 다시 로그인한 뒤 대시보드를 열어주세요.');
-          } else {
-            alert("열람 로그 로딩 실패: " + message);
-          }
-          if (raiseOnError) throw err;
-          return null;
-        });
+        if(!authState.isMaster) return Promise.resolve();
+        if(teacherDashboardActiveTab==='rooms') return loadTeacherRoomStats(true);
+        var session=getScheduleSessionKey(), request=++teacherDashboardLogRequest;
+        renderTeacherLogLoading('skeleton');
+        var refresh=document.getElementById('teacherDashboardRefresh');refresh.disabled=true;
+        return Promise.all([callServer('getTeacherViewLogs',[getAdminSelectedTeacher(),180]),withDashboardAdminSession(function(token) { return callServer("getTeacherViewOverrides", [token]); })]).then(function(results){
+          if(request!==teacherDashboardLogRequest || session!==getScheduleSessionKey() || !authState.isMaster) return;
+          teacherViewLogsCache=Array.isArray(results[0])?results[0].slice():[];teacherViewOverridesCache=Array.isArray(results[1])?results[1].slice():[];
+          if(teacherDashboardActiveTab==='log')filterTeacherViewLogs();
+        }).catch(function(error){
+          if(request!==teacherDashboardLogRequest || session!==getScheduleSessionKey())return;
+          if(teacherDashboardActiveTab==='log'){var list=document.getElementById('teacherViewLogList');list.classList.add('is-ready');list.innerHTML='<div class="td-empty" role="alert">열람 기록을 불러오지 못했습니다. 위의 ‘기록 새로고침’으로 다시 시도해 주세요.</div>';}
+          if(raiseOnError)throw error;
+        }).finally(function(){if(request===teacherDashboardLogRequest)syncTeacherDashboardTabs();});
       }
       function openTeacherViewLogModal() {
-        if (!authState.isMaster) return;
-        document.getElementById('teacherViewLogModal').style.display = 'flex';
-        document.getElementById('teacherViewLogSearch').value = "";
-        teacherViewLogWeekIndex = 0;
-        teacherViewLogSelectedDateIndex = 0;
-        teacherDashboardActiveTab = "log";
-        teacherDashboardEditMode = false;
-        teacherRoomStatsCache = null;
-        syncTeacherDashboardTabs();
-        syncTeacherDashboardEditButton();
-        renderTeacherLogLoading("spinner");
-        refreshTeacherViewLogs();
+        if(!authState.isMaster)return;
+        teacherDashboardReturnFocus=document.activeElement;
+        var modal=document.getElementById('teacherViewLogModal');if(!modal.open)modal.showModal();
+        document.getElementById('teacherViewLogSearch').value='';
+        teacherDashboardStatusFilter='all';teacherDashboardActiveTab='log';teacherDashboardEditMode=false;
+        teacherDashboardHistoryDate=currentSheetName;
+        syncTeacherDashboardTabs();syncTeacherDashboardEditButton();refreshTeacherViewLogs();
       }
       function closeTeacherViewLogModal() {
-        document.getElementById('teacherViewLogModal').style.display = 'none';
+        teacherDashboardLogRequest++;
+        teacherRoomStatsRequest++;teacherRoomStatsLoading=false;teacherRoomStatsContext='';
+        document.getElementById('teacherViewLogModal').close();
+        if(teacherDashboardReturnFocus && teacherDashboardReturnFocus.isConnected)teacherDashboardReturnFocus.focus();
       }
       function getCurrentReportHour() {
         var now = new Date();

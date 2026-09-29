@@ -1,0 +1,111 @@
+/* Teacher dashboard: an operational ledger, scoped to its full-screen dialog. */
+#teacherViewLogModal { inset:0; width:100%; height:100%; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#f4f5f7; color:#172236; }
+#teacherViewLogModal[open] { display:flex; }
+#teacherViewLogModal::backdrop { background:#17223680; }
+#teacherViewLogModal .teacher-log-box.dashboard { display:flex; flex-direction:column; width:100%; max-width:1440px; height:100%; max-height:none; margin:0 auto; padding:0; border:0; border-radius:0; overflow:hidden; box-shadow:none; background:#fff; text-align:left; }
+#teacherViewLogModal * { box-sizing:border-box; }
+#teacherViewLogModal h2, #teacherViewLogModal h3, #teacherViewLogModal p { margin:0; }
+#teacherViewLogModal h2 { font-size:24px; font-weight:750; letter-spacing:-.025em; line-height:1.4; }
+#teacherViewLogModal h3 { font-size:17px; font-weight:750; line-height:1.5; }
+#teacherViewLogModal p { color:#536176; font-size:13px; line-height:1.6; }
+#teacherViewLogModal button, #teacherViewLogModal select, #teacherViewLogModal input { font:inherit; }
+#teacherViewLogModal button { min-height:40px; padding:8px 14px; border:1px solid #c9ced7; border-radius:5px; background:#fff; color:#26364c; font-size:13px; font-weight:650; cursor:pointer; box-shadow:none; }
+#teacherViewLogModal button:hover { background:#edf1f6; }
+#teacherViewLogModal button:disabled { opacity:.5; cursor:wait; }
+#teacherViewLogModal :is(button,select,input,summary):focus-visible { outline:2px solid #2856a7; outline-offset:3px; }
+#teacherViewLogModal ::selection { background:#dce7fb; color:#102b56; }
+#teacherViewLogModal input { caret-color:#2856a7; }
+#teacherViewLogModal .td-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:26px 36px 22px; background:#172b49; color:#fff; flex-shrink:0; }
+#teacherViewLogModal #teacherLogWeekLabel { color:#c6d3e4; font-size:13px; margin-top:6px; }
+#teacherViewLogModal .td-close { display:flex; align-items:center; gap:8px; border-color:#76859b; background:transparent; color:#fff; flex-shrink:0; }
+#teacherViewLogModal .td-close:hover { background:#304561; }
+#teacherViewLogModal .teacher-dashboard-tabs { flex-shrink:0; display:flex; gap:28px; padding:0 36px; margin:0; border-bottom:1px solid #d5dbe3; }
+#teacherViewLogModal .teacher-dashboard-tab { padding:18px 0 15px; min-height:54px; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; font-size:15px; color:#536176; }
+#teacherViewLogModal .teacher-dashboard-tab.active { border-bottom-color:#172b49; color:#172b49; background:transparent; }
+#teacherViewLogModal .td-tools { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:16px 36px; border-bottom:1px solid #e0e4ea; flex-shrink:0; }
+#teacherViewLogModal .td-search { display:flex; align-items:center; gap:10px; flex:1; min-width:180px; max-width:460px; padding:0 12px; border:1px solid #c9ced7; border-radius:5px; color:#536176; }
+#teacherViewLogModal .td-search input { width:100%; height:40px; border:0; background:transparent; font-size:14px; color:#172236; outline-offset:0; }
+#teacherViewLogModal input::placeholder { color:#647086; opacity:1; }
+#teacherViewLogModal #teacherViewLogEditButton { margin-left:auto; }
+#teacherViewLogModal #teacherViewLogEditButton.is-active { background:#172b49; color:#fff; border-color:#172b49; }
+#teacherViewLogModal .teacher-log-list { flex:1; min-height:0; overflow:auto; padding:24px 36px 36px; display:block; opacity:1; transform:none; transition:none; overscroll-behavior:contain; scrollbar-color:#9ba8ba #f4f5f7; }
+#teacherViewLogModal .teacher-log-summary-grid { display:flex; flex-wrap:wrap; gap:0; padding:0 0 22px; margin:0 0 24px; border-bottom:1px solid #d5dbe3; }
+#teacherViewLogModal .teacher-log-summary-card { flex:1; min-width:140px; padding:0 24px 0 0; border:0; border-radius:0; background:transparent; }
+#teacherViewLogModal .teacher-log-summary-label { font-size:12px; color:#536176; font-weight:650; margin-bottom:6px; }
+#teacherViewLogModal .teacher-log-summary-value { font-size:24px; font-weight:700; color:#172236; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .teacher-log-summary-note { margin-top:6px; color:#536176; font-size:12px; font-weight:400; }
+#teacherViewLogModal .td-section { margin-bottom:32px; }
+#teacherViewLogModal .td-section-head { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:14px; }
+#teacherViewLogModal .td-section-head p { margin-top:4px; }
+#teacherViewLogModal label { font-size:12px; color:#536176; }
+#teacherViewLogModal select { margin-left:6px; max-width:100%; min-height:38px; padding:7px 28px 7px 10px; border:1px solid #c9ced7; border-radius:4px; background:#fff; color:#172236; font-size:13px; }
+#teacherViewLogModal .td-table-wrap { width:100%; overflow:auto; border-top:2px solid #243c5b; }
+#teacherViewLogModal .td-table { width:100%!important; min-width:500px!important; border-collapse:collapse; table-layout:fixed; font-size:14px; }
+#teacherViewLogModal .td-table :is(th,td) { padding:12px 16px; border:0; border-bottom:1px solid #e1e5eb; text-align:left; height:auto; position:static; vertical-align:middle; background:#fff; color:#172236; }
+#teacherViewLogModal .td-table thead th { background:#f3f5f8; color:#536176; font-size:12px; font-weight:650; white-space:nowrap; position:static; }
+#teacherViewLogModal .td-table th:first-child { width:20%; }
+#teacherViewLogModal .td-table th:nth-child(2) { width:22%; }
+#teacherViewLogModal .td-table th:nth-child(3):not(:last-child) { width:15%; }
+#teacherViewLogModal .td-table tbody th { font-weight:650; min-width:92px; }
+#teacherViewLogModal .td-table tbody tr:hover :is(th,td) { background:#f8fafc; }
+#teacherViewLogModal .td-table .td-number { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+#teacherViewLogModal .td-table .td-time { font-variant-numeric:tabular-nums; font-size:13px; color:#536176; }
+#teacherViewLogModal .td-state { font-size:13px; font-weight:600; white-space:nowrap; }
+#teacherViewLogModal .td-state.read { color:#316351; }
+#teacherViewLogModal .td-state.unread { color:#a23b26; }
+#teacherViewLogModal .td-period { padding-top:20px; border-top:1px solid #d5dbe3; }
+#teacherViewLogModal summary { padding:8px 0; cursor:pointer; color:#263c5b; font-size:14px; font-weight:600; }
+#teacherViewLogModal .td-period>summary { font-size:16px; }
+#teacherViewLogModal .td-period>summary span { color:#536176; font-size:13px; font-weight:400; margin-left:12px; }
+#teacherViewLogModal .teacher-log-analytics-grid { grid-template-columns:160px 1fr 1fr; gap:24px; margin-top:22px; }
+#teacherViewLogModal .teacher-log-rank-panel { border:0; border-radius:0; }
+#teacherViewLogModal .teacher-log-rank-head { background:#f3f5f8; color:#263c5b; border:0; }
+#teacherViewLogModal .teacher-log-rank-index { border-radius:0; background:transparent; color:#536176; }
+#teacherViewLogModal .teacher-log-rank-name { font-weight:600; }
+#teacherViewLogModal .td-empty { text-align:center; padding:48px 20px; color:#536176; line-height:1.8; }
+#teacherViewLogModal .td-empty progress { display:block; margin:24px auto 8px; accent-color:#243c5b; width:220px; max-width:100%; }
+#teacherViewLogModal .td-room-intro { display:flex; flex-wrap:wrap; gap:20px; align-items:center; justify-content:space-between; margin-bottom:16px; }
+#teacherViewLogModal .td-building-totals { display:flex; flex-wrap:wrap; gap:24px; font-size:12px; color:#536176; }
+#teacherViewLogModal .td-building-totals strong { display:block; margin-top:4px; font-size:20px; color:#172236; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .td-cache-note { padding-bottom:22px; margin-bottom:24px; border-bottom:1px solid #d5dbe3; }
+#teacherViewLogModal .td-filters { display:flex; gap:12px; flex-wrap:wrap; }
+#teacherViewLogModal .td-muted { color:#536176; font-size:12px; font-weight:400; }
+#teacherViewLogModal p.td-muted { margin-bottom:12px; }
+#teacherViewLogModal .td-room-details { margin:8px 0; font-size:13px; font-weight:400; }
+#teacherViewLogModal .td-room-details>div { display:flex; justify-content:space-between; gap:24px; padding:7px 0; border-bottom:1px solid #e1e5eb; }
+#teacherViewLogModal .td-room-details dd { margin:0; white-space:nowrap; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .td-notice { padding:14px 16px; margin-bottom:16px; background:#fff3e6; color:#704014; font-size:13px; border:1px solid #e6c99f; }
+#teacherViewLogModal .teacher-log-adjust-panel { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:0; padding:4px 0; border:0; background:none; }
+#teacherViewLogModal .teacher-log-adjust-panel input { border:1px solid #c9ced7; min-height:38px; border-radius:4px; width:70px; padding:8px; }
+#teacherViewLogModal .teacher-log-adjust-panel label { display:flex; align-items:center; gap:8px; }
+#teacherViewLogModal .teacher-log-skeleton-card { border:0; border-radius:0; box-shadow:none; }
+#teacherViewLogModal .teacher-log-skeleton-head { height:40px; background:#edf1f6; }
+#teacherViewLogModal .teacher-log-skeleton-row { height:46px; }
+@media(max-width:700px) {
+  #teacherViewLogModal .td-header { padding:18px 18px 16px; gap:12px; }
+  #teacherViewLogModal h2 { font-size:20px; }
+  #teacherViewLogModal .td-close { padding:8px; }
+  #teacherViewLogModal .td-close span { display:none; }
+  #teacherViewLogModal .teacher-dashboard-tabs { padding:0 18px; gap:24px; }
+  #teacherViewLogModal .td-tools { padding:12px 18px; gap:8px; }
+  #teacherViewLogModal .td-search { max-width:none; flex-basis:100%; }
+  #teacherViewLogModal .teacher-log-list { padding:20px 18px 28px; }
+  #teacherViewLogModal .teacher-log-summary-grid { gap:20px 0; }
+  #teacherViewLogModal .teacher-log-summary-card { flex-basis:50%; min-width:0; }
+  #teacherViewLogModal .teacher-log-summary-value { font-size:21px; }
+  #teacherViewLogModal .td-section-head { gap:10px; align-items:flex-start; }
+  #teacherViewLogModal .td-table { min-width:0!important; font-size:13px; }
+  #teacherViewLogModal .td-table :is(th,td) { padding:11px 7px; }
+  #teacherViewLogModal .td-table th:first-child { width:20%; }
+#teacherViewLogModal .td-table th:nth-child(2) { width:22%; }
+#teacherViewLogModal .td-table th:nth-child(3):not(:last-child) { width:15%; }
+#teacherViewLogModal .td-table tbody th { min-width:58px; }
+  #teacherViewLogModal .td-table thead th { white-space:normal; font-size:11px; }
+  #teacherViewLogModal .td-table .td-time { font-size:11px; overflow-wrap:anywhere; }
+  #teacherViewLogModal .td-state { font-size:11px; }
+  #teacherViewLogModal .td-rooms { min-width:450px!important; }
+  #teacherViewLogModal .td-rooms th:first-child { position:sticky; left:0; z-index:1; }
+  #teacherViewLogModal .teacher-log-analytics-grid { grid-template-columns:1fr; gap:20px; }
+  #teacherViewLogModal .td-period>summary span { display:block; margin:6px 0 0 16px; }
+}
+@media(prefers-reduced-motion:reduce) { #teacherViewLogModal * { animation:none!important; transition:none!important; } }
