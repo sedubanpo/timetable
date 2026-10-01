@@ -2069,7 +2069,7 @@
           </select>
           <textarea id="operationMemoMessageInput" placeholder="메모 내용"></textarea>
         </div>
-        <button class="msg-copy-btn" style="width:100%; margin-top:0; background:#be123c;" onclick="saveOperationMemo()">메모 저장</button>
+        <button id="operationMemoSaveButton" class="msg-copy-btn" style="width:100%; margin-top:0; background:#be123c;" onclick="saveOperationMemo()">메모 저장</button>
         <div id="operationMemoList" class="operation-memo-list"></div>
         <div class="close-modal" onclick="closeOperationMemoModal()">닫기</div>
       </div>
@@ -3784,15 +3784,10 @@
         });
       }
       function initOperationMemoFeature() {
-        var cfg = window.SEDU_OPERATION_MEMO_CONFIG || null;
-        var provider = String((cfg && cfg.provider) || "").toLowerCase();
-        var configured = false;
-        if (provider === "supabase") {
-          configured = !!(cfg && cfg.url && cfg.anonKey);
-        }
-        operationMemoState.configured = configured;
-        operationMemoState.provider = configured ? provider : "";
-        operationMemoState.config = configured ? cfg : null;
+        // The former browser anon configuration is deliberately ignored.
+        operationMemoState.configured = true;
+        operationMemoState.provider = "firebase-api";
+        operationMemoState.config = null;
       }
       function isOperationMemoAvailable() {
         return !!(operationMemoState.configured && authState.loggedIn && authState.isMaster);
@@ -3980,30 +3975,36 @@
         if (t === "caution") return "학생 메모";
         return "학생 메모";
       }
-      function operationMemoSupabaseRequest(path, options) {
-        var cfg = operationMemoState.config || {};
-        var base = String(cfg.url || "").replace(/\/+$/, "");
-        var headers = {
-          "apikey": String(cfg.anonKey || ""),
-          "Authorization": "Bearer " + String(cfg.anonKey || ""),
-          "Accept": "application/json",
-          "Content-Type": "application/json"
-        };
-        var opts = options || {};
-        opts.headers = Object.assign(headers, opts.headers || {});
-        return fetch(base + "/rest/v1/" + path, opts).then(function(res) {
-          if (!res.ok) throw new Error("운영 메모 저장소 오류: " + res.status);
-          if (res.status === 204) return null;
-          return res.json();
+      var operationMemoPendingWrite = null, operationMemoWriteBusy = false;
+      async function operationMemoAuthenticatedRequest(body) {
+        if (!authState.loggedIn || !authState.isMaster || authState.isLookup) throw new Error("FORBIDDEN");
+        var session = getScheduleSessionKey();
+        var auth = await getLiveFirebaseAuth();
+        if (!auth.currentUser) throw new Error("UNAUTHORIZED");
+        var token = await auth.currentUser.getIdToken();
+        if (session !== getScheduleSessionKey()) throw new Error("SESSION_CHANGED");
+        var controller = new AbortController(), timer = setTimeout(function() { controller.abort(); }, 20000);
+        try {
+          var res = await fetch("https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableOperationMemoApi", {
+            method: "POST", cache: "no-store", signal: controller.signal,
+            headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify(body)
+          });
+          var result = await res.json();
+          if (!res.ok || !result.ok) throw new Error(result.error || "UNAVAILABLE");
+          if (session !== getScheduleSessionKey()) throw new Error("SESSION_CHANGED");
+          return Array.isArray(result.items) ? result.items : [];
+        } finally { clearTimeout(timer); }
+      }
+      function lockOperationMemoInput(locked) {
+        ['operationMemoStudentInput','operationMemoSchoolInput','operationMemoGradeInput','operationMemoTypeInput','operationMemoSeverityInput','operationMemoMessageInput'].forEach(function(id) {
+          var el = document.getElementById(id); if (el) el.disabled = locked;
         });
+        var button = document.getElementById('operationMemoSaveButton');
+        if (button) { button.disabled = operationMemoWriteBusy; button.textContent = operationMemoPendingWrite ? '저장 재시도' : '메모 저장'; }
       }
       function fetchOperationMemos(dateKey) {
-        if (!operationMemoState.configured || operationMemoState.provider !== "supabase" || !dateKey) return Promise.resolve([]);
-        var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
-        var query = table + "?select=id,date_key,sheet_name,student_name,target_school,target_grade,type,message,severity,active,created_at,updated_at,created_by&date_key=eq." + encodeURIComponent(dateKey) + "&active=eq.true&order=updated_at.desc";
-        return operationMemoSupabaseRequest(query).then(function(rows) {
-          return Array.isArray(rows) ? rows : [];
-        });
+        if (!dateKey) return Promise.resolve([]);
+        return operationMemoAuthenticatedRequest({action:"list",date:dateKey});
       }
       function resolveOperationMemoSourceItems(result, previousItems, sameDate) {
         var rows = result && result.error && sameDate ? previousItems : (result && result.items);
@@ -4258,8 +4259,11 @@
       }
       function openOperationMemoModal() {
         if (!isOperationMemoReadable()) { alert("운영 메모는 관리자 계정에서만 확인할 수 있습니다."); return; }
-        operationMemoState.editingId = "";
-        resetOperationMemoForm();
+        if (!operationMemoWriteBusy && !operationMemoPendingWrite) {
+          operationMemoState.editingId = "";
+          resetOperationMemoForm();
+        }
+        lockOperationMemoInput(operationMemoWriteBusy || !!operationMemoPendingWrite);
         document.getElementById('operationMemoModal').style.display = 'flex';
         renderOperationMemoSchoolWarningToggle();
         renderOperationMemoList();
@@ -4268,7 +4272,7 @@
       }
       function closeOperationMemoModal() {
         document.getElementById('operationMemoModal').style.display = 'none';
-        operationMemoState.editingId = "";
+        if (!operationMemoWriteBusy && !operationMemoPendingWrite) operationMemoState.editingId = "";
       }
       function resetOperationMemoForm() {
         var student = document.getElementById('operationMemoStudentInput');
@@ -4296,8 +4300,13 @@
         if (grade) grade.classList.toggle('operation-memo-hidden', mode !== "school");
       }
       function saveOperationMemo() {
+        if (operationMemoWriteBusy) return;
         if (!isOperationMemoAvailable()) { alert("운영 메모 저장소 설정 또는 관리자 권한이 필요합니다."); return; }
         var dateKey = getOperationMemoDateKey(currentSheetName);
+        var session = getScheduleSessionKey();
+        if (operationMemoPendingWrite && (operationMemoPendingWrite.session !== session || operationMemoPendingWrite.body.date !== dateKey)) {
+          alert("저장 결과가 확인되지 않은 메모가 있습니다. 같은 계정과 원래 날짜에서 저장 재시도를 눌러 주세요."); return;
+        }
         var student = String(document.getElementById('operationMemoStudentInput').value || "").trim();
         var school = String(document.getElementById('operationMemoSchoolInput').value || "").trim();
         var grade = String(document.getElementById('operationMemoGradeInput').value || "").trim();
@@ -4308,8 +4317,6 @@
         if (type === "common" && !message) { alert("공동 메모 내용을 입력해주세요."); return; }
         if (type === "student" && !student) { alert("학생명을 입력해주세요."); return; }
         if (type === "school" && (!school || !grade)) { alert("학교명과 학년을 입력해주세요."); return; }
-        var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
-        var nowIso = new Date().toISOString();
         var schoolTarget = parseOperationMemoSchoolTarget(school);
         var gradeTarget = normalizeOperationMemoGrade(grade || schoolTarget.grade);
         var payload = {
@@ -4320,21 +4327,22 @@
           target_grade: type === "school" ? gradeTarget : "",
           type: type,
           message: message,
-          severity: severity,
-          active: true,
-          updated_at: nowIso,
-          created_by: authState.loginId || "admin"
+          severity: severity
         };
         var id = operationMemoState.editingId;
-        var request = id
-          ? operationMemoSupabaseRequest(table + "?id=eq." + encodeURIComponent(id), { method: "PATCH", headers: { "Prefer": "return=representation" }, body: JSON.stringify(payload) })
-          : operationMemoSupabaseRequest(table, { method: "POST", headers: { "Prefer": "return=representation" }, body: JSON.stringify(Object.assign({ created_at: nowIso }, payload)) });
-        request.then(function() {
+        if (!operationMemoPendingWrite) operationMemoPendingWrite = {session:session,body:{action:id?'update':'create',id:id||crypto.randomUUID(),date:dateKey,data:payload}};
+        operationMemoWriteBusy = true; lockOperationMemoInput(true);
+        return operationMemoAuthenticatedRequest(operationMemoPendingWrite.body).then(function() {
+          operationMemoPendingWrite = null;
           resetOperationMemoForm();
           operationMemoState.editingId = "";
           return loadOperationMemosForCurrentSheet(true);
         }).catch(function(err) {
-          alert("운영 메모 저장 실패: " + (err && err.message ? err.message : err));
+          var code = err && err.message;
+          if (['FORBIDDEN','UNAUTHORIZED','SESSION_CHANGED','INVALID_DATA','INVALID_ACTION','NOT_FOUND','CONFLICT','SERVER_NOT_CONFIGURED'].includes(code)) operationMemoPendingWrite = null;
+          alert(code==='SERVER_NOT_CONFIGURED' ? "인증된 운영 메모 서버 연결이 준비되지 않았습니다. 입력은 유지됩니다." : "운영 메모 저장을 확인하지 못했습니다. 입력은 유지됩니다." + (operationMemoPendingWrite ? " 저장 재시도를 눌러 주세요." : " 권한과 입력을 확인한 뒤 다시 시도해 주세요."));
+        }).finally(function() {
+          operationMemoWriteBusy = false; lockOperationMemoInput(!!operationMemoPendingWrite);
         });
       }
       function findOperationMemoById(encodedId) {
@@ -4342,6 +4350,7 @@
         return (operationMemoState.items || []).find(function(item) { return String(item.id || "") === id; });
       }
       function editOperationMemo(encodedId) {
+        if (operationMemoWriteBusy || operationMemoPendingWrite) return;
         var item = findOperationMemoById(encodedId);
         if (!item || isAutomaticOperationMemo(item)) return;
         operationMemoState.editingId = String(item.id || "");
@@ -4354,13 +4363,10 @@
         syncOperationMemoFormMode();
       }
       function deleteOperationMemo(encodedId) {
+        if (operationMemoWriteBusy || operationMemoPendingWrite) return;
         var item = findOperationMemoById(encodedId);
         if (!item || isAutomaticOperationMemo(item) || !confirm("이 운영 메모를 삭제할까요?")) return;
-        var table = encodeURIComponent(String(operationMemoState.config.table || "operation_memos"));
-        operationMemoSupabaseRequest(table + "?id=eq." + encodeURIComponent(item.id), {
-          method: "DELETE",
-          headers: { "Prefer": "return=minimal" }
-        }).then(function() {
+        return operationMemoAuthenticatedRequest({action:"delete",id:String(item.id),date:item.date_key}).then(function() {
           return loadOperationMemosForCurrentSheet(true);
         }).catch(function(err) {
           alert("운영 메모 삭제 실패: " + (err && err.message ? err.message : err));
@@ -5228,6 +5234,9 @@
         operationMemoState.loading = false;
         operationMemoState.slmsLoadedAt = 0;
         operationMemoState.slmsEvents = [];
+        operationMemoPendingWrite = null;
+        resetOperationMemoForm();
+        lockOperationMemoInput(operationMemoWriteBusy);
         closeOperationMemoAlert();
         clearOperationMemoHighlights();
         renderOperationCommonMemos();

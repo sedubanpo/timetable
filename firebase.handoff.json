@@ -6,7 +6,8 @@
       "ignore": [
         "node_modules",
         ".git",
-        "test.cjs"
+        "test.cjs",
+        "*.test.cjs"
       ]
     }
   ]
