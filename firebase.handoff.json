@@ -1,0 +1,13 @@
+{
+  "functions": [
+    {
+      "source": "handoff-functions",
+      "codebase": "live-timetable-handoff",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "test.cjs"
+      ]
+    }
+  ]
+}

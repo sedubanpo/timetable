@@ -116,3 +116,13 @@ The full-screen native dialog keeps its navy header, tabs and search/actions out
 Keep the summary as four unboxed metrics. The current-schedule table places unviewed teachers first and offers a textual status filter; unread rust (#a23b26) and confirmed green (#316351) always accompany explicit labels. Show one selected date's history at a time. Average and highest/lowest view rankings belong in a collapsed disclosure. Administrator count/status controls remain an explicit edit mode with save and restore-original actions. Classroom assignment is a complete teacher table with expandable room details, building filter, sorting and search.
 
 At 700px and below, use 18px horizontal gutters, a 20px title, two-column metrics and a full-width search field. Classroom columns preserve a 450px minimum and scroll horizontally inside their table region, with teacher names pinned at the left. Other dashboard content fits the viewport. Controls have visible blue focus (#2856a7); buttons retain 40px minimum height. Re-rendered selects preserve keyboard focus through stable IDs. Respect reduced motion; the dashboard adds no decorative motion.
+
+## 시간표 전달 — 2026-10-01
+
+승인된 시간표 전달 화면(`docs/handoff.html`)에 한정한 방향이다. 네이비(#203754)와 흰색의 운영 보드를 사용한다. 수업은 배경 상자 없이 흰색 행 위에 배치하고 얇은 구분선으로 시간대를 구분한다. 입력·버튼은 작은 반경(4–5px)의 직사각형이며 알약 배지와 장식용 왼쪽 색 띠를 추가하지 않는다. 시스템 한글 글꼴을 유지하며 제목(26px), 과목(16px), 학생(14px), 최대 동시 인원(26px)의 크기로 위계를 만든다.
+
+학생명·시작 시/분·종료 시/분·유형·선택 비고를 상단 가로 입력에 배치하고 작은 화면에서는 두 줄로 접는다. 시/분 입력은 포커스 시 전체 선택, Tab 및 시 입력란의 콜론 이동, 화살표 증감과 두 자리 정리를 지원한다. 비고는 학생 추가 후 비우고 시간·유형은 유지한다. 과목은 해당 시간대의 텍스트 버튼과 대화상자에서 자유롭게 입력한다.
+
+수업이 있는 시간대만 표시한다. 각 행 오른쪽에는 최대 동시 인원과 공통 눈금에 맞춘 막대 하나를 두며, 시간 중간의 인원 변화는 펼치기로 확인한다. 빈 보드는 선생님에게 첫 수업 입력을 안내하고 관리자에게는 날짜·검색·제출 선택을 안내한다. 600px 이하에서는 16px 좌우 여백, 21px 제목, 14px 과목, 13px 학생과 23px 인원 숫자를 사용한다. 관리자 수신함은 모바일에서 보드 위로 이동한다.
+
+초안 자동 저장과 명시적 전송을 별개 상태로 표시한다. 서버 응답 전에는 저장·전송 완료를 표시하지 않으며, 실패·충돌 안내와 재시도·서버 초안 다시 불러오기 경로를 유지한다. 관리자 제출은 읽기 전용으로 보여 주고 버전별 처리 상태만 변경한다. 운영 시간표 수동 반영 안내를 화면에 유지한다. 입력과 버튼은 파란 포커스 표시(#3269b1)를 제공하고 reduced motion 설정을 존중한다. 구현·검증·릴리스 상태는 `docs/handoff.md`를 따른다.
