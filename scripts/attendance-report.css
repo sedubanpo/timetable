@@ -87,3 +87,14 @@
 
       #attendanceReportModal .ar-mobile-messages { display:none; }
       @media(max-width:760px) { #attendanceReportModal .ar-mobile-messages { display:inline-flex; }.ar-toolbar { position:sticky; top:0; background:#fff; }.ar-side,.ar-tab { scroll-margin-top:150px; } }
+
+      .ar-clear-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px 8px; padding:14px 0; border-bottom:1px solid #d4dce5; }
+      .ar-clear-title { margin:16px 0 0; font-size:12px; color:#53657a; }
+      .ar-clear-name { display:flex; align-items:center; gap:4px; font-size:13px; margin-bottom:6px; }
+      .ar-clear-grid .ar-counts { gap:5px; font-size:11px; }
+      .ar-teacher-name { display:flex; align-items:center; gap:7px; }
+      #attendanceReportModal .ar-teacher-icon { display:inline-flex; align-items:center; }
+      #attendanceReportModal .ar-teacher-icon .subject-badge { background:none; border:0; padding:0; border-radius:0; font-size:0; }
+      #attendanceReportModal .ar-teacher-icon .shared-subject-icon { font-size:17px; width:20px; height:20px; margin:0; }
+      #attendanceReportModal .ar-teacher-icon img { width:20px; height:20px; object-fit:contain; }
+      @media(max-width:480px) { .ar-clear-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }

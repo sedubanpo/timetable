@@ -7,7 +7,9 @@ http.createServer((req,res)=>{
  var attendanceReportPayload=null,currentAttendanceReportText='',attendanceReportHourOffset=0,attendanceReportHideResolved=false,attendanceReportTextMode='simple';
  var currentSheetName='10/3(토)',SCHEDULE_START_HOUR=20,SCHEDULE_END_HOUR=21;
  var lastData={headers:['1강의실','2강의실','3관 1강의실'],grid:{20:[['개별 영어 가상강사T','서하늘|반포고2|지각|10/3(토) 확정, 곧 등원 예정','김가람|서초고2|정규|','최다온|서초고2|결석예고|개인 일정으로 결석예고'],['1:1 수학 예시강사T','윤여름|서문여고2|결석예고|개인 일정으로 결석예고'],['개별 사회 테스트강사T','이도담|세화고1|당일취소|발열로 오늘 수업에 참여하기 어렵습니다.']],21:[['개별 영어 가상강사T','서하늘|반포고2|지각|10/3(토) 확정, 곧 등원 예정','김가람|서초고2|정규|','최다온|서초고2|결석예고|개인 일정으로 결석예고'],['1:1 수학 예시강사T','윤여름|서문여고2|결석예고|개인 일정으로 결석예고'],['개별 사회 테스트강사T','이도담|세화고1|당일취소|발열로 오늘 수업에 참여하기 어렵습니다.']]}};
+ function getSubjectBadgeHtml(subject){return '<span class="subject-badge"><span class="shared-subject-icon">📘</span>'+subject+'</span>';}
  function getScheduleSessionKey(){return 'synthetic';}function normalizeStatusLabel(x){return x;}function isTeacherHeader(x){return x.endsWith('T');}function getSubjectName(x){return x.split(' ')[1];}function extractTeacherName(x){return x.split(' ')[2].replace(/T$/,'');}function detectClassType(x){return x.split(' ')[0];}function parseStudentRawText(x){var a=x.split('|');return {name:a[0],school:a[1],status:a[2],note:a[3]};}function renderExportCanvas(el,opts){return html2canvas(el,opts);}
+ lastData.headers.push('4강의실','5강의실','6강의실','7강의실'); Object.values(lastData.grid).forEach(function(row){['맑음강사','새봄강사','하루강사','다음강사'].forEach(function(name){row.push(['개별 수학 '+name+'T','예시학생|중2|정규|']);});});
  ${funcs}
  openAttendanceReportModal();
  </script></body></html>`);
