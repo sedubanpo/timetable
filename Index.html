@@ -983,6 +983,40 @@
       #attendanceReportText { min-height:150px; }
       #attendanceReportFeedback { position:sticky; bottom:0; background:#f4f5f7; min-height:32px; margin:0; padding:8px 28px; font-size:13px; color:#254f75; }
       @media(max-width:760px) { #attendanceReportModal .attendance-report-box { max-width:100%; width:100%; max-height:100dvh; border-radius:0; } .ar-head { padding:18px; } .ar-head h2 { font-size:21px; } .ar-toolbar { padding:12px 18px; } .ar-workspace { grid-template-columns:1fr; padding:18px; gap:26px; } #attendanceReportPreview { padding:20px; } #attendanceReportFeedback { padding:0 18px 12px; } }
+      /* Teacher-grouped attendance ledger */
+      #attendanceReportModal .attendance-report-box { width:1480px; }
+      #attendanceReportModal, #attendanceReportModal * { font-weight:700; }
+      #attendanceReportModal button, #attendanceReportModal textarea { font-weight:700; }
+      .ar-head,.ar-toolbar { position:sticky; z-index:3; }
+      .ar-head { top:0; }
+      .ar-workspace { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
+      #attendanceReportPreview { max-width:680px; padding:22px; }
+      .ar-teacher { margin-top:20px; }
+      .ar-teacher-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:2px solid #273e59; font-size:17px; }
+      .ar-subject-label { display:inline-flex; align-items:center; gap:5px; color:#365777; font-size:12px; }
+      .ar-class-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:10px 0 7px; font-size:12px; color:#475d74; }
+      .ar-counts { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; }
+      .ar-count { display:inline-flex; align-items:center; gap:3px; white-space:nowrap; }
+      .ar-count.present { color:#137044; }.ar-count.late { color:#785100; }.ar-count.absent { color:#b12832; }
+      #attendanceReportModal .ar-count svg { width:14px; height:14px; }
+      .ar-person { padding:9px 0; }.ar-person strong { font-size:14px; }
+      .ar-person-note { font-size:12px; margin:4px 0 0; line-height:1.5; padding-right:68px; }
+      .ar-state { padding:4px 7px; background:#fde9eb; color:#a0202d; border-radius:3px; font-size:12px; }
+      .ar-state.late { background:#ffedb1; color:#725000; }
+      .ar-summary { gap:12px; }
+      .ar-side { position:sticky; top:112px; }
+      .ar-tabs { display:flex; border-bottom:1px solid #c7d0dc; margin-bottom:16px; gap:18px; background:#f4f5f7; }
+      #attendanceReportModal .ar-tab { border:0; border-bottom:3px solid transparent; border-radius:0; background:none; padding:12px 2px; font-size:15px; }
+      #attendanceReportModal .ar-tab[aria-selected="true"] { color:#163c66; border-bottom-color:#163c66; }
+      .ar-side-panel { max-height:66vh; overflow:auto; scrollbar-color:#a0afbf transparent; padding-right:8px; }
+      .ar-side-panel[hidden] { display:none; }
+      .ar-editor-row { padding:10px 0; }#attendanceReportModal .ar-editor-row textarea { min-height:54px; }
+      .ar-message { padding:12px 0 18px; }.ar-messages-title { margin-top:0; }
+      #attendanceReportModal .ar-message textarea { min-height:170px; background:#fff; }
+      @media(max-width:760px) { .ar-workspace { grid-template-columns:1fr; }.ar-side { position:static; }.ar-side-panel { max-height:none; overflow:visible; padding:0; }.ar-head { position:static; }.ar-person-note { padding-right:0; }.ar-teacher-head { font-size:16px; } }
+
+      #attendanceReportModal .ar-mobile-messages { display:none; }
+      @media(max-width:760px) { #attendanceReportModal .ar-mobile-messages { display:inline-flex; }.ar-toolbar { position:sticky; top:0; background:#fff; }.ar-side,.ar-tab { scroll-margin-top:150px; } }
       #studentImagePreview { max-width:none; margin:0; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
       #studentImagePreview th, #studentImagePreview td { border:1px solid #e5e7eb; padding:8px; font-size:0.9rem; text-align:left; }
@@ -1992,10 +2026,10 @@
     <div id="attendanceReportModal" role="dialog" aria-modal="true" aria-labelledby="attendanceReportTitle" onkeydown="handleAttendanceReportKey(event)">
       <div class="modal-box attendance-report-box">
         <header class="ar-head"><div><h2 id="attendanceReportTitle">출결 현황 보고</h2><p>출결을 정리하고, 필요한 내용을 선생님께 전달하세요.</p></div><button class="ar-close" onclick="closeAttendanceReportModal()">닫기</button></header>
-        <div class="ar-toolbar"><div class="ar-nav"><button aria-label="이전 시간대" onclick="changeAttendanceReportHour(-1)">이전</button><span id="attendanceReportTimeLabel"></span><button aria-label="다음 시간대" onclick="changeAttendanceReportHour(1)">다음</button></div><label class="ar-filter"><input id="attendanceHideResolvedToggle" type="checkbox" onchange="refreshAttendanceReportModal()">결석예고·당일취소 숨기기</label></div>
+        <div class="ar-toolbar"><div class="ar-nav"><button aria-label="이전 시간대" onclick="changeAttendanceReportHour(-1)">이전</button><span id="attendanceReportTimeLabel"></span><button aria-label="다음 시간대" onclick="changeAttendanceReportHour(1)">다음</button></div><button class="ar-mobile-messages" onclick="setAttendanceReportPanel('messages');document.getElementById('ar-tab-messages').scrollIntoView({block:'start'});document.getElementById('ar-tab-messages').focus({preventScroll:true})">카톡 문구 바로가기</button><label class="ar-filter"><input id="attendanceHideResolvedToggle" type="checkbox" onchange="refreshAttendanceReportModal()">결석예고·당일취소 숨기기</label></div>
         <div class="ar-workspace">
           <section class="ar-column"><div class="ar-section-head"><h3>보고 미리보기</h3></div><div class="ar-actions" style="margin-bottom:14px"><button class="ar-primary" onclick="copyAttendanceReportImage(this)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="1"/><path d="M16 8V3H3v13h5"/></svg>이미지 복사</button><button onclick="downloadAttendanceReportImage(this)">이미지 저장</button><button onclick="copyAttendanceReportText()"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="1"/><path d="M16 8V3H3v13h5"/></svg>문구 복사</button></div><div id="attendanceReportPreview"></div><details class="ar-report-text"><summary>보고 문구 확인</summary><textarea id="attendanceReportText" aria-label="보고 문구" readonly></textarea></details></section>
-          <section class="ar-column"><div class="ar-section-head"><div><h3>보고용 비고 편집</h3><p>보고·이미지·카톡 문구에 반영됩니다. 원본 시간표는 변경하지 않습니다.<br>시간대를 바꿔도 유지되며, 이 창을 닫으면 초기화됩니다.</p></div></div><div id="attendanceReportEditors"></div><div class="ar-section-head ar-messages-title"><div><h3>강사별 카톡 문구</h3><p>편성용 날짜·확정 표시를 정리했습니다. 내용을 확인하고 복사하세요.</p></div></div><div id="attendanceTeacherMessages"></div></section>
+          <section class="ar-column ar-side"><div class="ar-tabs" role="tablist" aria-label="출결 보고 작업"><button id="ar-tab-notes" class="ar-tab" role="tab" aria-selected="true" aria-controls="ar-panel-notes" onclick="setAttendanceReportPanel('notes')">비고 편집</button><button id="ar-tab-messages" class="ar-tab" role="tab" aria-selected="false" aria-controls="ar-panel-messages" onclick="setAttendanceReportPanel('messages')">강사별 카톡 문구</button></div><div id="ar-panel-notes" class="ar-side-panel" role="tabpanel" aria-labelledby="ar-tab-notes"><div class="ar-section-head"><div><h3>보고용 비고 편집</h3><p>보고·이미지·카톡 문구에 함께 반영됩니다.<br>원본 시간표는 유지되며, 창을 닫으면 편집 내용이 초기화됩니다.</p></div></div><div id="attendanceReportEditors"></div></div><div id="ar-panel-messages" class="ar-side-panel" role="tabpanel" aria-labelledby="ar-tab-messages" hidden><div class="ar-section-head"><div><h3>강사별 카톡 문구</h3><p>편성용 날짜·확정 표시를 정리했습니다. 확인 후 복사하세요.</p></div></div><div id="attendanceTeacherMessages"></div></div></section>
         </div><p id="attendanceReportFeedback" role="status" aria-live="polite"></p>
       </div>
     </div>
@@ -8864,11 +8898,28 @@
         getVisibleAttendanceItems(payload).forEach(function(v){var teacher=attendanceTeacherName(v);if(!teacher)return;var note=cleanAttendanceTeacherNote(attendanceReportNote(v))||v.status;var line=v.name+(v.school?'('+v.school+')':'')+' 학생: '+note;if(!groups.has(teacher))groups.set(teacher,[]);if(!groups.get(teacher).includes(line))groups.get(teacher).push(line);});
         return Array.from(groups,function(pair){return {teacher:pair[0],text:pair[0]+' 선생님, 에스학원입니다.\n'+payload.dateText+' '+payload.slotText+' 수업 관련 출결 안내드립니다.\n\n'+pair[1].join('\n')+'\n\n수업 진행 시 참고 부탁드립니다.'};});
       }
+      function attendanceReportIcon(kind) {
+        var paths={person:'<circle cx="12" cy="7" r="3"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/>',math:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M7 7h10M7 12h3m4 0h3M7 16h3m4 0h3"/>',science:'<path d="M9 3h6M10 3v6L4 19q-1 2 2 2h12q3 0 2-2L14 9V3M7 15h10"/>',book:'<path d="M12 5v16M3 4q5-2 9 1 4-3 9-1v15q-5-2-9 2-4-4-9-2Z"/>'};
+        return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(paths[kind]||paths.book)+'</svg>';
+      }
+      function attendanceReportCounts(active,late,absent) {
+        return '<div class="ar-counts">'+[['present','출석',active],['late','지각',late],['absent','불참',absent]].map(function(v){return '<span class="ar-count '+v[0]+'">'+attendanceReportIcon('person')+v[1]+' '+v[2]+'명</span>';}).join('')+'</div>';
+      }
+      function attendanceReportGroups(payload) {
+        var teachers=new Map(),visible=getVisibleAttendanceItems(payload),summaries=Object.values(payload.roomClassSummaryMap||{});
+        function add(s){var teacher=attendanceTeacherName(s)||'담당 미지정';if(!teachers.has(teacher))teachers.set(teacher,{teacher:teacher,classes:[]});var key=JSON.stringify([s.room,s.subject,s.classType]);var g=teachers.get(teacher),cls=g.classes.find(function(c){return c.key===key;});if(!cls){cls={key:key,subject:s.subject||'수업',room:s.room||'',classType:s.classType||'',active:s.activeCount||0,late:0,absent:0,students:[]};g.classes.push(cls);}return cls;}
+        summaries.forEach(add);
+        (payload.items||[]).forEach(function(v){var cls=add(v);if(v.type==='late')cls.late++;else cls.absent++;if(visible.includes(v))cls.students.push(v);});
+        return Array.from(teachers.values());
+      }
+      function setAttendanceReportPanel(name) {
+        ['notes','messages'].forEach(function(key){var selected=key===name;document.getElementById('ar-panel-'+key).hidden=!selected;document.getElementById('ar-tab-'+key).setAttribute('aria-selected',String(selected));});
+      }
       function renderAttendanceReportPreview(payload) {
         var root=document.getElementById('attendanceReportPreview'),e=attendanceReportEscape;
         if(!payload){root.innerHTML='<p class="ar-empty">시간표를 불러온 뒤 다시 열어 주세요.</p>';return;}
-        var rows=getVisibleAttendanceItems(payload),summary=getAttendanceSummaryText(payload,rows);
-        root.innerHTML='<header class="ar-paper-head"><h3>출결 현황 보고</h3><div class="ar-date">'+e(payload.dateText)+' · '+e(payload.slotText)+'</div><div class="ar-summary"><span>지각<strong>'+summary.lateCount+'명</strong></span><span>미참여<strong>'+summary.absentCount+'명</strong></span><span>참여<strong>'+summary.activeCount+'명</strong></span></div></header>'+ (rows.length?rows.map(function(v){return '<article class="ar-person"><div class="ar-person-top"><div><strong>'+e(v.name)+'</strong><span class="ar-school">'+e(v.school)+'</span></div><span class="ar-state '+(v.type==='late'?'late':'')+'">'+e(v.status)+'</span></div><div class="ar-person-meta">'+e(attendanceTeacherName(v)||'담당 미지정')+(v.classType?' 선생님 · '+e(getAttendanceClassTypeLabel(v.classType)):'')+'</div><p class="ar-person-note">'+e(attendanceReportNote(v).trim()||v.status)+'</p></article>';}).join(''):'<p class="ar-empty">'+(payload.items.length?'현재 필터에 표시할 학생이 없습니다.':'보고할 출결 특이사항이 없습니다.')+'</p>')+'<p class="ar-paper-foot">에스학원 · 시간표에 입력된 출결 기준'+(attendanceReportHideResolved?' · 결석예고·당일취소 제외':'')+'</p>';
+        var groups=attendanceReportGroups(payload);
+        root.innerHTML='<header class="ar-paper-head"><h3>출결 현황 보고</h3><div class="ar-date">'+e(payload.dateText)+' · '+e(payload.slotText)+'</div><div class="ar-summary">'+attendanceReportCounts(payload.activeCount,payload.lateCount,payload.absentCount)+'</div></header>'+groups.map(function(g){return '<section class="ar-teacher"><div class="ar-teacher-head"><span>'+e(g.teacher)+' 선생님</span></div>'+g.classes.map(function(c){var icon=/수학|미적|기하|확통/.test(c.subject)?'math':/과학|물리|화학|생명|지구/.test(c.subject)?'science':'book';return '<div class="ar-class-heading"><span class="ar-subject-label">'+attendanceReportIcon(icon)+e(c.subject)+' · '+e(c.classType)+' · '+e(c.room)+'</span>'+attendanceReportCounts(c.active,c.late,c.absent)+'</div>'+c.students.map(function(v){return '<article class="ar-person"><div class="ar-person-top"><div><strong>'+e(v.name)+'</strong><span class="ar-school">'+e(v.school)+'</span></div><span class="ar-state '+(v.type==='late'?'late':'absent')+'">'+e(v.status)+'</span></div><p class="ar-person-note">'+e(attendanceReportNote(v).trim()||v.status)+'</p></article>';}).join('')+(!c.students.length?'<p class="ar-hint">'+(c.late+c.absent?'결석예고·당일취소 학생 숨김':'출결 특이사항 없음')+'</p>':'');}).join('')+'</section>';}).join('')+(!groups.length?'<p class="ar-empty">이 시간대에 수업이 없습니다.</p>':'')+'<p class="ar-paper-foot">에스학원 · 시간표에 입력된 출결 기준'+(attendanceReportHideResolved?' · 인원은 전체 기준, 결석예고·당일취소 상세만 숨김':'')+'</p>';
         document.getElementById('attendanceReportTimeLabel').textContent=payload.slotText;
       }
       function renderAttendanceReportEditors() {
@@ -8892,7 +8943,7 @@
       }
       function openAttendanceReportModal() {
         if(!lastData){alert('먼저 시간표를 불러와 주세요.');return;}
-        attendanceReportReturnFocus=document.activeElement;attendanceReportDrafts=Object.create(null);attendanceReportHourOffset=0;document.getElementById('attendanceHideResolvedToggle').checked=false;refreshAttendanceReportModal();attendanceReportFeedback('');document.getElementById('attendanceReportModal').style.display='flex';document.querySelector('#attendanceReportModal .ar-close').focus();
+        setAttendanceReportPanel('notes');attendanceReportReturnFocus=document.activeElement;attendanceReportDrafts=Object.create(null);attendanceReportHourOffset=0;document.getElementById('attendanceHideResolvedToggle').checked=false;refreshAttendanceReportModal();attendanceReportFeedback('');document.getElementById('attendanceReportModal').style.display='flex';document.querySelector('#attendanceReportModal .ar-close').focus();
       }
       function changeAttendanceReportHour(delta) {
         var now=new Date(),base=Math.max(SCHEDULE_START_HOUR,Math.min(SCHEDULE_END_HOUR,now.getHours())),next=attendanceReportHourOffset+Number(delta||0);if(base+next<SCHEDULE_START_HOUR||base+next>SCHEDULE_END_HOUR)return;attendanceReportHourOffset=next;refreshAttendanceReportModal();

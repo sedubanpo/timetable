@@ -53,3 +53,37 @@
       #attendanceReportText { min-height:150px; }
       #attendanceReportFeedback { position:sticky; bottom:0; background:#f4f5f7; min-height:32px; margin:0; padding:8px 28px; font-size:13px; color:#254f75; }
       @media(max-width:760px) { #attendanceReportModal .attendance-report-box { max-width:100%; width:100%; max-height:100dvh; border-radius:0; } .ar-head { padding:18px; } .ar-head h2 { font-size:21px; } .ar-toolbar { padding:12px 18px; } .ar-workspace { grid-template-columns:1fr; padding:18px; gap:26px; } #attendanceReportPreview { padding:20px; } #attendanceReportFeedback { padding:0 18px 12px; } }
+      /* Teacher-grouped attendance ledger */
+      #attendanceReportModal .attendance-report-box { width:1480px; }
+      #attendanceReportModal, #attendanceReportModal * { font-weight:700; }
+      #attendanceReportModal button, #attendanceReportModal textarea { font-weight:700; }
+      .ar-head,.ar-toolbar { position:sticky; z-index:3; }
+      .ar-head { top:0; }
+      .ar-workspace { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
+      #attendanceReportPreview { max-width:680px; padding:22px; }
+      .ar-teacher { margin-top:20px; }
+      .ar-teacher-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:2px solid #273e59; font-size:17px; }
+      .ar-subject-label { display:inline-flex; align-items:center; gap:5px; color:#365777; font-size:12px; }
+      .ar-class-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; padding:10px 0 7px; font-size:12px; color:#475d74; }
+      .ar-counts { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; }
+      .ar-count { display:inline-flex; align-items:center; gap:3px; white-space:nowrap; }
+      .ar-count.present { color:#137044; }.ar-count.late { color:#785100; }.ar-count.absent { color:#b12832; }
+      #attendanceReportModal .ar-count svg { width:14px; height:14px; }
+      .ar-person { padding:9px 0; }.ar-person strong { font-size:14px; }
+      .ar-person-note { font-size:12px; margin:4px 0 0; line-height:1.5; padding-right:68px; }
+      .ar-state { padding:4px 7px; background:#fde9eb; color:#a0202d; border-radius:3px; font-size:12px; }
+      .ar-state.late { background:#ffedb1; color:#725000; }
+      .ar-summary { gap:12px; }
+      .ar-side { position:sticky; top:112px; }
+      .ar-tabs { display:flex; border-bottom:1px solid #c7d0dc; margin-bottom:16px; gap:18px; background:#f4f5f7; }
+      #attendanceReportModal .ar-tab { border:0; border-bottom:3px solid transparent; border-radius:0; background:none; padding:12px 2px; font-size:15px; }
+      #attendanceReportModal .ar-tab[aria-selected="true"] { color:#163c66; border-bottom-color:#163c66; }
+      .ar-side-panel { max-height:66vh; overflow:auto; scrollbar-color:#a0afbf transparent; padding-right:8px; }
+      .ar-side-panel[hidden] { display:none; }
+      .ar-editor-row { padding:10px 0; }#attendanceReportModal .ar-editor-row textarea { min-height:54px; }
+      .ar-message { padding:12px 0 18px; }.ar-messages-title { margin-top:0; }
+      #attendanceReportModal .ar-message textarea { min-height:170px; background:#fff; }
+      @media(max-width:760px) { .ar-workspace { grid-template-columns:1fr; }.ar-side { position:static; }.ar-side-panel { max-height:none; overflow:visible; padding:0; }.ar-head { position:static; }.ar-person-note { padding-right:0; }.ar-teacher-head { font-size:16px; } }
+
+      #attendanceReportModal .ar-mobile-messages { display:none; }
+      @media(max-width:760px) { #attendanceReportModal .ar-mobile-messages { display:inline-flex; }.ar-toolbar { position:sticky; top:0; background:#fff; }.ar-side,.ar-tab { scroll-margin-top:150px; } }
