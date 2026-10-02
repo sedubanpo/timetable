@@ -1,0 +1,27 @@
+const dailyStyle=document.createElement('style');dailyStyle.textContent=`
+.view-switch{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:22px}.view-switch button{border:0;border-radius:0;background:none;padding:12px 0}.view-switch button[aria-pressed=true]{border-bottom:3px solid var(--blue);font-weight:700;color:var(--blue)}
+.daily-header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap}.daily-header h2{margin:0;font-size:22px}.daily-header p{font-size:13px}.day-tools{display:flex;gap:8px}.daily-grid{overflow:auto;background:white;border:1px solid var(--line)}.daily-grid table{min-width:650px;table-layout:fixed}.daily-grid th:first-child{width:90px}.daily-grid th{background:#eaf0f6;position:sticky;top:0}.daily-grid td{height:110px}.daily-grid th:first-child,.daily-grid td:first-child{position:sticky;left:0;background:#f8fafb}.daily-lesson{display:block;width:100%;text-align:left;padding:10px;margin-bottom:8px;min-height:80px;border:1px solid #c6d4e0;border-radius:4px;background:#f6f9fc}.daily-lesson strong,.daily-lesson small{display:block}.daily-lesson small{margin:4px 0}.floating{margin-top:22px;background:white;padding:20px;border:1px solid var(--line)}.floating h3{margin:0 0 10px}.floating button{margin:5px}.daily-note{margin:12px 0;font-size:13px}
+`;document.head.append(dailyStyle);
+function currentDailyData(){return liveData||{complete:false,students:[],plans:[],live:[]};}
+let dailyLessons=[];
+let dailyActive=false;
+function dailyResult(x){return x.state==='계획 일치'?'운영표와 일치':x.state;}
+function drawDaily(){
+ const date=$('date').value;if(!date)return;if(!liveData){$('dailyPanel').innerHTML='<div class="empty"><strong>'+(loading?'시간표를 불러오는 중입니다.':'시간표를 불러오지 못했습니다.')+'</strong><p>'+esc(loadError)+'</p></div>';return;}
+ dailyLessons=ExamReadiness.daily(currentDailyData(),date);const q=$('search').value.trim();const all=dailyLessons;const rows=all.filter(x=>[x.name,x.teacher,x.subject,x.school].join(' ').includes(q));const timed=rows.filter(x=>ExamReadiness.timed(x)),floating=rows.filter(x=>!ExamReadiness.timed(x));const teachers=[...new Set(rows.map(x=>x.teacher))];
+ let html=`<div class="daily-header"><div><h2>${label(date)} · 강사별 직보</h2><p>S-LMS 계획과 운영표만 대조하는 표입니다. 강사 제출까지 포함한 결과는 시험 대비 대상에서 확인합니다.</p></div><div class="day-tools"><button data-day="-1" aria-label="이전 날짜">이전 날</button><button data-day="1" aria-label="다음 날짜">다음 날</button></div></div>`;
+ html+='<p class="daily-note">시험 대비 대상은 앞으로의 시험을 확인하고, 이 표는 선택한 날의 시간표 입력을 돕습니다. 시험 범위 필터는 이 표에 적용되지 않습니다.</p>';
+ if(liveData.sources.operating.state!=='ready')html+='<div class="notice">운영 시간표 조회 실패 · S-LMS 일정만 표시합니다. 미반영이나 일치를 판단하지 않습니다.</div>';
+ if(!rows.length)html+=`<div class="empty list"><strong>${all.length?'검색 조건에 맞는 수업이 없습니다.':'이 날짜에 입력된 직보가 없습니다.'}</strong><p>다가오는 시험의 준비 대상이 없다는 뜻은 아닙니다.</p></div>`;
+ else{
+ html+=`<div class="daily-grid" role="region" aria-label="선택일 강사별 직보 시간표" tabindex="0"><table><thead><tr><th>시간</th>${teachers.map(t=>`<th>${esc(t)}</th>`).join('')}</tr></thead><tbody>`;
+ if(timed.length)for(let h=Math.floor(Math.min(...timed.map(x=>x.start))/60)*60;h<Math.max(...timed.map(x=>x.end));h+=60){html+=`<tr><td>${time(h)}<br><small>${time(h+60)}</small></td>${teachers.map(t=>`<td>${timed.filter(x=>x.teacher===t&&x.start<h+60&&x.end>h).map(x=>`<button class="daily-lesson" data-lesson="${esc(x.id)}"><strong>${esc(x.name)} · ${esc(subjectLabel(x.subject))}</strong><small>${time(x.start)}–${time(x.end)} · ${esc(x.progressStatus||'상태 확인')}</small><span class="status ${dailyResult(x)==='운영표와 일치'?'good':'warn'}">${dailyResult(x)}</span></button>`).join('')}</td>`).join('')}</tr>`;}
+ html+='</tbody></table></div><p class="daily-note">여러 시간에 걸친 수업은 각 시간대에 반복 표시됩니다. 수업을 누르면 운영표의 시간과 비교할 수 있습니다.</p>';
+ if(floating.length)html+=`<section class="floating"><h3>시간 미정 · ${floating.length}건</h3><p>시간이 확정되지 않아 표에는 배치하지 않았습니다.</p>${floating.map(x=>`<button data-lesson="${esc(x.id)}">${esc(x.name)} · ${esc(x.teacher)} · ${esc(subjectLabel(x.subject))}</button>`).join('')}</section>`;
+ }
+ $('dailyPanel').innerHTML=html;
+}
+function setDaily(active){dailyActive=active;$('dailyPanel').hidden=!active;document.querySelector('.workspace').hidden=active;document.querySelector('.workspace').style.display=active?'none':'';$('warning').hidden=active;$('range').disabled=active;$('readinessView').setAttribute('aria-pressed',String(!active));$('dailyView').setAttribute('aria-pressed',String(active));if(active)drawDaily();}
+$('dailyView').onclick=()=>setDaily(true);$('readinessView').onclick=()=>setDaily(false);
+['date','range'].forEach(id=>$(id).addEventListener('change',()=>{if(dailyActive)drawDaily();}));$('search').addEventListener('input',()=>{if(dailyActive)drawDaily();});$('reset').addEventListener('click',()=>{if(dailyActive)drawDaily();});
+$('dailyPanel').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.day){$('date').value=ExamReadiness.plus($('date').value,Number(b.dataset.day));requestLoad();return;}const x=dailyLessons.find(x=>x.id===b.dataset.lesson);if(!x)return;$('dialogText').textContent=`${x.name} · ${subjectLabel(x.subject)} / ${label(x.date)}. S-LMS: ${x.teacher}, ${!ExamReadiness.timed(x)?'시간 미정':time(x.start)+'–'+time(x.end)}. 운영표: ${liveData.sources.operating.state!=='ready'?'조회 실패':x.live?x.live.teacher+' '+time(x.live.start)+'–'+time(x.live.end):'편성 없음'}. ${dailyResult(x)}.`;$('dialog').showModal();};

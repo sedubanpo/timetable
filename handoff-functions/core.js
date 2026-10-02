@@ -11,6 +11,33 @@ function op(value){if(typeof value!=='string'||!/^[a-zA-Z0-9-]{16,80}$/.test(val
 const metadata=v=>({number:v.number,time:v.time,state:v.state,statusRevision:v.statusRevision||0,operationId:v.operationId});
 async function handle(db,who,b){const action=b.action;if(action==='identity')return {identity:who};const day=date(b.date),collection=db.collection('liveTimetableHandoffDays').doc(day).collection('teachers');
  if(action==='list'){if(!who.admin)fail('FORBIDDEN');let q=collection.orderBy('__name__').limit(51);if(b.cursor)q=q.startAfter(text(b.cursor,128));const snap=await q.get(),docs=snap.docs.slice(0,50);return {items:docs.filter(d=>d.data().latest).map(d=>({uid:d.id,teacher:d.data().teacher,date:day,latest:d.data().latest})),cursor:snap.docs.length>50?docs.at(-1).id:null};}
+ if(action==='review'){
+  if(!who.admin)fail('FORBIDDEN');
+  const end=date(b.endDate||day);
+  if(end<day||(Date.parse(end)-Date.parse(day))/86400000>14)fail('INVALID_DATE');
+  const items=[];
+  for(let d=day;d<=end;d=new Date(Date.parse(d)+86400000).toISOString().slice(0,10)){
+   const teachers=db.collection('liveTimetableHandoffDays').doc(d).collection('teachers');
+   let cursor=null,count=0;
+   do{
+    let q=teachers.orderBy('__name__').limit(51);if(cursor)q=q.startAfter(cursor);
+    const page=await q.get(),docs=page.docs.slice(0,50);count+=docs.length;
+    if(count>300)fail('SOURCE_INCOMPLETE');
+    const submitted=docs.filter(doc=>doc.data().latest);
+    const refs=submitted.map(doc=>teachers.doc(doc.id).collection('versions').doc(op(doc.data().latest.operationId)));
+    const versions=refs.length?(db.getAll?await db.getAll(...refs):await Promise.all(refs.map(ref=>ref.get()))):[];
+    versions.forEach((version,i)=>{
+     const value=version.data(),doc=submitted[i],meta=doc.data().latest;
+     if(!version.exists||!value||value.date!==d||value.uid!==doc.id||value.operationId!==meta.operationId||value.number!==meta.number)fail('SOURCE_INCOMPLETE');
+     const validated=validate(value);
+     items.push({date:d,teacher:value.teacher,uid:value.uid,number:value.number,time:value.time,state:value.state,rows:validated.rows,subjects:validated.subjects});
+    });
+    if(Buffer.byteLength(JSON.stringify(items))>2000000)fail('SOURCE_INCOMPLETE');
+    cursor=page.docs.length>50?docs.at(-1).id:null;
+   }while(cursor);
+  }
+  return {items,complete:true,start:day,end};
+ }
  const uid=action==='draft'||action==='saveDraft'||action==='submit'?who.uid:(b.uid||who.uid);if(uid!==who.uid&&!who.admin)fail('FORBIDDEN');if(typeof uid!=='string'||!uid||uid.length>128||uid.includes('/'))fail('INVALID_DATA');const ref=collection.doc(uid);
  if(action==='draft'){const doc=(await ref.get()).data()||{};let latest=null;if(doc.latest)latest=(await ref.collection('versions').doc(doc.latest.operationId).get()).data()||null;return {revision:doc.revision||0,draft:doc.draft||empty(),latest};}
  if(action==='versions'){const snap=await ref.collection('versions').orderBy('number','desc').limit(50).get();return {versions:snap.docs.map(d=>d.data())};}
