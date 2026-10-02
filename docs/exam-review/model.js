@@ -12,10 +12,18 @@
     }
     return [...groups.values()].flat();
   }
+  // A missing operating sheet affects only dates needed by this comparison.
+  function operatingReady(data,start,end){
+    const source=data.sources?.operating;
+    if(!source)return data.complete===true;
+    if(source.state==='ready')return true;
+    const missing=source.missingDates;
+    return source.state==='unavailable'&&Array.isArray(missing)&&missing.length>0&&missing.every(d=>/^\d{4}-\d{2}-\d{2}$/.test(d))&&!missing.some(d=>d>=start&&d<end);
+  }
   function assess(data,asOf,days=14){
     const end=plus(asOf,days),oldest=plus(asOf,-56),start=data.preparationStart||asOf;
     const latest=latestSubmissions(data.submissions||[]);
-    return data.students.filter(s=>s.active!==false).flatMap(student=>data.exams.filter(exam=>exam.school===student.school&&(exam.grade==='전학년'||String(exam.grade)===String(student.grade))&&exam.date>=asOf&&exam.date<=end).flatMap(exam=>{
+    return data.students.filter(s=>s.active!==false).flatMap(student=>data.exams.filter(exam=>exam.school===student.school&&(exam.grade==='전학년'||String(exam.grade)===String(student.grade))&&exam.date>asOf&&exam.date<=end).flatMap(exam=>{
       const enrolled=student.subjects.includes(exam.subject);
       const history=(data.history||[]).filter(x=>x.student===student.id&&x.subject===exam.subject&&x.date>=oldest&&x.date<asOf&&x.attended).sort((a,b)=>b.date.localeCompare(a.date));
       if(!enrolled&&!history.length)return [];
@@ -25,7 +33,9 @@
       const plans=allPlans.filter(x=>!x.cancelled&&x.confirmed!==false&&inWindow(x)),submissions=allSubmitted.filter(x=>!x.cancelled&&inWindow(x)),live=allLive.filter(x=>!x.cancelled&&inWindow(x));
       const plan=plans[0]||allPlans[0],submitted=submissions[0]||allSubmitted[0];
       let state,reason;
-      const complete=data.complete===true&&Object.values(data.sources||{}).every(x=>x.state==='ready');
+      const operatingComplete=operatingReady(data,start,exam.date);
+      const otherSourcesReady=Object.entries(data.sources||{}).filter(([k])=>k!=='operating').every(([,x])=>x.state==='ready');
+      const complete=operatingComplete&&otherSourcesReady&&(data.complete===true||data.planSourceComplete===true&&data.sources?.operating?.state==='unavailable');
       if(!complete){state='자료 확인 필요';reason='필요한 자료가 전부 조회되지 않았습니다. 편성 여부와 일치를 판단하지 않습니다.';}
       else if(!enrolled){state='자료 확인 필요';reason='최근 공개 수업 기록은 있으나 현재 수강 여부를 확인해야 합니다.';}
       else if(student.identityAmbiguous){state='자료 확인 필요';reason='S-LMS 학생 식별 자료가 이름 기준으로 합쳐져 있어 학생 ID 연결을 확인해야 합니다.';}
@@ -43,7 +53,7 @@
       else if(!live.length){state='운영표 미반영';reason='확정한 대비 계획이 운영 시간표에 없습니다.';}
       else if(!plans.every(p=>live.some(x=>same(p,x)))||!live.every(x=>plans.some(p=>same(p,x)))||!submissions.every(s=>plans.some(p=>same(p,s)))){state='내용 불일치';reason='준비 기간의 날짜·시간·담당 강사 또는 수업 회차가 서로 다릅니다.';}
       else {state='계획 일치';reason=submissions.length?'직보 계획, 최신 강사 제출, 운영 시간표가 일치합니다.':'직보 계획과 운영 시간표가 일치합니다. 강사 제출은 아직 없습니다.';}
-      return [{key:student.id+':'+exam.id,student,exam,plan,submitted,submissions,live,plans,state,reason,history,enrolled}];
+      return [{key:student.id+':'+exam.id,student,exam,plan,submitted,submissions,live,plans,state,reason,history,enrolled,operatingComplete}];
     })).sort((a,b)=>a.exam.date.localeCompare(b.exam.date)||a.student.name.localeCompare(b.student.name,'ko'));
   }
   function daily(data,date){
@@ -53,10 +63,10 @@
       if(!student||student.active===false||student.suppressed)return null;
       const result=assessed.find(r=>r.student.id===x.student&&r.exam.id===x.exam);
       const live=(data.live||[]).filter(l=>l.student===x.student&&l.subject===x.subject&&l.exam===x.exam&&l.date===date&&!l.cancelled);
-      const complete=data.sources?data.sources.board?.state==='ready'&&data.sources.operating?.state==='ready':data.complete===true;
+      const complete=data.sources?data.sources.board?.state==='ready'&&data.planSourceComplete!==false&&operatingReady(data,date,plus(date,1)):data.complete===true;
       const state=!complete?'운영표 조회 불가':!timed(x)?'시간 미정':student.identityAmbiguous||x.identityAmbiguous||x.examAmbiguous||x.confirmed===false?'자료 확인 필요':live.some(l=>same(x,l))?'계획 일치':live.length?'시간·강사 차이':'운영표 미반영';
       return {...x,id:'daily-'+i,name:student.name,school:student.school,live:live[0]||null,state,result};
     }).filter(Boolean);
   }
-  const api={assess,daily,latestSubmissions,timed,same,plus};if(typeof module!=='undefined')module.exports=api;else root.ExamReadiness=api;
+  const api={assess,daily,operatingReady,latestSubmissions,timed,same,plus};if(typeof module!=='undefined')module.exports=api;else root.ExamReadiness=api;
 })(typeof window!=='undefined'?window:this);

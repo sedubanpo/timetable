@@ -7,7 +7,7 @@
   if(!board||board.schema!==1||board.complete!==true)throw Error('S_LMS_SOURCE_INCOMPLETE');
   const data={complete:Object.values(sources).every(s=>s.state==='ready'),sources,students:structuredClone(board.students),exams:board.exams,history:[],plans:[],submissions:[],live:[],unresolved:[]};
   for(const s of data.students){const raw=s.subjects||[];s.subjects=data.exams.filter(e=>raw.some(v=>subjectMatches(v,e)||e.major&&norm(v).includes(norm(e.major)))).map(e=>e.subject);s.subjectAmbiguousExams=data.exams.filter(e=>raw.some(v=>e.major&&norm(v).includes(norm(e.major)))&&!raw.some(v=>subjectMatches(v,e))).map(e=>e.id);}
-  const plans=root.ExamReviewAdapters.fromDailySnapshots(board.snapshots,data.exams);data.plans=plans.plans;if(!plans.complete)data.complete=false;
+  const plans=root.ExamReviewAdapters.fromDailySnapshots(board.snapshots,data.exams);data.plans=plans.plans;data.planSourceComplete=plans.complete;if(!plans.complete)data.complete=false;
   for(const row of history&&history.rows||[]){const matches=data.students.filter(s=>s.id===row.studentId||(s.aliases||[]).includes(row.studentId));if(matches.length!==1)continue;for(const e of data.exams)if(subjectMatches(row.subject,e)||e.major&&norm(row.subject)===norm(e.major))data.history.push({student:matches[0].id,subject:e.subject,date:row.date,attended:true});}
   if(handoffs){const h=root.ExamReviewAdapters.fromHandoffs(handoffs,data.students,data.exams);data.submissions=h.submissions;data.unresolved.push(...h.unresolved);}
   for(const day of operating)for(const [name,detail]of Object.entries(day.snapshot.studentDetails||{})){
