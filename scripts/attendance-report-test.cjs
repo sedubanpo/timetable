@@ -1,0 +1,25 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const a=fs.readFileSync('docs/index.html','utf8'),b=fs.readFileSync('Index.html','utf8');
+const block=h=>h.slice(h.indexOf('      function getCurrentReportHour('),h.indexOf('      function isTeacherHeader('));assert.equal(block(a),block(b));assert(a.includes(fs.readFileSync('scripts/attendance-report.css','utf8')));
+for(const h of [a,b])for(const s of h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))if(s[1].trim())new vm.Script(s[1]);
+const els={attendanceReportFeedback:{textContent:''}},ctx=vm.createContext({console,Date,Map,Set,Promise,JSON,Array,Object,String,Number,Math,setTimeout,URL,navigator:{},document:{getElementById:k=>els[k],querySelectorAll:()=>[]},currentSheetName:'10/3(토)',getScheduleSessionKey:()=> 'test-account',normalizeStatusLabel:s=>s,attendanceReportHideResolved:false,attendanceReportPayload:null,attendanceReportHourOffset:0,SCHEDULE_START_HOUR:0,SCHEDULE_END_HOUR:23});vm.runInContext(block(a),ctx);
+const one={type:'late',name:'가상학생',school:'반포고2',teacher:'가상강사',classType:'개별',subject:'영어',room:'1강의실',status:'지각',note:'10/3(토) 확정, 곧 등원 예정'};
+const two={...one,name:'다른학생',status:'결석예고',type:'absent',note:'개인 일정으로 결석예고'};
+const p={dateText:'10/3(토)',slotText:'21:00~22:00',hour:21,activeCount:2,items:[one,two]};ctx.attendanceReportPayload=p;
+assert.equal(ctx.cleanAttendanceTeacherNote(one.note),'곧 등원 예정');assert.equal(ctx.cleanAttendanceTeacherNote('10/3(토) 확정'),'');assert.equal(ctx.cleanAttendanceTeacherNote('시간표 입력 완료; 21:30 등원 예정'),'21:30 등원 예정');
+assert.equal(ctx.cleanAttendanceTeacherNote('등원 시간 미확정'),'등원 시간 미확정');assert.equal(ctx.cleanAttendanceTeacherNote('결석 확정'),'결석 확정');
+let msg=ctx.attendanceTeacherMessages(p);assert.equal(msg.length,1);assert(msg[0].text.includes('가상학생(반포고2)'));assert(msg[0].text.includes('다른학생'));assert(!msg[0].text.includes('확정'));
+assert(ctx.composeAttendanceReportText(p).includes('가상학생 · 가상강사(개별) · '));assert(!ctx.composeAttendanceReportText(p).includes('1강의실'));
+ctx.attendanceReportDrafts[ctx.attendanceReportNoteKey(one)]='21:30 등원 예정';assert(ctx.composeAttendanceReportText(p).includes('21:30 등원 예정'));assert(ctx.attendanceTeacherMessages(p)[0].text.includes('21:30 등원 예정'));assert.equal(one.note,'10/3(토) 확정, 곧 등원 예정');
+ctx.currentSheetName='10/4(일)';assert.equal(ctx.attendanceReportNote(one),one.note);ctx.currentSheetName='10/3(토)';ctx.attendanceReportHideResolved=true;assert.equal(ctx.getVisibleAttendanceItems(p).length,1);assert(!ctx.attendanceTeacherMessages(p)[0].text.includes('다른학생'));ctx.attendanceReportHideResolved=false;
+assert.equal(ctx.attendanceReportEscape('<img onerror="x">'), '&lt;img onerror=&quot;x&quot;&gt;');assert(ctx.composeAttendanceReportText({...p,items:[]}).includes('특이사항이 없습니다'));assert.equal(ctx.attendanceTeacherMessages({...p,items:[{...one,teacher:''}]}).length,0);
+(async()=>{
+ await ctx.copyAttendanceReportImage();assert(els.attendanceReportFeedback.textContent.includes('지원되지'));
+ let output='';ctx.navigator.clipboard={writeText:async text=>{output=text;}};await ctx.copyAttendanceTextValue('문구');assert.equal(output,'문구');
+ ctx.navigator.clipboard.writeText=async()=>{throw Error('denied');};await ctx.copyAttendanceTextValue('문구');assert(els.attendanceReportFeedback.textContent.includes('권한'));
+ const guarded={disabled:false};ctx.document.querySelectorAll=()=>[guarded];
+ ctx.renderExportCanvas=async()=>({toBlob:fn=>fn({type:'image/png'})});ctx.ClipboardItem=function(value){this.value=value;};ctx.navigator.clipboard.write=async records=>{assert.equal((await records[0].value['image/png']).type,'image/png');};const button={disabled:false};await ctx.copyAttendanceReportImage(button);assert.equal(button.disabled,false);assert.equal(guarded.disabled,false);assert(els.attendanceReportFeedback.textContent.includes('복사했습니다'));
+ let finish;ctx.renderExportCanvas=()=>new Promise(resolve=>finish=resolve);const first=ctx.captureAttendanceReportImage(),second=ctx.captureAttendanceReportImage();assert.equal(first,second,'concurrent exports share one capture');await Promise.resolve();finish({toBlob:fn=>fn({type:'image/png'})});await Promise.all([first,second]);assert.equal(guarded.disabled,false);assert.equal(ctx.attendanceReportExportPending,null);
+ ctx.renderExportCanvas=async()=>{assert.equal(guarded.disabled,true);throw Error('export failed');};await ctx.copyAttendanceReportImage(button);assert.equal(button.disabled,false);assert(els.attendanceReportFeedback.textContent.includes('실패'));
+ console.log('PASS: syntax/parity, compact text, teacher grouping, conservative note cleanup, report-only edits, date isolation, filters, escaping, empty states, clipboard success/denial/unsupported/export failure.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -928,69 +928,61 @@
       .absence-card-policy-line.is-absent { color:#15803d; font-weight:800; }
       .absence-card-period { margin-top:10px; padding:10px 12px; border-radius:14px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; font-size:0.8rem; font-weight:800; line-height:1.5; }
       #absenceNoticeText { width:100%; min-height:140px; border:1px solid #d1d5db; border-radius:10px; padding:10px; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size:0.9rem; resize:vertical; background:#f8fafc; box-sizing:border-box; }
-      .attendance-report-box { width: 760px; max-width: 95%; max-height: 88vh; overflow: auto; text-align: left; }
-      .attendance-report-controls { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0 12px; flex-wrap:wrap; }
-      .attendance-report-time-nav { display:flex; gap:6px; align-items:center; }
-      .attendance-report-filters { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-      .attendance-report-text-modes { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-      .attendance-time-btn { border:1px solid #cbd5e1; background:#fff; color:#1e293b; border-radius:8px; padding:8px 10px; font-size:0.82rem; font-weight:700; cursor:pointer; }
-      .attendance-time-label { border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; border-radius:999px; padding:6px 10px; font-size:0.78rem; font-weight:800; }
-      .attendance-filter-chip { display:inline-flex; align-items:center; gap:7px; padding:7px 11px; border:1px solid #cbd5e1; border-radius:999px; background:#fff; color:#475569; font-size:0.78rem; font-weight:800; }
-      .attendance-filter-chip input { width:15px; height:15px; accent-color:#334155; }
-      .attendance-text-mode-btn { border:1px solid #cbd5e1; background:#fff; color:#475569; border-radius:999px; padding:7px 14px; font-size:0.78rem; font-weight:900; cursor:pointer; transition:0.2s; }
-      .attendance-text-mode-btn.active { background:linear-gradient(180deg,#2563eb,#1d4ed8); border-color:#1d4ed8; color:#fff; box-shadow:0 10px 18px rgba(37,99,235,0.18); }
-      #attendanceReportPreview { max-width: 480px; margin: 0 auto 10px; background:linear-gradient(180deg, #f7faff 0%, #eef4ff 100%); border:1px solid #cfe0ff; border-radius:28px; padding:18px; box-shadow:0 16px 34px rgba(37, 99, 235, 0.10); }
-      .attendance-report-shell { position:relative; overflow:hidden; border-radius:24px; background:linear-gradient(180deg,#f8fbff 0%, #eef4ff 100%); border:1px solid #d7e6ff; padding:18px; }
-      .attendance-report-shell::before { content:""; position:absolute; right:-56px; top:-52px; width:180px; height:180px; border-radius:50%; background:radial-gradient(circle at center, rgba(96,165,250,0.20) 0%, rgba(96,165,250,0.06) 52%, rgba(96,165,250,0) 76%); pointer-events:none; }
-      .attendance-report-top { position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; }
-      .attendance-report-head { font-size:1.1rem; font-weight:900; color:#0f172a; margin-bottom:6px; letter-spacing:-0.02em; }
-      .attendance-report-sub { color:#475569; font-size:0.88rem; margin-bottom:0; font-weight:800; }
-      .attendance-report-inline-summary { margin-top:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:0.84rem; font-weight:900; }
-      .attendance-report-inline-summary .late { color:#dc2626; }
-      .attendance-report-inline-summary .absent { color:#334155; }
-      .attendance-report-inline-summary .active { color:#15803d; }
-      .attendance-report-calendar { flex-shrink:0; width:92px; border-radius:22px; background:linear-gradient(180deg,#ffffff,#eff6ff); border:1px solid #bfdbfe; box-shadow:0 14px 24px rgba(37,99,235,0.10); overflow:hidden; text-align:center; }
-      .attendance-report-calendar-month { background:linear-gradient(180deg,#2563eb,#1d4ed8); color:#fff; font-size:0.73rem; font-weight:900; letter-spacing:0.08em; padding:7px 6px; }
-      .attendance-report-calendar-day { padding:10px 6px 4px; font-size:1.6rem; font-weight:900; color:#0f172a; line-height:1; letter-spacing:-0.04em; }
-      .attendance-report-calendar-dow { padding:0 6px 4px; font-size:0.78rem; font-weight:800; color:#64748b; }
-      .attendance-report-calendar-dow.sun { color:#dc2626; }
-      .attendance-report-calendar-dow.sat { color:#2563eb; }
-      .attendance-report-calendar-time { padding:0 6px 10px; font-size:0.72rem; font-weight:900; color:#2563eb; }
-      .attendance-report-summary { background:#ffffff; border:1px dashed #cbd5e1; border-radius:16px; padding:14px; color:#64748b; font-size:0.84rem; font-weight:800; text-align:center; }
-      .attendance-report-note { margin-top:5px; font-size:0.78rem; color:#9a3412; line-height:1.45; }
-      .attendance-vcard { display:flex; flex-direction:column; gap:10px; }
-      .attendance-vroom-card { background:rgba(255,255,255,0.96); border:1px solid #cbd5e1; border-radius:20px; padding:13px; box-shadow:0 10px 24px rgba(148, 163, 184, 0.12); }
-      .attendance-vroom-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
-      .attendance-v-room { font-size:0.98rem; font-weight:900; color:#0f172a; }
-      .attendance-v-room-meta { font-size:0.74rem; color:#64748b; font-weight:700; margin-top:4px; line-height:1.45; }
-      .attendance-v-room-count { border-radius:999px; padding:4px 8px; font-size:0.72rem; font-weight:800; background:#e0ecff; color:#1d4ed8; border:1px solid #bfdbfe; white-space:nowrap; }
-      .attendance-vclass-card { border-top:1px dashed #dbeafe; padding-top:12px; margin-top:12px; }
-      .attendance-vclass-card:first-of-type { border-top:none; padding-top:0; margin-top:0; }
-      .attendance-vclass-shell { border-radius:16px; padding:12px; border:1px solid #dbeafe; background:linear-gradient(180deg,#ffffff,#f8fbff); }
-      .attendance-vclass-shell.type-1to1 { background:linear-gradient(180deg,#fefce8,#fef3c7); border-color:#fcd34d; }
-      .attendance-vclass-shell.type-2to1 { background:linear-gradient(180deg,#f0fdf4,#dcfce7); border-color:#86efac; }
-      .attendance-vclass-shell.type-individual { background:linear-gradient(180deg,#eff6ff,#dbeafe); border-color:#93c5fd; }
-      .attendance-vclass-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px; }
-      .attendance-v-class { font-size:0.82rem; color:#334155; font-weight:800; margin-bottom:4px; }
-      .attendance-v-class-type { display:inline-flex; align-items:center; border-radius:999px; padding:5px 10px; font-size:0.72rem; color:#334155; font-weight:900; background:rgba(255,255,255,0.84); border:1px solid rgba(148,163,184,0.32); }
-      .attendance-vclass-shell.type-1to1 .attendance-v-class-type { color:#92400e; border-color:#f59e0b; }
-      .attendance-vclass-shell.type-2to1 .attendance-v-class-type { color:#166534; border-color:#4ade80; }
-      .attendance-vclass-shell.type-individual .attendance-v-class-type { color:#1d4ed8; border-color:#60a5fa; }
-      .attendance-vclass-count { flex-shrink:0; font-size:0.72rem; font-weight:800; color:#475569; background:rgba(255,255,255,0.88); border:1px solid rgba(203,213,225,0.9); border-radius:999px; padding:5px 9px; white-space:nowrap; }
-      .attendance-v-students { display:flex; flex-direction:column; gap:6px; }
-      .attendance-v-student { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:8px 9px; }
-      .attendance-v-student.is-notice { background:linear-gradient(180deg,#e5e7eb,#cbd5e1); border-color:#94a3b8; box-shadow:inset 0 1px 0 rgba(255,255,255,0.35); }
-      .attendance-v-student.is-notice .attendance-v-student-name { color:#334155; }
-      .attendance-v-student.is-notice .attendance-v-student-meta { color:#64748b; }
-      .attendance-v-student.is-notice .attendance-report-note { color:#475569; }
-      .attendance-v-student-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-      .attendance-v-student-name { font-size:0.84rem; font-weight:800; color:#1e293b; }
-      .attendance-v-student-meta { font-size:0.74rem; color:#64748b; margin-top:4px; }
-      .attendance-v-student-status { font-size:0.72rem; font-weight:800; border-radius:999px; padding:3px 8px; border:1px solid transparent; }
-      .attendance-v-student-status.late { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
-      .attendance-v-student-status.absent { background:#fee2e2; color:#991b1b; border-color:#f87171; }
-      .attendance-v-student-status.notice { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
-      #attendanceReportText { width:100%; min-height:150px; border:1px solid #d1d5db; border-radius:10px; padding:10px; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; font-size:0.9rem; resize:vertical; background:#f8fafc; box-sizing:border-box; }
+      /* Attendance report: compact paper + working notes */
+      #attendanceReportModal .attendance-report-box { width:1180px; max-width:calc(100% - 40px); max-height:94vh; padding:0; border-radius:12px; text-align:left; overflow:auto; background:#f4f5f7; color:#192b43; }
+      #attendanceReportModal * { box-sizing:border-box; }
+      #attendanceReportModal button { font:inherit; cursor:pointer; border:1px solid #ccd3dc; background:#fff; color:#21364e; border-radius:5px; min-height:40px; padding:8px 12px; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-size:13px; font-weight:600; }
+      #attendanceReportModal button:hover { background:#eaf0f5; }
+      #attendanceReportModal button:disabled { opacity:.5; cursor:wait; }
+      #attendanceReportModal :focus-visible { outline:2px solid #2365ae; outline-offset:3px; }
+      #attendanceReportModal ::selection { background:#d5e5f5; }
+      #attendanceReportModal svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+      .ar-head { padding:24px 28px; background:#1c304a; color:#fff; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+      .ar-head h2 { margin:0; font-size:24px; letter-spacing:-.025em; }
+      .ar-head p { margin:6px 0 0; color:#d8e1ec; font-size:13px; }
+      #attendanceReportModal .ar-close { color:#fff; background:transparent; border-color:#6b7d92; }
+      .ar-toolbar { background:#fff; padding:14px 28px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #d9dfe6; }
+      .ar-nav,.ar-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      #attendanceReportTimeLabel { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; min-width:128px; text-align:center; }
+      .ar-filter { display:flex; align-items:center; gap:7px; font-size:13px; color:#46576a; }
+      .ar-filter input { accent-color:#1c304a; width:17px; height:17px; }
+      .ar-workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; padding:24px 28px 28px; align-items:start; }
+      .ar-column { min-width:0; }
+      .ar-section-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+      .ar-section-head h3 { font-size:15px; margin:0; }
+      .ar-section-head p,.ar-hint { color:#506074; font-size:12px; line-height:1.6; margin:4px 0 0; }
+      #attendanceReportModal .ar-primary { background:#1c304a; color:#fff; border-color:#1c304a; }
+      #attendanceReportModal .ar-primary:hover { background:#294666; color:#fff; }
+      #attendanceReportModal .ar-close:hover { background:#294666; color:#fff; }
+      #attendanceReportPreview { width:100%; max-width:560px; margin:0 auto; background:#fff; padding:26px; border:1px solid #d7dde5; border-radius:0; box-shadow:none; overflow-wrap:anywhere; }
+      .ar-paper-head { padding-bottom:18px; border-bottom:2px solid #21364e; }
+      .ar-paper-head h3 { font-size:23px; margin:0 0 8px; letter-spacing:-.02em; }
+      .ar-date { font-size:14px; font-weight:600; color:#42566f; font-variant-numeric:tabular-nums; }
+      .ar-summary { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; margin-top:16px; color:#42566f; }
+      .ar-summary strong { color:#172b43; margin-left:5px; }
+      .ar-person { padding:16px 0; border-bottom:1px solid #e0e5eb; }
+      .ar-person-top { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+      .ar-person strong { font-size:16px; }
+      .ar-person .ar-school { color:#536378; font-size:12px; margin-left:7px; }
+      .ar-state { font-size:12px; color:#58677a; white-space:nowrap; }
+      .ar-state.late { color:#a64917; }
+      .ar-person-meta { font-size:13px; color:#455a73; margin-top:4px; }
+      .ar-person-note { font-size:14px; line-height:1.55; margin:8px 0 0; white-space:pre-wrap; }
+      .ar-paper-foot { margin:16px 0 0; color:#5d6979; font-size:11px; line-height:1.5; }
+      .ar-empty { padding:28px 0; color:#526177; font-size:14px; line-height:1.6; }
+      .ar-editor-row { padding:14px 0; border-bottom:1px solid #d7dde5; }
+      .ar-editor-row label { display:block; font-size:14px; font-weight:700; margin-bottom:7px; }
+      .ar-editor-row label small { font-weight:400; color:#536378; }
+      #attendanceReportModal textarea { font:inherit; font-size:13px; line-height:1.6; color:#263c56; background:#fff; border:1px solid #bfc9d6; border-radius:5px; padding:10px 12px; width:100%; resize:vertical; min-height:72px; caret-color:#2365ae; }
+      .ar-message { padding:16px 0; border-bottom:1px solid #d7dde5; }
+      .ar-message-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+      .ar-message-head strong { font-size:14px; }
+      .ar-messages-title { margin-top:26px; }
+      .ar-report-text { margin-top:18px; }
+      .ar-report-text summary { cursor:pointer; font-size:13px; color:#42566f; margin-bottom:10px; }
+      #attendanceReportText { min-height:150px; }
+      #attendanceReportFeedback { position:sticky; bottom:0; background:#f4f5f7; min-height:32px; margin:0; padding:8px 28px; font-size:13px; color:#254f75; }
+      @media(max-width:760px) { #attendanceReportModal .attendance-report-box { max-width:100%; width:100%; max-height:100dvh; border-radius:0; } .ar-head { padding:18px; } .ar-head h2 { font-size:21px; } .ar-toolbar { padding:12px 18px; } .ar-workspace { grid-template-columns:1fr; padding:18px; gap:26px; } #attendanceReportPreview { padding:20px; } #attendanceReportFeedback { padding:0 18px 12px; } }
       #studentImagePreview { max-width:none; margin:0; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
       #studentImagePreview th, #studentImagePreview td { border:1px solid #e5e7eb; padding:8px; font-size:0.9rem; text-align:left; }
@@ -1997,33 +1989,14 @@
         <div class="close-modal" onclick="closeAbsenceNoticeModal()">닫기</div>
       </div>
     </div>
-    <div id="attendanceReportModal">
+    <div id="attendanceReportModal" role="dialog" aria-modal="true" aria-labelledby="attendanceReportTitle" onkeydown="handleAttendanceReportKey(event)">
       <div class="modal-box attendance-report-box">
-        <div class="modal-title">출결 현황 보고</div>
-        <div class="attendance-report-controls">
-          <div class="attendance-report-time-nav">
-            <button class="attendance-time-btn" onclick="changeAttendanceReportHour(-1)">◀ 이전</button>
-            <span id="attendanceReportTimeLabel" class="attendance-time-label">현재 시간대</span>
-            <button class="attendance-time-btn" onclick="changeAttendanceReportHour(1)">다음 ▶</button>
-          </div>
-          <div class="attendance-report-filters">
-            <label class="attendance-filter-chip">
-              <input id="attendanceHideResolvedToggle" type="checkbox" onchange="refreshAttendanceReportModal()">
-              <span>결석예고/당일취소 숨기기</span>
-            </label>
-            <div class="attendance-report-text-modes">
-              <button type="button" id="attendanceTextModeSimpleBtn" class="attendance-text-mode-btn active" onclick="setAttendanceReportTextMode('simple')">심플</button>
-              <button type="button" id="attendanceTextModeDetailedBtn" class="attendance-text-mode-btn" onclick="setAttendanceReportTextMode('detailed')">상세</button>
-            </div>
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="msg-copy-btn" style="margin-top:0;" onclick="copyAttendanceReportText()">문구 복사</button>
-            <button class="msg-copy-btn" style="margin-top:0; background:#0ea5e9;" onclick="downloadAttendanceReportImage()">이미지 저장</button>
-          </div>
-        </div>
-        <div id="attendanceReportPreview"></div>
-        <textarea id="attendanceReportText" readonly></textarea>
-        <div class="close-modal" onclick="closeAttendanceReportModal()">닫기</div>
+        <header class="ar-head"><div><h2 id="attendanceReportTitle">출결 현황 보고</h2><p>출결을 정리하고, 필요한 내용을 선생님께 전달하세요.</p></div><button class="ar-close" onclick="closeAttendanceReportModal()">닫기</button></header>
+        <div class="ar-toolbar"><div class="ar-nav"><button aria-label="이전 시간대" onclick="changeAttendanceReportHour(-1)">이전</button><span id="attendanceReportTimeLabel"></span><button aria-label="다음 시간대" onclick="changeAttendanceReportHour(1)">다음</button></div><label class="ar-filter"><input id="attendanceHideResolvedToggle" type="checkbox" onchange="refreshAttendanceReportModal()">결석예고·당일취소 숨기기</label></div>
+        <div class="ar-workspace">
+          <section class="ar-column"><div class="ar-section-head"><h3>보고 미리보기</h3></div><div class="ar-actions" style="margin-bottom:14px"><button class="ar-primary" onclick="copyAttendanceReportImage(this)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="1"/><path d="M16 8V3H3v13h5"/></svg>이미지 복사</button><button onclick="downloadAttendanceReportImage(this)">이미지 저장</button><button onclick="copyAttendanceReportText()"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="1"/><path d="M16 8V3H3v13h5"/></svg>문구 복사</button></div><div id="attendanceReportPreview"></div><details class="ar-report-text"><summary>보고 문구 확인</summary><textarea id="attendanceReportText" aria-label="보고 문구" readonly></textarea></details></section>
+          <section class="ar-column"><div class="ar-section-head"><div><h3>보고용 비고 편집</h3><p>보고·이미지·카톡 문구에 반영됩니다. 원본 시간표는 변경하지 않습니다.<br>시간대를 바꿔도 유지되며, 이 창을 닫으면 초기화됩니다.</p></div></div><div id="attendanceReportEditors"></div><div class="ar-section-head ar-messages-title"><div><h3>강사별 카톡 문구</h3><p>편성용 날짜·확정 표시를 정리했습니다. 내용을 확인하고 복사하세요.</p></div></div><div id="attendanceTeacherMessages"></div></section>
+        </div><p id="attendanceReportFeedback" role="status" aria-live="polite"></p>
       </div>
     </div>
     <div id="teacherAttendanceComposerModal" role="dialog" aria-modal="true" aria-labelledby="teacherAttendanceComposerTitle">
@@ -8869,214 +8842,93 @@
         }
         return { lateCount: lateCount, absentCount: absentCount, activeCount: payload.activeCount, empty: false };
       }
-      function composeAttendanceReportText(payload) {
-        var visibleItems = getVisibleAttendanceItems(payload);
-        var lateCount = visibleItems.filter(function(v){ return v.type === "late"; }).length;
-        var absentCount = visibleItems.filter(function(v){ return v.type === "absent"; }).length;
-        var head = payload.dateText + " " + payload.slotText + " 등원 현황 보고";
-        var mode = getAttendanceTextMode();
-        var out = "[출결 현황 보고]\n" + head + "\n\n";
-        if (!visibleItems.length) {
-          out += "지각 0명 / 미참여 0명 / 참여 " + payload.activeCount + "명";
-          return out;
-        }
-        out += "지각 " + lateCount + "명 / 미참여 " + absentCount + "명 / 참여 " + payload.activeCount + "명\n";
-        visibleItems.forEach(function(v){
-          var typeLabel = getAttendanceClassTypeLabel(v.classType);
-          var cls = v.subject + (v.teacher ? "-" + v.teacher + "T" : "");
-          var school = v.school ? (" (" + v.school + ")") : "";
-          if (mode === "simple") {
-            out += "- [" + v.status + "] " + v.name + school + " / " + cls + (typeLabel ? " [" + typeLabel + "]" : "") + "\n";
-            return;
-          }
-          var note = v.note ? (" / 비고: " + v.note) : "";
-          out += "- [" + v.status + "] " + v.name + school + " / " + cls + (typeLabel ? " [" + typeLabel + "]" : "") + " / " + v.room + note + "\n";
-        });
-        return out.trim();
+      var attendanceReportDrafts = Object.create(null);
+      var attendanceReportReturnFocus = null;
+      var attendanceReportExportPending = null;
+      function attendanceReportEscape(v) { return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+      function attendanceReportNoteKey(v) { return JSON.stringify([getScheduleSessionKey(),currentSheetName,v.name,v.school,v.teacher,v.subject,v.classType,v.room,v.note]); }
+      function attendanceReportNote(v) { var k=attendanceReportNoteKey(v); return Object.prototype.hasOwnProperty.call(attendanceReportDrafts,k)?attendanceReportDrafts[k]:String(v.note||''); }
+      function cleanAttendanceTeacherNote(value) {
+        return String(value||'').split(/\n|[;；]|\s*\|\s*/).map(function(line){
+          if (/^\s*확정\s*[.]?\s*$/.test(line)) return '';
+          return line.replace(/\d{1,2}\/\d{1,2}\s*(?:\([월화수목금토일](?:요일)?\))?\s*(?:시간표\s*)?(?:입력|편성|배정|일정)?\s*확정(?=\s|[,，.]|$)/g,'').replace(/(?:시간표|수업)\s*(?:입력|배정|편성)\s*(?:완료|확정)/g,'').replace(/^[\s,，.·]+|[\s,，·]+$/g,'').trim();
+        }).filter(Boolean).join(' / ').trim();
       }
-      function buildAttendanceGroupedRows(payload) {
-        var rooms = {};
-        payload.items.forEach(function(v){
-          var typeLabel = getAttendanceClassTypeLabel(v.classType);
-          var classText = v.subject + (v.teacher ? "-" + v.teacher + "T" : "");
-          var classKey = classText + "||" + typeLabel;
-          if (!rooms[v.room]) rooms[v.room] = { room: v.room, classes: {} };
-          if (!rooms[v.room].classes[classKey]) {
-            var summaryKey = [v.room, v.subject || "수업", v.teacher || "", v.classType || ""].join("||");
-            var summary = payload.roomClassSummaryMap && payload.roomClassSummaryMap[summaryKey];
-            rooms[v.room].classes[classKey] = {
-              classText: classText,
-              classType: typeLabel,
-              students: [],
-              totalCount: summary ? summary.totalCount : 0,
-              activeCount: summary ? summary.activeCount : 0,
-              issueCount: summary ? summary.issueCount : 0
-            };
-          }
-          rooms[v.room].classes[classKey].students.push(v);
-        });
-        return Object.keys(rooms).sort(function(a, b){
-          return String(a || "").localeCompare(String(b || ""));
-        }).map(function(roomKey){
-          var room = rooms[roomKey];
-          var classList = Object.keys(room.classes).sort(function(a, b){
-            return String(a || "").localeCompare(String(b || ""));
-          }).map(function(classKey){
-            return room.classes[classKey];
-          });
-          return {
-            room: room.room,
-            classes: classList,
-            issueCount: classList.reduce(function(sum, cls){ return sum + cls.students.length; }, 0),
-            activeCount: classList.reduce(function(sum, cls){ return sum + cls.activeCount; }, 0),
-            totalCount: classList.reduce(function(sum, cls){ return sum + cls.totalCount; }, 0)
-          };
-        });
+      function attendanceTeacherName(v) { return String(v.teacher||'').replace(/T$/,'').trim(); }
+      function composeAttendanceReportText(payload) {
+        var rows=getVisibleAttendanceItems(payload);
+        return '[출결 현황 보고] '+payload.dateText+' '+payload.slotText+'\n\n'+(rows.length?rows.map(function(v){return v.name+' · '+(attendanceTeacherName(v)||'담당 미지정')+(v.classType?'('+getAttendanceClassTypeLabel(v.classType)+')':'')+' · '+(attendanceReportNote(v).trim()||v.status);}).join('\n'):'보고할 출결 특이사항이 없습니다.');
+      }
+      function attendanceTeacherMessages(payload) {
+        var groups=new Map();
+        getVisibleAttendanceItems(payload).forEach(function(v){var teacher=attendanceTeacherName(v);if(!teacher)return;var note=cleanAttendanceTeacherNote(attendanceReportNote(v))||v.status;var line=v.name+(v.school?'('+v.school+')':'')+' 학생: '+note;if(!groups.has(teacher))groups.set(teacher,[]);if(!groups.get(teacher).includes(line))groups.get(teacher).push(line);});
+        return Array.from(groups,function(pair){return {teacher:pair[0],text:pair[0]+' 선생님, 에스학원입니다.\n'+payload.dateText+' '+payload.slotText+' 수업 관련 출결 안내드립니다.\n\n'+pair[1].join('\n')+'\n\n수업 진행 시 참고 부탁드립니다.'};});
       }
       function renderAttendanceReportPreview(payload) {
-        var root = document.getElementById("attendanceReportPreview");
-        if (!payload) { root.innerHTML = "<div class='teacher-empty'>데이터가 없습니다.</div>"; return; }
-        var visibleItems = getVisibleAttendanceItems(payload);
-        var summaryText = getAttendanceSummaryText(payload, visibleItems);
-        var grouped = buildAttendanceGroupedRows({ items: visibleItems, roomClassSummaryMap: payload.roomClassSummaryMap || {} });
-        var listHtml = grouped.length ? grouped.map(function(g){
-          var classesHtml = g.classes.map(function(clsGroup){
-            var studentsHtml = clsGroup.students.map(function(v){
-              var statusText = normalizeStatusLabel(v.status || "");
-              var statusCls = v.type === "late" ? "late" : "absent";
-              var studentCls = "";
-              if (statusText === "결석예고") { statusCls = "notice"; studentCls = " is-notice"; }
-              else if (statusText === "당일취소") { statusCls = "absent"; }
-              var school = v.school ? (" " + v.school) : "";
-              var meta = [];
-              if (v.teacher) meta.push(v.teacher + "T");
-              if (v.subject) meta.push(v.subject);
-              if (v.classType) meta.push(getAttendanceClassTypeLabel(v.classType));
-              return "<div class='attendance-v-student" + studentCls + "'>" +
-                       "<div class='attendance-v-student-top'>" +
-                         "<span class='attendance-v-student-name'>" + v.name + school + "</span>" +
-                         "<span class='attendance-v-student-status " + statusCls + "'>" + v.status + "</span>" +
-                       "</div>" +
-                       (meta.length ? "<div class='attendance-v-student-meta'>" + meta.join(" · ") + "</div>" : "") +
-                       (v.note ? "<div class='attendance-report-note'>비고: " + v.note + "</div>" : "") +
-                     "</div>";
-            }).join("");
-            var visualType = getAttendanceClassVisualType(clsGroup.classType);
-            return "<div class='attendance-vclass-card'>" +
-                     "<div class='attendance-vclass-shell type-" + visualType + "'>" +
-                       "<div class='attendance-vclass-head'>" +
-                         "<div><div class='attendance-v-class'>수업: " + clsGroup.classText + (clsGroup.classType ? " <span class='attendance-v-class-type'>" + clsGroup.classType + "</span>" : "") + "</div></div>" +
-                         "<div class='attendance-vclass-count'>참여 " + clsGroup.activeCount + "명 / 이상 " + clsGroup.issueCount + "명 / 전체 " + clsGroup.totalCount + "명</div>" +
-                       "</div>" +
-                       "<div class='attendance-v-students'>" + studentsHtml + "</div>" +
-                     "</div>" +
-                   "</div>";
-          }).join("");
-          return "<div class='attendance-vroom-card'>" +
-                   "<div class='attendance-vroom-head'>" +
-                     "<div><div class='attendance-v-room'>" + g.room + "</div><div class='attendance-v-room-meta'>참여 중 " + g.activeCount + "명 · 이상 징후 " + g.issueCount + "명 · 전체 " + g.totalCount + "명</div></div>" +
-                     "<div class='attendance-v-room-count'>" + g.issueCount + "건</div>" +
-                   "</div>" +
-                   "<div class='attendance-vcard'>" + classesHtml + "</div>" +
-                 "</div>";
-        }).join("") : "<div class='attendance-report-summary'>현재 시간대 이상 징후(지각/결석/취소) 학생이 없습니다.</div>";
-        var cal = payload.dateInfo || {};
-        var dowClass = "";
-        if (cal.dow === "토") dowClass = " sat";
-        else if (cal.dow === "일") dowClass = " sun";
-        root.innerHTML =
-          "<div class='attendance-report-shell'>" +
-            "<div class='attendance-report-top'>" +
-              "<div><div class='attendance-report-head'>출결 현황 보고</div>" +
-              "<div class='attendance-report-sub'>" + payload.dateText + " · " + payload.slotText + "</div>" +
-              "<div class='attendance-report-inline-summary'>" +
-                "<span class='late'>지각 " + summaryText.lateCount + "명</span>" +
-                "<span class='absent'>미참여 " + summaryText.absentCount + "명</span>" +
-                "<span class='active'>참여 " + summaryText.activeCount + "명</span>" +
-              "</div></div>" +
-              "<div class='attendance-report-calendar'>" +
-                "<div class='attendance-report-calendar-month'>" + (cal.month || "-") + "월</div>" +
-                "<div class='attendance-report-calendar-day'>" + (cal.day || "-") + "</div>" +
-                "<div class='attendance-report-calendar-dow" + dowClass + "'>" + (cal.dow ? cal.dow + "요일" : "") + "</div>" +
-                "<div class='attendance-report-calendar-time'>" + payload.slotText + "</div>" +
-              "</div>" +
-            "</div>" +
-            "<div class='attendance-vcard'>" + listHtml + "</div>" +
-          "</div>";
-        var label = document.getElementById("attendanceReportTimeLabel");
-        if (label) label.textContent = payload.slotText + " 기준";
+        var root=document.getElementById('attendanceReportPreview'),e=attendanceReportEscape;
+        if(!payload){root.innerHTML='<p class="ar-empty">시간표를 불러온 뒤 다시 열어 주세요.</p>';return;}
+        var rows=getVisibleAttendanceItems(payload),summary=getAttendanceSummaryText(payload,rows);
+        root.innerHTML='<header class="ar-paper-head"><h3>출결 현황 보고</h3><div class="ar-date">'+e(payload.dateText)+' · '+e(payload.slotText)+'</div><div class="ar-summary"><span>지각<strong>'+summary.lateCount+'명</strong></span><span>미참여<strong>'+summary.absentCount+'명</strong></span><span>참여<strong>'+summary.activeCount+'명</strong></span></div></header>'+ (rows.length?rows.map(function(v){return '<article class="ar-person"><div class="ar-person-top"><div><strong>'+e(v.name)+'</strong><span class="ar-school">'+e(v.school)+'</span></div><span class="ar-state '+(v.type==='late'?'late':'')+'">'+e(v.status)+'</span></div><div class="ar-person-meta">'+e(attendanceTeacherName(v)||'담당 미지정')+(v.classType?' 선생님 · '+e(getAttendanceClassTypeLabel(v.classType)):'')+'</div><p class="ar-person-note">'+e(attendanceReportNote(v).trim()||v.status)+'</p></article>';}).join(''):'<p class="ar-empty">'+(payload.items.length?'현재 필터에 표시할 학생이 없습니다.':'보고할 출결 특이사항이 없습니다.')+'</p>')+'<p class="ar-paper-foot">에스학원 · 시간표에 입력된 출결 기준'+(attendanceReportHideResolved?' · 결석예고·당일취소 제외':'')+'</p>';
+        document.getElementById('attendanceReportTimeLabel').textContent=payload.slotText;
       }
-      function syncAttendanceReportTextModeButtons() {
-        var simpleBtn = document.getElementById("attendanceTextModeSimpleBtn");
-        var detailedBtn = document.getElementById("attendanceTextModeDetailedBtn");
-        var isDetailed = getAttendanceTextMode() === "detailed";
-        if (simpleBtn) simpleBtn.classList.toggle("active", !isDetailed);
-        if (detailedBtn) detailedBtn.classList.toggle("active", isDetailed);
+      function renderAttendanceReportEditors() {
+        var root=document.getElementById('attendanceReportEditors');root.replaceChildren();
+        var rows=getVisibleAttendanceItems(attendanceReportPayload);
+        if(!rows.length){root.innerHTML='<p class="ar-hint">표시할 학생이 없습니다.</p>';return;}
+        rows.forEach(function(v,index){var wrap=document.createElement('div');wrap.className='ar-editor-row';var label=document.createElement('label');label.htmlFor='ar-note-'+index;label.textContent=v.name+' · '+(attendanceTeacherName(v)||'담당 미지정');var input=document.createElement('textarea');input.id=label.htmlFor;input.value=attendanceReportNote(v);input.maxLength=2000;input.rows=2;input.placeholder='등원 예정 시각이나 전달할 내용을 입력하세요';input.addEventListener('input',function(){attendanceReportDrafts[attendanceReportNoteKey(v)]=input.value;renderAttendanceReportOutputs();});wrap.append(label,input);root.append(wrap);});
       }
-      function setAttendanceReportTextMode(mode) {
-        attendanceReportTextMode = mode === "detailed" ? "detailed" : "simple";
-        syncAttendanceReportTextModeButtons();
-        if (!attendanceReportPayload) return;
-        currentAttendanceReportText = composeAttendanceReportText(attendanceReportPayload);
-        document.getElementById("attendanceReportText").value = currentAttendanceReportText;
+      function renderAttendanceReportOutputs() {
+        if(!attendanceReportPayload)return;
+        currentAttendanceReportText=composeAttendanceReportText(attendanceReportPayload);document.getElementById('attendanceReportText').value=currentAttendanceReportText;renderAttendanceReportPreview(attendanceReportPayload);
+        var root=document.getElementById('attendanceTeacherMessages');root.replaceChildren();
+        var groups=attendanceTeacherMessages(attendanceReportPayload);
+        groups.forEach(function(g){var wrap=document.createElement('div');wrap.className='ar-message';var head=document.createElement('div');head.className='ar-message-head';var title=document.createElement('strong');title.textContent=g.teacher+' 선생님';var button=document.createElement('button');button.type='button';button.setAttribute('aria-label',g.teacher+' 선생님 카톡 문구 복사');button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="1"/><path d="M16 8V3H3v13h5"/></svg>복사';var text=document.createElement('textarea');text.rows=5;text.value=g.text;text.readOnly=true;text.setAttribute('aria-label',g.teacher+' 선생님 카톡 문구');button.addEventListener('click',function(){copyAttendanceTextValue(text.value);});head.append(title,button);wrap.append(head,text);root.append(wrap);});
+        if(!groups.length)root.innerHTML='<p class="ar-hint">담당 강사가 있는 학생의 문구가 여기에 표시됩니다.</p>';
       }
+      function attendanceReportFeedback(text) { document.getElementById('attendanceReportFeedback').textContent=text; }
       function refreshAttendanceReportModal() {
-        var hideToggle = document.getElementById("attendanceHideResolvedToggle");
-        attendanceReportHideResolved = !!(hideToggle && hideToggle.checked);
-        attendanceReportPayload = buildAttendanceReport();
-        if (!attendanceReportPayload) { alert("출결 데이터를 만들 수 없습니다."); return; }
-        syncAttendanceReportTextModeButtons();
-        currentAttendanceReportText = composeAttendanceReportText(attendanceReportPayload);
-        renderAttendanceReportPreview(attendanceReportPayload);
-        document.getElementById("attendanceReportText").value = currentAttendanceReportText;
+        attendanceReportHideResolved=!!document.getElementById('attendanceHideResolvedToggle').checked;attendanceReportPayload=buildAttendanceReport();
+        if(!attendanceReportPayload){attendanceReportFeedback('시간표를 불러온 뒤 다시 열어 주세요.');return;}renderAttendanceReportEditors();renderAttendanceReportOutputs();
       }
       function openAttendanceReportModal() {
-        if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
-        attendanceReportHourOffset = 0;
-        attendanceReportHideResolved = false;
-        attendanceReportTextMode = "simple";
-        var hideToggle = document.getElementById("attendanceHideResolvedToggle");
-        if (hideToggle) hideToggle.checked = false;
-        refreshAttendanceReportModal();
-        document.getElementById("attendanceReportModal").style.display = "flex";
+        if(!lastData){alert('먼저 시간표를 불러와 주세요.');return;}
+        attendanceReportReturnFocus=document.activeElement;attendanceReportDrafts=Object.create(null);attendanceReportHourOffset=0;document.getElementById('attendanceHideResolvedToggle').checked=false;refreshAttendanceReportModal();attendanceReportFeedback('');document.getElementById('attendanceReportModal').style.display='flex';document.querySelector('#attendanceReportModal .ar-close').focus();
       }
       function changeAttendanceReportHour(delta) {
-        var nextOffset = attendanceReportHourOffset + Number(delta || 0);
-        var now = new Date();
-        var base = now.getHours();
-        if (base < SCHEDULE_START_HOUR) base = SCHEDULE_START_HOUR;
-        if (base > SCHEDULE_END_HOUR) base = SCHEDULE_END_HOUR;
-        if (base + nextOffset < SCHEDULE_START_HOUR || base + nextOffset > SCHEDULE_END_HOUR) return;
-        attendanceReportHourOffset = nextOffset;
-        refreshAttendanceReportModal();
+        var now=new Date(),base=Math.max(SCHEDULE_START_HOUR,Math.min(SCHEDULE_END_HOUR,now.getHours())),next=attendanceReportHourOffset+Number(delta||0);if(base+next<SCHEDULE_START_HOUR||base+next>SCHEDULE_END_HOUR)return;attendanceReportHourOffset=next;refreshAttendanceReportModal();
       }
-      function closeAttendanceReportModal() {
-        document.getElementById("attendanceReportModal").style.display = "none";
+      function closeAttendanceReportModal() { if(attendanceReportExportPending){attendanceReportFeedback('이미지 생성이 끝나면 창을 닫을 수 있습니다.');return;}document.getElementById('attendanceReportModal').style.display='none';attendanceReportDrafts=Object.create(null);if(attendanceReportReturnFocus&&attendanceReportReturnFocus.isConnected)attendanceReportReturnFocus.focus(); }
+      function handleAttendanceReportKey(event) {
+        if(event.key==='Escape'){event.preventDefault();closeAttendanceReportModal();return;}
+        if(event.key!=='Tab')return;var nodes=Array.from(document.querySelectorAll('#attendanceReportModal button:not(:disabled), #attendanceReportModal input, #attendanceReportModal textarea, #attendanceReportModal summary')).filter(function(n){return n.getClientRects().length;});var first=nodes[0],last=nodes[nodes.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
       }
-      function copyAttendanceReportText() {
-        if (!currentAttendanceReportText) { alert("출력할 보고 문구가 없습니다."); return; }
-        var t = document.getElementById("attendanceReportText");
-        t.select();
-        document.execCommand("copy");
-        alert("복사 완료!");
+      function copyAttendanceTextValue(text) {
+        if(!text.trim()){attendanceReportFeedback('복사할 문구가 없습니다.');return Promise.resolve();}
+        var action;
+        if(navigator.clipboard&&navigator.clipboard.writeText)action=navigator.clipboard.writeText(text);
+        else {var input=document.createElement('textarea');input.value=text;document.querySelector('#attendanceReportModal .attendance-report-box').append(input);input.select();try{action=document.execCommand('copy')?Promise.resolve():Promise.reject(new Error('copy'));}catch(error){action=Promise.reject(error);}input.remove();}
+        return action.then(function(){attendanceReportFeedback('문구를 복사했습니다. 카톡에 붙여넣어 주세요.');}).catch(function(){attendanceReportFeedback('복사 권한을 확인하거나 문구를 선택해 직접 복사해 주세요.');});
       }
-      function downloadAttendanceReportImage() {
-        if (!attendanceReportPayload) { alert("먼저 보고를 생성하세요."); return; }
-        var target = document.getElementById("attendanceReportPreview");
-        if (!target || !target.innerHTML.trim()) { alert("저장할 이미지가 없습니다."); return; }
-        renderExportCanvas(target, {
-          scale: Math.max(2, window.devicePixelRatio || 1),
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          imageTimeout: 1500
-        }).then(function(canvas){
-          var a = document.createElement("a");
-          a.href = canvas.toDataURL("image/png");
-          a.download = "출결현황_" + (attendanceReportPayload.dateText || "today").replace(/[^\d가-힣A-Za-z]/g, "_") + "_" + attendanceReportPayload.hour + "시.png";
-          a.click();
-        }).catch(function(){
-          alert("이미지 생성 중 오류가 발생했습니다. 다시 시도해주세요.");
-        });
+      function copyAttendanceReportText() { return copyAttendanceTextValue(currentAttendanceReportText||''); }
+      function captureAttendanceReportImage() {
+        if(attendanceReportExportPending)return attendanceReportExportPending;
+        if(!attendanceReportPayload)return Promise.reject(new Error('보고가 없습니다.'));
+        var controls=Array.from(document.querySelectorAll('#attendanceReportModal .ar-nav button, #attendanceReportModal .ar-close, #attendanceHideResolvedToggle, #attendanceReportEditors textarea'));
+        var states=controls.map(function(node){var disabled=node.disabled;node.disabled=true;return disabled;});
+        attendanceReportFeedback('보고 이미지를 만들고 있습니다.');
+        attendanceReportExportPending = Promise.resolve().then(function(){return renderExportCanvas(document.getElementById('attendanceReportPreview'),{scale:2,backgroundColor:'#ffffff',useCORS:true,imageTimeout:1500});}).then(function(canvas){return new Promise(function(resolve,reject){canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error('이미지 생성 실패'));},'image/png');});}).finally(function(){controls.forEach(function(node,i){node.disabled=states[i];});attendanceReportExportPending=null;});
+        return attendanceReportExportPending;
+      }
+      function copyAttendanceReportImage(button) {
+        if(!navigator.clipboard||!navigator.clipboard.write||typeof ClipboardItem==='undefined'){attendanceReportFeedback('이 브라우저에서는 이미지 복사가 지원되지 않습니다. 이미지 저장을 이용해 주세요.');return Promise.resolve();}
+        if(button)button.disabled=true;attendanceReportFeedback('보고 이미지를 만들고 있습니다.');
+        var blob=captureAttendanceReportImage();blob.catch(function(){});
+        var action;try{action=navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);}catch(error){action=Promise.reject(error);}
+        return action.then(function(){attendanceReportFeedback('이미지를 복사했습니다. 카톡에 붙여넣어 주세요.');}).catch(function(){attendanceReportFeedback('이미지 복사에 실패했습니다. 복사 권한을 확인하거나 이미지 저장을 이용해 주세요.');}).finally(function(){if(button)button.disabled=false;});
+      }
+      function downloadAttendanceReportImage(button) {
+        if(button)button.disabled=true;var name='출결현황_'+String(currentSheetName).replace(/[^\d가-힣A-Za-z]/g,'_')+'_'+getCurrentReportHour()+'시.png';
+        return captureAttendanceReportImage().then(function(blob){var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);attendanceReportFeedback('보고 이미지를 저장했습니다.');}).catch(function(){attendanceReportFeedback('이미지 생성에 실패했습니다. 다시 시도해 주세요.');}).finally(function(){if(button)button.disabled=false;});
       }
       function isTeacherHeader(value) {
         var text = String(value || "").trim();
