@@ -10270,9 +10270,8 @@
 	            return matches && matches.length ? matches[matches.length - 1] : "";
 	          }
 	          function getReviewSubjectLabel(text) {
-	            var match = String(text || "").match(/(지구과학|한국사|컨설팅|클리닉|수학|수I|수II|미적|기하|확통|과학|물리|화학|생명|국어|언매|화작|영어|사회|역사|사탐|면접)/);
-	            return match ? match[0] : "";
-	          }
+              return getSubjectName(text);
+          }
 	          function getStudentIdentity(name, school) {
 	            return normalizeReviewNameToken(name) + "|" + String(school || "").replace(/\s+/g, "").toLowerCase();
 	          }
@@ -11665,17 +11664,43 @@
         if (entry.teacher) parts.push(entry.teacher);
         return parts.join("-");
       }
+      var scheduleExportPending = null;
       function exportScheduleToExcel() {
-        if (typeof XLSX === "undefined") return ensureExportLibrary("XLSX").then(exportScheduleToExcel).catch(function(error){alert(error.message);});
-        if (!lastData) { alert("데이터를 불러오는 중입니다..."); return; }
-
-        var dateMatch = currentSheetName.match(/(\d+\/\d+\([가-힣]\))/);
-        var dateStr = dateMatch ? dateMatch[1] : currentSheetName;
+        if (scheduleExportPending) return scheduleExportPending;
+        var sheet = currentSheetName, session = getScheduleSessionKey(), teacher = getActiveTeacherName();
+        if (!sheet) { alert("저장할 날짜를 선택해 주세요."); return Promise.resolve(); }
+        var buttons = Array.from(document.querySelectorAll('button[onclick="exportScheduleToExcel()"]'));
+        var previous = buttons.map(function(button) { return { disabled:button.disabled, html:button.innerHTML }; });
+        buttons.forEach(function(button) { button.disabled=true; button.textContent="최신 시간표 조회 중…"; });
+        scheduleExportPending = Promise.resolve().then(function() {
+          return typeof XLSX === "undefined" ? ensureExportLibrary("XLSX") : null;
+        }).then(function() {
+          // Export must bypass both client/server caches and display-only snapshot fallback.
+          return callServer(teacher ? "getTeacherGridData" : "getFixedGridData", teacher ? [sheet,teacher,true] : [sheet,true]);
+        }).then(function(data) {
+          if (sheet !== currentSheetName || session !== getScheduleSessionKey() || teacher !== getActiveTeacherName()) {
+            throw new Error("조회 중 날짜 또는 계정이 변경되었습니다. 선택한 날짜에서 다시 저장해 주세요.");
+          }
+          if (!data || data.error || data.__snapshotHandled || !Array.isArray(data.headers) || !data.grid || typeof data.grid !== "object" || Array.isArray(data.grid)) {
+            throw new Error("최신 시간표 원본을 확인하지 못했습니다.");
+          }
+          writeScheduleToExcel(data, sheet);
+        }).catch(function(error) {
+          alert("시수를 저장하지 않았습니다. 이전 데이터나 스냅샷은 저장에 사용하지 않습니다.\n"+(error && error.message || error));
+        }).finally(function() {
+          buttons.forEach(function(button,index) { button.disabled=previous[index].disabled; button.innerHTML=previous[index].html; });
+          scheduleExportPending=null;
+        });
+        return scheduleExportPending;
+      }
+      function writeScheduleToExcel(sourceData, sheetName) {
+        var dateMatch = sheetName.match(/(\d+\/\d+\([가-힣]\))/);
+        var dateStr = dateMatch ? dateMatch[1] : sheetName;
         var rawEntries = [];
-        var headers = lastData.headers || [];
+        var headers = sourceData.headers || [];
 
         for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
-          var row = lastData.grid[h] || [];
+          var row = sourceData.grid[h] || [];
           for (var i = 0; i < headers.length; i++) {
             var roomName = String(headers[i] || "").trim();
             if (!roomName || roomName.includes("휴강")) continue;

@@ -19,13 +19,16 @@ const context={SCHEDULE_START_HOUR:8,SCHEDULE_END_HOUR:23,currentSheetName:'9/8(
   XLSX:{utils:{json_to_sheet:value=>{rows=value;return {'!ref':'A1:J9'};},book_new:()=>({}),book_append_sheet:()=>{}},writeFile:()=>{}}
 };
 vm.createContext(context);
-for(const name of ['normalizeSchoolNameForExport','normalizeExportClassType','mapExportAttendanceStatus','buildExportClassName','getExportTimeRange','formatTime','exportScheduleToExcel'])vm.runInContext(extract(name),context);
+for(const name of ['normalizeSchoolNameForExport','normalizeExportClassType','mapExportAttendanceStatus','buildExportClassName','getExportTimeRange','formatTime','writeScheduleToExcel'])vm.runInContext(extract(name),context);
 function run(entries){
   const rooms=[...new Set(entries.map(e=>e.room||'1강의실'))];const grid={};
   for(const e of entries){const hour=e.hour;grid[hour]??=rooms.map(()=>[]);const cell=grid[hour][rooms.indexOf(e.room||'1강의실')];cell.push(`T|${e.teacher||'검증강사'}|${e.subject||'수학'}|${e.type||'개별'}`,`${e.name||'검증학생'}|${e.school||'검증중2'}|${e.status||'출석'}|${e.note||''}`);}
-  context.lastData={headers:rooms,grid};const snapshot=JSON.stringify(context.lastData);rows=[];vm.runInContext('exportScheduleToExcel()',context);assert.equal(JSON.stringify(context.lastData),snapshot,'Export must not mutate live source');return rows.filter(r=>r['이름']);
+  context.lastData={headers:rooms,grid};const snapshot=JSON.stringify(context.lastData);rows=[];vm.runInContext('writeScheduleToExcel(lastData,currentSheetName)',context);assert.equal(JSON.stringify(context.lastData),snapshot,'Export must not mutate live source');return rows.filter(r=>r['이름']);
 }
 const results={};
+const arrival=run([{hour:10,subject:'영어',status:'지각',note:'10:24 등원, 지각'},{hour:11,subject:'영어'}]);
+assert.equal(arrival.length,1);assert.equal(arrival[0]['시간'],2);assert.equal(arrival[0]['시작'],'오전 10:00');assert.equal(arrival[0]['종료'],'오후 12:00');assert.match(arrival[0]['참고'],/10:24 등원/);
+
 let output=run([{hour:18,note:'교재 지참'},{hour:19,note:'숙제 확인'},{hour:20,note:'교재 지참'}]);
 results.notesDoNotSplit=output.length===1&&output[0]['시간']===3;
 results.allDistinctNotesPreserved=output.length===1&&output[0]['참고'].includes('교재 지참')&&output[0]['참고'].includes('숙제 확인')&&output[0]['참고'].split('교재 지참').length===2;
@@ -91,3 +94,10 @@ for(const field of ['school','teacher','subject','type','room']) {
 }
 console.log(JSON.stringify({baseline,results},null,2));
 if(!baseline)for(const [name,passed]of Object.entries(results))assert.equal(passed,true,name);
+// Use the real timetable parser for the reported 10:24 arrival example.
+for(const name of ['detectStudentStatus','detectStudentStatusFromTokens','normalizeNoticeText','normalizeStatusLabel','shouldHideStatus','parseStudentRawText','getSubjectName','isTeacherHeader','extractTeacherName','detectClassType','getTypeBadgeText'])vm.runInContext(extract(name),context);
+for(const subject of ['영어','생윤','윤사','사문']){
+ context.lastData={headers:['1강의실'],grid:{10:[['개별 '+subject+' 검증강사T','검증학생 반포고2 정규 10:24 등원, 지각']],11:[['개별 '+subject+' 검증강사T','검증학생 반포고2 정규']]}};
+ rows=[];context.writeScheduleToExcel(context.lastData,'10/4(일)');const actual=rows.filter(r=>r['이름']);assert.equal(actual.length,1);assert.equal(actual[0]['시간'],2);assert.equal(actual[0]['출결'],'출석');assert.match(actual[0]['반명'],new RegExp('^'+subject+'-'));assert.match(actual[0]['참고'],/10:24 등원, 지각/);
+}
+console.log('PASS real parser: English/social subjects and 10:24 arrival keep one 10–12 lesson.');
