@@ -1028,6 +1028,19 @@
       #attendanceReportModal .ar-teacher-icon .shared-subject-icon { font-size:17px; width:20px; height:20px; margin:0; }
       #attendanceReportModal .ar-teacher-icon img { width:20px; height:20px; object-fit:contain; }
       @media(max-width:480px) { .ar-clear-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+      #attendanceReportModal .ar-counts { font-size:16px; gap:12px; }
+      #attendanceReportModal .ar-count svg { width:21px; height:21px; fill:currentColor; stroke:none; }
+      #attendanceReportModal .ar-clear-grid .ar-counts { font-size:14px; gap:6px; }
+      #attendanceReportModal .ar-clear-grid .ar-count svg { width:18px; height:18px; }
+      .ar-teacher { background:var(--teacher-bg,#f3f6fa); padding:10px 14px 4px; }
+      .ar-clear-cell { background:var(--teacher-bg,#f3f6fa); padding:10px 7px; }
+      .ar-teacher .ar-person { border-bottom-color:rgba(35,54,77,.12); }
+      .ar-teacher-head { padding-top:2px; }
+
+      #attendanceReportModal .ar-clear-grid .ar-counts { gap:2px; justify-content:space-between; }
+      #attendanceReportModal .ar-clear-grid .ar-count { gap:0; }
+      @media(max-width:760px) { .ar-clear-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
       #studentImagePreview { max-width:none; margin:0; background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(241,246,255,0.70)); border:1px solid rgba(191,219,254,0.55); border-radius:24px; padding:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 30px rgba(30,64,175,0.08); backdrop-filter: blur(12px); }
       #studentImagePreview table { width:100%; border-collapse:collapse; table-layout: fixed; }
       #studentImagePreview th, #studentImagePreview td { border:1px solid #e5e7eb; padding:8px; font-size:0.9rem; text-align:left; }
@@ -8928,7 +8941,7 @@ window.SeduHubAdapter={
         return Array.from(groups,function(pair){return {teacher:pair[0],text:pair[0]+' 선생님, 에스학원입니다.\n'+payload.dateText+' '+payload.slotText+' 수업 관련 출결 안내드립니다.\n\n'+pair[1].join('\n')+'\n\n수업 진행 시 참고 부탁드립니다.'};});
       }
       function attendanceReportIcon(kind) {
-        var paths={person:'<circle cx="12" cy="7" r="3"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/>',math:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M7 7h10M7 12h3m4 0h3M7 16h3m4 0h3"/>',science:'<path d="M9 3h6M10 3v6L4 19q-1 2 2 2h12q3 0 2-2L14 9V3M7 15h10"/>',book:'<path d="M12 5v16M3 4q5-2 9 1 4-3 9-1v15q-5-2-9 2-4-4-9-2Z"/>'};
+        var paths={person:'<circle cx="12" cy="7" r="3"/><path d="M5 21v-3a7 7 0 0 1 14 0v3Z"/>',math:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M7 7h10M7 12h3m4 0h3M7 16h3m4 0h3"/>',science:'<path d="M9 3h6M10 3v6L4 19q-1 2 2 2h12q3 0 2-2L14 9V3M7 15h10"/>',book:'<path d="M12 5v16M3 4q5-2 9 1 4-3 9-1v15q-5-2-9 2-4-4-9-2Z"/>'};
         return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(paths[kind]||paths.book)+'</svg>';
       }
       function attendanceReportCounts(active,late,absent) {
@@ -8954,9 +8967,11 @@ window.SeduHubAdapter={
       function renderAttendanceReportPreview(payload) {
         var root=document.getElementById('attendanceReportPreview'),e=attendanceReportEscape;
         if(!payload){root.innerHTML='<p class="ar-empty">시간표를 불러온 뒤 다시 열어 주세요.</p>';return;}
-        var groups=attendanceReportGroups(payload),clear=attendanceClearGroups(groups),details=groups.filter(function(g){return !clear.includes(g);});
-        var compact=clear.length?'<p class="ar-clear-title">출결 특이사항 없음 · '+clear.length+'명</p><div class="ar-clear-grid">'+clear.map(function(g){var totals=g.classes.reduce(function(a,c){a[0]+=c.active;a[1]+=c.late;a[2]+=c.absent;return a;},[0,0,0]);return '<div><div class="ar-clear-name">'+attendanceTeacherIcon(g)+e(g.teacher)+'</div>'+attendanceReportCounts(totals[0],totals[1],totals[2])+'</div>';}).join('')+'</div>':'';
-        root.innerHTML='<header class="ar-paper-head"><h3>출결 현황 보고</h3><div class="ar-date">'+e(payload.dateText)+' · '+e(payload.slotText)+'</div><div class="ar-summary">'+attendanceReportCounts(payload.activeCount,payload.lateCount,payload.absentCount)+'</div></header>'+compact+details.map(function(g){return '<section class="ar-teacher"><div class="ar-teacher-head"><span class="ar-teacher-name">'+attendanceTeacherIcon(g)+e(g.teacher)+' 선생님</span></div>'+g.classes.map(function(c){var icon=/수학|미적|기하|확통/.test(c.subject)?'math':/과학|물리|화학|생명|지구/.test(c.subject)?'science':'book';return '<div class="ar-class-heading"><span class="ar-subject-label">'+attendanceReportIcon(icon)+e(c.subject)+' · '+e(c.classType)+' · '+e(c.room)+'</span>'+attendanceReportCounts(c.active,c.late,c.absent)+'</div>'+c.students.map(function(v){return '<article class="ar-person"><div class="ar-person-top"><div><strong>'+e(v.name)+'</strong><span class="ar-school">'+e(v.school)+'</span></div><span class="ar-state '+(v.type==='late'?'late':'absent')+'">'+e(v.status)+'</span></div><p class="ar-person-note">'+e(attendanceReportNote(v).trim()||v.status)+'</p></article>';}).join('')+(!c.students.length?'<p class="ar-hint">'+(c.late+c.absent?'결석예고·당일취소 학생 숨김':'출결 특이사항 없음')+'</p>':'');}).join('')+'</section>';}).join('')+(!groups.length?'<p class="ar-empty">이 시간대에 수업이 없습니다.</p>':'')+'<p class="ar-paper-foot">에스학원 · 시간표에 입력된 출결 기준'+(attendanceReportHideResolved?' · 인원은 전체 기준, 결석예고·당일취소 상세만 숨김':'')+'</p>';
+        var groups=attendanceReportGroups(payload),clear=attendanceClearGroups(groups),details=groups.filter(function(g){return !clear.includes(g) && g.classes.some(function(c){return c.students.length;});});
+        var teacherNames=groups.map(function(g){return g.teacher;}).sort();
+        function teacherStyle(g){return "--teacher-bg:hsl("+((teacherNames.indexOf(g.teacher)*137.508)%360).toFixed(3)+",55%,94%)";}
+        var compact=clear.length?'<p class="ar-clear-title">출결 특이사항 없음 · '+clear.length+'명</p><div class="ar-clear-grid">'+clear.map(function(g){var totals=g.classes.reduce(function(a,c){a[0]+=c.active;a[1]+=c.late;a[2]+=c.absent;return a;},[0,0,0]);return '<div class="ar-clear-cell" style="'+teacherStyle(g)+'"><div class="ar-clear-name">'+attendanceTeacherIcon(g)+e(g.teacher)+'</div>'+attendanceReportCounts(totals[0],totals[1],totals[2])+'</div>';}).join('')+'</div>':'';
+        root.innerHTML='<header class="ar-paper-head"><h3>출결 현황 보고</h3><div class="ar-date">'+e(payload.dateText)+' · '+e(payload.slotText)+'</div><div class="ar-summary">'+attendanceReportCounts(payload.activeCount,payload.lateCount,payload.absentCount)+'</div></header>'+compact+details.map(function(g){return '<section class="ar-teacher" style="'+teacherStyle(g)+'"><div class="ar-teacher-head"><span class="ar-teacher-name">'+attendanceTeacherIcon(g)+e(g.teacher)+' 선생님</span></div>'+g.classes.filter(function(c){return c.students.length;}).map(function(c){var icon=/수학|미적|기하|확통/.test(c.subject)?'math':/과학|물리|화학|생명|지구/.test(c.subject)?'science':'book';return '<div class="ar-class-heading"><span class="ar-subject-label">'+attendanceReportIcon(icon)+e(c.subject)+' · '+e(c.classType)+' · '+e(c.room)+'</span>'+attendanceReportCounts(c.active,c.late,c.absent)+'</div>'+c.students.map(function(v){return '<article class="ar-person"><div class="ar-person-top"><div><strong>'+e(v.name)+'</strong><span class="ar-school">'+e(v.school)+'</span></div><span class="ar-state '+(v.type==='late'?'late':'absent')+'">'+e(v.status)+'</span></div><p class="ar-person-note">'+e(attendanceReportNote(v).trim()||v.status)+'</p></article>';}).join('')+(!c.students.length?'<p class="ar-hint">'+(c.late+c.absent?'결석예고·당일취소 학생 숨김':'출결 특이사항 없음')+'</p>':'');}).join('')+'</section>';}).join('')+(!groups.length?'<p class="ar-empty">이 시간대에 수업이 없습니다.</p>':'')+'<p class="ar-paper-foot">에스학원 · 시간표에 입력된 출결 기준'+(attendanceReportHideResolved?' · 인원은 전체 기준, 결석예고·당일취소 상세만 숨김':'')+'</p>';
         document.getElementById('attendanceReportTimeLabel').textContent=payload.slotText;
       }
       function renderAttendanceReportEditors() {

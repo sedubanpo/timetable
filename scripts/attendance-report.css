@@ -98,3 +98,16 @@
       #attendanceReportModal .ar-teacher-icon .shared-subject-icon { font-size:17px; width:20px; height:20px; margin:0; }
       #attendanceReportModal .ar-teacher-icon img { width:20px; height:20px; object-fit:contain; }
       @media(max-width:480px) { .ar-clear-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+      #attendanceReportModal .ar-counts { font-size:16px; gap:12px; }
+      #attendanceReportModal .ar-count svg { width:21px; height:21px; fill:currentColor; stroke:none; }
+      #attendanceReportModal .ar-clear-grid .ar-counts { font-size:14px; gap:6px; }
+      #attendanceReportModal .ar-clear-grid .ar-count svg { width:18px; height:18px; }
+      .ar-teacher { background:var(--teacher-bg,#f3f6fa); padding:10px 14px 4px; }
+      .ar-clear-cell { background:var(--teacher-bg,#f3f6fa); padding:10px 7px; }
+      .ar-teacher .ar-person { border-bottom-color:rgba(35,54,77,.12); }
+      .ar-teacher-head { padding-top:2px; }
+
+      #attendanceReportModal .ar-clear-grid .ar-counts { gap:2px; justify-content:space-between; }
+      #attendanceReportModal .ar-clear-grid .ar-count { gap:0; }
+      @media(max-width:760px) { .ar-clear-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
