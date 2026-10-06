@@ -1622,6 +1622,19 @@
       .calendar-aux { display:grid; gap:8px; margin-top:8px; }
       .calendar-sheet-option { text-align:left; padding:8px; overflow-wrap:anywhere; }
       .calendar-help { font-size:12px; color:#64748b; margin:8px 0 0; }
+      .intro-right, .intro-right button, .calendar-panel, .calendar-panel button,
+      .day-name, .day-cell { font-weight:700; }
+      .calendar-grid .calendar-saturday { color:#2563eb; }
+      .calendar-grid .calendar-sunday { color:#dc2626; }
+      .calendar-grid .day-cell.calendar-saturday:not(.day-active),
+      .calendar-grid .calendar-date.calendar-saturday:disabled { color:#7a9bce; }
+      .calendar-grid .day-cell.calendar-sunday:not(.day-active),
+      .calendar-grid .calendar-date.calendar-sunday:disabled { color:#cd8585; }
+      .calendar-grid .day-today.calendar-saturday { color:#2563eb !important; }
+      .calendar-grid .day-today.calendar-sunday { color:#dc2626 !important; }
+      .calendar-grid .calendar-date.calendar-saturday[aria-pressed="true"] { background:#eff6ff; color:#1d4ed8; border-color:#2563eb; box-shadow:inset 0 0 0 1px #2563eb; }
+      .calendar-grid .calendar-date.calendar-sunday[aria-pressed="true"] { background:#fef2f2; color:#b91c1c; border-color:#dc2626; box-shadow:inset 0 0 0 1px #dc2626; }
+
 
       /* Keep the two toolbar rows independent of timetable cell layout. */
       .top-bar { column-gap:6px; row-gap:6px; }
@@ -6007,7 +6020,7 @@
           renderCalendar();
         }catch(e){console.error(e);} 
       }
-      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'; D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'; C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.setAttribute('role','button'); C.tabIndex=0; C.setAttribute('aria-label',(M+1)+'월 '+d+'일 시간표'); C.onclick=function(){handleDateClick(K);}; C.onkeydown=function(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();handleDateClick(K);}}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
+      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['월','화','수','목','금','토','일'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'+(d==='토'?' calendar-saturday':d==='일'?' calendar-sunday':''); D.textContent=d; G.appendChild(D); }); var F=(new Date(Y,M,1).getDay()+6)%7, L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'+(new Date(Y,M,d).getDay()===6?' calendar-saturday':new Date(Y,M,d).getDay()===0?' calendar-sunday':''); C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.setAttribute('role','button'); C.tabIndex=0; C.setAttribute('aria-label',(M+1)+'월 '+d+'일 시간표'); C.onclick=function(){handleDateClick(K);}; C.onkeydown=function(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();handleDateClick(K);}}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
       function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ s=s.filter(function(name){return !isLookupHiddenSheetName(name);}); if(!s.length)return; } if(s.length===1)loadData(s[0],true,{preferServerCache:true}); else showVersionModal(s); }
       function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,{preferServerCache:true});closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
@@ -6450,7 +6463,7 @@
         grid.replaceChildren(); aux.replaceChildren();
         document.getElementById('calendarMonthLabel').textContent = year + '년 ' + (m + 1) + '월';
         ['월','화','수','목','금','토','일'].forEach(function(label) {
-          var el = document.createElement('span'); el.className = 'calendar-weekday'; el.textContent = label; grid.appendChild(el);
+          var el = document.createElement('span'); el.className = 'calendar-weekday' + (label === '토' ? ' calendar-saturday' : label === '일' ? ' calendar-sunday' : ''); el.textContent = label; grid.appendChild(el);
         });
         for (var i = 0; i < (new Date(year,m,1).getDay() + 6) % 7; i++) grid.appendChild(document.createElement('span'));
         function addSheetButton(name) {
@@ -6463,7 +6476,7 @@
             var choices = (map[key] || []).filter(function(name) {
               return parseTeacherLogTargetDate(name, today).getFullYear() === year;
             });
-            var button = document.createElement('button'); button.type = 'button'; button.className = 'calendar-date'; button.textContent = day;
+            var button = document.createElement('button'); button.type = 'button'; button.className = 'calendar-date' + (new Date(year,m,day).getDay() === 6 ? ' calendar-saturday' : new Date(year,m,day).getDay() === 0 ? ' calendar-sunday' : ''); button.textContent = day;
             button.disabled = !choices.length;
             button.setAttribute('aria-label', year + '년 ' + (m+1) + '월 ' + day + '일' + (choices.length ? '' : ' 시간표 없음'));
             button.setAttribute('aria-pressed', String(choices.indexOf(currentSheetName) !== -1));
