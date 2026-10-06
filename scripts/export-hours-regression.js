@@ -14,6 +14,7 @@ const context={SCHEDULE_START_HOUR:8,SCHEDULE_END_HOUR:23,currentSheetName:'9/8(
   alert:message=>{throw Error(message);},
   extractTeacherName:text=>text.split('|')[1],getSubjectName:text=>text.split('|')[2],getTypeBadgeText:text=>text.split('|')[3],
   isTeacherHeader:text=>text.startsWith('T|'),
+  detectStudentStatusFromTokens:()=>"",
   parseStudentRawText:text=>{const [name,school,status,note]=text.split('|');return {name,school,status,note,full:school};},
   shouldHideStatus:()=>false,normalizeStatusLabel:value=>value,
   XLSX:{utils:{json_to_sheet:value=>{rows=value;return {'!ref':'A1:J9'};},book_new:()=>({}),book_append_sheet:()=>{}},writeFile:()=>{}}
@@ -101,3 +102,9 @@ for(const subject of ['영어','생윤','윤사','사문']){
  rows=[];context.writeScheduleToExcel(context.lastData,'10/4(일)');const actual=rows.filter(r=>r['이름']);assert.equal(actual.length,1);assert.equal(actual[0]['시간'],2);assert.equal(actual[0]['출결'],'출석');assert.match(actual[0]['반명'],new RegExp('^'+subject+'-'));assert.match(actual[0]['참고'],/10:24 등원, 지각/);
 }
 console.log('PASS real parser: English/social subjects and 10:24 arrival keep one 10–12 lesson.');
+
+for(const regular of ['정규','오늘만']) {
+ context.lastData={headers:['1강의실'],grid:{14:[['개별 과학 검증강사T','검증학생 서문여고3 보충 10/5(월) 당취에 대한 보충, 14:10 등원 예정']],15:[['개별 과학 검증강사T','검증학생 서문여고3 '+regular]],16:[['개별 과학 검증강사T','검증학생 서문여고3 '+regular]],17:[['개별 과학 검증강사T','검증학생 서문여고3 '+regular]]}};
+ rows=[];context.writeScheduleToExcel(context.lastData,'10/5(월)');const actual=rows.filter(r=>r['이름']);assert.equal(actual.length,2);assert.equal(actual[0]['출결'],'보충');assert.equal(actual[0]['시간'],1);assert.equal(actual[1]['출결'],'출석');assert.equal(actual[1]['시간'],3);
+}
+console.log('PASS real parser: supplement 1h + regular/today-only 3h remain separate, including late notes.');

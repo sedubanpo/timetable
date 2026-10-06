@@ -1924,6 +1924,11 @@
  #teacherViewLogModal .td-history li { flex-wrap:wrap; gap:4px; }
 }
       /* TEACHER_DASHBOARD_CSS_END */
+
+      .excel-btn .hours-export-spinner { display:inline-block; width:16px; height:16px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:hours-export-spin .75s linear infinite; flex-shrink:0; }
+      .excel-btn [role="status"] { display:inline; }
+      @keyframes hours-export-spin { to { transform:rotate(360deg); } }
+      @media(prefers-reduced-motion:reduce) { .hours-export-spinner { animation:none; } }
     </style>
   </head>
   <body>
@@ -11680,7 +11685,7 @@
       }
       function mapExportAttendanceStatus(statusLabel) {
         var s = normalizeStatusLabel(statusLabel || "");
-        if (s === "당일취소" || s === "결석예고" || s === "병결") return s;
+        if (s === "당일취소" || s === "결석예고" || s === "병결" || s === "보충" || s === "보강") return s;
         return "출석";
       }
       function buildExportClassName(entry) {
@@ -11697,7 +11702,7 @@
         if (!sheet) { alert("저장할 날짜를 선택해 주세요."); return Promise.resolve(); }
         var buttons = Array.from(document.querySelectorAll('button[onclick="exportScheduleToExcel()"]'));
         var previous = buttons.map(function(button) { return { disabled:button.disabled, html:button.innerHTML }; });
-        buttons.forEach(function(button) { button.disabled=true; button.textContent="최신 시간표 조회 중…"; });
+        buttons.forEach(function(button) { button.disabled=true; button.innerHTML='<span class="hours-export-spinner" aria-hidden="true"></span><span role="status">조회 중…</span>'; });
         scheduleExportPending = Promise.resolve().then(function() {
           return typeof XLSX === "undefined" ? ensureExportLibrary("XLSX") : null;
         }).then(function() {
@@ -11751,7 +11756,8 @@
 
               var subject = subjectName || (/자습|자기주도/.test(rawText) ? "자습" : "수업");
               var classType = normalizeExportClassType(typeInfo, subject);
-              var attendance = mapExportAttendanceStatus(parsed.status);
+              var sourceStatus = normalizeStatusLabel(detectStudentStatusFromTokens(rawText.split(/\s+/).slice(1)));
+              var attendance = mapExportAttendanceStatus(sourceStatus === "보충" || sourceStatus === "보강" ? sourceStatus : parsed.status);
               var schoolName = normalizeSchoolNameForExport(parsed.school || parsed.full);
 
               rawEntries.push({
@@ -12006,9 +12012,9 @@
 (function(){
  const host=document.createElement('aside');host.id='dotAlerts';host.hidden=true;host.setAttribute('aria-label','dot 시간표 점검 알림');document.body.append(host);
  const style=document.createElement('style');style.textContent='#dotAlerts{position:fixed;bottom:20px;right:20px;z-index:2400;width:min(340px,90vw);background:white;border-radius:20px;padding:12px;box-shadow:0 8px 30px #0002;color:#172554}#dotAlerts button,#dotAlerts a{min-height:40px;display:inline-flex;align-items:center;padding:4px 10px;margin:2px;border-radius:10px}#dotAlerts .dot{display:inline-block;background:#6366f1;border-radius:50%;color:white;width:40px;height:40px;text-align:center;line-height:40px}#dotAlerts [role=status]{font-size:12px}#dotAlerts article{padding:8px;background:#f1f5f9;border-radius:12px;margin-top:8px}';document.head.append(style);
- let generation=0,sync=null,authStop=null,key='',items=[],states={},synced=0,connection='',bubble=true;
+ let generation=0,sync=null,authStop=null,key='',items=[],states={},synced=0,connection='',bubble=true,minimized=false;
  const endpoint='https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableHandoffApi';
- function render(){const focused=host.contains(document.activeElement)?document.activeElement?.dataset.focus:null;host.hidden=!key;if(!key)return;const active=items.filter(a=>a.expiresAt>Date.now());host.replaceChildren();const title=document.createElement('button');title.dataset.focus='inbox';title.innerHTML='<span class="dot" aria-hidden="true">•ᴗ•</span>';title.append(document.createTextNode(' dot 알림함 '+active.filter(a=>!states[a.id]?.read).length));title.onclick=()=>{bubble=!bubble;render();};host.append(title);const status=document.createElement('div');status.setAttribute('role','status');status.textContent=connection+(synced?' · '+new Date(synced).toLocaleTimeString():'');host.append(status);if(connection.includes('중단')||connection==='연결 실패'){const reconnect=document.createElement('button');reconnect.textContent='다시 연결';reconnect.onclick=()=>connect(generation);host.append(reconnect);}
+ function render(){const focused=host.contains(document.activeElement)?document.activeElement?.dataset.focus:null;host.hidden=!key;if(!key)return;const active=items.filter(a=>a.expiresAt>Date.now());host.replaceChildren();if(minimized){host.style.width='auto';const restore=document.createElement('button');restore.textContent='dot';restore.setAttribute('aria-label','dot 알림함 펼치기');restore.onclick=()=>{minimized=false;render();};host.append(restore);return;}host.style.width='';const minimize=document.createElement('button');minimize.textContent='−';minimize.setAttribute('aria-label','dot 알림함 최소화');minimize.onclick=()=>{minimized=true;render();};host.append(minimize);const title=document.createElement('button');title.dataset.focus='inbox';title.innerHTML='<span class="dot" aria-hidden="true">•ᴗ•</span>';title.append(document.createTextNode(' dot 알림함 '+active.filter(a=>!states[a.id]?.read).length));title.onclick=()=>{bubble=!bubble;render();};host.append(title);const status=document.createElement('div');status.setAttribute('role','status');status.textContent=connection+(synced?' · '+new Date(synced).toLocaleTimeString():'');host.append(status);if(connection.includes('중단')||connection==='연결 실패'){const reconnect=document.createElement('button');reconnect.textContent='다시 연결';reconnect.onclick=()=>connect(generation);host.append(reconnect);}
  const spoken=active.find(a=>a.state!=='RESOLVED'&&!states[a.id]?.dismiss);if(spoken){const speech=document.createElement('p');speech.setAttribute('aria-label','dot 말풍선');speech.textContent='dot: '+spoken.message;host.append(speech);}
  if(!bubble)return;for(const a of active){const article=document.createElement('article');const text=document.createElement('p');text.textContent=a.studentName+' · '+a.targetDate+' '+a.classTime+' · '+a.message+' ('+a.state+')'+(states[a.id]?.read?' · 읽음':'')+(states[a.id]?.dismiss?' · 말풍선 닫음':'');article.append(text);
  if(a.sourceUrl){const link=document.createElement('a');link.href=a.sourceUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent='원문';article.append(link);}
@@ -12017,7 +12023,7 @@
  if(focused){const next=Array.from(host.querySelectorAll('[data-focus]')).find(e=>e.dataset.focus===focused);next?.focus({preventScroll:true});}
  }
  async function api(body,signal){const auth=await getLiveFirebaseAuth();if(!auth.currentUser)throw Error('AUTH');const user=auth.currentUser,g=generation;const token=await user.getIdToken();if(g!==generation||auth.currentUser!==user||!key)throw Error('SESSION_CHANGED');const response=await fetch(endpoint,{method:'POST',signal,cache:'no-store',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({channel:'dotAlerts',...body})});if(!response.ok)throw Error(String(response.status));return response.json();}
- function stop(){generation++;sync?.stop();sync=null;authStop?.();authStop=null;key='';items=[];states={};synced=0;render();}
+ function stop(){minimized=false;generation++;sync?.stop();sync=null;authStop?.();authStop=null;key='';items=[];states={};synced=0;render();}
  async function connect(g){if(g!==generation)return;sync?.stop();sync=null;try{const [auth,db]=await Promise.all([getLiveFirebaseAuth(),getLiveFirebaseFirestore()]);if(g!==generation||!auth.currentUser)return;connection='연결 중';render();sync=window.createDotAlertSync({uid:auth.currentUser.uid,db,authorize:signal=>api({action:'identity'},signal),onState:s=>{if(g!==generation)return;const previous=new Map(items.map(a=>[a.id,a]));items=s.items.map(a=>previous.get(a.id)?.revision>a.revision?previous.get(a.id):a);states=Object.fromEntries(Object.entries(s.states).map(([id,value])=>[id,{...value,read:!!(value.read||states[id]?.read),dismiss:!!(value.dismiss||states[id]?.dismiss)}]));synced=s.syncedAt;connection=s.connection;render();},onFailure:()=>{if(g!==generation)return;items=[];states={};connection='연결 중단 · 권한 또는 네트워크 확인 필요';render();}});sync.start();}catch{if(g===generation){connection='연결 실패';render();}}}
  const originalLoad=loadNotice,originalStop=stopLiveNotice;
  loadNotice=function(){originalLoad.apply(this,arguments);const next=authState.loggedIn&&!authState.isLookup?String(authState.loginId):'';if(next===key)return;stop();if(!next)return;key=next;const g=generation;getLiveFirebaseAuth().then(auth=>{if(g!==generation)return;const uid=auth.currentUser?.uid;if(!uid){stop();return;}authStop=auth.onAuthStateChanged(u=>{if(g===generation&&u?.uid!==uid)stop();});connect(g);});};

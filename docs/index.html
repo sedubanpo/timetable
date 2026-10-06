@@ -1924,6 +1924,11 @@
  #teacherViewLogModal .td-history li { flex-wrap:wrap; gap:4px; }
 }
       /* TEACHER_DASHBOARD_CSS_END */
+
+      .excel-btn .hours-export-spinner { display:inline-block; width:16px; height:16px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:hours-export-spin .75s linear infinite; flex-shrink:0; }
+      .excel-btn [role="status"] { display:inline; }
+      @keyframes hours-export-spin { to { transform:rotate(360deg); } }
+      @media(prefers-reduced-motion:reduce) { .hours-export-spinner { animation:none; } }
     </style>
   </head>
   <body>
@@ -11698,7 +11703,7 @@ window.SeduHubAdapter={
       }
       function mapExportAttendanceStatus(statusLabel) {
         var s = normalizeStatusLabel(statusLabel || "");
-        if (s === "당일취소" || s === "결석예고" || s === "병결") return s;
+        if (s === "당일취소" || s === "결석예고" || s === "병결" || s === "보충" || s === "보강") return s;
         return "출석";
       }
       function buildExportClassName(entry) {
@@ -11715,7 +11720,7 @@ window.SeduHubAdapter={
         if (!sheet) { alert("저장할 날짜를 선택해 주세요."); return Promise.resolve(); }
         var buttons = Array.from(document.querySelectorAll('button[onclick="exportScheduleToExcel()"]'));
         var previous = buttons.map(function(button) { return { disabled:button.disabled, html:button.innerHTML }; });
-        buttons.forEach(function(button) { button.disabled=true; button.textContent="최신 시간표 조회 중…"; });
+        buttons.forEach(function(button) { button.disabled=true; button.innerHTML='<span class="hours-export-spinner" aria-hidden="true"></span><span role="status">조회 중…</span>'; });
         scheduleExportPending = Promise.resolve().then(function() {
           return typeof XLSX === "undefined" ? ensureExportLibrary("XLSX") : null;
         }).then(function() {
@@ -11769,7 +11774,8 @@ window.SeduHubAdapter={
 
               var subject = subjectName || (/자습|자기주도/.test(rawText) ? "자습" : "수업");
               var classType = normalizeExportClassType(typeInfo, subject);
-              var attendance = mapExportAttendanceStatus(parsed.status);
+              var sourceStatus = normalizeStatusLabel(detectStudentStatusFromTokens(rawText.split(/\s+/).slice(1)));
+              var attendance = mapExportAttendanceStatus(sourceStatus === "보충" || sourceStatus === "보강" ? sourceStatus : parsed.status);
               var schoolName = normalizeSchoolNameForExport(parsed.school || parsed.full);
 
               rawEntries.push({
@@ -11991,6 +11997,6 @@ window.SeduHubAdapter={
 <script defer src='./exam-review/data.js'></script>
 <script defer src='./exam-review/host.js'></script>
 <script src="dot-alert-sync.js?v=20261004-events-3"></script>
-<script src="dot-alert-client.js?v=20261005-design-3"></script>
+<script src="dot-alert-client.js?v=20261006-minimize-1"></script>
 </body>
 </html>
