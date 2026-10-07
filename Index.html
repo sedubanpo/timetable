@@ -958,6 +958,9 @@
       .ar-paper-head { padding-bottom:18px; border-bottom:2px solid #21364e; }
       .ar-paper-head h3 { font-size:23px; margin:0 0 8px; letter-spacing:-.02em; }
       .ar-date { font-size:14px; font-weight:600; color:#42566f; font-variant-numeric:tabular-nums; }
+      .ar-hide-options { display:flex; flex-wrap:wrap; align-items:center; gap:12px; font-size:12px; font-weight:700; }
+      .ar-count-label { font-size:12px; }
+      .ar-summary .ar-counts { flex-wrap:wrap; justify-content:flex-end; gap:10px; }
       .ar-summary { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; margin-top:16px; color:#42566f; }
       .ar-summary strong { color:#172b43; margin-left:5px; }
       .ar-person { padding:16px 0; border-bottom:1px solid #e0e5eb; }
@@ -2083,7 +2086,7 @@
     <div id="attendanceReportModal" role="dialog" aria-modal="true" aria-labelledby="attendanceReportTitle" onkeydown="handleAttendanceReportKey(event)">
       <div class="modal-box attendance-report-box">
         <header class="ar-head"><div><h2 id="attendanceReportTitle">출결 현황 보고</h2><p>출결을 정리하고, 필요한 내용을 선생님께 전달하세요.</p></div><button class="ar-close" onclick="closeAttendanceReportModal()">닫기</button></header>
-        <div class="ar-toolbar"><div class="ar-nav"><button aria-label="이전 시간대" onclick="changeAttendanceReportHour(-1)">이전</button><span id="attendanceReportTimeLabel"></span><button aria-label="다음 시간대" onclick="changeAttendanceReportHour(1)">다음</button></div><button class="ar-mobile-messages" onclick="setAttendanceReportPanel('messages');document.getElementById('ar-tab-messages').scrollIntoView({block:'start'});document.getElementById('ar-tab-messages').focus({preventScroll:true})">카톡 문구 바로가기</button><label class="ar-filter"><input id="attendanceHideResolvedToggle" type="checkbox" onchange="refreshAttendanceReportModal()">결석예고·당일취소·휴강 숨기기</label></div>
+        <div class="ar-toolbar"><div class="ar-nav"><button aria-label="이전 시간대" onclick="changeAttendanceReportHour(-1)">이전</button><span id="attendanceReportTimeLabel"></span><button aria-label="다음 시간대" onclick="changeAttendanceReportHour(1)">다음</button></div><button class="ar-mobile-messages" onclick="setAttendanceReportPanel('messages');document.getElementById('ar-tab-messages').scrollIntoView({block:'start'});document.getElementById('ar-tab-messages').focus({preventScroll:true})">카톡 문구 바로가기</button><div class="ar-hide-options" role="group" aria-label="학생 상세 숨기기"><span>상세 숨기기</span><label class="ar-filter"><input id="attendanceHidePlannedToggle" type="checkbox" onchange="refreshAttendanceReportModal()">결석예고</label><label class="ar-filter"><input id="attendanceHideCancelledToggle" type="checkbox" onchange="refreshAttendanceReportModal()">당일취소</label><label class="ar-filter"><input id="attendanceHideClosedToggle" type="checkbox" onchange="refreshAttendanceReportModal()">휴강</label></div></div>
         <div class="ar-workspace">
           <section class="ar-column"><div class="ar-section-head"><h3>보고 미리보기</h3></div><div class="ar-actions" style="margin-bottom:14px"><button class="ar-primary" onclick="copyAttendanceReportImage(this)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="1"/><path d="M16 8V3H3v13h5"/></svg>이미지 복사</button><button onclick="downloadAttendanceReportImage(this)">이미지 저장</button><button onclick="copyAttendanceReportText()"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="1"/><path d="M16 8V3H3v13h5"/></svg>문구 복사</button></div><div id="attendanceReportPreview"></div><details class="ar-report-text"><summary>보고 문구 확인</summary><textarea id="attendanceReportText" aria-label="보고 문구" readonly></textarea></details></section>
           <section class="ar-column ar-side"><div class="ar-tabs" role="tablist" aria-label="출결 보고 작업"><button id="ar-tab-notes" class="ar-tab" role="tab" aria-selected="true" aria-controls="ar-panel-notes" onclick="setAttendanceReportPanel('notes')">비고 편집</button><button id="ar-tab-messages" class="ar-tab" role="tab" aria-selected="false" aria-controls="ar-panel-messages" onclick="setAttendanceReportPanel('messages')">강사별 카톡 문구</button></div><div id="ar-panel-notes" class="ar-side-panel" role="tabpanel" aria-labelledby="ar-tab-notes"><div class="ar-section-head"><div><h3>보고용 비고 편집</h3><p>보고·이미지·카톡 문구에 함께 반영됩니다.<br>원본 시간표는 유지되며, 창을 닫으면 편집 내용이 초기화됩니다.</p></div></div><div id="attendanceReportEditors"></div></div><div id="ar-panel-messages" class="ar-side-panel" role="tabpanel" aria-labelledby="ar-tab-messages" hidden><div class="ar-section-head"><div><h3>강사별 카톡 문구</h3><p>편성용 날짜·확정 표시를 정리했습니다. 확인 후 복사하세요.</p></div></div><div id="attendanceTeacherMessages"></div></div></section>
@@ -2368,7 +2371,7 @@
       let attendanceReportPayload = null;
       let currentAttendanceReportText = "";
       let attendanceReportHourOffset = 0;
-      let attendanceReportHideResolved = false;
+      let attendanceReportHiddenStatuses = new Set();
       let attendanceReportTextMode = "simple";
       let teacherMobileSimpleView = true;
       let visitorLookupShowFullDay = false;
@@ -8908,11 +8911,11 @@
       }
       function shouldHideAttendanceStatus(status) {
         var s = normalizeStatusLabel(status || "");
-        return s === "결석예고" || s === "당일취소" || s === "휴강";
+        return attendanceReportHiddenStatuses.has(s);
       }
       function getVisibleAttendanceItems(payload) {
         var items = (payload && payload.items) ? payload.items.slice() : [];
-        if (!attendanceReportHideResolved) return items;
+        if (!attendanceReportHiddenStatuses.size) return items;
         return items.filter(function(v){ return !shouldHideAttendanceStatus(v.status); });
       }
       function getAttendanceTextMode() {
@@ -8959,8 +8962,8 @@
         var paths={person:'<circle cx="12" cy="7" r="3"/><path d="M5 21v-3a7 7 0 0 1 14 0v3Z"/>',math:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M7 7h10M7 12h3m4 0h3M7 16h3m4 0h3"/>',science:'<path d="M9 3h6M10 3v6L4 19q-1 2 2 2h12q3 0 2-2L14 9V3M7 15h10"/>',book:'<path d="M12 5v16M3 4q5-2 9 1 4-3 9-1v15q-5-2-9 2-4-4-9-2Z"/>'};
         return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(paths[kind]||paths.book)+'</svg>';
       }
-      function attendanceReportCounts(active,late,absent) {
-        return '<div class="ar-counts">'+[['present','출석',active],['late','지각',late],['absent','불참',absent]].map(function(v){return '<span class="ar-count '+v[0]+'" aria-label="'+v[1]+' '+v[2]+'명" title="'+v[1]+'">'+attendanceReportIcon('person')+'×'+v[2]+'</span>';}).join('')+'</div>';
+      function attendanceReportCounts(active,late,absent,labeled) {
+        return '<div class="ar-counts">'+[['present','출석',active],['late','지각',late],['absent','불참',absent]].map(function(v){return '<span class="ar-count '+v[0]+'" aria-label="'+v[1]+' '+v[2]+'명" title="'+v[1]+'">'+attendanceReportIcon('person')+(labeled?'<span class="ar-count-label">'+v[1]+'</span> '+v[2]+'명':'×'+v[2])+'</span>';}).join('')+'</div>';
       }
       function attendanceReportGroups(payload) {
         var teachers=new Map(),visible=getVisibleAttendanceItems(payload),summaries=Object.values(payload.roomClassSummaryMap||{});
@@ -8982,11 +8985,11 @@
       function renderAttendanceReportPreview(payload) {
         var root=document.getElementById('attendanceReportPreview'),e=attendanceReportEscape;
         if(!payload){root.innerHTML='<p class="ar-empty">시간표를 불러온 뒤 다시 열어 주세요.</p>';return;}
-        var groups=attendanceReportGroups(payload),clear=attendanceClearGroups(groups),details=groups.filter(function(g){return !clear.includes(g) && g.classes.some(function(c){return c.students.length;});});
+        var groups=attendanceReportGroups(payload),clear=attendanceClearGroups(groups),details=groups.filter(function(g){return !clear.includes(g);});
         var teacherNames=groups.map(function(g){return g.teacher;}).sort();
         function teacherStyle(g){return "--teacher-bg:hsl("+((teacherNames.indexOf(g.teacher)*137.508)%360).toFixed(3)+",55%,94%)";}
         var compact=clear.length?'<p class="ar-clear-title">출결 특이사항 없음 · '+clear.length+'명</p><div class="ar-clear-grid">'+clear.map(function(g){var totals=g.classes.reduce(function(a,c){a[0]+=c.active;a[1]+=c.late;a[2]+=c.absent;return a;},[0,0,0]);return '<div class="ar-clear-cell" style="'+teacherStyle(g)+'"><div class="ar-clear-name">'+attendanceTeacherIcon(g)+e(g.teacher)+'<span class="ar-clear-room">'+e(Array.from(new Set(g.classes.map(function(c){return c.room;}).filter(Boolean))).join(', '))+'</span></div>'+attendanceReportCounts(totals[0],totals[1],totals[2])+'</div>';}).join('')+'</div>':'';
-        root.innerHTML='<header class="ar-paper-head"><h3>출결 현황 보고</h3><div class="ar-date">'+e(payload.dateText)+' · '+e(payload.slotText)+'</div><div class="ar-summary">'+attendanceReportCounts(payload.activeCount,payload.lateCount,payload.absentCount)+'</div></header>'+compact+details.map(function(g){return '<section class="ar-teacher" style="'+teacherStyle(g)+'"><div class="ar-teacher-head"><span class="ar-teacher-name">'+attendanceTeacherIcon(g)+e(g.teacher)+' 선생님</span></div>'+g.classes.filter(function(c){return c.students.length;}).map(function(c){var icon=/수학|미적|기하|확통/.test(c.subject)?'math':/과학|물리|화학|생명|지구/.test(c.subject)?'science':'book';return '<div class="ar-class-heading"><span class="ar-subject-label">'+attendanceReportIcon(icon)+e(c.subject)+' · '+e(c.classType)+' · '+e(c.room)+'</span>'+attendanceReportCounts(c.active,c.late,c.absent)+'</div>'+c.students.map(function(v){return '<article class="ar-person"><div class="ar-person-top"><div><strong>'+e(v.name)+'</strong><span class="ar-school">'+e(v.school)+'</span></div><p class="ar-person-note">'+e(attendanceReportNote(v).trim()||v.status)+'</p><span class="ar-state '+(v.type==='late'?'late':'absent')+'">'+e(v.status)+'</span></div></article>';}).join('')+(!c.students.length?'<p class="ar-hint">'+(c.late+c.absent?'결석예고·당일취소 학생 숨김':'출결 특이사항 없음')+'</p>':'');}).join('')+'</section>';}).join('')+(!groups.length?'<p class="ar-empty">이 시간대에 수업이 없습니다.</p>':'')+'<p class="ar-paper-foot">에스학원 · 시간표에 입력된 출결 기준'+(attendanceReportHideResolved?' · 인원은 전체 기준, 결석예고·당일취소·휴강 상세만 숨김':'')+'</p>';
+        root.innerHTML='<header class="ar-paper-head"><h3>출결 현황 보고</h3><div class="ar-date">'+e(payload.dateText)+' · '+e(payload.slotText)+'</div><div class="ar-summary">'+attendanceReportCounts(payload.activeCount,payload.lateCount,payload.absentCount,true)+'</div></header>'+compact+details.map(function(g){return '<section class="ar-teacher" style="'+teacherStyle(g)+'"><div class="ar-teacher-head"><span class="ar-teacher-name">'+attendanceTeacherIcon(g)+e(g.teacher)+' 선생님</span></div>'+g.classes.map(function(c){var icon=/수학|미적|기하|확통/.test(c.subject)?'math':/과학|물리|화학|생명|지구/.test(c.subject)?'science':'book';return '<div class="ar-class-heading"><span class="ar-subject-label">'+attendanceReportIcon(icon)+e(c.subject)+' · '+e(c.classType)+' · '+e(c.room)+'</span>'+attendanceReportCounts(c.active,c.late,c.absent)+'</div>'+c.students.map(function(v){return '<article class="ar-person"><div class="ar-person-top"><div><strong>'+e(v.name)+'</strong><span class="ar-school">'+e(v.school)+'</span></div><p class="ar-person-note">'+e(attendanceReportNote(v).trim()||v.status)+'</p><span class="ar-state '+(v.type==='late'?'late':'absent')+'">'+e(v.status)+'</span></div></article>';}).join('');}).join('')+'</section>';}).join('')+(!groups.length?'<p class="ar-empty">이 시간대에 수업이 없습니다.</p>':'')+'<p class="ar-paper-foot">에스학원 · 시간표에 입력된 출결 기준'+(attendanceReportHiddenStatuses.size?' · 전체 인원 기준 · 선택한 상태의 학생 상세만 숨김':'')+'</p>';
         document.getElementById('attendanceReportTimeLabel').textContent=payload.slotText;
       }
       function renderAttendanceReportEditors() {
@@ -9005,12 +9008,12 @@
       }
       function attendanceReportFeedback(text) { document.getElementById('attendanceReportFeedback').textContent=text; }
       function refreshAttendanceReportModal() {
-        attendanceReportHideResolved=!!document.getElementById('attendanceHideResolvedToggle').checked;attendanceReportPayload=buildAttendanceReport();
+        attendanceReportHiddenStatuses=new Set([['Planned','결석예고'],['Cancelled','당일취소'],['Closed','휴강']].filter(function(pair){return document.getElementById('attendanceHide'+pair[0]+'Toggle').checked;}).map(function(pair){return pair[1];}));attendanceReportPayload=buildAttendanceReport();
         if(!attendanceReportPayload){attendanceReportFeedback('시간표를 불러온 뒤 다시 열어 주세요.');return;}renderAttendanceReportEditors();renderAttendanceReportOutputs();
       }
       function openAttendanceReportModal() {
         if(!lastData){alert('먼저 시간표를 불러와 주세요.');return;}
-        setAttendanceReportPanel('notes');attendanceReportReturnFocus=document.activeElement;attendanceReportDrafts=Object.create(null);attendanceReportHourOffset=0;document.getElementById('attendanceHideResolvedToggle').checked=false;refreshAttendanceReportModal();attendanceReportFeedback('');document.getElementById('attendanceReportModal').style.display='flex';document.querySelector('#attendanceReportModal .ar-close').focus();
+        setAttendanceReportPanel('notes');attendanceReportReturnFocus=document.activeElement;attendanceReportDrafts=Object.create(null);attendanceReportHourOffset=0;['Planned','Cancelled','Closed'].forEach(function(key){document.getElementById('attendanceHide'+key+'Toggle').checked=false;});refreshAttendanceReportModal();attendanceReportFeedback('');document.getElementById('attendanceReportModal').style.display='flex';document.querySelector('#attendanceReportModal .ar-close').focus();
       }
       function changeAttendanceReportHour(delta) {
         var now=new Date(),base=Math.max(SCHEDULE_START_HOUR,Math.min(SCHEDULE_END_HOUR,now.getHours())),next=attendanceReportHourOffset+Number(delta||0);if(base+next<SCHEDULE_START_HOUR||base+next>SCHEDULE_END_HOUR)return;attendanceReportHourOffset=next;refreshAttendanceReportModal();
@@ -9031,7 +9034,7 @@
       function captureAttendanceReportImage() {
         if(attendanceReportExportPending)return attendanceReportExportPending;
         if(!attendanceReportPayload)return Promise.reject(new Error('보고가 없습니다.'));
-        var controls=Array.from(document.querySelectorAll('#attendanceReportModal .ar-nav button, #attendanceReportModal .ar-close, #attendanceHideResolvedToggle, #attendanceReportEditors textarea'));
+        var controls=Array.from(document.querySelectorAll('#attendanceReportModal .ar-nav button, #attendanceReportModal .ar-close, .ar-hide-options input, #attendanceReportEditors textarea'));
         var states=controls.map(function(node){var disabled=node.disabled;node.disabled=true;return disabled;});
         attendanceReportFeedback('보고 이미지를 만들고 있습니다.');
         attendanceReportExportPending = Promise.resolve().then(function(){return renderExportCanvas(document.getElementById('attendanceReportPreview'),{scale:2,backgroundColor:'#ffffff',useCORS:true,imageTimeout:1500});}).then(function(canvas){return new Promise(function(resolve,reject){canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error('이미지 생성 실패'));},'image/png');});}).finally(function(){controls.forEach(function(node,i){node.disabled=states[i];});attendanceReportExportPending=null;});
