@@ -133,3 +133,8 @@ test('quiet hours skip scheduled executions and delayed retries but allow manual
   assert.equal(f.exports.timetableSnapshotEveryTwoHours.config.timeZone,'Asia/Seoul');
   assert.equal((await f.request({action:'save',sheet:f.sheet})).ok,true);assert.equal(f.calls(),1);
 });
+test('media operations reject unauthorized and non-admin uploads before storage access',async()=>{
+ const f=fixture();assert.equal((await f.request({action:'visitor_media'},'expired')).status,401);
+ f.data.set('users/u',{role:'TEACHER',status:'ACTIVE',name:'강사'});
+ for(const action of ['visitor_banner_save','visitor_banner_hide'])assert.equal((await f.request({action})).status,403);
+});

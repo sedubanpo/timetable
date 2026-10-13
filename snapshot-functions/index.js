@@ -93,6 +93,13 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
   if(req.method!=='POST')return res.status(405).json({ok:false,error:'METHOD_NOT_ALLOWED'});
   try {
     const who=await authenticate(req), {action,sheet,teacher}=req.body||{};
+    if(action==='visitor_media') return res.json({ok:true,...await require('./visitor-media').read(getFirestore())});
+    if(['visitor_banner_save','visitor_banner_hide'].includes(action)){
+      if(who.role!=='ADMIN')coreFail('FORBIDDEN');
+      const media=require('./visitor-media');
+      await media.save(getFirestore(),require('firebase-admin/storage').getStorage().bucket(media.BUCKET),who,req.body);
+      return res.json({ok:true});
+    }
     if(action==='bootstrap') {
       // Identity is verified before any date metadata is read; no Apps Script dependency.
       let dates;try{dates=await core.catalog(getFirestore());}catch{dates={sheets:[],savedSheets:[],catalogSavedAt:null};}
@@ -117,7 +124,7 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
     }
     return res.json({ok:true,...await core.read(getFirestore(),sheet,who,teacher,action==='rooms')});
   }catch(error){
-    const known=['UNAUTHORIZED','FORBIDDEN','INVALID_ACTION','INVALID_SHEET','INVALID_SNAPSHOT','SNAPSHOT_NOT_FOUND','SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','SOURCE_RATE_LIMIT','INVALID_RECEIPT','RECEIPT_EXPIRED','SNAPSHOT_TOO_LARGE'];
+    const known=['INVALID_IMAGE','UNAUTHORIZED','FORBIDDEN','INVALID_ACTION','INVALID_SHEET','INVALID_SNAPSHOT','SNAPSHOT_NOT_FOUND','SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','SOURCE_RATE_LIMIT','INVALID_RECEIPT','RECEIPT_EXPIRED','SNAPSHOT_TOO_LARGE'];
     const code=known.includes(error.code)?error.code:'UNAVAILABLE';
     console.warn('timetableSnapshotApi',{code});
     res.status(code==='UNAUTHORIZED'?401:code==='FORBIDDEN'?403:code==='SNAPSHOT_NOT_FOUND'?404:code==='SAVE_IN_PROGRESS'?409:503).json({ok:false,error:code});

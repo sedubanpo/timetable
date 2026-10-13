@@ -1974,6 +1974,39 @@
       .visitor-map-room.active .visitor-map-count {fill:#fff;}
       @media(max-width:900px){.visitor-lookup-card {grid-template-columns:26px minmax(0,1fr);} .visitor-lookup-field {grid-column:2;} .visitor-lookup-card-arrow{display:none;} .visitor-teacher-value{flex-direction:row;align-items:center;}}
       @media(max-width:600px){.visitor-lookup-mode #roomOverviewBtn{position:static;margin-left:auto;}}
+
+      #visitorBannerAdminBtn[hidden] {display:none!important;}
+      body.visitor-lookup-mode #snapshotNotice {display:none!important;}
+      body.visitor-lookup-mode #visitorLookupPane {width:calc(100vw - 48px);max-width:none;margin:24px;}
+      .visitor-screen {display:grid;grid-template-columns:minmax(0,7fr) minmax(0,3fr);gap:24px;align-items:start;}
+      .visitor-screen .visitor-lookup-main {grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0;}
+      .visitor-screen .visitor-lookup-panel {padding:24px;min-width:0;}
+      .visitor-screen .visitor-lookup-card {grid-template-columns:26px minmax(0,1fr);}
+      .visitor-screen .visitor-lookup-field {grid-column:2;}
+      .visitor-screen .visitor-teacher-value {flex-direction:row;align-items:center;}
+      .visitor-screen .visitor-lookup-card-arrow {display:none;}
+      .visitor-banner {min-width:0;overflow:hidden;border-radius:16px;background:#fff;color:#17365d;}
+      .visitor-banner-heading {padding:18px 24px;font-weight:800;border-bottom:1px solid #e4eaf3;}
+      .visitor-banner img {display:block;width:100%;height:auto;object-fit:contain;}
+      .visitor-banner-empty {padding:48px 28px;min-height:320px;display:flex;flex-direction:column;justify-content:center;}
+      .visitor-banner-empty span {color:#2465bb;font-weight:900;font-size:18px;}
+      .visitor-banner-empty h2 {font-size:30px;margin:18px 0;}
+      .visitor-banner-empty p {line-height:1.8;color:#526781;}
+      .visitor-banner-dialog {width:min(540px,calc(100vw - 40px));max-height:85vh;overflow:auto;padding:28px;border:0;border-radius:16px;color:#17365d;}
+      .visitor-banner-dialog::backdrop {background:#10234580;}
+      .visitor-banner-dialog header,.visitor-banner-dialog footer {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+      .visitor-banner-dialog h2 {margin:0;font-size:22px;}
+      .visitor-banner-dialog p {line-height:1.6;}
+      .visitor-banner-dialog label {display:block;margin:18px 0;font-weight:700;}
+      .visitor-banner-dialog input {display:block;box-sizing:border-box;width:100%;padding:12px;margin-top:8px;border:1px solid #b9cce6;border-radius:8px;}
+      .visitor-banner-dialog button {padding:10px 16px;border:1px solid #b9cce6;border-radius:8px;background:#edf4ff;color:#17365d;font-weight:700;cursor:pointer;}
+      .visitor-banner-dialog #visitorBannerSave {background:#1457be;color:white;border-color:#1457be;}
+      .visitor-banner-dialog button:disabled {opacity:.6;cursor:wait;}
+      .visitor-banner-dialog img {width:100%;max-height:300px;object-fit:contain;background:#f1f5fa;}
+      .visitor-banner-help {font-size:13px;color:#526781;}
+      @media(max-width:1500px){.visitor-screen .visitor-lookup-main{grid-template-columns:1fr;}}
+      @media(max-width:800px){.visitor-screen{grid-template-columns:1fr;}body.visitor-lookup-mode #visitorLookupPane{width:calc(100vw - 28px);margin:18px 14px;}.visitor-banner{max-width:100%;}}
+
 </style>
   </head>
   <body>
@@ -2278,6 +2311,7 @@
             <div id="teacherPickerOptions" class="teacher-picker-options" aria-label="강사 선택"></div>
           </div>
         </div>
+        <button id="visitorBannerAdminBtn" type="button" class="nav-btn" hidden onclick="openVisitorBannerAdmin()">방문 배너</button>
         <button id="roomOverviewBtn" type="button" class="nav-btn" style="display:none" onclick="openRoomOverview()">전체 강의실</button>
         <button id="teacherLoginBtn" class="nav-btn" onclick="openAuthModal()">강사 로그인</button>
         
@@ -5627,6 +5661,7 @@
         });
       }
       function applyRoleUi() {
+        document.getElementById('visitorBannerAdminBtn').hidden=!(authState.loggedIn&&authState.isMaster&&!authState.isLookup);
         var introLogin=document.querySelector(".intro-login-btn");
         if(introLogin){introLogin.disabled=false;introLogin.textContent=authState.loggedIn?"로그아웃":"강사 로그인";introLogin.onclick=authState.loggedIn?logoutTeacher:openAuthModal;}
         updateSnapshotSaveAccess();
@@ -5999,7 +6034,7 @@
       }
       function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= SCHEDULE_START_HOUR && hour <= SCHEDULE_END_HOUR) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(false); timeLeft = 1800; } } else { setCountdownText("대기", "업데이트 대기중 (운영시간 외)"); document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
       function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; setCountdownText(String(min).padStart(2,"0") + ":" + String(sec).padStart(2,"0"), "다음 업데이트까지 " + min + "분 " + sec + "초"); }
-      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var M=now.getMonth()+1; var D=now.getDate(); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+M+"/"+D+"("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); if(isLookupViewActive() && now.getSeconds()===0)renderVisitorLookupResults(); updateTimelinePosition(); }
+      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var M=now.getMonth()+1; var D=now.getDate(); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+M+"/"+D+"("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); if(isLookupViewActive() && now.getSeconds()===0){renderVisitorLookupResults();loadVisitorPortraits();} updateTimelinePosition(); }
       
       function updateTimelinePosition() {
          renderAttendanceWindow();
@@ -6130,10 +6165,10 @@
       // Independent Firebase endpoint: reading a saved copy never calls Apps Script.
       var snapshotView = null, snapshotSaveBusy = false;
       var SNAPSHOT_API_URL = 'https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableSnapshotApi';
-      function snapshotRequest(action, sheet, teacher, receipt) {
+      function snapshotRequest(action, sheet, teacher, receipt, extra) {
         var session = getScheduleSessionKey();
         var controller = new AbortController();
-        var timer = setTimeout(function(){controller.abort();}, action === 'save' ? 95000 : 12000);
+        var timer = setTimeout(function(){controller.abort();}, (action === 'save' || action === 'visitor_banner_save') ? 95000 : 12000);
         return Promise.resolve().then(function() {
           if (!authState.loggedIn) throw new Error('UNAUTHORIZED');
           if (authState.isLookup) {
@@ -6148,7 +6183,7 @@
           if (controller.signal.aborted || session !== getScheduleSessionKey()) throw new Error('SESSION_CHANGED');
           return fetch(SNAPSHOT_API_URL, {method:'POST',signal:controller.signal,cache:'no-store',
             headers:Object.assign({'Content-Type':'application/json'},identity.token?{Authorization:'Bearer '+identity.token}:{}),
-            body:JSON.stringify({action:action,sheet:sheet,teacher:teacher||'',lookupToken:identity.lookupToken||'',receipt:receipt||null})});
+            body:JSON.stringify(Object.assign({},extra||{},{action:action,sheet:sheet,teacher:teacher||'',lookupToken:identity.lookupToken||'',receipt:receipt||null}))});
         }).then(function(response){return response.json();}).then(function(result){
           if (session !== getScheduleSessionKey()) throw new Error('SESSION_CHANGED');
           if (!result || !result.ok) throw new Error(result && result.error || 'SNAPSHOT_UNAVAILABLE');
@@ -9908,22 +9943,45 @@
 
       var visitorPortraits = Object.create(null), visitorPortraitKey = '', visitorPortraitPending = false;
       function visitorTeacherKey(name) { return String(name || '').replace(/(?:선생님|T)\s*$/,'').replace(/\s/g,''); }
-      function loadVisitorPortraits() {
+      var visitorBanner = null, visitorMediaLoadedAt = 0;
+      function loadVisitorPortraits(force) {
         if (!authState.loggedIn || !authState.isLookup) { visitorPortraits=Object.create(null);visitorPortraitKey='';return; }
-        var key=String(authState.loginId || '');
-        if(visitorPortraitKey===key || visitorPortraitPending)return;
+        var key=getScheduleSessionKey();
+        if(visitorPortraitPending || (!force && visitorPortraitKey===key && Date.now()-visitorMediaLoadedAt<55000))return;
         visitorPortraitPending=true;
-        getLiveFirebaseAuth().then(function(auth){if(!auth.currentUser)throw Error('AUTH');return getLiveFirebaseFirestore();})
-          .then(function(db){return db.collection('sharedIconAssets').where('category','==','PERSON').get();})
-          .then(function(snapshot){
-            if(!authState.isLookup || String(authState.loginId)!==key)return;
-            var map=Object.create(null),owners=Object.create(null);
-            snapshot.docs.forEach(function(doc){var a=doc.data()||{};if((a.status||'ACTIVE')!=='ACTIVE'||!/^user:/.test(a.lookupKey||''))return;
-              var url;try{url=new URL(a.imageUrl||a.downloadURL||'');}catch(_){return;}
-              if(url.protocol!=='https:'||!['firebasestorage.googleapis.com','storage.googleapis.com'].includes(url.hostname)||url.pathname.indexOf('fir-lms-prod')<0)return;
-              [a.displayName].concat(a.aliases||[]).forEach(function(name){var n=visitorTeacherKey(name);if(!n)return;if(owners[n]==='AMBIGUOUS')return;if(owners[n]&&owners[n]!==a.lookupKey){owners[n]='AMBIGUOUS';map[n]='';return;}owners[n]=a.lookupKey;map[n]=url.href;});
-            });visitorPortraits=map;visitorPortraitKey=key;renderVisitorLookupResults();
-          }).catch(function(){/* Keep a neutral portrait when the shared asset is unavailable. */}).finally(function(){visitorPortraitPending=false;});
+        snapshotRequest('visitor_media','').then(function(result){
+          if(!authState.isLookup||getScheduleSessionKey()!==key)return;
+          var map=Object.create(null),owners=Object.create(null);
+          (result.portraits||[]).forEach(function(a){[a.name].concat(a.aliases||[]).forEach(function(name){var n=visitorTeacherKey(name);if(!n||owners[n]==='AMBIGUOUS')return;if(owners[n]&&owners[n]!==a.owner){owners[n]='AMBIGUOUS';map[n]='';return;}owners[n]=a.owner;map[n]=a.url;});});
+          visitorPortraits=map;visitorPortraitKey=key;visitorMediaLoadedAt=Date.now();visitorBanner=result.banner;renderVisitorLookupResults();renderVisitorBanner();
+        }).catch(function(){/* Retry on the next minute tick; schedule remains usable. */}).finally(function(){visitorPortraitPending=false;});
+      }
+      function renderVisitorBanner(){
+        var host=document.getElementById('visitorBanner');if(!host)return;
+        var b=visitorBanner;
+        if(!b||!b.enabled||!b.url){host.innerHTML="<div class='visitor-banner-empty'><span>SEDU</span><h2>학원 소식</h2><p>새로운 특강과 시험 직보 소식을<br>이곳에서 안내해 드립니다.</p></div>";host.dataset.url='';return;}
+        if(host.dataset.url===b.url)return;
+        host.dataset.url=b.url;host.innerHTML="<div class='visitor-banner-heading'>학원 소식</div><img alt='"+escapeHtml(b.title||'학원 소식')+"' src='"+escapeHtml(b.url)+"'>";
+      }
+      async function openVisitorBannerAdmin(){
+        if(!authState.isMaster||authState.isLookup)return;
+        var old=document.getElementById('visitorBannerDialog');if(old)old.remove();
+        var modal=document.createElement('dialog');modal.id='visitorBannerDialog';modal.className='visitor-banner-dialog';
+        modal.innerHTML="<form method='dialog'><header><h2>방문 화면 배너</h2><button aria-label='배너 설정 닫기'>닫기</button></header></form><p>방문용 화면 오른쪽에 표시할 특강·시험 직보 소식을 올려 주세요.</p><label>이미지 설명<input id='visitorBannerTitle' maxlength='100' placeholder='예: 중간고사 직보 안내'></label><label>배너 이미지<input id='visitorBannerFile' type='file' accept='image/png,image/jpeg,image/gif,image/webp'></label><p class='visitor-banner-help'>PNG · JPG · WebP · GIF / 최대 5MB<br>GIF는 움직이는 원본 그대로 표시됩니다. 세로형 이미지를 권장합니다.</p><img id='visitorBannerPreview' alt='배너 미리보기' hidden><p id='visitorBannerMessage' role='status'>현재 배너를 불러오는 중…</p><footer><button type='button' id='visitorBannerHide' onclick='saveVisitorBanner(true)'>배너 숨기기</button><button type='button' id='visitorBannerSave' onclick='saveVisitorBanner(false)'>업로드하고 표시</button></footer>";
+        document.body.appendChild(modal);modal.showModal();
+        var file=modal.querySelector('#visitorBannerFile'),preview=modal.querySelector('#visitorBannerPreview');
+        file.onchange=function(){if(modal.previewUrl)URL.revokeObjectURL(modal.previewUrl);var f=file.files[0];if(!f)return;if(!['image/png','image/jpeg','image/gif','image/webp'].includes(f.type)||f.size>5*1024*1024){file.value='';modal.querySelector('#visitorBannerMessage').textContent='5MB 이하의 PNG, JPG, GIF, WebP 파일을 선택해 주세요.';return;}modal.previewUrl=URL.createObjectURL(f);preview.src=modal.previewUrl;preview.hidden=false;modal.querySelector('#visitorBannerMessage').textContent='미리보기를 확인한 뒤 업로드해 주세요.';};
+        modal.onclose=function(){if(modal.previewUrl)URL.revokeObjectURL(modal.previewUrl);modal.remove();};
+        try{var r=await snapshotRequest('visitor_media','');if(!modal.isConnected)return;var b=r.banner;if(b){modal.querySelector('#visitorBannerTitle').value=b.title||'';if(!file.files.length){preview.src=b.url;preview.hidden=false;}}modal.querySelector('#visitorBannerMessage').textContent=b&&b.enabled?'현재 방문 화면에 표시 중입니다.':'현재 표시 중인 배너가 없습니다.';}catch(e){modal.querySelector('#visitorBannerMessage').textContent='배너를 불러오지 못했습니다. 창을 닫고 다시 시도해 주세요.';}
+      }
+      async function saveVisitorBanner(hide){
+        var modal=document.getElementById('visitorBannerDialog');if(!modal||modal.busy||!authState.isMaster)return;
+        var message=modal.querySelector('#visitorBannerMessage'),file=modal.querySelector('#visitorBannerFile').files[0];
+        if(!hide&&!file){message.textContent='업로드할 이미지를 먼저 선택해 주세요.';return;}
+        modal.busy=true;modal.querySelectorAll('button,input').forEach(function(el){el.disabled=true;});message.textContent=hide?'배너를 숨기는 중…':'이미지를 업로드하는 중…';
+        try{var data=hide?null:await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result);};reader.onerror=reject;reader.readAsDataURL(file);});await snapshotRequest(hide?'visitor_banner_hide':'visitor_banner_save','','',null,{image:data,title:modal.querySelector('#visitorBannerTitle').value});message.textContent=hide?'배너를 숨겼습니다.':'저장했습니다. 방문 화면에 최대 1분 안에 반영됩니다.';}
+        catch(e){message.textContent=e.message==='INVALID_IMAGE'?'지원하는 형식의 5MB 이하 이미지를 선택해 주세요.':'저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.';}
+        finally{modal.busy=false;modal.querySelectorAll('button,input').forEach(function(el){el.disabled=false;});}
       }
       function visitorPersonIcon() { return "<svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='7' r='4'/><path d='M4 22v-3a8 8 0 0 1 16 0v3Z'/></svg>"; }
       function visitorPortrait(name) { var url=visitorPortraits[visitorTeacherKey(name)];return "<span class='visitor-portrait'>"+(url?"<img src='"+escapeHtml(url)+"' alt='' onerror='this.hidden=true'>":"")+visitorPersonIcon()+"</span>"; }
@@ -10080,7 +10138,7 @@
         }
         visitorLookupShellKey = shellKey;
         pane.innerHTML =
-          "<div class='visitor-lookup-shell'>" +
+          "<div class='visitor-screen'><div class='visitor-lookup-shell'>" +
             "<div class='visitor-lookup-head'>" +
               "<div class='visitor-lookup-head-main'>" +
                 "<div class='visitor-lookup-logo-wrap'><img class='visitor-lookup-logo' src='https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png' alt='SEDU'></div>" +
@@ -10097,7 +10155,8 @@
               "</div>" +
               "<div class='visitor-lookup-panel visitor-lookup-right' id='visitorLookupMapHost'></div>" +
             "</div>" +
-          "</div>";
+          "</div><aside id='visitorBanner' class='visitor-banner' aria-label='학원 소식'></aside></div>";
+        renderVisitorBanner();
       }
       function renderVisitorLookupResults() {
         var pane = document.getElementById('visitorLookupPane');
