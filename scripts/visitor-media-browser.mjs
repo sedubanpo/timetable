@@ -27,7 +27,8 @@ try{
  await page.locator('.visitor-portrait img').waitFor();assert(await page.locator('.visitor-portrait img').evaluate(i=>i.complete&&i.naturalWidth>0));assert.equal(await page.locator('#snapshotNotice').isVisible(),false);assert.equal(await page.locator('#visitorBannerAdminBtn').isVisible(),false);
  assert(requests.some(r=>r.action==='visitor_media'&&r.lookupToken==='fixture-lookup'));
  assert(await page.locator('.visitor-banner').evaluate(e=>{const p=e.parentElement.getBoundingClientRect(),r=e.getBoundingClientRect();return r.width/p.width>.18&&r.width/p.width<.21;}));
- assert(await page.locator('.visitor-lookup-card').evaluate(e=>{const fields=[...e.querySelectorAll('.visitor-lookup-field')].map(x=>x.getBoundingClientRect());return Math.max(...fields.map(x=>x.top))-Math.min(...fields.map(x=>x.top))<40;}));
+ assert(await page.evaluate(()=>{const left=document.querySelector('.visitor-lookup-left').getBoundingClientRect(),map=document.querySelector('.visitor-lookup-right').getBoundingClientRect(),news=document.querySelector('.visitor-banner').getBoundingClientRect();return Math.abs(left.top-map.top)<2&&left.right<=map.left+1&&map.right<news.left&&map.width>left.width;}));
+ assert(await page.locator('.visitor-floorplan').evaluate(e=>e.getBoundingClientRect().width>900&&e.getBoundingClientRect().height>400));
  assert(await page.locator('.visitor-room-map-scroll').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
  await page.screenshot({path:out+'/desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:out+'/mobile.png',fullPage:true});
