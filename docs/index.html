@@ -1978,20 +1978,37 @@
       #visitorBannerAdminBtn[hidden] {display:none!important;}
       body.visitor-lookup-mode #snapshotNotice {display:none!important;}
       body.visitor-lookup-mode #visitorLookupPane {width:calc(100vw - 48px);max-width:none;margin:24px;}
-      .visitor-screen {display:grid;grid-template-columns:minmax(0,7fr) minmax(0,3fr);gap:24px;align-items:start;}
-      .visitor-screen .visitor-lookup-main {grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0;}
-      .visitor-screen .visitor-lookup-panel {padding:24px;min-width:0;}
-      .visitor-screen .visitor-lookup-card {grid-template-columns:26px minmax(0,1fr);}
-      .visitor-screen .visitor-lookup-field {grid-column:2;}
+      .visitor-screen {display:grid;grid-template-columns:minmax(0,4fr) minmax(0,1fr);gap:20px;align-items:start;}
+      .visitor-screen .visitor-lookup-head {padding:16px 24px;align-items:center;}
+      .visitor-screen .visitor-lookup-logo-wrap {width:44px;height:44px;border-radius:12px;box-shadow:none;}
+      .visitor-screen .visitor-lookup-logo {width:32px;height:32px;}
+      .visitor-screen .visitor-lookup-title {font-size:1.2rem;}
+      .visitor-screen .visitor-lookup-sub {font-size:.85rem;margin-top:4px;}
+      .visitor-screen .visitor-lookup-sheet {padding:8px 12px;font-size:.85rem;}
+      .visitor-screen .visitor-lookup-main {grid-template-columns:minmax(0,1fr);min-height:0;}
+      .visitor-screen .visitor-lookup-panel {padding:16px 24px;min-width:0;}
+      .visitor-screen .visitor-lookup-left {border-right:0;border-bottom:1px solid #dbe7ff;}
+      .visitor-screen .visitor-lookup-tabs {margin-bottom:12px;gap:8px;}
+      .visitor-screen .visitor-lookup-tab {min-height:36px;padding:0 18px;font-size:.85rem;}
+      .visitor-screen .visitor-lookup-summary {margin-bottom:8px;align-items:center;}
+      .visitor-screen .visitor-lookup-student {font-size:1rem;}
+      .visitor-screen .visitor-lookup-school {display:inline;margin-left:8px;font-size:.82rem;}
+      .visitor-screen .visitor-lookup-result-label {font-size:.82rem;margin-bottom:8px;}
+      .visitor-screen .visitor-lookup-card {grid-template-columns:26px minmax(70px,.8fr) minmax(100px,1fr) minmax(160px,1.5fr) minmax(132px,1fr);gap:12px;padding:12px 16px;}
+      .visitor-screen .visitor-lookup-field {grid-column:auto;}
       .visitor-screen .visitor-teacher-value {flex-direction:row;align-items:center;}
       .visitor-screen .visitor-lookup-card-arrow {display:none;}
+      .visitor-screen .visitor-entry-notice {padding:10px 14px;font-size:.85rem;}
+      .visitor-screen .visitor-map-head {margin-bottom:10px;}
+      .visitor-screen .visitor-map-title {font-size:1.6rem;margin-top:10px;}
+      .visitor-screen .visitor-map-instruction {margin-bottom:12px;font-size:.9rem;}
+      .visitor-screen .visitor-floorplan {min-width:0;height:clamp(260px,calc(100dvh - 660px),520px);}
       .visitor-banner {min-width:0;overflow:hidden;border-radius:16px;background:#fff;color:#17365d;}
-      .visitor-banner-heading {padding:18px 24px;font-weight:800;border-bottom:1px solid #e4eaf3;}
+      .visitor-banner-heading {padding:16px 18px;font-size:15px;font-weight:800;border-bottom:1px solid #e4eaf3;}
       .visitor-banner img {display:block;width:100%;height:auto;object-fit:contain;}
-      .visitor-banner-empty {padding:48px 28px;min-height:320px;display:flex;flex-direction:column;justify-content:center;}
-      .visitor-banner-empty span {color:#2465bb;font-weight:900;font-size:18px;}
-      .visitor-banner-empty h2 {font-size:30px;margin:18px 0;}
-      .visitor-banner-empty p {line-height:1.8;color:#526781;}
+      .visitor-banner-empty {padding:16px 18px;}
+      .visitor-banner-empty h2 {font-size:15px;margin:0 0 8px;}
+      .visitor-banner-empty p {font-size:13px;line-height:1.6;color:#526781;margin:0;}
       .visitor-banner-dialog {width:min(540px,calc(100vw - 40px));max-height:85vh;overflow:auto;padding:28px;border:0;border-radius:16px;color:#17365d;}
       .visitor-banner-dialog::backdrop {background:#10234580;}
       .visitor-banner-dialog header,.visitor-banner-dialog footer {display:flex;align-items:center;justify-content:space-between;gap:12px;}
@@ -2004,7 +2021,14 @@
       .visitor-banner-dialog button:disabled {opacity:.6;cursor:wait;}
       .visitor-banner-dialog img {width:100%;max-height:300px;object-fit:contain;background:#f1f5fa;}
       .visitor-banner-help {font-size:13px;color:#526781;}
-      @media(max-width:1500px){.visitor-screen .visitor-lookup-main{grid-template-columns:1fr;}}
+      @media(min-width:801px){
+        body.visitor-lookup-mode #mainPage .top-bar {min-height:88px;padding:12px 20px;}
+        .visitor-lookup-mode .top-bar > .search-wrapper .search-input {height:48px;border-radius:12px;}
+        .visitor-lookup-mode #roomOverviewBtn {top:12px;padding:9px 16px;}
+        .visitor-lookup-mode .toolbar-first-row > #digitalClock {top:68px;}
+      }
+      @media(max-width:1100px) and (min-width:801px){.visitor-screen .visitor-lookup-card{grid-template-columns:24px minmax(60px,.7fr) minmax(85px,1fr) minmax(120px,1.3fr) minmax(86px,1fr);gap:6px;padding:10px;}.visitor-screen .visitor-teacher-value{flex-direction:column;align-items:flex-start;}.visitor-screen .visitor-lookup-field-sub{white-space:normal;}}
+      @media(max-width:800px){.visitor-screen .visitor-lookup-card{grid-template-columns:26px minmax(0,1fr);}.visitor-screen .visitor-lookup-field{grid-column:2;}.visitor-screen .visitor-lookup-panel{padding:16px;}.visitor-screen .visitor-floorplan{min-width:520px;max-height:none;}}
       @media(max-width:800px){.visitor-screen{grid-template-columns:1fr;}body.visitor-lookup-mode #visitorLookupPane{width:calc(100vw - 28px);margin:18px 14px;}.visitor-banner{max-width:100%;}}
 
 </style>
@@ -9977,7 +10001,7 @@ window.SeduHubAdapter={
       function renderVisitorBanner(){
         var host=document.getElementById('visitorBanner');if(!host)return;
         var b=visitorBanner;
-        if(!b||!b.enabled||!b.url){host.innerHTML="<div class='visitor-banner-empty'><span>SEDU</span><h2>학원 소식</h2><p>새로운 특강과 시험 직보 소식을<br>이곳에서 안내해 드립니다.</p></div>";host.dataset.url='';return;}
+        if(!b||!b.enabled||!b.url){host.innerHTML="<div class='visitor-banner-empty'><h2>학원 소식</h2><p>특강·시험 직보 소식을 안내합니다.</p></div>";host.dataset.url='';return;}
         if(host.dataset.url===b.url)return;
         host.dataset.url=b.url;host.innerHTML="<div class='visitor-banner-heading'>학원 소식</div><img alt='"+escapeHtml(b.title||'학원 소식')+"' src='"+escapeHtml(b.url)+"'>";
       }

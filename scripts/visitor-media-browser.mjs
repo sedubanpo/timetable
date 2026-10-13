@@ -26,8 +26,10 @@ try{
  await page.evaluate(()=>{authState={loggedIn:true,isMaster:false,isLookup:true,loginId:'2371',snapshotLookupToken:'fixture-lookup'};currentSheetName='10/13(화)';accessMode='all';lastData={headers:['4강의실'],grid:{12:[[]],19:[['개별 국어 검증강사T','검증학생 검증고3']]}};applyRoleUi();document.getElementById('mainPage').style.display='flex';document.getElementById('introPage').style.display='none';document.getElementById('loginGate').style.display='none';resetVisitorLookupIndexCache();document.getElementById('searchInput').value='검증학생';searchTable();});
  await page.locator('.visitor-portrait img').waitFor();assert(await page.locator('.visitor-portrait img').evaluate(i=>i.complete&&i.naturalWidth>0));assert.equal(await page.locator('#snapshotNotice').isVisible(),false);assert.equal(await page.locator('#visitorBannerAdminBtn').isVisible(),false);
  assert(requests.some(r=>r.action==='visitor_media'&&r.lookupToken==='fixture-lookup'));
- assert(await page.locator('.visitor-banner').evaluate(e=>{const p=e.parentElement.getBoundingClientRect(),r=e.getBoundingClientRect();return r.width/p.width>.28&&r.width/p.width<.31;}));
+ assert(await page.locator('.visitor-banner').evaluate(e=>{const p=e.parentElement.getBoundingClientRect(),r=e.getBoundingClientRect();return r.width/p.width>.18&&r.width/p.width<.21;}));
+ assert(await page.locator('.visitor-lookup-card').evaluate(e=>{const fields=[...e.querySelectorAll('.visitor-lookup-field')].map(x=>x.getBoundingClientRect());return Math.max(...fields.map(x=>x.top))-Math.min(...fields.map(x=>x.top))<40;}));
+ assert(await page.locator('.visitor-room-map-scroll').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
  await page.screenshot({path:out+'/desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:out+'/mobile.png',fullPage:true});
- assert.deepEqual(errors,[]);console.log('PASS: admin GIF upload, lookup-auth portraits, source bar hidden, 70/30 layout, mobile overflow, no page errors');
+ assert.deepEqual(errors,[]);console.log('PASS: admin GIF upload, lookup-auth portraits, source bar hidden, 80/20 layout, mobile overflow, no page errors');
 }finally{await browser.close();server.close();}
