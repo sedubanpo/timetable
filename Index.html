@@ -1949,7 +1949,32 @@
       .excel-btn [role="status"] { display:inline; }
       @keyframes hours-export-spin { to { transform:rotate(360deg); } }
       @media(prefers-reduced-motion:reduce) { .hours-export-spinner { animation:none; } }
-    </style>
+
+      .visitor-lookup-mode .toolbar-first-row > #roomOverviewBtn { left:auto;right:24px;top:20px;transform:none;width:auto;min-width:112px;white-space:nowrap;padding:12px 18px;border-radius:10px;background:#fff;color:#153c77;border:1px solid #c7d8f2;font-weight:800; }
+      .visitor-lookup-mode .toolbar-first-row > #digitalClock { right:28px;top:82px; }
+      .visitor-occupancy { display:inline-flex;align-items:center;gap:5px;color:#245bb2;font-weight:800;font-size:14px;flex-wrap:wrap; }
+      .visitor-occupancy svg { width:19px;height:22px;fill:currentColor; }
+      .visitor-occupancy small { font-size:10px;color:#526781; }
+      .visitor-portrait { position:relative;display:inline-flex;width:48px;height:48px;vertical-align:middle;margin-right:8px;border-radius:12px;background:#e2edff;overflow:hidden;color:#4779ba;align-items:center;justify-content:center; }
+      .visitor-portrait img { position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#edf4ff;z-index:1; }
+      .visitor-portrait svg {width:28px;height:30px;fill:currentColor;}
+      .visitor-entry-notice { padding:14px 16px;background:#edf4ff;color:#27466c;border-radius:8px;line-height:1.65;font-weight:700; }
+      .visitor-entry-notice strong { display:block;margin-bottom:4px; }
+      .visitor-entry-notice.busy { background:#fff1da;color:#7c4c0b; }
+      .visitor-study-until { margin-top:10px;font-size:12px;color:#315477;font-weight:800;line-height:1.5; }
+      @media(max-width:600px){.visitor-lookup-mode .toolbar-first-row > #roomOverviewBtn {position:static;margin-left:auto;min-height:44px;} .visitor-lookup-mode .toolbar-first-row > #digitalClock {display:none!important;}}
+
+
+      body.visitor-lookup-mode #mainPage .top-bar > .toolbar-first-row {display:contents!important;position:static!important;transform:none!important;}
+      .visitor-lookup-mode #roomOverviewBtn { display:flex!important;position:absolute;right:24px;left:auto;top:20px;width:auto;min-width:112px;white-space:nowrap;padding:12px 18px;border-radius:10px;background:#fff;color:#153c77;border:1px solid #c7d8f2;font-weight:800; }
+      .visitor-lookup-card { grid-template-columns:26px minmax(64px,.7fr) minmax(90px,1fr) minmax(100px,1.2fr) minmax(82px,.8fr) 12px;gap:8px; }
+      .visitor-lookup-field {min-width:0;overflow-wrap:anywhere;}
+      .visitor-teacher-value {display:flex;flex-direction:column;align-items:flex-start;gap:6px;}
+      .visitor-teacher-value .visitor-portrait {flex-shrink:0;margin:0;}
+      .visitor-map-room.active .visitor-map-count {fill:#fff;}
+      @media(max-width:900px){.visitor-lookup-card {grid-template-columns:26px minmax(0,1fr);} .visitor-lookup-field {grid-column:2;} .visitor-lookup-card-arrow{display:none;} .visitor-teacher-value{flex-direction:row;align-items:center;}}
+      @media(max-width:600px){.visitor-lookup-mode #roomOverviewBtn{position:static;margin-left:auto;}}
+</style>
   </head>
   <body>
     <div id="loginGate">
@@ -5610,6 +5635,7 @@
         if (roomButton) roomButton.style.display = authState.loggedIn ? '' : 'none';
         if (!authState.loggedIn) closeRoomOverview(false);
         loadSharedSubjectIcons(false);
+        loadVisitorPortraits();
         loadNotice();
         calendarSync();
         refreshOptionalTeacherRoster();
@@ -5973,7 +5999,7 @@
       }
       function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= SCHEDULE_START_HOUR && hour <= SCHEDULE_END_HOUR) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(false); timeLeft = 1800; } } else { setCountdownText("대기", "업데이트 대기중 (운영시간 외)"); document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
       function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; setCountdownText(String(min).padStart(2,"0") + ":" + String(sec).padStart(2,"0"), "다음 업데이트까지 " + min + "분 " + sec + "초"); }
-      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var M=now.getMonth()+1; var D=now.getDate(); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+M+"/"+D+"("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); updateTimelinePosition(); }
+      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var M=now.getMonth()+1; var D=now.getDate(); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+M+"/"+D+"("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); if(isLookupViewActive() && now.getSeconds()===0)renderVisitorLookupResults(); updateTimelinePosition(); }
       
       function updateTimelinePosition() {
          renderAttendanceWindow();
@@ -9879,6 +9905,47 @@
         m = text.match(/^(?:(?:본관|2관|3관)\s*)?([1-9])$/);
         return m ? m[1] : "";
       }
+
+      var visitorPortraits = Object.create(null), visitorPortraitKey = '', visitorPortraitPending = false;
+      function visitorTeacherKey(name) { return String(name || '').replace(/(?:선생님|T)\s*$/,'').replace(/\s/g,''); }
+      function loadVisitorPortraits() {
+        if (!authState.loggedIn || !authState.isLookup) { visitorPortraits=Object.create(null);visitorPortraitKey='';return; }
+        var key=String(authState.loginId || '');
+        if(visitorPortraitKey===key || visitorPortraitPending)return;
+        visitorPortraitPending=true;
+        getLiveFirebaseAuth().then(function(auth){if(!auth.currentUser)throw Error('AUTH');return getLiveFirebaseFirestore();})
+          .then(function(db){return db.collection('sharedIconAssets').where('category','==','PERSON').get();})
+          .then(function(snapshot){
+            if(!authState.isLookup || String(authState.loginId)!==key)return;
+            var map=Object.create(null),owners=Object.create(null);
+            snapshot.docs.forEach(function(doc){var a=doc.data()||{};if((a.status||'ACTIVE')!=='ACTIVE'||!/^user:/.test(a.lookupKey||''))return;
+              var url;try{url=new URL(a.imageUrl||a.downloadURL||'');}catch(_){return;}
+              if(url.protocol!=='https:'||!['firebasestorage.googleapis.com','storage.googleapis.com'].includes(url.hostname)||url.pathname.indexOf('fir-lms-prod')<0)return;
+              [a.displayName].concat(a.aliases||[]).forEach(function(name){var n=visitorTeacherKey(name);if(!n)return;if(owners[n]==='AMBIGUOUS')return;if(owners[n]&&owners[n]!==a.lookupKey){owners[n]='AMBIGUOUS';map[n]='';return;}owners[n]=a.lookupKey;map[n]=url.href;});
+            });visitorPortraits=map;visitorPortraitKey=key;renderVisitorLookupResults();
+          }).catch(function(){/* Keep a neutral portrait when the shared asset is unavailable. */}).finally(function(){visitorPortraitPending=false;});
+      }
+      function visitorPersonIcon() { return "<svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='7' r='4'/><path d='M4 22v-3a8 8 0 0 1 16 0v3Z'/></svg>"; }
+      function visitorPortrait(name) { var url=visitorPortraits[visitorTeacherKey(name)];return "<span class='visitor-portrait'>"+(url?"<img src='"+escapeHtml(url)+"' alt='' onerror='this.hidden=true'>":"")+visitorPersonIcon()+"</span>"; }
+      function visitorRoomState(room,hour) {
+        if(!lastData||!lastData.grid||!lastData.headers||!Object.prototype.hasOwnProperty.call(lastData.grid,hour))return null;
+        var index=lastData.headers.indexOf(room);if(index<0)return null;
+        var items=(lastData.grid[hour]||[])[index]||[],headers=items.filter(function(v){return isTeacherHeader(v||'');});
+        var students=new Set();items.forEach(function(raw){if(!raw||isTeacherHeader(raw))return;var p=parseStudentRawText(raw);if(!p.name||shouldHideStatus(p.status)||isAbsenceNoticeStatus(p.status))return;students.add(p.name+'|'+p.school);});
+        return {count:students.size,headers:headers};
+      }
+      function visitorOccupancy(room) {var state=visitorRoomState(room,new Date().getHours());return "<span class='visitor-occupancy'>"+visitorPersonIcon()+(state?state.count+'명':'확인 필요')+"<small>시간표 기준</small></span>";}
+      function visitorRoomNotice(item) {
+        var now=new Date(),h=now.getHours(),state=visitorRoomState(item.room,h);
+        if(!state)return "<p class='visitor-entry-notice'>현재 강의실 상태는 데스크에서 확인해 주세요.</p>";
+        var conflicts=state.headers.filter(function(raw){return h<item.hour || visitorTeacherKey(extractTeacherName(raw))!==visitorTeacherKey(item.teacher);});
+        if(conflicts.length)return "<p class='visitor-entry-notice busy'><strong>입실 전 대기해 주세요</strong>현재 "+escapeHtml(conflicts.map(function(raw){return extractTeacherName(raw)+' · '+detectClassType(raw);}).join(', '))+" 수업 중입니다. 수업 종료 후 데스크 안내에 따라 입실하세요.</p>";
+        return "<p class='visitor-entry-notice'>"+(state.headers.length?'현재 담당 선생님 수업이 진행 중입니다. 입실 전 선생님께 확인해 주세요.':'현재 시간표에 진행 중인 수업이 없습니다. 입실 전 데스크에 확인해 주세요.')+"</p>";
+      }
+      function visitorStudyUntil(room,hour) {
+        for(var h=hour+1;h<=SCHEDULE_END_HOUR;h++){var state=visitorRoomState(room,h);if(!state)return {hour:h,known:false};if(state.headers.length)return {hour:h,known:true};}
+        return {hour:SCHEDULE_END_HOUR+1,known:false};
+      }
       function buildVisitorLookupEmptyRooms() {
         if (!lastData || !lastData.headers || !lastData.grid) return { hour: new Date().getHours(), rooms: [], ready: false };
         var hour = new Date().getHours();
@@ -9905,7 +9972,8 @@
               room: roomName,
               building: getVisitorLookupBuilding(roomName),
               number: getVisitorLookupRoomNumber(roomName),
-              count: studentCount
+              count: visitorRoomState(roomName,hour).count,
+              until: visitorStudyUntil(roomName,hour)
             });
           }
         });
@@ -9926,17 +9994,11 @@
         if (!info.rooms.length) {
           return "<div class='visitor-lookup-empty'>현재 시간(" + info.hour + ":00)에는 표시할 빈 강의실이 없습니다.</div>";
         }
-        return "<div class='visitor-study-meta'>현재 시간(" + info.hour + ":00) 기준 자습 가능 강의실입니다. 각 칸은 최대 8명 기준의 현재 인원입니다.</div>" +
+        return "<div class='visitor-study-meta'>현재 시간(" + info.hour + ":00) 기준 자습 가능 강의실입니다. 인원은 시간표 기준이며, 다음 수업 전에 자리를 비워 주세요.</div>" +
           "<div class='visitor-study-grid'>" + info.rooms.map(function(item) {
-            var count = Math.max(0, Number(item.count || 0));
-            var filled = Math.min(8, count);
-            var gauge = "";
-            for (var i = 0; i < 8; i++) {
-              gauge += "<span class='visitor-study-gauge-cell" + (i < filled ? " filled" : "") + "'></span>";
-            }
             return "<div class='visitor-study-room'>" +
-              "<div class='visitor-study-room-head'><span class='visitor-study-room-name'>" + escapeHtml(item.building + " " + item.number + "강의실") + "</span><span class='visitor-study-room-count'>" + count + "명</span></div>" +
-              "<div class='visitor-study-gauge'>" + gauge + "</div>" +
+              "<div class='visitor-study-room-head'><span class='visitor-study-room-name'>" + escapeHtml(item.building + " " + item.number + "강의실") + "</span><span class='visitor-study-room-count'>" + visitorOccupancy(item.room) + "</span></div>" +
+              "<div class='visitor-study-until'>" + item.until.hour + ":00까지 사용 가능<br>" + (item.until.known ? "다음 수업 시작 전 퇴실" : "이후 일정은 데스크 확인") + "</div>" +
             "</div>";
           }).join("") + "</div>";
       }
@@ -9980,7 +10042,7 @@
           return "<g data-room='" + num + "' class='visitor-map-room" + (active ? " active" : "") + (isEmpty ? " empty" : "") + "'>" +
             "<rect x='" + x + "' y='" + y + "' width='" + w + "' height='" + h + "'/>" +
             "<text x='" + (x+w/2) + "' y='" + (y+h/2) + "'>" + num + "강의실</text>" +
-            ((active || isEmpty) ? "<text class='visitor-map-room-state' x='" + (x+w/2) + "' y='" + (y+h/2+27) + "'>" + (active ? "도착" : "자습 가능") + "</text>" : "") + "</g>";
+            ((active || isEmpty) ? "<text class='visitor-map-room-state' x='" + (x+w/2) + "' y='" + (y+h/2+27) + "'>" + (active ? "도착" : "자습 가능") + "</text>" : "") + (function(){var roomName=((lastData&&lastData.headers)||[]).find(function(n){return getVisitorLookupBuilding(n)==='본관'&&getVisitorLookupRoomNumber(n)===num;});var state=visitorRoomState(roomName,new Date().getHours());return state?"<g class='visitor-map-count' fill='"+(active?'#fff':'#2563b4')+"' transform='translate("+(x+w/2-22)+","+(y+h/2+36)+")'><circle cx='5' cy='4' r='3'/><path d='M0 15v-3a5 5 0 0 1 10 0v3Z'/><text style='fill:inherit;font-size:14px;text-anchor:start' x='15' y='13'>"+state.count+"명</text></g>":'';})() + "</g>";
         }).join("");
         var destination = rooms.find(function(room) { return room[0] === activeRoom; });
         var direction = destination ? (activeRoom === "9" ? "데스크 앞에서 왼쪽으로 이동한 뒤, 아래쪽 9강의실 문으로 들어가세요." :
@@ -10084,7 +10146,7 @@
                 "</div>" +
                 "<div class='visitor-lookup-field'>" +
                   "<div class='visitor-lookup-field-label'>배정 강의실</div>" +
-                  "<div class='visitor-lookup-field-value visitor-lookup-room'>" + escapeHtml(item.room) + "</div>" +
+                  "<div class='visitor-lookup-field-value visitor-lookup-room'>" + escapeHtml(item.room) + "</div>" + visitorOccupancy(item.room) +
                 "</div>" +
                 "<div class='visitor-lookup-field'>" +
                   "<div class='visitor-lookup-field-label'>강의명</div>" +
@@ -10093,7 +10155,7 @@
                 "</div>" +
                 "<div class='visitor-lookup-field'>" +
                   "<div class='visitor-lookup-field-label'>담당 선생님</div>" +
-                  "<div class='visitor-lookup-field-value'>" + escapeHtml(item.teacher || "-") + "</div>" +
+                  "<div class='visitor-lookup-field-value visitor-teacher-value'>" + visitorPortrait(item.teacher) + escapeHtml(item.teacher || "-") + "</div>" +
                 "</div>" +
                 "<div class='visitor-lookup-card-arrow'>›</div>" +
               "</div>";
@@ -10106,7 +10168,7 @@
         var mapHost = document.getElementById('visitorLookupMapHost');
         if (resultsHost) resultsHost.innerHTML = resultHtml;
         if (mapHost) {
-          var mapHtml = renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []);
+          var mapHtml = (selectedMatch ? visitorRoomNotice(selectedMatch) : "") + renderVisitorLookupRoomMap(selectedMatch, emptyInfo ? emptyInfo.rooms : []);
           if (mapHost._visitorMapHtml !== mapHtml) {
             mapHost.innerHTML = mapHtml;
             mapHost._visitorMapHtml = mapHtml;

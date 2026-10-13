@@ -14,13 +14,17 @@ const server = http.createServer((req, res) => {
   if (['hub-start.mjs', 'hub-client.mjs'].includes(moduleName)) {
     res.setHeader('Content-Type', 'text/javascript'); res.end(fs.readFileSync(path.join(root, 'docs', moduleName))); return;
   }
+  const assetPath=path.join(root,'docs',moduleName);
+  if(moduleName && fs.existsSync(assetPath) && fs.statSync(assetPath).isFile()){res.setHeader('Content-Type',moduleName.endsWith('.js')?'text/javascript':'application/octet-stream');res.end(fs.readFileSync(assetPath));return;}
   res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(source);
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const browser = await playwright.chromium.launch({ headless: true });
+const browser = await playwright.chromium.launch({ headless: true, channel: "chrome" });
 const results = { browser: browser.version(), baseline, cases: {}, errors: [] };
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'ko-KR', timezoneId: 'Asia/Seoul', reducedMotion: 'reduce' });
+  await page.clock.install({time:new Date('2026-09-08T18:30:15+09:00')});
+  await page.clock.pauseAt(new Date('2026-09-08T18:30:16+09:00'));
   page.on('pageerror', error => results.errors.push(error.message));
   await page.route('**/*', route => {
     const url = route.request().url();
@@ -44,6 +48,7 @@ try {
     };
     qaLoadRooms(['1강의실']);
   });
+  results.cases.roomButtonTopRight = await page.locator('#roomOverviewBtn').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>innerWidth/2&&r.right<=innerWidth&&r.width>r.height;});
   const prefix = baseline ? 'baseline' : 'after';
   await page.screenshot({ path: path.join(evidence, `${prefix}-desktop-room1.png`), fullPage: true });
   results.cases.svgPresent = await page.locator('.visitor-floorplan').count() === 1;
