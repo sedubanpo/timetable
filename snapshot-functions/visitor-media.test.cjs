@@ -19,3 +19,10 @@ test('visitor response contains only active account portraits and banner present
  const db={collection:()=>({where:()=>({get:async()=>({docs:assets.map(a=>({data:()=>a}))})}),doc:()=>({get:async()=>({data:()=>({url,title:'특강',enabled:true,updatedBy:'private'})})})})};
  const r=await media.read(db);assert.equal(r.portraits.length,1);assert.equal(r.portraits[0].name,'강사');assert(!JSON.stringify(r).includes('secret'));assert(!JSON.stringify(r).includes('updatedBy'));
 });
+test('four independent banner slots preserve legacy slot and enforce bounds',async()=>{
+ const docs={};const db={collection:()=>({doc:id=>({set:async(v,o)=>{docs[id]=o?{...docs[id],...v}:v;},get:async()=>({data:()=>docs[id]})}),where:()=>({get:async()=>({docs:[]})})})};const bucket={file:()=>({save:async()=>{}})};
+ for(let slot=1;slot<=4;slot++)await media.save(db,bucket,{role:'ADMIN'},{slot,action:'visitor_banner_save',image:gif,title:'배너 '+slot});
+ await media.save(db,bucket,{role:'ADMIN'},{slot:2,action:'visitor_banner_hide'});
+ const result=await media.read(db);assert.equal(result.banners.length,4);assert.equal(result.banner.title,'배너 1');assert.equal(result.banners[1].enabled,false);assert.equal(result.banners[2].enabled,true);
+ for(const slot of [0,5,1.5,'bad'])await assert.rejects(media.save(db,bucket,{role:'ADMIN'},{slot,action:'visitor_banner_hide'}),{code:'INVALID_SLOT'});
+});

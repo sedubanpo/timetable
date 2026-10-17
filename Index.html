@@ -2010,6 +2010,26 @@
       .visitor-banner {min-width:0;overflow:hidden;border-radius:16px;background:#fff;color:#17365d;}
       .visitor-banner-heading {padding:16px 18px;font-size:15px;font-weight:800;border-bottom:1px solid #e4eaf3;}
       .visitor-banner img {display:block;width:100%;height:auto;object-fit:contain;}
+      .visitor-screen .visitor-lookup-result-list {gap:8px;}
+      .visitor-screen .visitor-lookup-card {grid-template-columns:22px minmax(0,1fr) minmax(0,1fr);gap:6px 8px;padding:10px 12px;box-shadow:none;}
+      .visitor-screen .visitor-lookup-check {width:18px;height:18px;grid-row:1;}
+      .visitor-screen .visitor-lookup-namecell {display:flex;align-items:center;justify-content:space-between;gap:8px;}
+      .visitor-screen .visitor-lookup-card-name {font-size:.88rem;}
+      .visitor-screen .visitor-lookup-status {margin:0;padding:2px 6px;font-size:.7rem;}
+      .visitor-screen .visitor-lookup-card .visitor-lookup-field {border:0;padding:0;}
+      .visitor-screen .visitor-lookup-card .visitor-lookup-field:nth-child(3) {grid-column:3;grid-row:2 / 4;text-align:right;}
+      .visitor-screen .visitor-lookup-card .visitor-lookup-field:nth-child(4) {grid-column:1 / 3;grid-row:2;}
+      .visitor-screen .visitor-lookup-card .visitor-lookup-field:nth-child(5) {grid-column:1 / 3;grid-row:3;}
+      .visitor-screen .visitor-lookup-field-label {display:none;}
+      .visitor-screen .visitor-lookup-field-value {font-size:.88rem;}
+      .visitor-screen .visitor-lookup-field-sub {font-size:.76rem;font-variant-numeric:tabular-nums;margin-top:3px;}
+      .visitor-screen .visitor-portrait {width:24px;height:24px;min-width:24px;border-radius:6px;}
+      .visitor-screen .visitor-teacher-value {gap:6px;}
+      .visitor-banner-list {display:grid;gap:12px;padding:12px;background:#f0f4fa;}
+      .visitor-banner-list figure {margin:0;min-width:0;background:white;border-radius:10px;overflow:hidden;}
+      .visitor-banner-list img {width:100%;height:auto;aspect-ratio:9 / 5;object-fit:contain;background:#f8fafc;}
+      .visitor-banner-list figcaption {padding:8px 10px;font-size:12px;font-weight:700;overflow-wrap:anywhere;}
+      .visitor-banner-dialog select {display:block;width:100%;padding:10px;margin-top:8px;border:1px solid #b9cce6;border-radius:8px;background:white;}
       .visitor-banner-empty {padding:16px 18px;}
       .visitor-banner-empty h2 {font-size:15px;margin:0 0 8px;}
       .visitor-banner-empty p {font-size:13px;line-height:1.6;color:#526781;margin:0;}
@@ -10028,35 +10048,36 @@ function card(s){const lessons=mergedLessons(s);const subjects=[...new Set(lesso
           if(!authState.isLookup||getScheduleSessionKey()!==key)return;
           var map=Object.create(null),owners=Object.create(null);
           (result.portraits||[]).forEach(function(a){[a.name].concat(a.aliases||[]).forEach(function(name){var n=visitorTeacherKey(name);if(!n||owners[n]==='AMBIGUOUS')return;if(owners[n]&&owners[n]!==a.owner){owners[n]='AMBIGUOUS';map[n]='';return;}owners[n]=a.owner;map[n]=a.url;});});
-          visitorPortraits=map;visitorPortraitKey=key;visitorMediaLoadedAt=Date.now();visitorBanner=result.banner;renderVisitorLookupResults();renderVisitorBanner();
+          visitorPortraits=map;visitorPortraitKey=key;visitorMediaLoadedAt=Date.now();visitorBanner=result.banners||result.banner;renderVisitorLookupResults();renderVisitorBanner();
         }).catch(function(){/* Retry on the next minute tick; schedule remains usable. */}).finally(function(){visitorPortraitPending=false;});
       }
       function renderVisitorBanner(){
         var host=document.getElementById('visitorBanner');if(!host)return;
-        var b=visitorBanner;
-        if(!b||!b.enabled||!b.url){host.innerHTML="<div class='visitor-banner-empty'><h2>학원 소식</h2><p>특강·시험 직보 소식을 안내합니다.</p></div>";host.dataset.url='';return;}
-        if(host.dataset.url===b.url)return;
-        host.dataset.url=b.url;host.innerHTML="<div class='visitor-banner-heading'>학원 소식</div><img alt='"+escapeHtml(b.title||'학원 소식')+"' src='"+escapeHtml(b.url)+"'>";
+        var banners=(Array.isArray(visitorBanner)?visitorBanner:[visitorBanner]).filter(function(b){return b&&b.enabled&&b.url;});
+        var key=JSON.stringify(banners);if(host.dataset.url===key)return;host.dataset.url=key;
+        host.innerHTML="<div class='visitor-banner-heading'>학원 소식</div>"+(banners.length?"<div class='visitor-banner-list'>"+banners.map(function(b){return "<figure><img alt='"+escapeHtml(b.title||'학원 소식')+"' src='"+escapeHtml(b.url)+"'><figcaption>"+escapeHtml(b.title||'학원 소식')+"</figcaption></figure>";}).join('')+"</div>":"<div class='visitor-banner-empty'><p>특강·시험 직보 소식을 안내합니다.</p></div>");
       }
+      function selectVisitorBannerSlot(){var modal=document.getElementById('visitorBannerDialog'),slot=Number(modal.querySelector('#visitorBannerSlot').value),b=(modal.banners||[])[slot-1];modal.querySelector('#visitorBannerFile').value='';modal.querySelector('#visitorBannerTitle').value=b?b.title:'';var preview=modal.querySelector('#visitorBannerPreview');preview.hidden=!b;if(b)preview.src=b.url;modal.querySelector('#visitorBannerMessage').textContent=b&&b.enabled?'현재 방문 화면에 표시 중입니다.':'현재 표시 중인 배너가 없습니다.';}
+
       async function openVisitorBannerAdmin(){
         if(!authState.isMaster||authState.isLookup)return;
         var old=document.getElementById('visitorBannerDialog');if(old)old.remove();
         var modal=document.createElement('dialog');modal.id='visitorBannerDialog';modal.className='visitor-banner-dialog';
-        modal.innerHTML="<form method='dialog'><header><h2>방문 화면 배너</h2><button aria-label='배너 설정 닫기'>닫기</button></header></form><p>방문용 화면 오른쪽에 표시할 특강·시험 직보 소식을 올려 주세요.</p><label>이미지 설명<input id='visitorBannerTitle' maxlength='100' placeholder='예: 중간고사 직보 안내'></label><label>배너 이미지<input id='visitorBannerFile' type='file' accept='image/png,image/jpeg,image/gif,image/webp'></label><p class='visitor-banner-help'>PNG · JPG · WebP · GIF / 최대 5MB<br>GIF는 움직이는 원본 그대로 표시됩니다. 세로형 이미지를 권장합니다.</p><img id='visitorBannerPreview' alt='배너 미리보기' hidden><p id='visitorBannerMessage' role='status'>현재 배너를 불러오는 중…</p><footer><button type='button' id='visitorBannerHide' onclick='saveVisitorBanner(true)'>배너 숨기기</button><button type='button' id='visitorBannerSave' onclick='saveVisitorBanner(false)'>업로드하고 표시</button></footer>";
+        modal.innerHTML="<form method='dialog'><header><h2>방문 화면 배너</h2><button aria-label='배너 설정 닫기'>닫기</button></header></form><p>방문용 화면 오른쪽에 표시할 특강·시험 직보 소식을 올려 주세요.</p><label>배너 위치<select id='visitorBannerSlot' onchange='selectVisitorBannerSlot()'><option value='1'>1번 배너</option><option value='2'>2번 배너</option><option value='3'>3번 배너</option><option value='4'>4번 배너</option></select></label><label>이미지 설명<input id='visitorBannerTitle' maxlength='100' placeholder='예: 중간고사 직보 안내'></label><label>배너 이미지<input id='visitorBannerFile' type='file' accept='image/png,image/jpeg,image/gif,image/webp'></label><p class='visitor-banner-help'>PNG · JPG · WebP · GIF / 최대 5MB<br>GIF는 움직이는 원본 그대로 표시됩니다. 가로형 명함 비율 9:5 (권장 900×500px), 최대 4개를 위에서부터 표시합니다. 기존 세로 이미지는 잘리지 않게 축소됩니다.</p><img id='visitorBannerPreview' alt='배너 미리보기' hidden><p id='visitorBannerMessage' role='status'>현재 배너를 불러오는 중…</p><footer><button type='button' id='visitorBannerHide' onclick='saveVisitorBanner(true)'>배너 숨기기</button><button type='button' id='visitorBannerSave' onclick='saveVisitorBanner(false)'>업로드하고 표시</button></footer>";
         document.body.appendChild(modal);modal.showModal();
         var file=modal.querySelector('#visitorBannerFile'),preview=modal.querySelector('#visitorBannerPreview');
         file.onchange=function(){if(modal.previewUrl)URL.revokeObjectURL(modal.previewUrl);var f=file.files[0];if(!f)return;if(!['image/png','image/jpeg','image/gif','image/webp'].includes(f.type)||f.size>5*1024*1024){file.value='';modal.querySelector('#visitorBannerMessage').textContent='5MB 이하의 PNG, JPG, GIF, WebP 파일을 선택해 주세요.';return;}modal.previewUrl=URL.createObjectURL(f);preview.src=modal.previewUrl;preview.hidden=false;modal.querySelector('#visitorBannerMessage').textContent='미리보기를 확인한 뒤 업로드해 주세요.';};
         modal.onclose=function(){if(modal.previewUrl)URL.revokeObjectURL(modal.previewUrl);modal.remove();};
-        try{var r=await snapshotRequest('visitor_media','');if(!modal.isConnected)return;var b=r.banner;if(b){modal.querySelector('#visitorBannerTitle').value=b.title||'';if(!file.files.length){preview.src=b.url;preview.hidden=false;}}modal.querySelector('#visitorBannerMessage').textContent=b&&b.enabled?'현재 방문 화면에 표시 중입니다.':'현재 표시 중인 배너가 없습니다.';}catch(e){modal.querySelector('#visitorBannerMessage').textContent='배너를 불러오지 못했습니다. 창을 닫고 다시 시도해 주세요.';}
+        try{var r=await snapshotRequest('visitor_media','');if(!modal.isConnected)return;modal.banners=r.banners||[r.banner];var b=modal.banners[Number(modal.querySelector('#visitorBannerSlot').value)-1];if(b){modal.querySelector('#visitorBannerTitle').value=b.title||'';if(!file.files.length){preview.src=b.url;preview.hidden=false;}}modal.querySelector('#visitorBannerMessage').textContent=b&&b.enabled?'현재 방문 화면에 표시 중입니다.':'현재 표시 중인 배너가 없습니다.';}catch(e){modal.querySelector('#visitorBannerMessage').textContent='배너를 불러오지 못했습니다. 창을 닫고 다시 시도해 주세요.';}
       }
       async function saveVisitorBanner(hide){
         var modal=document.getElementById('visitorBannerDialog');if(!modal||modal.busy||!authState.isMaster)return;
         var message=modal.querySelector('#visitorBannerMessage'),file=modal.querySelector('#visitorBannerFile').files[0];
         if(!hide&&!file){message.textContent='업로드할 이미지를 먼저 선택해 주세요.';return;}
-        modal.busy=true;modal.querySelectorAll('button,input').forEach(function(el){el.disabled=true;});message.textContent=hide?'배너를 숨기는 중…':'이미지를 업로드하는 중…';
-        try{var data=hide?null:await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result);};reader.onerror=reject;reader.readAsDataURL(file);});await snapshotRequest(hide?'visitor_banner_hide':'visitor_banner_save','','',null,{image:data,title:modal.querySelector('#visitorBannerTitle').value});message.textContent=hide?'배너를 숨겼습니다.':'저장했습니다. 방문 화면에 최대 1분 안에 반영됩니다.';}
+        modal.busy=true;modal.querySelectorAll('button,input,select').forEach(function(el){el.disabled=true;});message.textContent=hide?'배너를 숨기는 중…':'이미지를 업로드하는 중…';
+        try{var data=hide?null:await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result);};reader.onerror=reject;reader.readAsDataURL(file);});await snapshotRequest(hide?'visitor_banner_hide':'visitor_banner_save','','',null,{image:data,title:modal.querySelector('#visitorBannerTitle').value,slot:Number(modal.querySelector('#visitorBannerSlot').value)});var refreshed=await snapshotRequest('visitor_media','');modal.banners=refreshed.banners||[refreshed.banner];message.textContent=hide?'배너를 숨겼습니다.':'저장했습니다. 방문 화면에 최대 1분 안에 반영됩니다.';}
         catch(e){message.textContent=e.message==='INVALID_IMAGE'?'지원하는 형식의 5MB 이하 이미지를 선택해 주세요.':'저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.';}
-        finally{modal.busy=false;modal.querySelectorAll('button,input').forEach(function(el){el.disabled=false;});}
+        finally{modal.busy=false;modal.querySelectorAll('button,input,select').forEach(function(el){el.disabled=false;});}
       }
       function visitorPersonIcon() { return "<svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='7' r='4'/><path d='M4 22v-3a8 8 0 0 1 16 0v3Z'/></svg>"; }
       function visitorPortrait(name) { var url=visitorPortraits[visitorTeacherKey(name)];return "<span class='visitor-portrait'>"+(url?"<img src='"+escapeHtml(url)+"' alt='' onerror='this.hidden=true'>":"")+visitorPersonIcon()+"</span>"; }

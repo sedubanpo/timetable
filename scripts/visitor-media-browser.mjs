@@ -30,6 +30,8 @@ try{
  assert(await page.evaluate(()=>{const left=document.querySelector('.visitor-lookup-left').getBoundingClientRect(),map=document.querySelector('.visitor-lookup-right').getBoundingClientRect(),news=document.querySelector('.visitor-banner').getBoundingClientRect();return Math.abs(left.top-map.top)<2&&left.right<=map.left+1&&map.right<news.left&&map.width>left.width;}));
  assert(await page.locator('.visitor-floorplan').evaluate(e=>e.getBoundingClientRect().width>900&&e.getBoundingClientRect().height>400));
  assert(await page.locator('.visitor-room-map-scroll').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
+ assert(await page.locator('.visitor-lookup-card').first().evaluate(e=>e.getBoundingClientRect().height<155));
+ await page.evaluate(()=>{visitorBanner=[1,2,3].map(i=>({enabled:true,url:'https://fixture.test/banner.gif',title:'특강 '+i}));renderVisitorBanner();});assert.equal(await page.locator('.visitor-banner-list img').count(),3);assert(await page.locator('.visitor-banner-list img').first().evaluate(e=>Math.abs(e.getBoundingClientRect().width/e.getBoundingClientRect().height-1.8)<.02));
  await page.screenshot({path:out+'/desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:out+'/mobile.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('PASS: admin GIF upload, lookup-auth portraits, source bar hidden, 80/20 layout, mobile overflow, no page errors');
