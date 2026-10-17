@@ -95,7 +95,7 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
     const who=await authenticate(req), {action,sheet,teacher}=req.body||{};
     if(action==='visitor_media') return res.json({ok:true,...await require('./visitor-media').read(getFirestore())});
     if(['visitor_banner_save','visitor_banner_hide'].includes(action)){
-      if(who.role!=='ADMIN')coreFail('FORBIDDEN');
+      if(!(who.role==='ADMIN'||(who.role==='STAFF'&&who.full===true)))coreFail('FORBIDDEN');
       const media=require('./visitor-media');
       await media.save(getFirestore(),require('firebase-admin/storage').getStorage().bucket(media.BUCKET),who,req.body);
       return res.json({ok:true});

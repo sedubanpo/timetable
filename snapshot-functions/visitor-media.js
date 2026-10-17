@@ -24,7 +24,7 @@ async function read(db){
  return {portraits,banner:banners[0],banners};
 }
 async function save(db,bucket,who,input){
- if(who.role!=='ADMIN')fail('FORBIDDEN');
+ if(!(who.role==='ADMIN'||(who.role==='STAFF'&&who.full===true)))fail('FORBIDDEN');
  const slot=input.slot===undefined?1:Number(input.slot);if(!Number.isInteger(slot)||slot<1||slot>4)fail('INVALID_SLOT');
  const ref=db.collection('liveTimetableVisitorMedia').doc(slot===1?'banner':'banner'+slot);
  if(input.action==='visitor_banner_hide'){await ref.set({enabled:false},{merge:true});return;}

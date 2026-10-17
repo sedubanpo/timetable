@@ -26,3 +26,8 @@ test('four independent banner slots preserve legacy slot and enforce bounds',asy
  const result=await media.read(db);assert.equal(result.banners.length,4);assert.equal(result.banner.title,'배너 1');assert.equal(result.banners[1].enabled,false);assert.equal(result.banners[2].enabled,true);
  for(const slot of [0,5,1.5,'bad'])await assert.rejects(media.save(db,bucket,{role:'ADMIN'},{slot,action:'visitor_banner_hide'}),{code:'INVALID_SLOT'});
 });
+test('authorized managing staff can publish, ordinary staff and desk remain denied',async()=>{
+ const db={collection:()=>({doc:()=>({set:async()=>{}})})},bucket={file:()=>({save:async()=>{}})};
+ await media.save(db,bucket,{role:'STAFF',full:true},{action:'visitor_banner_save',image:gif});
+ for(const who of [{role:'STAFF',full:false},{role:'DESK',full:true},{role:'LOOKUP',full:true},{role:'TEACHER',full:true}])await assert.rejects(media.save(db,bucket,who,{action:'visitor_banner_save',image:gif}),{code:'FORBIDDEN'});
+});

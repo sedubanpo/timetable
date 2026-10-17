@@ -5,7 +5,7 @@ function fixture(){
   const now=Date.now(),date=core.dates(now)[0],parts=date.split('-'),sheet=Number(parts[1])+'/'+Number(parts[2])+'(월)';
   const snapshot={schema:1,date,sheet,capturedAt:now,data:{headers:['1강의실'],grid:{},version:'v1'},owners:{},rooms:{rooms:['1강의실'],rows:[]}};
   for(let h=8;h<=23;h++){snapshot.data.grid[h]=[['개별 수학 가상T','학생A']];snapshot.owners[h]=[['가상']];}
-  const ref=id=>({id,get:async()=>({exists:data.has(id),data:()=>data.get(id)})});
+  const ref=id=>({id,set:async(v)=>data.set(id,v),get:async()=>({exists:data.has(id),data:()=>data.get(id)})});
   const db={collection:c=>({doc:id=>ref(c+'/'+id),where:()=>({select:()=>({get:async()=>({docs:[...data].filter(([k])=>k.startsWith(c+'/')).map(([,d])=>({data:()=>d}))})})})}),runTransaction:async fn=>fn({get:r=>r.get(),set:(r,d)=>data.set(r.id,d),delete:r=>data.delete(r.id)})};
   data.set('users/u',{role:'ADMIN',status:'ACTIVE',name:'가상'});
   const logs=[],exports={},context={exports,console:{warn(...a){logs.push(a);},error(...a){logs.push(a);},info(...a){logs.push(a);}},AbortSignal,Date,fetch:async(url,opts)=>{
@@ -13,7 +13,7 @@ function fixture(){
     return {ok:true,status:200,url:'https://script.google.com/macros/s/example/exec',text:async()=>htmlSource?'<html>Google Drive is temporarily unavailable. PrivateName secret-content</html>':JSON.stringify(failSource?{ok:false}:{ok:true,snapshots:[snapshot],sheets:[sheet,'10/3(토)'],catalogCapturedAt:now})};
   },require:name=>({
     'firebase-admin/app':{initializeApp(){}},'firebase-admin/auth':{getAuth:()=>({verifyIdToken:async(token,revoked)=>{assert.equal(revoked,true);if(token!=='valid')throw Error('auth');return {uid:'u'};}})},
-    'firebase-admin/firestore':{getFirestore:()=>db},'firebase-functions/v2/https':{onRequest:(config,handler)=>Object.assign(handler,{config})},
+    'firebase-admin/storage':{getStorage:()=>({bucket:()=>({file:()=>({save:async()=>{}})})})},'./visitor-media':require('./visitor-media'),'firebase-admin/firestore':{getFirestore:()=>db},'firebase-functions/v2/https':{onRequest:(config,handler)=>Object.assign(handler,{config})},
     'firebase-functions/v2/scheduler':{onSchedule:(config,handler)=>Object.assign(handler,{config})},'firebase-functions/params':{defineSecret:()=>({value:()=>secret})},'node:crypto':crypto,'./core':{...core,isSnapshotRestTime:()=>restTime}
   })[name]};
   vm.runInNewContext(fs.readFileSync(__dirname+'/index.js','utf8'),context);
@@ -101,7 +101,7 @@ test('history supports legacy backups and caps successful records at 50 without 
   const f=fixture();const id='liveTimetableSnapshots/'+core.key(f.sheet,f.snapshot.date);
   f.data.set(id,{json:JSON.stringify(f.snapshot),capturedAt:f.snapshot.capturedAt});
   assert.equal((await f.request({action:'history',sheet:f.sheet})).legacySavedAt,f.snapshot.capturedAt);
-  const ref=id=>({id,get:async()=>({exists:f.data.has(id),data:()=>f.data.get(id)})});
+  const ref=id=>({id,set:async(v)=>data.set(id,v),get:async()=>({exists:f.data.has(id),data:()=>f.data.get(id)})});
   const db={collection:c=>({doc:id=>ref(c+'/'+id)}),runTransaction:async fn=>fn({get:r=>r.get(),set:(r,d)=>f.data.set(r.id,d)})};
   for(let i=1;i<=55;i++) await core.save(db,{...f.snapshot,capturedAt:f.snapshot.capturedAt+i});
   const history=await f.request({action:'history',sheet:f.sheet});assert.equal(history.items.length,50);assert.equal(history.items[0].changes,0);assert.equal(history.items[0].actor,'자동 저장');
@@ -151,4 +151,14 @@ test('active desk and staff can save and view history without account management
   assert.equal((await f.request({action:'history',sheet:f.sheet})).status,403);
   assert.equal((await f.request({action:'save',sheet:f.sheet})).status,403);
  }
+});
+
+test('banner API permits managing staff and revokes immediately with permissions',async()=>{
+ const f=fixture();f.data.set('users/u',{role:'STAFF',status:'ACTIVE',name:'직원'});
+ f.data.set('userAppAccess/u',{permissions:{canManageSchedules:true}});
+ const image='data:image/gif;base64,'+Buffer.from('GIF89a-fixture').toString('base64');
+ assert.equal((await f.request({action:'visitor_banner_save',image,slot:2})).ok,true);
+ assert(f.data.get('liveTimetableVisitorMedia/banner2').enabled);
+ f.data.set('userAppAccess/u',{permissions:{}});
+ assert.equal((await f.request({action:'visitor_banner_hide',slot:2})).status,403);
 });
