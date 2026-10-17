@@ -2088,6 +2088,22 @@
       @media(max-width:1100px){.staff-query{flex:1;}.staff-actions{flex-wrap:wrap;margin-left:0;}.staff-controls{gap:10px;}.staff-status #snapshotNotice{width:100%;}}
       @media(max-width:600px){.staff-controls{padding:10px;}.staff-query{flex-basis:100%;flex-wrap:wrap;}.staff-toolbar .search-wrapper{max-width:none;flex-basis:100%;}.staff-actions{gap:5px;}.staff-actions>.staff-menu{position:static;}.staff-controls{position:relative;}.staff-menu-panel{left:10px;right:10px;top:100%;width:auto;}.staff-status{padding:4px 10px;}.staff-context{flex-wrap:wrap;}}
 
+      #scheduleTable .student-item.student-selected {outline:none;background:#fff9d6!important;color:inherit!important;border-radius:4px;box-shadow:inset 3px 0 #e4b929!important;}
+      #scheduleTable .student-item.student-selected .student-info {background:transparent;color:inherit;}
+      #scheduleTable .student-item.student-selected .school-text {color:#607080!important;}
+      #scheduleTable .student-item.student-selected .student-name-button {color:#322a10;text-decoration:none;background:linear-gradient(transparent 36%,#ffe678 36%,#ffe678 91%,transparent 91%);}
+      #scheduleTable button.teacher-name {border:0;background:none;padding:0;color:inherit;font:inherit;font-weight:800;cursor:pointer;}
+      #scheduleTable button.teacher-name:focus-visible {outline:2px solid #245ebc;outline-offset:2px;}
+      #scheduleTable .cell-inner.teacher-focused {outline:2px solid #2563b6;outline-offset:-2px;box-shadow:inset 4px 0 #2563b6;border-radius:4px;}
+      .time-cell.time-current .time-start,.time-cell.time-current .time-end {visibility:hidden;}
+      #liveTimeline {width:48px;height:0;background:none;box-shadow:none;}
+      #liveTimeline::before {display:none;}
+      #liveTimeline::after {content:attr(data-time);left:3px;right:3px;top:-10px;padding:3px 1px;border-radius:5px;background:#1556a6;font:700 10px/14px sans-serif;text-align:center;}
+      .search-wrapper.has-teacher-copy .search-input {padding-right:68px!important;}
+      #teacherSearchCopy {position:absolute;right:7px;top:50%;transform:translateY(-50%);width:32px;min-height:30px;height:30px;padding:5px;border:0;border-radius:6px;background:#e4edfb;color:#234f91;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+      .teacher-copy-feedback {position:absolute;right:0;top:calc(100% + 6px);padding:6px 10px;background:#17365b;color:white;border-radius:6px;font-size:12px;white-space:nowrap;z-index:100;}
+      #teacherSearchCopy[hidden] {display:none!important;}
+
 </style>
   </head>
   <body>
@@ -6160,6 +6176,7 @@
       
       function updateTimelinePosition() {
          renderAttendanceWindow();
+         document.querySelectorAll('.time-current').forEach(function(cell){cell.classList.remove('time-current');});
          if (isTeacherViewActive() && window.innerWidth <= 768) {
            document.getElementById('liveTimeline').style.display = 'none';
            return;
@@ -6170,7 +6187,7 @@
          var h = now.getHours();
          var m = now.getMinutes();
          var line = document.getElementById('liveTimeline');
-         line.dataset.time = "현재 " + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+         line.dataset.time =  String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
          if(h < SCHEDULE_START_HOUR || h > SCHEDULE_END_HOUR) { line.style.display = 'none'; return; }
          
          var table = document.getElementById('scheduleTable');
@@ -6181,7 +6198,12 @@
          var containerRect = container.getBoundingClientRect();
          var rowRect = row.getBoundingClientRect();
          var height = rowRect.height || row.offsetHeight || 0;
-         var finalTop = (rowRect.top - containerRect.top) + container.scrollTop + (height * (m / 60));
+         var finalTop = (rowRect.top - containerRect.top) + container.scrollTop + (height * .5);
+         var timeCell=row.querySelector('.time-cell');
+         if(timeCell)timeCell.classList.add('time-current');
+         line.title='현재 시각 '+line.dataset.time;
+         line.style.width=(timeCell?timeCell.getBoundingClientRect().width:48)+'px';
+         line.style.left=container.scrollLeft+'px';
          line.style.top = finalTop + "px";
          line.style.display = 'block';
       }
@@ -9585,6 +9607,8 @@
           }
         }
         table.appendChild(tbody);
+        syncScheduleTeacherFocus();
+        syncTeacherCopyButton();
         syncStudentSelection();
         if (isRefresh) {
            if(container) setTimeout(function() { container.scrollTop = lastScrollPosition; }, 0);
@@ -10391,6 +10415,7 @@
         });
       }
       function searchTable() { 
+        syncTeacherCopyButton();
         var rawInput = document.getElementById('searchInput').value.trim();
         var input = rawInput.toUpperCase(); 
         var table = document.getElementById('scheduleTable'); 
@@ -11853,6 +11878,60 @@
           panel.classList.toggle('active', panel.getAttribute('data-review-teacher-panel') === teacherKey);
         });
       }
+      var selectedScheduleTeacher=null;
+      function syncScheduleTeacherFocus(){
+        if(selectedScheduleTeacher&&(selectedScheduleTeacher.sheet!==currentSheetName||selectedScheduleTeacher.session!==getScheduleSessionKey()))selectedScheduleTeacher=null;
+        document.querySelectorAll('#scheduleTable .cell-inner').forEach(function(cell){
+          var headers=Array.from(cell.querySelectorAll('.is-teacher'));
+          var active=!!selectedScheduleTeacher&&headers.some(function(h){return extractTeacherName(h.dataset.originalText)===selectedScheduleTeacher.name;});
+          cell.classList.toggle('teacher-focused',active);
+          headers.forEach(function(h){var b=h.querySelector('.teacher-name');if(b)b.setAttribute('aria-pressed',String(active));});
+        });
+      }
+      document.addEventListener('click',function(e){var b=e.target.closest('#scheduleTable .teacher-name');if(!b)return;var name=extractTeacherName(b.closest('.is-teacher').dataset.originalText);selectedScheduleTeacher=selectedScheduleTeacher&&selectedScheduleTeacher.name===name?null:{name:name,sheet:currentSheetName,session:getScheduleSessionKey()};syncScheduleTeacherFocus();});
+      document.addEventListener('keydown',function(e){if(e.key==='Escape'){selectedScheduleTeacher=null;syncScheduleTeacherFocus();}});
+      function searchedScheduleTeacher(){
+        if(isLookupViewActive())return '';
+        var query=document.getElementById('searchInput').value.trim().replace(/\s*T$/,'').toLowerCase();if(!query)return '';
+        var names=Array.from(new Set(Array.from(document.querySelectorAll('#scheduleTable .is-teacher')).map(function(h){return extractTeacherName(h.dataset.originalText);}))).filter(function(n){return n.toLowerCase().includes(query);});
+        return names.length===1?names[0]:'';
+      }
+      function syncTeacherCopyButton(){
+        var input=document.getElementById('searchInput'),button=document.getElementById('teacherSearchCopy');
+        if(!button){button=document.createElement('button');button.id='teacherSearchCopy';button.type='button';button.title='검색한 강사 시간표 이미지 복사';button.setAttribute('aria-label',button.title);button.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3"/></svg>';button.onclick=copySearchedTeacherSchedule;input.parentElement.appendChild(button);}
+        button.hidden=!searchedScheduleTeacher();input.parentElement.classList.toggle('has-teacher-copy',!button.hidden);
+      }
+      function teacherSearchExportRows(name){
+        var rows=[];
+        if(!lastData||!lastData.grid)return rows;
+        Object.keys(lastData.grid).forEach(function(hour){
+          (lastData.grid[hour]||[]).forEach(function(items,index){
+            var header=(items||[]).find(function(t){return isTeacherHeader(t)&&extractTeacherName(t)===name;});
+            if(!header)return;
+            rows.push({hour:Number(hour),room:String(lastData.headers[index]||''),lesson:String(header),students:items.filter(function(t){return t&&!isTeacherHeader(t)&&!shouldHideStudentText(String(t));}).map(function(t){return document.body.classList.contains('privacy-active')?'이름 비공개':String(t);})});
+          });
+        });
+        return rows.sort(function(a,b){return a.hour-b.hour||a.room.localeCompare(b.room);});
+      }
+      function teacherSearchImageBlob(name,rows){
+        var dateText=currentSheetName;
+        return document.fonts.ready.then(function(){
+          var canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),width=720,y=116,draw=[];
+          function text(value,x,max,font,color){ctx.font=font;var line='';Array.from(String(value)).forEach(function(c){if(ctx.measureText(line+c).width>max&&line){draw.push({text:line,x:x,y:y,font:font,color:color});y+=28;line='';}line+=c;});draw.push({text:line,x:x,y:y,font:font,color:color});y+=28;}
+          rows.forEach(function(row){y+=24;text(String(row.hour).padStart(2,'0')+':00–'+String(row.hour+1).padStart(2,'0')+':00  ·  '+row.room,32,656,'700 22px sans-serif','#17365b');text(row.lesson,32,656,'600 18px sans-serif','#46607e');row.students.forEach(function(s){text(s,44,632,'500 18px sans-serif','#26364a');});y+=16;draw.push({rule:y});});
+          canvas.width=width*2;canvas.height=(y+40)*2;ctx.scale(2,2);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,width,y+40);ctx.fillStyle='#142f54';ctx.font='700 28px sans-serif';ctx.fillText(name+' 선생님 시간표',32,48);ctx.font='500 18px sans-serif';ctx.fillText(dateText,32,80);
+          draw.forEach(function(d){if(d.rule){ctx.fillStyle='#e3e9f1';ctx.fillRect(32,d.rule,656,1);}else{ctx.font=d.font;ctx.fillStyle=d.color;ctx.fillText(d.text,d.x,d.y);}});
+          return new Promise(function(resolve,reject){canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error('이미지 생성 실패'));},'image/png');});
+        });
+      }
+      function copySearchedTeacherSchedule(){
+        var name=searchedScheduleTeacher();if(!name)return;
+        if(!navigator.clipboard||!navigator.clipboard.write||!window.ClipboardItem){alert('이 브라우저에서는 이미지 복사를 지원하지 않습니다. Chrome에서 이용해 주세요.');return;}
+        var button=document.getElementById('teacherSearchCopy');button.disabled=true;
+        var blob=teacherSearchImageBlob(name,teacherSearchExportRows(name));
+        navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){button.title='복사했습니다. 대화창에 붙여넣으세요.';button.setAttribute('aria-label',button.title);var status=document.createElement('span');status.className='teacher-copy-feedback';status.setAttribute('role','status');status.textContent='이미지 복사 완료';button.parentElement.appendChild(status);setTimeout(function(){status.remove();},2500);}).catch(function(){alert('이미지 복사를 완료하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.');}).finally(function(){button.disabled=false;});
+      }
+
       var selectedTimetableStudent = null;
       function syncStudentSelection() {
         var privateView = document.body.classList.contains('privacy-active');
@@ -11916,7 +11995,7 @@
           if (typeInfo) { typeBadgeHtml = typeInfo.html; displayText = displayText.replace(typeInfo.keyword, "").trim(); }
           var subject = getSubjectName(displayText); var content = displayText.replace(subject, "").trim(); 
           var subjBadge = getSubjectBadgeHtml(subject);
-          itemDiv.innerHTML = typeBadgeHtml + subjBadge + " <span class='teacher-name'>" + escapeHtml(content) + "</span>" + allBadges;
+          itemDiv.innerHTML = typeBadgeHtml + subjBadge + " <button type='button' class='teacher-name' aria-pressed='false' title='같은 강사의 수업 강조'>" + escapeHtml(content) + "</button>" + allBadges;
         } else { 
           itemDiv.classList.add("is-student");
           var parsed = parseStudentRawText(rawText);
