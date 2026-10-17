@@ -2104,6 +2104,18 @@
       .teacher-copy-feedback {position:absolute;right:0;top:calc(100% + 6px);padding:6px 10px;background:#17365b;color:white;border-radius:6px;font-size:12px;white-space:nowrap;z-index:100;}
       #teacherSearchCopy[hidden] {display:none!important;}
 
+
+      /* Strong focus remains visible among subject colors and attendance badges. */
+      #scheduleTable:has(.student-selected,.teacher-focused) .cell-inner:not(.teacher-focused):not(:has(.student-selected)) {opacity:.48;}
+      #scheduleTable .student-item.student-selected {background:#ffe13b!important;outline:3px solid #ce9700;outline-offset:-1px;box-shadow:inset 6px 0 #c18400!important;color:#241e00!important;opacity:1!important;}
+      #scheduleTable .student-item.student-selected .student-name-button {background:#ffe13b;color:#211900;font-weight:950;}
+      #scheduleTable .student-item.student-selected .school-text {color:#514817!important;}
+      #scheduleTable td:has(>.teacher-focused) {background:#e4efff!important;}
+      #scheduleTable .cell-inner.teacher-focused {position:relative;z-index:3;outline:4px solid #1256c0;outline-offset:-2px;box-shadow:0 0 0 2px #fff,inset 7px 0 #1256c0!important;background:#deebff!important;}
+      #scheduleTable .teacher-focused .is-teacher {background:#1456b8!important;color:#fff!important;}
+      #scheduleTable .teacher-focused .teacher-name {color:#fff!important;}
+      #scheduleTable .past-row:has(.student-selected,.teacher-focused) {opacity:1!important;filter:none!important;}
+
 </style>
   </head>
   <body>
@@ -11934,11 +11946,38 @@ window.SeduHubAdapter={
       function teacherSearchImageBlob(name,rows){
         var dateText=currentSheetName;
         return document.fonts.ready.then(function(){
-          var canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),width=720,y=116,draw=[];
-          function text(value,x,max,font,color){ctx.font=font;var line='';Array.from(String(value)).forEach(function(c){if(ctx.measureText(line+c).width>max&&line){draw.push({text:line,x:x,y:y,font:font,color:color});y+=28;line='';}line+=c;});draw.push({text:line,x:x,y:y,font:font,color:color});y+=28;}
-          rows.forEach(function(row){y+=24;text(String(row.hour).padStart(2,'0')+':00–'+String(row.hour+1).padStart(2,'0')+':00  ·  '+row.room,32,656,'700 22px sans-serif','#17365b');text(row.lesson,32,656,'600 18px sans-serif','#46607e');row.students.forEach(function(s){text(s,44,632,'500 18px sans-serif','#26364a');});y+=16;draw.push({rule:y});});
-          canvas.width=width*2;canvas.height=(y+40)*2;ctx.scale(2,2);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,width,y+40);ctx.fillStyle='#142f54';ctx.font='700 28px sans-serif';ctx.fillText(name+' 선생님 시간표',32,48);ctx.font='500 18px sans-serif';ctx.fillText(dateText,32,80);
-          draw.forEach(function(d){if(d.rule){ctx.fillStyle='#e3e9f1';ctx.fillRect(32,d.rule,656,1);}else{ctx.font=d.font;ctx.fillStyle=d.color;ctx.fillText(d.text,d.x,d.y);}});
+          var canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),width=720,y=154,draw=[];
+          function lines(value,max,font){ctx.font=font;var result=[],line='';String(value||'').split(/\n/).forEach(function(part){Array.from(part).forEach(function(c){if(line&&ctx.measureText(line+c).width>max){result.push(line);line='';}line+=c;});if(line)result.push(line);line='';});return result;}
+          function text(value,x,top,font,color){draw.push({type:'text',text:value,x:x,y:top,font:font,color:color});}
+          function box(x,top,w,h,color,r){draw.push({type:'box',x:x,y:top,w:w,h:h,color:color,r:r||0});}
+          rows.forEach(function(row){
+            var start=y,background={type:'box',x:24,y:y,w:672,h:0,color:'#ffffff',r:14};draw.push(background);
+            box(24,y,6,70,'#2563b5',3);
+            text(String(row.hour).padStart(2,'0')+':00 – '+String(row.hour+1).padStart(2,'0')+':00',44,y+29,'700 22px sans-serif','#16375e');
+            text(row.room,490,y+29,'700 18px sans-serif','#2563b5');
+            text((getSubjectName(row.lesson)||'수업')+'  ·  '+detectClassType(row.lesson),44,y+55,'600 15px sans-serif','#65778e');
+            y+=78;
+            box(44,y,632,28,'#f0f4f9',5);
+            text('학생',56,y+19,'600 12px sans-serif','#61738a');text('학교·학년',234,y+19,'600 12px sans-serif','#61738a');text('출결·수강 상태',552,y+19,'600 12px sans-serif','#61738a');y+=40;
+            row.students.forEach(function(raw,index){
+              var p=raw==='이름 비공개'?{name:raw,school:'',status:'',note:''}:parseStudentRawText(raw);
+              var status=p.status||'정규',bad=/결석|취소|휴강/.test(status),warn=/지각|보강|보충/.test(status),ink=bad?'#ac2943':warn?'#8a590c':'#245a96',fill=bad?'#fff0f2':warn?'#fff4d5':'#eaf2ff';
+              var names=lines(p.name,162,'700 19px sans-serif'),schools=lines(p.school,292,'500 15px sans-serif'),n=Math.max(1,names.length,schools.length);
+              names.forEach(function(t,i){text(t,56,y+20+i*25,'700 19px sans-serif','#1c304c');});schools.forEach(function(t,i){text(t,234,y+20+i*25,'500 15px sans-serif','#61738a');});
+              box(548,y,116,28,fill,7);text(status,560,y+19,'700 13px sans-serif',ink);y+=n*25+9;
+              if(p.note){
+                var note=lines(p.note.replace(/\s*,\s*/g,' · '),564,'500 14px sans-serif'),noteH=note.length*23+16;
+                box(56,y,608,noteH,'#f6f8fb',6);text('비고',68,y+23,'700 12px sans-serif','#718096');
+                note.forEach(function(t,i){text(t,104,y+23+i*23,'500 14px sans-serif','#52647b');});y+=noteH+10;
+              }
+              if(index<row.students.length-1){box(56,y,608,1,'#e9eef4');y+=12;}
+            });
+            y+=14;background.h=y-start;y+=18;
+          });
+          canvas.width=width*2;canvas.height=(y+38)*2;ctx.scale(2,2);ctx.fillStyle='#edf2f8';ctx.fillRect(0,0,width,y+38);
+          ctx.fillStyle='#142f54';ctx.fillRect(0,0,width,128);ctx.fillStyle='#b8d3f7';ctx.font='700 12px sans-serif';ctx.fillText('SEDU  /  DAILY TIMETABLE',28,27);ctx.fillStyle='#ffffff';ctx.font='700 28px sans-serif';ctx.fillText(name+' 선생님',28,68);ctx.font='500 16px sans-serif';ctx.fillStyle='#dce9fa';ctx.fillText(dateText+'  ·  '+rows.length+'개 시간대',28,101);
+          draw.forEach(function(d){ctx.fillStyle=d.color;if(d.type==='box'){ctx.beginPath();ctx.roundRect(d.x,d.y,d.w,d.h,d.r);ctx.fill();}else{ctx.font=d.font;ctx.fillText(d.text,d.x,d.y);}});
+          ctx.font='500 12px sans-serif';ctx.fillStyle='#74859a';ctx.fillText('에스에듀 반포관 · 시간표 기준',28,y+12);
           return new Promise(function(resolve,reject){canvas.toBlob(function(blob){if(blob)resolve(blob);else reject(new Error('이미지 생성 실패'));},'image/png');});
         });
       }

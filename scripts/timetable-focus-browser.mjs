@@ -29,7 +29,7 @@ try{
   lastData={headers:['1강의실','2강의실'],grid:{10:[['개별 수학 검증강사T','검증학생 검증고3 정규'],[]],11:[[],[]]}};renderTable(lastData,false);setSnapshotNotice(null,'원본 조회 기준 · 자동 갱신');document.getElementById('attendanceWindow').hidden=false;document.getElementById('attendanceWindow').textContent='오늘 접수된 출결 메시지가 없습니다.';
  });
  await page.evaluate(()=>{
-   lastData={headers:['1강의실','2강의실'],grid:{12:[['개별 수학 검증강사T','검증학생 검증고3 정규'],['개별 영어 다른강사T','다른학생 다른고2 지각']],13:[[],['1:1 수학 검증강사T','검증학생 검증고3 결석예고']]}};
+   lastData={headers:['1강의실','2강의실'],grid:{12:[['개별 수학 검증강사T','검증학생 검증고3 정규 10/17(토) 확정, 선생님 톡 확인 시수 포함 X, 지각, 10:09 도착'],['개별 영어 다른강사T','다른학생 다른고2 지각']],13:[[],['1:1 수학 검증강사T','검증학생 검증고3 결석예고']]}};
    renderTable(lastData,false);
  });
  await page.locator('.student-name-button').filter({hasText:'검증학생'}).first().click();
