@@ -33,6 +33,8 @@ try{
  assert(await page.locator('.visitor-lookup-card').first().evaluate(e=>e.getBoundingClientRect().height<155));
  await page.evaluate(()=>{visitorBanner=[1,2,3].map(i=>({enabled:true,url:'https://fixture.test/banner.gif',title:'특강 '+i}));renderVisitorBanner();});assert.equal(await page.locator('.visitor-banner-list img').count(),3);assert(await page.locator('.visitor-banner-list img').first().evaluate(e=>Math.abs(e.getBoundingClientRect().width/e.getBoundingClientRect().height-1.8)<.02));
  await page.screenshot({path:out+'/desktop.png',fullPage:true});
+ assert(await page.locator('.visitor-lookup-card-name').first().innerText().then(t=>t.includes('검증학생')&&t.includes('국어 · 개별')));
+ for(const width of [1920,1024,768]){await page.setViewportSize({width,height:1080});assert(await page.evaluate(()=>{const a=document.getElementById('roomOverviewBtn').getBoundingClientRect(),b=document.getElementById('digitalClock').getBoundingClientRect();return a.bottom+8<=b.top||a.right+8<=b.left||b.right+8<=a.left;}),'clock and room button must not overlap at '+width);}
  await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:out+'/mobile.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('PASS: admin GIF upload, lookup-auth portraits, source bar hidden, 80/20 layout, mobile overflow, no page errors');
 }finally{await browser.close();server.close();}

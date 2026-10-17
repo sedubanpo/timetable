@@ -2055,6 +2055,15 @@
       @media(max-width:800px){.visitor-screen .visitor-lookup-main{grid-template-columns:1fr;}.visitor-screen .visitor-lookup-left{border-right:0;border-bottom:1px solid #dbe7ff;}.visitor-screen .visitor-lookup-panel{padding:16px;}.visitor-screen .visitor-floorplan{min-width:520px;}}
       @media(max-width:800px){.visitor-screen{grid-template-columns:1fr;}body.visitor-lookup-mode #visitorLookupPane{width:calc(100vw - 28px);margin:18px 14px;}.visitor-banner{max-width:100%;}}
 
+      .visitor-screen .visitor-lookup-card-name {display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+      .visitor-screen .visitor-lookup-inline-lesson {font-size:.82rem;font-weight:800;color:#334155;}
+      .visitor-screen .visitor-lookup-card .visitor-lookup-field-sub {margin-top:0;}
+      @media(min-width:601px){
+        body.visitor-lookup-mode #mainPage .top-bar {min-height:112px;box-sizing:border-box;}
+        body.visitor-lookup-mode .toolbar-first-row > #roomOverviewBtn {top:12px;right:24px;transform:none;}
+        body.visitor-lookup-mode .toolbar-first-row > #digitalClock {top:auto;bottom:12px;right:24px;transform:none;margin:0;}
+      }
+
       /* Administrative controls: neutral actions, one operational row and a compact status row. */
       .staff-toolbar-enabled #mainPage .top-bar {display:block;padding:0;background:#fff;backdrop-filter:none;}
       .staff-toolbar-enabled .top-bar > .toolbar-first-row,
@@ -10314,7 +10323,7 @@ function card(s){const lessons=mergedLessons(s);const subjects=[...new Set(lesso
               return "<div class='visitor-lookup-card" + (isSelected ? " active" : "") + "' role='button' tabindex='0' aria-pressed='" + isSelected + "' onkeydown='if(event.key===\"Enter\" || event.key===\" \"){event.preventDefault();selectVisitorLookupMatch(" + idx + ");}' onclick='selectVisitorLookupMatch(" + idx + ")'>" +
                 "<div class='visitor-lookup-check'>" + (isSelected ? "✓" : "") + "</div>" +
                 "<div class='visitor-lookup-namecell'>" +
-                  "<div class='visitor-lookup-card-name'>" + escapeHtml(item.studentName) + "</div>" +
+                  "<div class='visitor-lookup-card-name'>" + escapeHtml(item.studentName) + "<span class='visitor-lookup-inline-lesson'>" + escapeHtml(lessonLabel) + "</span></div>" +
                   "<div class='visitor-lookup-status'>" + (isSelected ? "선택됨" : "수업") + "</div>" +
                 "</div>" +
                 "<div class='visitor-lookup-field'>" +
@@ -10323,7 +10332,6 @@ function card(s){const lessons=mergedLessons(s);const subjects=[...new Set(lesso
                 "</div>" +
                 "<div class='visitor-lookup-field'>" +
                   "<div class='visitor-lookup-field-label'>강의명</div>" +
-                  "<div class='visitor-lookup-field-value'>" + escapeHtml(lessonLabel) + "</div>" +
                   "<div class='visitor-lookup-field-sub'>" + escapeHtml(timeLabel) + " · " + item.durationHours + "시간</div>" +
                 "</div>" +
                 "<div class='visitor-lookup-field'>" +
