@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 async function verify(file) {
-  const source = [...fs.readFileSync(file, 'utf8').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
+  const source = [...fs.readFileSync(file, 'utf8').matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).find(s => s.includes("function loadData("));
   const elements = new Map(), timers = new Map(); let id = 0;
   const element = key => { if (!elements.has(key)) elements.set(key, { setAttribute() {}, style: {}, value: '9/17', classList: { add() {}, remove() {} } }); return elements.get(key); };
   const scope = { console, window: { addEventListener() {} }, document: { hidden: false, addEventListener() {}, getElementById: element, body: { classList: { remove() {} } } }, localStorage: { getItem() { return null; } }, setTimeout() {}, clearTimeout() {}, setInterval(fn, ms) { timers.set(++id, { fn, ms }); return id; }, clearInterval(k) { timers.delete(k); }, URLSearchParams, Date, Promise, Set, Map };

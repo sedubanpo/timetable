@@ -6,7 +6,7 @@ const root = path.join(__dirname, '..');
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
 async function check(file) {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
-  const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
+  const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).find(s => s.includes("function loadData("));
   const scope = {console, window: {addEventListener() {}}, document: {addEventListener() {}, getElementById() {return {style: {}, classList: {add() {}, remove() {}}};}, querySelectorAll: () => []}, localStorage: {getItem: () => null}, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, URLSearchParams, Date, Promise, Set, Map};
   vm.createContext(scope);
   vm.runInContext(app, scope);

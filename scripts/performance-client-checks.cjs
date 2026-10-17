@@ -1,6 +1,6 @@
 const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
 const html = fs.readFileSync('Index.html', 'utf8');
-const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
+const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).find(s => s.includes("function loadData("));
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
 function fixture() {
   const elements = new Map(), timers = new Map(), deadlines = new Map(); let timerId = 0;

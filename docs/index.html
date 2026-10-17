@@ -5,7 +5,6 @@
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png">
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       window.SEDU_OPERATION_MEMO_CONFIG = {
         provider: "supabase",
@@ -5116,7 +5115,6 @@
         setTimeout(function(){ var t=document.querySelector('.kakao-tooltip'); if(t) t.style.opacity=1; }, 1000);
         setTimeout(function(){ var t=document.querySelector('.kakao-tooltip'); if(t) t.style.opacity=0; }, 4000);
         updateClock(); setInterval(updateClock, 1000);
-        setInterval(updateTimeline, 60000); 
         startAutoRefresh();
         loadNotice(); 
         initOperationMemoFeature();
@@ -5130,7 +5128,10 @@
         if (gateToggle) gateToggle.addEventListener('change', function(){ syncRememberToggleState('gate'); });
         if (authToggle) authToggle.addEventListener('change', function(){ syncRememberToggleState('auth'); });
         var tableContainer = document.getElementById('tableContainer');
-        if (tableContainer) tableContainer.addEventListener('scroll', updateTimelinePosition);
+        if (tableContainer) tableContainer.addEventListener('scroll', scheduleTimelinePosition, { passive: true });
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) { lastClockMinute = -1; updateClock(); }
+        });
         document.addEventListener('click', function(){ closeAllNoteBubbles(); });
       };
       window.initializeTimetablePage=window.onload;
@@ -6220,39 +6221,72 @@ window.SeduHubAdapter={
       }
       function startAutoRefresh() { if(autoRefreshTimer) clearInterval(autoRefreshTimer); if(countdownTimer) clearInterval(countdownTimer); timeLeft = 1800; updateLoadingBar(); countdownTimer = setInterval(function() { var now = new Date(); var hour = now.getHours(); if (hour >= SCHEDULE_START_HOUR && hour <= SCHEDULE_END_HOUR) { timeLeft--; updateLoadingBar(); if (timeLeft <= 0) { refreshData(false); timeLeft = 1800; } } else { setCountdownText("대기", "업데이트 대기중 (운영시간 외)"); document.getElementById('loadingBar').style.width = "0%"; } }, 1000); }
       function updateLoadingBar() { var percentage = (timeLeft / 1800) * 100; document.getElementById('loadingBar').style.width = percentage + "%"; var min = Math.floor(timeLeft / 60); var sec = timeLeft % 60; setCountdownText(String(min).padStart(2,"0") + ":" + String(sec).padStart(2,"0"), "다음 업데이트까지 " + min + "분 " + sec + "초"); }
-      function updateClock() { var now=new Date(); var days=['일','월','화','수','목','금','토']; var d=days[now.getDay()]; var M=now.getMonth()+1; var D=now.getDate(); var h=String(now.getHours()).padStart(2,'0'); var m=String(now.getMinutes()).padStart(2,'0'); var s=String(now.getSeconds()).padStart(2,'0'); var el=document.getElementById('digitalClock'); if(el) el.innerHTML="<span class='clock-date'>"+M+"/"+D+"("+d+")</span><span class='clock-time'>"+h+":"+m+":"+s+"</span>"; checkVisitorLookupDateRollover(now); if(isLookupViewActive() && now.getSeconds()===0){renderVisitorLookupResults();loadVisitorPortraits();} updateTimelinePosition(); }
-      
+      var lastClockMinute = -1;
+      var timelinePositionFrame = null;
+      function scheduleTimelinePosition() {
+        if (timelinePositionFrame !== null) return;
+        timelinePositionFrame = requestAnimationFrame(function() {
+          timelinePositionFrame = null;
+          updateTimelinePosition();
+        });
+      }
+      function updateClock() {
+        if (document.hidden) return;
+        var now = new Date();
+        var el = document.getElementById('digitalClock');
+        if (el) {
+          if (!el.querySelector('.clock-date') || !el.querySelector('.clock-time')) {
+            el.innerHTML = "<span class='clock-date'></span><span class='clock-time'></span>";
+          }
+          var dateText = (now.getMonth()+1) + '/' + now.getDate() + '(' + ['일','월','화','수','목','금','토'][now.getDay()] + ')';
+          var timeText = [now.getHours(), now.getMinutes(), now.getSeconds()].map(function(n) { return String(n).padStart(2, '0'); }).join(':');
+          var dateLabel = el.querySelector('.clock-date'), timeLabel = el.querySelector('.clock-time');
+          if (dateLabel.textContent !== dateText) dateLabel.textContent = dateText;
+          if (timeLabel.textContent !== timeText) timeLabel.textContent = timeText;
+        }
+        // The timetable marker only displays minutes; scrolling/resizing/data changes
+        // reposition it separately. Do not force table layout on every clock second.
+        var minute = Math.floor(now.getTime() / 60000);
+        if (lastClockMinute === minute) return;
+        lastClockMinute = minute;
+        checkVisitorLookupDateRollover(now);
+        if (isLookupViewActive()) { renderVisitorLookupResults(); loadVisitorPortraits(); }
+        updateTimelinePosition();
+      }
+
       function updateTimelinePosition() {
          renderAttendanceWindow();
-         document.querySelectorAll('.time-current').forEach(function(cell){cell.classList.remove('time-current');});
-         if (isTeacherViewActive() && window.innerWidth <= 768) {
-           document.getElementById('liveTimeline').style.display = 'none';
-           return;
-         }
-         if (!document.getElementById('timelineToggle').checked) return;
-         
-         var now = new Date();
-         var h = now.getHours();
-         var m = now.getMinutes();
          var line = document.getElementById('liveTimeline');
-         line.dataset.time =  String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-         if(h < SCHEDULE_START_HOUR || h > SCHEDULE_END_HOUR) { line.style.display = 'none'; return; }
-         
+         if (!line) return;
          var table = document.getElementById('scheduleTable');
          var container = document.getElementById('tableContainer');
-         if(!table || table.rows.length < 2 || !container) return;
-         var row = table.querySelector('tbody tr[data-hour="' + h + '"]');
-         if (!row) { line.style.display = 'none'; return; }
+         var now = new Date(), h = now.getHours();
+         var enabled = !(isTeacherViewActive() && window.innerWidth <= 768) && document.getElementById('timelineToggle').checked;
+         var row = enabled && h >= SCHEDULE_START_HOUR && h <= SCHEDULE_END_HOUR && table
+           ? table.querySelector('tbody tr[data-hour="' + h + '"]') : null;
+         var timeCell = row && row.querySelector('.time-cell');
+         var previous = table && table.querySelector('.time-current');
+         if (!row || !container) {
+           if (previous) previous.classList.remove('time-current');
+           line.style.display = 'none';
+           return;
+         }
+         // Read geometry together before modifying styles or the current-row class.
          var containerRect = container.getBoundingClientRect();
          var rowRect = row.getBoundingClientRect();
          var height = rowRect.height || row.offsetHeight || 0;
          var finalTop = (rowRect.top - containerRect.top) + container.scrollTop + (height * .5);
-         var timeCell=row.querySelector('.time-cell');
-         if(timeCell)timeCell.classList.add('time-current');
-         line.title='현재 시각 '+line.dataset.time;
-         line.style.width=(timeCell?timeCell.getBoundingClientRect().width:48)+'px';
-         line.style.left=container.scrollLeft+'px';
-         line.style.top = finalTop + "px";
+         var width = timeCell ? timeCell.getBoundingClientRect().width : 48;
+         var left = container.scrollLeft;
+         if (previous !== timeCell) {
+           if (previous) previous.classList.remove('time-current');
+           if (timeCell) timeCell.classList.add('time-current');
+         }
+         line.dataset.time = String(h).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+         line.title = '현재 시각 ' + line.dataset.time;
+         line.style.width = width + 'px';
+         line.style.left = left + 'px';
+         line.style.top = finalTop + 'px';
          line.style.display = 'block';
       }
       function initApp(names) { 
@@ -10405,10 +10439,11 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
       }
       
       function highlightScheduleText(root, keyword) {
-        root.querySelectorAll('.highlight-text').forEach(function(mark) {
+        var marks = root.querySelectorAll('.highlight-text');
+        marks.forEach(function(mark) {
           mark.replaceWith(document.createTextNode(mark.textContent));
         });
-        root.normalize();
+        if (marks.length) root.normalize();
         if (!keyword) return;
         var walker = document.createTreeWalker(root, 4);
         var nodes = [];
@@ -10448,10 +10483,10 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 
         if (isTeacherViewActive() && window.innerWidth <= 768) {
           var cards = mobileWrap.querySelectorAll('.teacher-hour-card, .teacher-simple-hour-card');
-          cards.forEach(function(card) {
+          var cardTexts = Array.from(cards, function(card) { return (card.innerText || card.textContent || "").toUpperCase(); });
+          cards.forEach(function(card, index) {
             highlightScheduleText(card, "");
-            var text = (card.innerText || card.textContent || "").toUpperCase();
-            var visible = (!input || text.includes(input));
+            var visible = (!input || cardTexts[index].includes(input));
             card.style.display = visible ? "" : "none";
             if (!teacherMobileSimpleView && visible && rawInput) highlightScheduleText(card, rawInput);
           });
@@ -10463,20 +10498,20 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         if (isMobile && input) { table.style.minWidth = "100%"; table.style.tableLayout = "auto"; } 
         else { table.style.minWidth = "100%"; table.style.tableLayout = "fixed"; } 
         
-        var cells = document.querySelectorAll('.cell-inner'); 
+        var cells = table.querySelectorAll('.cell-inner');
         var matchColIndices = new Set();
-        
-        cells.forEach(function(cell) { 
-          var td = cell.parentElement;
-          var colIdx = td.getAttribute('data-col-index');
-          var items = cell.querySelectorAll('.student-item'); 
-          var cellHasMatch = false; 
-          
-          var cellFullText = "";
-          items.forEach(function(item) {
-             var t = item.innerText || item.textContent || "";
-             cellFullText += t + " ";
-          });
+        // Snapshot rendered text before any filtering/highlighting writes. Reading
+        // innerText after each changed cell forces repeated synchronous layout.
+        var searchRows = Array.from(cells, function(cell) {
+          var items = Array.from(cell.querySelectorAll('.student-item'));
+          var texts = input ? items.map(function(item) { return item.innerText || item.textContent || ""; }) : [];
+          return { cell: cell, items: items, texts: texts };
+        });
+        searchRows.forEach(function(entry) {
+          var cell = entry.cell, items = entry.items;
+          var colIdx = cell.parentElement.getAttribute('data-col-index');
+          var cellHasMatch = false;
+          var cellFullText = entry.texts.join(' ');
           if (input && cellFullText.toUpperCase().includes(input)) { 
             cellHasMatch = true; 
             matchColIndices.add(colIdx);
@@ -10488,9 +10523,8 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           } else {
              if (cellHasMatch) {
                cell.classList.remove('hidden-cell'); 
-               items.forEach(item => {
-                 var itemText = item.innerText || item.textContent || "";
-                 highlightScheduleText(item, itemText.toUpperCase().includes(input) ? rawInput : "");
+               items.forEach(function(item, index) {
+                 highlightScheduleText(item, entry.texts[index].toUpperCase().includes(input) ? rawInput : "");
                });
              } else {
                cell.classList.add('hidden-cell'); 
@@ -10516,6 +10550,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
            document.querySelectorAll('th[data-col-index], td[data-col-index]').forEach(el => el.style.display = "");
         }
         applyOperationMemoHighlights();
+        scheduleTimelinePosition();
       }
       function runScheduleReview() {
         if (!lastData) return;
