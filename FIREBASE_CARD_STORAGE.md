@@ -32,3 +32,11 @@ The legacy Apps Script setter now returns `CARD_STORAGE_MOVED` without accessing
 
 - Firestore transactions and offline failure: https://firebase.google.com/docs/firestore/manage-data/transactions
 - Sheets formatted row export: https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets.values/get
+
+## Parent card redesign — 2026-10-17
+
+The live card modal uses a student queue, editable preview, and explicit delivery status editor. Unsent status requires a 1–300 character reason; sent status clears it. `unsentReason` is stored with the existing Firebase delivery record and verified in the server confirmation. Legacy records without the field remain readable. Reasons are staff-only and never rendered in exported cards.
+
+The preview and both PNG actions share `buildStudentExportHtml`. Notes are hidden by default; temporary note edits preserve newlines and are escaped. Note drafts do not alter original schedule times or persist after reopening the modal. Copying or downloading does not mark a card sent. Adjacent matching lessons merge, gaps become self-study, and only used building addresses appear. Registered subject/teacher images have bundled fallback icons.
+
+Verification: `node scripts/firebase-card-checks.cjs`, `node scripts/card-reliability-checks.cjs`, and `node scripts/student-card-browser.mjs` (Playwright required; set `PLAYWRIGHT_MODULE` for a nonstandard installation and optionally `HTML2CANVAS_PATH` for an offline html2canvas 1.4.1 file). Browser fixtures use in-memory records and no production student writes.

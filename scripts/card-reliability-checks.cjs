@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'Index.html'), 'utf8');
-const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
+const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).find(s => s.includes('function markStudentCardSentStatus('));
 const elements = new Map();
 const element = id => {
   if (!elements.has(id)) elements.set(id, { style: {}, textContent: '', hidden: true, innerHTML: '', value: '', classList: { add() {}, remove() {} } });
@@ -54,14 +54,14 @@ async function read(statuses) {
   await flush();
   assert.equal(run('studentCardSentMap.Alice.updatedAt'), 'confirmed');
   assert.equal(run('canChangeStudentCardStatus()'), true);
-  run(`markStudentCardSentStatus('Alice',false,{silent:true}).catch(e=>globalThis.failure=e.code);requests.at(-1).reject(Object.assign(new Error('lost'),{operationId:'expected-op',datasetId:'dataset-A'}));`);
+  run(`markStudentCardSentStatus('Alice',false,{silent:true,unsentReason:'연락 확인 중'}).catch(e=>globalThis.failure=e.code);requests.at(-1).reject(Object.assign(new Error('lost'),{operationId:'expected-op',datasetId:'dataset-A'}));`);
   await flush();
   run(`requests.at(-1).resolve({Alice:{sent:false,operationId:'wrong-op',datasetId:'dataset-A'}});`);
   await flush();
   assert.equal(run('failure'), 'CARD_STATUS_MISMATCH');
   assert.match(run('studentCardStatusError'), /異|다릅니다/);
   await read({Alice:{sent:true}});
-  run(`markStudentCardSentStatus('Alice',false,{silent:true}).catch(()=>{});requests.at(-1).reject(new Error('lost'));`);
+  run(`markStudentCardSentStatus('Alice',false,{silent:true,unsentReason:'연락 확인 중'}).catch(()=>{});requests.at(-1).reject(new Error('lost'));`);
   await flush();
   run(`requests.at(-1).reject(new Error('read lost'));`);
   await flush();

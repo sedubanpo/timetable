@@ -34,7 +34,7 @@ function harness(file) {
   } };
   const context = { crypto: webcrypto, TextEncoder, Uint8Array, setTimeout: (fn, ms) => setTimeout(fn, state.fastDeadline ? 5 : ms), clearTimeout, getScheduleSessionKey: () => session, getLiveFirebaseAuth: async () => auth, getLiveFirebaseFirestore: async () => db, firebase: { firestore: { FieldValue: { serverTimestamp: () => ({ toDate: () => new Date('2026-09-17T00:00:00Z') }) } } }, hasGasRunner: () => { throw new Error('GAS MUST NOT BE CALLED'); } };
   vm.createContext(context); vm.runInContext(provider + router, context);
-  return { state, auth, context, session: value => { session = value; }, call: (method, args) => context.callServer(method, args), read: sheet => context.callServer('getStudentCardStatuses', [sheet]), write: (sheet, student, sent) => context.callServer('setStudentCardSentStatus', [sheet, student, sent, 'untrusted-login-id']) };
+  return { state, auth, context, session: value => { session = value; }, call: (method, args) => context.callServer(method, args), read: sheet => context.callServer('getStudentCardStatuses', [sheet]), write: (sheet, student, sent, reason) => context.callServer('setStudentCardSentStatus', [sheet, student, sent, 'untrusted-login-id', reason]) };
 }
 (async () => {
   for (const file of files) {
@@ -55,14 +55,27 @@ function harness(file) {
     const result = await h.write(sheet, student, true);
     assert.equal(result.updatedBy, 'admin-1'); assert.equal(result.updatedAt, '2026-09-17T00:00:00.000Z'); assert.equal(result.revision, 1);
     assert.equal(h.state.writes[0][0], `liveTimetableCardStores/dataset-A/sheets/${hash(sheet)}/statuses/${hash(student)}`);
-    assert.deepEqual(Object.keys(h.state.writes[0][1]).sort(), ['operationId','revision','sent','sheetName','studentName','updatedAt','updatedBy'].sort());
+    assert.deepEqual(Object.keys(h.state.writes[0][1]).sort(), ['operationId','revision','sent','sheetName','studentName','updatedAt','updatedBy','unsentReason'].sort());
     const imported = h.state.docs.get(h.state.writes[0][0]); imported.legacyUpdatedAt = 'legacy-date'; imported.legacyUpdatedBy = 'legacy-actor';
     assert.equal((await h.read(sheet))[student].updatedAt, 'legacy-date', 'imported first revision preserves displayed audit date');
+    assert.equal(result.unsentReason, '');
+    delete imported.unsentReason;
+    assert.equal((await h.read(sheet))[student].unsentReason, '', 'legacy records default to empty reason');
+    for (const reason of [undefined, '', '   ', '가'.repeat(301), 123]) {
+      const writesBefore = h.state.writes.length;
+      await assert.rejects(h.write(sheet, student, false, reason), /1~300/);
+      assert.equal(h.state.writes.length, writesBefore, 'invalid reason must not write');
+    }
     h.state.retryTx = true;
-    const result2 = await h.write(sheet, student, false); assert.equal(result2.revision, 2); assert.notEqual(result.operationId, result2.operationId);
+    const result2 = await h.write(sheet, student, false, '  연락처 확인 중  '); assert.equal(result2.unsentReason, '연락처 확인 중'); assert.equal(result2.revision, 2); assert.notEqual(result.operationId, result2.operationId);
     assert.equal(result2.legacyUpdatedAt, 'legacy-date'); assert.equal(result2.legacyUpdatedBy, 'legacy-actor');
     assert.equal(result2.updatedAt, '2026-09-17T00:00:00.000Z', 'subsequent changes show server timestamp');
     h.state.retryTx = false;
+    assert.equal((await h.read(sheet))[student].unsentReason, '연락처 확인 중', 'reason survives server reload');
+    const cleared = await h.write(sheet, student, true, 'old reason');
+    assert.equal(cleared.unsentReason, '', 'sent status clears reason');
+    const maxReason = await h.write(sheet, student, false, '가'.repeat(300));
+    assert.equal(maxReason.unsentReason.length, 300);
     h.state.config.activeDatasetId = 'dataset-B';
     await assert.rejects(h.write(sheet, student, true), /dataset changed/);
     h.state.config.activeDatasetId = 'dataset-A';
