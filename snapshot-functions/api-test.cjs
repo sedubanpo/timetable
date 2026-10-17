@@ -138,3 +138,17 @@ test('media operations reject unauthorized and non-admin uploads before storage 
  f.data.set('users/u',{role:'TEACHER',status:'ACTIVE',name:'강사'});
  for(const action of ['visitor_banner_save','visitor_banner_hide'])assert.equal((await f.request({action})).status,403);
 });
+
+test('active desk and staff can save and view history without account management privileges',async()=>{
+ for(const role of ['STAFF','DESK']){
+  const f=fixture();f.data.set('users/u',{role,status:'ACTIVE',name:'데스크 직원'});
+  assert.equal((await f.request({action:'save',sheet:f.sheet})).ok,true);
+  assert.equal((await f.request({action:'history',sheet:f.sheet})).ok,true);
+  assert.equal((await f.request({action:'visitor_banner_hide'})).status,403);
+  f.data.set('userAppAccess/u',{apps:{liveTimetable:false}});
+  assert.equal((await f.request({action:'save',sheet:f.sheet})).status,403);
+  f.data.delete('userAppAccess/u');f.data.set('users/u',{role,status:'DISABLED',name:'데스크 직원'});
+  assert.equal((await f.request({action:'history',sheet:f.sheet})).status,403);
+  assert.equal((await f.request({action:'save',sheet:f.sheet})).status,403);
+ }
+});

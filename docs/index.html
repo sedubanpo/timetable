@@ -6264,7 +6264,7 @@ window.SeduHubAdapter={
           return values[1].collection('users').doc(user.uid).get({source:'server'}).then(function(doc){
             if (session!==getScheduleSessionKey() || values[0].currentUser!==user) return;
             var data=doc.exists?doc.data():{};
-            button.hidden=!(data.role==='ADMIN' && data.status==='ACTIVE');
+            button.hidden=!(['ADMIN','STAFF','DESK'].indexOf(String(data.role||'').toUpperCase())!==-1 && data.status==='ACTIVE');
             if(historyButton) historyButton.hidden=button.hidden;
           });
         }).catch(function(){});
@@ -6284,7 +6284,7 @@ window.SeduHubAdapter={
           else setSnapshotNotice(null,result.outcome==='already-newer'?'같거나 더 최신인 저장본이 이미 있습니다. 저장 이력을 확인해 주세요.':(receipt?'조회한 시간표 저장 완료 · ':'스냅샷 저장 완료 · ')+'조회 지연 시 이 저장본을 사용할 수 있습니다.');
         }).catch(function(error){
           if (session!==getScheduleSessionKey() || sheet!==currentSheetName) return;
-          var messages={SAVE_IN_PROGRESS:'다른 저장 작업이 진행 중입니다. 잠시 후 저장 이력을 확인해 주세요.',SOURCE_RATE_LIMIT:'원본 요청이 제한되어 저장하지 못했습니다. 반복 저장을 멈추고 잠시 후 다시 시도해 주세요.',RECEIPT_EXPIRED:'조회한 지 2시간이 지났습니다. 시간표를 새로고침한 뒤 저장해 주세요.',INVALID_RECEIPT:'조회 데이터 검증에 실패했습니다. 시간표를 새로고침한 뒤 저장해 주세요.',UNAUTHORIZED:'로그인이 만료되었습니다. 다시 로그인해 주세요.',FORBIDDEN:'스냅샷을 저장할 관리자 권한이 없습니다.',AbortError:'저장 결과를 확인하지 못했습니다. 다시 저장하기 전에 저장 이력을 확인해 주세요.'};
+          var messages={SAVE_IN_PROGRESS:'다른 저장 작업이 진행 중입니다. 잠시 후 저장 이력을 확인해 주세요.',SOURCE_RATE_LIMIT:'원본 요청이 제한되어 저장하지 못했습니다. 반복 저장을 멈추고 잠시 후 다시 시도해 주세요.',RECEIPT_EXPIRED:'조회한 지 2시간이 지났습니다. 시간표를 새로고침한 뒤 저장해 주세요.',INVALID_RECEIPT:'조회 데이터 검증에 실패했습니다. 시간표를 새로고침한 뒤 저장해 주세요.',UNAUTHORIZED:'로그인이 만료되었습니다. 다시 로그인해 주세요.',FORBIDDEN:'스냅샷을 저장할 관리자·데스크 직원 권한이 없습니다.',AbortError:'저장 결과를 확인하지 못했습니다. 다시 저장하기 전에 저장 이력을 확인해 주세요.'};
           setSnapshotNotice(null,(messages[error.name]||messages[error.message]||'저장하지 못했습니다. 잠시 후 저장 이력을 확인하고 다시 시도해 주세요.')+' 기존 저장본은 유지됩니다.');
         }).finally(function(){snapshotSaveBusy=false;button.disabled=false;button.removeAttribute('aria-busy');});
       }

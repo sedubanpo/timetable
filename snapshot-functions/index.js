@@ -108,11 +108,11 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
     if(!['read','rooms','save','history'].includes(action))coreFail('INVALID_ACTION');
     core.dateForSheet(sheet);
     if(action==='history') {
-      if(who.role!=='ADMIN')coreFail('FORBIDDEN');
+      if(!['ADMIN','STAFF','DESK'].includes(who.role))coreFail('FORBIDDEN');
       return res.json({ok:true,...await core.history(getFirestore(),sheet)});
     }
     if(action==='save') {
-      if(who.role!=='ADMIN')coreFail('FORBIDDEN');
+      if(!['ADMIN','STAFF','DESK'].includes(who.role))coreFail('FORBIDDEN');
       const actor={name:who.login.name||'관리자',source:req.body.receipt?'manual-capture':'manual-origin'};
       if(req.body.receipt) {
         const snapshot=core.verifyReceipt(req.body.receipt,secret.value(),sheet);
