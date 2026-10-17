@@ -2035,6 +2035,59 @@
       @media(max-width:800px){.visitor-screen .visitor-lookup-main{grid-template-columns:1fr;}.visitor-screen .visitor-lookup-left{border-right:0;border-bottom:1px solid #dbe7ff;}.visitor-screen .visitor-lookup-panel{padding:16px;}.visitor-screen .visitor-floorplan{min-width:520px;}}
       @media(max-width:800px){.visitor-screen{grid-template-columns:1fr;}body.visitor-lookup-mode #visitorLookupPane{width:calc(100vw - 28px);margin:18px 14px;}.visitor-banner{max-width:100%;}}
 
+      /* Administrative controls: neutral actions, one operational row and a compact status row. */
+      .staff-toolbar-enabled #mainPage .top-bar {display:block;padding:0;background:#fff;backdrop-filter:none;}
+      .staff-toolbar-enabled .top-bar > .toolbar-first-row,
+      .staff-toolbar-enabled .top-bar > .toolbar-row-break {display:none!important;}
+      .staff-toolbar {width:100%;color:#183252;}
+      .staff-context {display:flex;align-items:center;gap:16px;padding:8px 16px;border-bottom:1px solid #e7ecf2;}
+      .staff-toolbar-embedded .staff-context,.staff-toolbar-embedded #mainPage > .ticker-wrap {display:none!important;}
+      .staff-controls {display:flex;align-items:center;gap:14px;padding:12px 16px;flex-wrap:wrap;}
+      .staff-date,.staff-query,.staff-actions {display:flex;align-items:center;gap:6px;min-width:0;}
+      .staff-query {flex:1;}
+      .staff-actions {margin-left:auto;}
+      .staff-toolbar .search-wrapper {flex:1;min-width:160px;max-width:300px;margin:0;}
+      .staff-toolbar .search-input {width:100%;height:40px!important;border:1px solid #c8d3e0!important;border-radius:8px!important;background:#f7f9fc!important;font-size:13px!important;}
+      .staff-toolbar button,.staff-menu summary {box-sizing:border-box;min-height:40px;height:auto;min-width:0;width:auto;padding:9px 12px;border:1px solid #d3dce7;border-radius:8px;background:#fff;color:#183252;box-shadow:none;font:600 13px/20px Pretendard,sans-serif;white-space:nowrap;cursor:pointer;display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;}
+      .staff-toolbar button:hover,.staff-menu summary:hover {background:#f0f5fb;border-color:#9db2cc;}
+      .staff-toolbar button:focus-visible,.staff-menu summary:focus-visible {outline:2px solid #225bc1;outline-offset:2px;}
+      .staff-toolbar button[hidden] {display:none!important;}
+      .staff-toolbar button:disabled {opacity:.55;cursor:wait;}
+      .staff-toolbar .icon,.staff-toolbar button > svg {width:17px;height:17px;flex:none;}
+      .staff-toolbar #calendarTrigger {background:#edf3ff;border-color:#cfdbf3;color:#193c78;font-weight:800;}
+      .staff-date > .nav-group {display:none!important;}
+      .staff-actions > button > span:not(.attendance-inbox-count) {display:inline!important;}
+      .staff-date > button svg {display:none;}
+      .staff-date > button[aria-label="어제"] span,.staff-date > button[aria-label="내일"] span {font-size:0;}
+      .staff-date > button[aria-label="어제"] span::after {content:'‹';font-size:22px;}
+      .staff-date > button[aria-label="내일"] span::after {content:'›';font-size:22px;}
+      .staff-toolbar #attendanceInboxBtn {position:relative;background:#edf3ff!important;border-color:#cfdbf3;color:#193c78!important;}
+      .staff-toolbar .attendance-inbox-count.is-visible {position:static;display:inline-flex;border-radius:5px;padding:0 5px;background:#215bb9;color:#fff;font-size:11px;}
+      .staff-toolbar .refresh-container {margin:0!important;}
+      .staff-menu {position:relative;}
+      .staff-menu summary {list-style:none;}
+      .staff-menu summary::-webkit-details-marker {display:none;}
+      .staff-menu[open] summary {background:#edf3ff;border-color:#9db2cc;}
+      .staff-menu-panel {position:absolute;right:0;top:calc(100% + 8px);width:260px;max-height:min(70vh,620px);overflow:auto;padding:8px;background:#fff;border:1px solid #d3dce7;border-radius:12px;box-shadow:0 12px 30px #17325326;z-index:150;}
+      .staff-menu-panel section {padding:6px 0;border-bottom:1px solid #edf0f5;}
+      .staff-menu-panel section:last-child {border:0;}
+      .staff-menu-panel section:has(> button[hidden]):not(:has(> button:not([hidden]))) {display:none;}
+      .staff-menu-panel h3 {margin:4px 10px;color:#65778e;font-size:11px;font-weight:700;}
+      .staff-menu-panel button {width:100%;justify-content:flex-start;border-color:transparent;background:#fff;padding:9px 10px;}
+      .staff-toolbar .toggle-wrapper {display:flex;position:relative;flex-direction:row-reverse;justify-content:space-between;gap:16px;margin:0!important;padding:10px;min-height:42px;}
+      .staff-toolbar .toggle-wrapper span {font-size:13px;line-height:20px;}
+      .staff-status {display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 16px;border-top:1px solid #e7ecf2;background:#fafbfd;}
+      .staff-status .attendance-window {flex:1;min-width:180px;height:36px;}
+      .staff-status .attendance-window-items {height:36px;}
+      .staff-status .attendance-window-chip {height:32px;border-radius:6px;}
+      .staff-status #snapshotNotice {margin:0;padding:0;background:transparent;border:0;min-height:36px;gap:8px;flex-wrap:wrap;font-size:11px;}
+      .staff-status #snapshotNotice button,.staff-status .attendance-message-refresh {min-height:30px;padding:4px 8px;font-size:11px;}
+      .staff-status .attendance-message-refresh span {display:none;}
+      .staff-status .snapshot-history-icon svg {width:15px;height:15px;}
+      @media(max-width:1400px){.staff-controls{gap:8px;}.staff-toolbar button,.staff-menu summary{padding-inline:8px;font-size:12px;}.staff-toolbar .search-wrapper{max-width:220px;}}
+      @media(max-width:1100px){.staff-query{flex:1;}.staff-actions{flex-wrap:wrap;margin-left:0;}.staff-controls{gap:10px;}.staff-status #snapshotNotice{width:100%;}}
+      @media(max-width:600px){.staff-controls{padding:10px;}.staff-query{flex-basis:100%;flex-wrap:wrap;}.staff-toolbar .search-wrapper{max-width:none;flex-basis:100%;}.staff-actions{gap:5px;}.staff-actions>.staff-menu{position:static;}.staff-controls{position:relative;}.staff-menu-panel{left:10px;right:10px;top:100%;width:auto;}.staff-status{padding:4px 10px;}.staff-context{flex-wrap:wrap;}}
+
 </style>
   </head>
   <body>
@@ -5688,7 +5741,48 @@
           return [];
         });
       }
+      var staffToolbarMoves=[], staffToolbarRoot=null;
+      function syncStaffToolbar() {
+        var enabled=authState.loggedIn&&!authState.isLookup&&(authState.isMaster||['STAFF','DESK'].includes(authState.role));
+        document.body.classList.toggle('staff-toolbar-enabled',!!enabled);
+        document.body.classList.toggle('staff-toolbar-embedded',!!enabled&&window.self!==window.top);
+        if(!enabled){
+          staffToolbarMoves.forEach(function(item){item.marker.replaceWith(item.node);});staffToolbarMoves=[];
+          if(staffToolbarRoot){staffToolbarRoot.remove();staffToolbarRoot=null;}
+          return;
+        }
+        if(staffToolbarRoot)return;
+        var bar=document.querySelector('#mainPage .top-bar');
+        staffToolbarRoot=document.createElement('div');staffToolbarRoot.className='staff-toolbar';
+        staffToolbarRoot.innerHTML='<div class="staff-context"></div><div class="staff-controls"><div class="staff-date" aria-label="날짜 이동"></div><div class="staff-query"></div><div class="staff-actions"></div></div><div class="staff-status"></div>';
+        bar.appendChild(staffToolbarRoot);
+        function move(selector,target){var node=document.querySelector(selector);if(!node)return;var marker=document.createComment('toolbar original position');node.before(marker);staffToolbarMoves.push({node:node,marker:marker});target.appendChild(node);}
+        var date=staffToolbarRoot.querySelector('.staff-date'),query=staffToolbarRoot.querySelector('.staff-query'),actions=staffToolbarRoot.querySelector('.staff-actions'),status=staffToolbarRoot.querySelector('.staff-status'),context=staffToolbarRoot.querySelector('.staff-context');
+        ['.toolbar-home','#digitalClock','.loading-bar-container'].forEach(function(s){move(s,context);});
+        move('.nav-group',date);move('#calendarPicker',date);
+        // Keep the calendar between previous and next, and Today at the end.
+        var nav=date.querySelector('.nav-group');
+        if(nav){Array.from(nav.children).forEach(function(n){move('.nav-group > button[aria-label="'+n.getAttribute('aria-label')+'"]',date);});nav.style.display='none';date.appendChild(date.querySelector('[aria-label="오늘"]'));date.insertBefore(date.querySelector('#calendarPicker'),date.querySelector('[aria-label="내일"]'));}
+        ['.top-bar > .search-wrapper','#teacherPicker','#roomOverviewBtn'].forEach(function(s){move(s,query);});
+        ['#attendanceInboxBtn','.excel-btn','#snapshotSaveBtn'].forEach(function(s){move(s,actions);});
+        function menu(label){var d=document.createElement('details');d.className='staff-menu';d.innerHTML='<summary>'+label+' <span aria-hidden="true">⌄</span></summary><div class="staff-menu-panel"></div>';actions.appendChild(d);d.addEventListener('toggle',function(){if(d.open)staffToolbarRoot.querySelectorAll('details').forEach(function(other){if(other!==d)other.open=false;});});return d.querySelector('.staff-menu-panel');}
+        var tools=menu('업무 도구'),view=menu('보기 설정');
+        function group(label,selectors){var section=document.createElement('section');section.innerHTML='<h3>'+label+'</h3>';tools.appendChild(section);selectors.forEach(function(s){move(s,section);});}
+        group('출결',['#absenceNoticeBtn','#attendanceReportBtn']);
+        group('시간표 운영',['#operationMemoBtn','button[onclick="runScheduleReview()"]','#teacherViewLogBtn','#timetableHandoffBtn']);
+        group('저장·제작',['#studentImageBtn']);
+        group('방문 화면 관리',['#visitorBannerAdminBtn']);
+        ['privacyToggle','timelineToggle','dimmingToggle','hide9amToggle'].forEach(function(id){move('label:has(#'+id+')',view);});
+        var labels={privacyToggle:'학생 이름 가리기',timelineToggle:'현재 시간선 표시',dimmingToggle:'지난 수업 흐리게',hide9amToggle:'9시 요약표 숨기기'};
+        Object.keys(labels).forEach(function(id){var span=document.getElementById(id).parentElement.querySelector('span');if(span){var original=span.textContent;span.textContent=labels[id];staffToolbarMoves.push({node:span,marker:{replaceWith:function(){span.textContent=original;}}});}});
+        move('.fullscreen-btn',view);move('.refresh-container',actions);
+        ['#attendanceWindow','#attendanceMessageTools','#snapshotNotice'].forEach(function(s){move(s,status);});
+        tools.addEventListener('click',function(e){if(e.target.closest('button'))tools.parentElement.open=false;});
+      }
+      document.addEventListener('click',function(e){if(staffToolbarRoot)staffToolbarRoot.querySelectorAll('details[open]').forEach(function(d){if(!d.contains(e.target))d.open=false;});});
+      document.addEventListener('keydown',function(e){if(e.key==='Escape'&&staffToolbarRoot){var d=staffToolbarRoot.querySelector('details[open]');if(d){d.open=false;d.querySelector('summary').focus();}}});
       function applyRoleUi() {
+        syncStaffToolbar();
         document.getElementById('visitorBannerAdminBtn').hidden=!(authState.loggedIn&&authState.isMaster&&!authState.isLookup);
         var introLogin=document.querySelector(".intro-login-btn");
         if(introLogin){introLogin.disabled=false;introLogin.textContent=authState.loggedIn?"로그아웃":"강사 로그인";introLogin.onclick=authState.loggedIn?logoutTeacher:openAuthModal;}
@@ -5743,7 +5837,7 @@
           teacherSel.style.display = 'none';
           loginBtn.style.display = '';
           logoutBtn.style.display = 'none';
-          searchInput.placeholder = "🔍 학생/강사 검색";
+          searchInput.placeholder = "학생·강사 검색";
           setToolbarButtonDisplay(reviewBtn, '');
           setToolbarButtonDisplay(excelBtn, '');
           setToolbarButtonDisplay(msgGenBtn, '');
@@ -5878,7 +5972,7 @@
           if (studentImageBtn) studentImageBtn.style.display = '';
           document.body.classList.remove('teacher-compact');
         }
-        searchInput.placeholder = isTeacherViewActive() ? "🔍 내 시간표 검색" : "🔍 학생/강사 검색";
+        searchInput.placeholder = isTeacherViewActive() ? "🔍 내 시간표 검색" : "학생·강사 검색";
         populateMainSheetSelector(currentSheetName);
         syncLookupDimmingState();
       }
