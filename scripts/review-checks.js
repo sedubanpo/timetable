@@ -42,12 +42,15 @@ function extractFunction(source, name) {
   throw new Error("unterminated function: " + name);
 }
 
-// GitHub Pages owns the hub adapter/module; Apps Script serves only the shared app.
-// Keep all shared UI byte-identical while allowing that explicit hosting boundary.
-const mirrorShared = mirror
-  .replace(/^window\.SeduHubAdapter=\{\n[\s\S]*?^\};\n/m, "")
-  .replace('  <script type="module" src="hub-start.mjs"></script>\n</body>', '  </body>');
-assert.strictEqual(index, mirrorShared, "Shared Index.html and docs/index.html UI diverged");
+// Shared application body must match. Host adapters and the pre-existing
+// inline-vs-external alert loaders are explicit, separately tested boundaries.
+function sharedBody(html) {
+  return html.replace(/^window\.SeduHubAdapter=\{\n[\s\S]*?^\};\n/m, "")
+    .split(/\s*<script (?:type="module" src="hub-start\.mjs"|defer src='\.\/exam-review\/model\.js')/)[0];
+}
+assert(sharedBody(index) === sharedBody(mirror), "Shared application body differs");
+assert(mirror.includes('src="hub-start.mjs"'), "Pages adapter missing");
+assert(mirror.includes('src="dot-alert-sync.js?'), "Pages subscription module missing");
 
 const inlineScripts = Array.from(index.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))
   .map((match) => match[1])
@@ -56,7 +59,7 @@ assert(inlineScripts.length >= 2, "expected configuration and application script
 inlineScripts.forEach((script, i) => new vm.Script(script, { filename: "Index.inline." + i + ".js" }));
 new vm.Script(server, { filename: "Code.gs" });
 
-const appScript = inlineScripts[inlineScripts.length - 1];
+const appScript = inlineScripts.find(script => script.includes("function runScheduleReview()"));
 const sandbox = {
   window: { innerWidth: 1280, addEventListener() {} },
   document: { addEventListener() {} },
@@ -572,7 +575,8 @@ sandbox.XLSX = {
   },
   writeFile() {}
 };
-vm.runInContext("exportScheduleToExcel()", sandbox);
+// Fresh server-read orchestration is covered by export-freshness-test.cjs.
+vm.runInContext("writeScheduleToExcel(lastData, currentSheetName)", sandbox);
 assert(exportedRows.some((row) => row["이름"] === "아침학생" && row["시작"] === "오전 8:00" && row["종료"] === "오전 10:00" && row["시간"] === 2), "timesheet must include and merge 08:00-10:00");
 assert(exportedRows.some((row) => row["이름"] === "야간학생" && row["시작"] === "오후 10:00" && row["종료"] === "오전 12:00" && row["시간"] === 2), "timesheet must include and merge 22:00-24:00");
 

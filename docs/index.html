@@ -2944,7 +2944,8 @@
         }
         return withFirestoreTimeout(loadPage("", []), 12000, "Firebase 학교 일정");
       }
-      function resetStudentEnrollmentStatus() {
+      function resetStudentEnrollmentStatus(preserveReview) {
+        if(!preserveReview&&typeof reviewReadManager!=="undefined"&&reviewReadManager){reviewReadUser=null;invalidateReviewReads("AUTH");}
         studentEnrollmentStatusSequence++;
         studentEnrollmentStatusContext = "";
         studentEnrollmentStatusUser = null;
@@ -2961,7 +2962,7 @@
       function loadStudentEnrollmentStatusWarnings(force) {
         var context = JSON.stringify([!!authState.loggedIn, authState.loginId || ""]);
         if (studentEnrollmentStatusContext !== context) {
-          resetStudentEnrollmentStatus();
+          resetStudentEnrollmentStatus(!studentEnrollmentStatusContext);
           studentEnrollmentStatusContext = context;
         }
         var sequence = studentEnrollmentStatusSequence;
@@ -4290,6 +4291,7 @@
       var operationMemoPendingWrite = null, operationMemoWriteBusy = false;
       async function operationMemoAuthenticatedRequest(body) {
         if (!authState.loggedIn || !authState.isMaster || authState.isLookup) throw new Error("FORBIDDEN");
+        if(["create","update","delete"].indexOf(body.action)!==-1)invalidateReviewReads("DATA");
         var session = getScheduleSessionKey();
         var auth = await getLiveFirebaseAuth();
         if (!auth.currentUser) throw new Error("UNAUTHORIZED");
@@ -4306,7 +4308,7 @@
           if (session !== getScheduleSessionKey()) throw new Error("SESSION_CHANGED");
           if (body.action === "attendance" && !Array.isArray(result.items)) throw new Error("ATTENDANCE_INVALID_RESPONSE");
           return Array.isArray(result.items) ? result.items : [];
-        } finally { clearTimeout(timer); }
+        } finally { clearTimeout(timer); if(["create","update","delete"].indexOf(body.action)!==-1)invalidateReviewReads("DATA"); }
       }
       function lockOperationMemoInput(locked) {
         ['operationMemoStudentInput','operationMemoSchoolInput','operationMemoGradeInput','operationMemoTypeInput','operationMemoSeverityInput','operationMemoMessageInput'].forEach(function(id) {
@@ -6639,6 +6641,7 @@ window.SeduHubAdapter={
       }
       
       function processData(d, isRefresh, attendanceManualRefreshId, preserveDisplay){
+        if(isRefresh)invalidateReviewReads('DATA');
         try { 
           var scheduleLoadSucceeded = !!(d && !d.error);
           if (scheduleLoadSucceeded) document.getElementById('updateText').textContent = '업데이트 확인됨!';
@@ -6813,6 +6816,7 @@ window.SeduHubAdapter={
           }
           return scheduleInFlight.promise;
         }
+        invalidateReviewReads('DATA');
         document.getElementById('refreshBtn').classList.add('spinning');
         var manualRefreshId = 0;
         if (markReplySeen !== false && canCurrentUserSubmitAttendance()) {
@@ -10552,8 +10556,89 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         applyOperationMemoHighlights();
         scheduleTimelinePosition();
       }
+      // Each source owns its successful cache and request. Consumers never own shared cancellation.
+      function createReviewReadManager(options) {
+        options=options||{};
+        var generation=0, cache=new Map(), pending=new Map(), now=options.now||Date.now;
+        function error(code){return Object.assign(new Error(code),{code:code});}
+        function cancelPending(){generation++;pending.forEach(function(entry){entry.cancel();});pending.clear();}
+        function invalidate(){cache.clear();cancelPending();}
+        function read(key,loader,settings){
+          settings=settings||{};
+          var active=pending.get(key), stamp=generation;
+          if(active&&(!settings.force||active.forced))return active.promise;
+          if(active){active.cancel();pending.delete(key);cache.delete(key);}
+          var saved=cache.get(key);
+          if(!settings.force&&saved&&now()>=saved.at&&now()-saved.at<300000)return Promise.resolve(saved.value);
+          var controller=new AbortController(), entry={generation:stamp,forced:!!settings.force}, timer, rejectCancel;
+          function current(){return generation===stamp&&pending.get(key)===entry&&!controller.signal.aborted;}
+          var cancelled=new Promise(function(_,reject){rejectCancel=reject;});
+          entry.cancel=function(){controller.abort();rejectCancel(error('INVALIDATED'));};
+          pending.set(key,entry);
+          timer=setTimeout(function(){controller.abort();rejectCancel(error('TIMEOUT'));},Math.min(settings.deadline||8500,8500));
+          var work=Promise.resolve().then(function(){if(!current())throw error('INVALIDATED');return loader(controller.signal,current);});
+          entry.promise=Promise.race([work,cancelled]).then(function(value){
+            if(!current())throw error('INVALIDATED');
+            if(settings.cache!==false)cache.set(key,{value:value,at:now()});
+            return value;
+          }).finally(function(){clearTimeout(timer);if(pending.get(key)===entry)pending.delete(key);});
+          return entry.promise;
+        }
+        return {read:read,invalidate:invalidate,cancelPending:cancelPending,generation:function(){return generation;}};
+      }
+      var reviewReadManager=createReviewReadManager(), reviewReadEpoch=0, reviewReadUser=null, reviewIdentitySignature=null, reviewViewFlight=null;
+      window.addEventListener('pagehide',function(){invalidateReviewReads('LEAVE');});
+
+      function invalidateReviewReads(reason) {
+        if(reason==='LEAVE')reviewReadManager.cancelPending();else{reviewReadEpoch++;reviewReadManager.invalidate();}
+        if(reason==='AUTH'||reason==='401'||reason==='403')reviewIdentitySignature=null;
+        window.seduReviewContextCache={};
+        if(typeof reviewModalSequence==='number')reviewModalSequence++;
+        var modal=document.getElementById('reviewModal');
+        if(modal&&modal.style.display!=='none'){
+          var host=document.getElementById('reviewResultList');
+          if(host){
+            var message=reason==='401'?'인증 만료(401) · 다시 로그인해 주세요.':reason==='403'?'접근 거부(403) · 현재 계정 권한을 확인해 주세요.':reason==='AUTH'?'인증·권한 상태가 변경되어 점검 결과를 폐기했습니다. 다시 로그인하거나 권한을 확인해 주세요.':'자료가 변경되어 이전 점검 결과를 폐기했습니다. 점검을 다시 실행해 주세요.';
+            if(reason==='DATA')host.querySelectorAll('[data-review-panel]').forEach(function(panel){if(panel.getAttribute('data-review-panel')!=='exam')panel.textContent=message;});
+            else host.textContent=message;
+          }
+        }
+      }
+      async function authorizeReviewRead() {
+        var epoch=reviewReadEpoch, session=getScheduleSessionKey();
+        if(!authState.loggedIn||authState.isLookup)throw new Error('UNAUTHORIZED');
+        return reviewReadManager.read('authority:'+session,async function(signal,current){
+          var auth=await getLiveFirebaseAuth(),user=auth.currentUser;
+          if(!user)throw new Error('UNAUTHORIZED');
+          if(reviewReadUser&&reviewReadUser!==user)throw new Error('SESSION_CHANGED');
+          reviewReadUser=user;
+          var token=await user.getIdToken();
+          if(!current()||epoch!==reviewReadEpoch||session!==getScheduleSessionKey()||auth.currentUser!==user)throw new Error('SESSION_CHANGED');
+          // Existing read-only identity contract; never use attendance/memo mutations as an auth probe.
+          var response=await fetch('https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableHandoffApi',{method:'POST',signal:signal,cache:'no-store',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({action:'identity'})});
+          if(response.status===401||response.status===403)throw new Error(String(response.status));
+          var body=await response.json();
+          if(!response.ok||!body.ok||!body.identity||body.identity.uid!==user.uid)throw new Error('AUTH_UNAVAILABLE');
+          if(!current()||auth.currentUser!==user||epoch!==reviewReadEpoch||session!==getScheduleSessionKey())throw new Error('SESSION_CHANGED');
+          var signature=JSON.stringify([user.uid,body.identity.admin,body.identity.name||'']);
+          if(reviewIdentitySignature&&reviewIdentitySignature!==signature)throw new Error('FORBIDDEN');
+          reviewIdentitySignature=signature;
+          if(!current()||auth.currentUser!==user||epoch!==reviewReadEpoch||session!==getScheduleSessionKey())throw new Error('SESSION_CHANGED');
+          return {token:token,key:JSON.stringify([user.uid,session,epoch,body.identity.admin]),epoch:epoch};
+        },{cache:false}).catch(function(error){
+          if(epoch===reviewReadEpoch&&error.message!=='INVALIDATED'){reviewReadUser=null;invalidateReviewReads(/401|UNAUTHORIZED/.test(error.message)?'401':/403|FORBIDDEN/.test(error.message)?'403':'AUTH');}
+          throw error;
+        });
+      }
+      function reviewReadState(error){
+        var code=String(error&&error.message||error);
+        return /401|UNAUTHORIZED/.test(code)?'unauthorized':/403|FORBIDDEN|permission-denied/.test(code)?'forbidden':/LIMIT_EXCEEDED/.test(code)?'limit':/TIMEOUT/.test(code)?'timeout':/INVALIDATED|SESSION_CHANGED|AbortError/.test(code)?'cancelled':'unavailable';
+      }
+
+
       function runScheduleReview() {
         if (!lastData) return;
+        if(reviewViewFlight&&reviewViewFlight.sequence===reviewModalSequence&&reviewViewFlight.epoch===reviewReadEpoch&&reviewViewFlight.sheet===currentSheetName&&reviewViewFlight.session===getScheduleSessionKey())return reviewViewFlight.promise;
         
         var reviewList = document.getElementById('reviewResultList');
         reviewList.innerHTML = "<div class='review-empty'>지난주 시간표와 함께 검토 중입니다...</div>";
@@ -11093,14 +11178,14 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           var state = externalReview && externalReview.attendanceStatus && externalReview.attendanceStatus.state;
           var loading = !externalReview || externalReview.loading;
           var available = !loading && state === "ready";
-          var label = loading ? "조회 중" : state === "unconfigured" ? "미설정" : "조회 불가";
+          var label = loading ? "조회 중" : state === "unsupported" ? "미지원" : state === "unconfigured" ? "미설정" : "조회 불가";
           var counts = (externalReview && externalReview.sourceCounts) || {};
           return {
             available: available,
             label: available ? "정상" : label,
             countText: available ? (counts.attendanceRows || 0) + "건" : label,
             patternText: available ? ((externalReview.patternMissing || []).length) + "명" : label,
-            note: loading ? "시수 데이터를 불러오는 중입니다." : state === "unconfigured" ?
+            note: loading ? "시수 데이터를 불러오는 중입니다." : state === "unsupported" ? "출결 API 미지원 · 시수 패턴 누락 여부는 점검하지 못합니다." : state === "unconfigured" ?
               "출결 보조 조회가 설정되지 않아 시수 패턴 누락 여부를 판단할 수 없습니다." :
               "출결 보조 조회를 확인하지 못해 시수 패턴 누락 여부를 판단할 수 없습니다."
           };
@@ -11116,9 +11201,9 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           var attendance = getReviewAttendancePresentation(externalReview);
 	          var hasErrors = (externalReview.errors || []).length > 0;
 	          return "<div class='review-data-grid'>" +
-	            "<div class='review-data-row " + (hasErrors ? "warn" : "") + "'><div class='review-data-label'>S-LMS 학교일정/직보상태</div><div class='review-data-value'>" + ((counts.events || 0) + (counts.statuses || 0)) + "</div></div>" +
+	            "<div class='review-data-row " + (hasErrors ? "warn" : "") + "'><div class='review-data-label'>S-LMS 학교일정/직보상태</div><div class='review-data-value'>" + (reviewSourceCount(externalReview,"events")+" / "+reviewSourceCount(externalReview,"statuses")) + "</div></div>" +
             "<div class='review-data-row " + (attendance.available ? "" : "warn") + "'><div class='review-data-label'>강사 포털 Supabase 최근 시수</div><div class='review-data-value'>" + escapeHtml(attendance.countText) + "</div></div>" +
-	            "<div class='review-data-row'><div class='review-data-label'>확정 직보 누락 후보</div><div class='review-data-value'>" + ((externalReview.confirmedMissing || []).length) + "</div></div>" +
+	            "<div class='review-data-row'><div class='review-data-label'>확정 직보 누락 후보</div><div class='review-data-value'>" + (externalReview.sourceStates&&externalReview.sourceStates.statuses&&externalReview.sourceStates.statuses.state==="ready"?(externalReview.confirmedMissing || []).length:"판단 불가") + "</div></div>" +
             "<div class='review-data-row " + (attendance.available ? "" : "warn") + "'><div class='review-data-label'>시수 패턴 누락 후보</div><div class='review-data-value'>" + escapeHtml(attendance.patternText) + "</div></div>" +
             (!attendance.available ? "<div class='review-source-note'>" + escapeHtml(attendance.note) + "</div>" : "") +
 	            (hasErrors ? "<div class='review-source-note'>제한: " + escapeHtml((externalReview.errors || []).join(" / ")) + "</div>" : "") +
@@ -11190,38 +11275,24 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
               timer=setTimeout(function(){ reject(new Error(label + " 시간 초과")); },ms||8000);
             })]).finally(function(){ clearTimeout(timer); });
           }
-          function fetchReviewFirestoreCollection(collectionName, idToken, maxRows) {
-	          if (!idToken) return Promise.reject(new Error("Firebase 로그인 토큰 없음"));
-	          var projectId = (LIVE_FIREBASE_CONFIG && LIVE_FIREBASE_CONFIG.projectId) || "fir-lms-prod";
-	          var base = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(projectId) +
-	            "/databases/(default)/documents/" + encodeURIComponent(collectionName);
-	          var limit = Math.max(1, Number(maxRows || 800));
-	          function loadPage(pageToken, acc) {
-	            var url = base + "?pageSize=300" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
-	            return fetch(url, { headers: { "Authorization": "Bearer " + idToken, "Accept": "application/json" } }).then(function(res) {
-	              if (!res.ok) throw new Error("Firebase " + collectionName + " 조회 실패(" + res.status + ")");
-	              return res.json();
-	            }).then(function(payload) {
-	              var rows = acc.concat(((payload && payload.documents) || []).map(parseFirestoreRestDocument));
-	              if (payload && payload.nextPageToken && rows.length < limit) return loadPage(payload.nextPageToken, rows);
-	              if (payload && payload.nextPageToken || rows.length > limit) throw new Error("Firebase " + collectionName + " 부분 조회 · 조회 한도를 초과했습니다.");
-	              return rows;
-	            });
-	          }
-	          return withReviewTimeout(loadPage("", []), 8500, "Firebase " + collectionName);
-	        }
-        // Anonymous JSONP and direct REST fallbacks are intentionally disabled.
-        // The authenticated server attendance path is disabled until its schema is approved.
-        function fetchReviewTeacherPortalAttendanceRows() {
-          return Promise.reject(new Error("ATTENDANCE_AUTH_API_REQUIRED"));
-        }
-        function fetchReviewDirectSupabaseAttendanceRows() {
-          return Promise.reject(new Error("ATTENDANCE_AUTH_API_REQUIRED"));
-        }
-        function fetchReviewAttendanceRows(targetDateKey) {
-          return operationMemoAuthenticatedRequest({action:"attendance",date:targetDateKey});
-        }
-	        function getReviewStatusStudentName(item) {
+          function fetchReviewFirestoreCollection(collectionName, idToken, maxRows, signal, current) {
+            var base="https://firestore.googleapis.com/v1/projects/"+encodeURIComponent(LIVE_FIREBASE_CONFIG.projectId)+"/databases/(default)/documents/"+encodeURIComponent(collectionName);
+            async function page(token,rows){
+              if(signal.aborted||!current())throw new Error('INVALIDATED');
+              var res=await fetch(base+'?pageSize=300'+(token?'&pageToken='+encodeURIComponent(token):''),{signal:signal,headers:{Authorization:'Bearer '+idToken,Accept:'application/json'}});
+              if(!res.ok)throw new Error('HTTP_'+res.status);
+              var payload=await res.json();
+              if(signal.aborted||!current())throw new Error('INVALIDATED');
+              rows=rows.concat((payload.documents||[]).map(parseFirestoreRestDocument));
+              if(rows.length>maxRows||(payload.nextPageToken&&rows.length>=maxRows))throw new Error('LIMIT_EXCEEDED');
+              return payload.nextPageToken?page(payload.nextPageToken,rows):rows;
+            }
+            return page('',[]);
+          }
+          function fetchReviewTeacherPortalAttendanceRows(){return Promise.reject(new Error('ATTENDANCE_AUTH_API_REQUIRED'));}
+          function fetchReviewDirectSupabaseAttendanceRows(){return Promise.reject(new Error('ATTENDANCE_AUTH_API_REQUIRED'));}
+          function fetchReviewAttendanceRows(){return Promise.reject(new Error('ATTENDANCE_NOT_SUPPORTED'));}
+        function getReviewStatusStudentName(item) {
 	          return String(item.studentName || item.student_name || item.name || item.displayName || item.student || "").trim();
 	        }
 	        function getReviewStatusDateKeys(item) {
@@ -11347,48 +11418,40 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
             enrollmentWarnings: enrollmentWarnings
 	          };
 	        }
-	        function loadReviewExternalContext(targetDateKey, currentSnapshot) {
-	          if (!targetDateKey) return Promise.resolve({ loading: false, targetDateKey: "", errors: ["점검 대상 날짜를 파악하지 못했습니다."], sourceCounts: {}, confirmedMissing: [], relevantStatuses: [], confirmedStatuses: [], unresolvedStatuses: [], allUnresolvedStatuses: [], examEvents: [], patternMissing: [] });
-	          window.seduReviewContextCache = window.seduReviewContextCache || {};
-	          var sessionKey = typeof getScheduleSessionKey === "function" ? getScheduleSessionKey() : "local";
-            var cacheKey = "review:" + sessionKey + ":" + targetDateKey;
-	          var cached = window.seduReviewContextCache[cacheKey];
-	          if (cached && cached.payload && cached.payload.attendanceStatus && cached.payload.sourceStates && cached.payload.sourceStates.events && cached.payload.sourceStates.events.state === "ready" && cached.payload.sourceStates.statuses && cached.payload.sourceStates.statuses.state === "ready" && !(cached.payload.errors || []).length && Date.now() >= cached.savedAt && Date.now() - cached.savedAt < 5 * 60 * 1000) {
-	            return Promise.resolve(buildReviewExternalSummary(cached.payload, currentSnapshot, targetDateKey));
-	          }
-          var raw = { events: [], statuses: [], attendanceRows: [], attendanceStatus: { state: "loading" }, sourceStates: {events:{state:"loading"},statuses:{state:"loading"}}, errors: [] };
-	          var firebasePromise = getLiveFirebaseAuth().then(function(auth) {
-	            var user = auth.currentUser;
-	            if (!user) throw new Error("Firebase 로그인 세션 없음");
-	            return user.getIdToken();
-	          }).then(function(idToken) {
-	            return Promise.all([
-	              fetchReviewFirestoreCollection("events", idToken, 1500).then(function(rows) { raw.events = rows; raw.sourceStates.events={state:"ready"}; }).catch(function(err) { raw.sourceStates.events={state:"unavailable"}; raw.errors.push(err.message); }),
-	              fetchReviewFirestoreCollection("jikboStatuses", idToken, 2500).then(function(rows) { raw.statuses = rows; raw.sourceStates.statuses={state:"ready"}; }).catch(function(err) { raw.sourceStates.statuses={state:"unavailable"}; raw.errors.push(err.message); })
-	            ]);
-	          }).catch(function(err) {
-	            raw.sourceStates.events={state:"unavailable"}; raw.sourceStates.statuses={state:"unavailable"};
-            raw.errors.push(err && err.message ? err.message : String(err || "Firebase 조회 실패"));
-	          });
-          var supabasePromise = fetchReviewAttendanceRows(targetDateKey).then(function(rows) {
-            if (!Array.isArray(rows)) throw new Error("ATTENDANCE_INVALID_RESPONSE");
-            raw.attendanceRows = rows;
-            raw.attendanceStatus = { state: "ready" };
-          }).catch(function(err) {
-            var code = err && err.message ? err.message : String(err || "Supabase 조회 실패");
-            raw.attendanceStatus = { state: /^(ATTENDANCE_NOT_CONFIGURED|SERVER_NOT_CONFIGURED)$/.test(code) ? "unconfigured" : "unavailable" };
-            raw.errors.push(err && err.message ? err.message : String(err || "Supabase 조회 실패"));
-          });
-          var enrollmentPromise = loadStudentEnrollmentStatusWarnings().catch(function(err) {
-            raw.errors.push(err && err.message ? err.message : String(err || "Firebase 학생 상태 조회 실패"));
-          });
-          return Promise.all([firebasePromise, supabasePromise, enrollmentPromise]).then(function() {
-	            if (typeof getScheduleSessionKey === "function" && sessionKey !== getScheduleSessionKey()) throw new Error("SESSION_CHANGED");
-            if (!raw.errors.length) window.seduReviewContextCache[cacheKey] = { savedAt: Date.now(), payload: raw };
-	            return buildReviewExternalSummary(raw, currentSnapshot, targetDateKey);
-	          });
-	        }
-	        function buildReviewExternalIssues(externalReview) {
+          function loadReviewExternalContext(targetDateKey,currentSnapshot) {
+            // The consumer deadline does not cancel requests shared by another consumer.
+            return withReviewTimeout(loadReviewExternalContextWork(targetDateKey,currentSnapshot),20000,'점검');
+          }
+          async function loadReviewExternalContextWork(targetDateKey,currentSnapshot) {
+            var auth=await reviewReadManager.read('auth-bootstrap:'+getScheduleSessionKey(),function(){return getLiveFirebaseAuth();},{cache:false}),user=auth.currentUser,epoch=reviewReadEpoch;
+            if(!authState.loggedIn||authState.isLookup||!user)throw new Error('UNAUTHORIZED');
+            if(reviewReadUser&&reviewReadUser!==user){reviewReadUser=null;invalidateReviewReads('AUTH');throw new Error('SESSION_CHANGED');}
+            var session=getScheduleSessionKey(), key=JSON.stringify([user.uid,session,epoch,!!authState.isMaster]);
+            var authority=authorizeReviewRead();
+            // Start existing permitted reads concurrently; authority must pass before commit or display.
+            var tokenPromise=user.getIdToken();
+            var raw={events:[],statuses:[],attendanceRows:[],attendanceStatus:{state:'unsupported'},sourceStates:{},errors:['출결 미지원 · 시수 패턴 점검은 제공되지 않습니다.']};
+            var enrollment=loadStudentEnrollmentStatusWarnings().catch(function(){raw.errors.push('학생 상태 조회 불가');});
+            var sources=Promise.all([['events','events',1500],['statuses','jikboStatuses',2500]].map(async function(spec){
+              try{
+                var rows=await reviewReadManager.read(key+':'+spec[1]+':'+spec[2],async function(signal,current){
+                  var token=await tokenPromise;
+                  if(auth.currentUser!==user||session!==getScheduleSessionKey())throw new Error('SESSION_CHANGED');
+                  var result=await Promise.all([fetchReviewFirestoreCollection(spec[1],token,spec[2],signal,current),authority]);
+                  return result[0];
+                });
+                if(epoch!==reviewReadEpoch)throw new Error('INVALIDATED');
+                raw[spec[0]]=rows;raw.sourceStates[spec[0]]={state:'ready'};
+              }catch(error){
+                var state=reviewReadState(error);raw.sourceStates[spec[0]]={state:state};raw.errors.push(spec[0]+': '+state);
+                if((state==='unauthorized'||state==='forbidden')&&epoch===reviewReadEpoch)invalidateReviewReads(state==='unauthorized'?'401':'403');
+              }
+            }));
+            await Promise.all([sources,authority,enrollment]);
+            if(epoch!==reviewReadEpoch)throw new Error('INVALIDATED');
+            return buildReviewExternalSummary(raw,currentSnapshot,targetDateKey);
+          }
+          function buildReviewExternalIssues(externalReview) {
 	          if (!externalReview || externalReview.loading) return [];
 	          var list = [];
 	          (externalReview.confirmedMissing || []).forEach(function(item) {
@@ -11422,7 +11485,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 	        function reviewSourceCount(externalReview, key) {
             if (!externalReview || externalReview.loading) return "조회 중";
             var state = externalReview.sourceStates && externalReview.sourceStates[key];
-            return state && state.state === "ready" ? ((externalReview.sourceCounts || {})[key] || 0) + "건" : "조회 불가";
+            return state && state.state === "ready" ? ((externalReview.sourceCounts || {})[key] || 0) + "건" : ({unauthorized:"인증 만료",forbidden:"접근 거부",limit:"상한 초과 · 불완전",timeout:"시간 초과",cancelled:"조회 취소"}[state&&state.state]||"조회 불가");
           }
           function renderReviewExternalPanel(externalReview) {
 	          if (!externalReview) return "<div class='review-empty'>S-LMS/Firebase/Supabase 연동 결과를 준비하고 있습니다.</div>";
@@ -11431,7 +11494,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           var attendance = getReviewAttendancePresentation(externalReview);
 	          var html = "<div class='review-source-note'>연동 결과: Firebase 학교일정 " + reviewSourceCount(externalReview,"events") + ", 직보상태 " + reviewSourceCount(externalReview,"statuses") + ", Supabase 최근 시수 " + escapeHtml(attendance.countText) +
 	            ((externalReview.errors || []).length ? "<br>제한: " + escapeHtml((externalReview.errors || []).join(" / ")) : "") + "</div>";
-	          html += "<div class='review-section-title'><span>S-LMS 직보 확정 누락 후보</span><span>" + (externalReview.confirmedMissing || []).length + "명</span></div>";
+	          html += "<div class='review-section-title'><span>S-LMS 직보 확정 누락 후보</span><span>" + (externalReview.sourceStates&&externalReview.sourceStates.statuses&&externalReview.sourceStates.statuses.state==="ready"?(externalReview.confirmedMissing || []).length+"명":"판단 불가") + "</span></div>";
 	          html += renderReviewIssueList(buildReviewExternalIssues({ loading: false, confirmedMissing: externalReview.confirmedMissing || [], unresolvedStatuses: [], patternMissing: [] }), externalReview.sourceStates && externalReview.sourceStates.statuses && externalReview.sourceStates.statuses.state === "ready" ? "확정 직보 학생 중 현재표 누락 후보가 없습니다." : "직보 자료 조회 불가 · 누락 여부를 판단할 수 없습니다.");
 	          html += "<div class='review-section-title'><span>S-LMS 미정·확인 필요 직보</span><span>" + (externalReview.unresolvedStatuses || []).length + "명</span></div>";
 	          html += renderReviewIssueList(buildReviewExternalIssues({ loading: false, confirmedMissing: [], unresolvedStatuses: externalReview.unresolvedStatuses || [], patternMissing: [] }), externalReview.sourceStates && externalReview.sourceStates.statuses && externalReview.sourceStates.statuses.state === "ready" ? "미정 또는 확인 필요 직보 상태가 없습니다." : "직보 자료 조회 불가 · 미정 여부를 판단할 수 없습니다.");
@@ -11840,8 +11903,9 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 	          if(window.connectTimetableExamReview)window.connectTimetableExamReview(document.getElementById('examReviewFrame'),targetDateKey,buildReviewSnapshot,reviewCurrent);
 	          setReviewTab(selectedTab || 'overview');
 	        }
-	        var reviewRequest = ++reviewModalSequence, reviewSheet = currentSheetName, reviewSession = getScheduleSessionKey();
-        function reviewCurrent() { return reviewRequest === reviewModalSequence && reviewSheet === currentSheetName && reviewSession === getScheduleSessionKey() && document.getElementById("reviewModal").style.display !== "none"; }
+	        var reviewEpoch=reviewReadEpoch;
+        var reviewRequest = ++reviewModalSequence, reviewSheet = currentSheetName, reviewSession = getScheduleSessionKey();
+        function reviewCurrent() { return reviewEpoch===reviewReadEpoch && reviewRequest === reviewModalSequence && reviewSheet === currentSheetName && reviewSession === getScheduleSessionKey() && document.getElementById("reviewModal").style.display !== "none"; }
         var currentSnapshot = buildReviewSnapshot(lastData);
 	        currentSnapshot.allStudentNamesCount = getReviewObjectKeys(currentSnapshot.allStudentNames).length;
 	        var previousSheetName = getReviewPreviousWeekSheetName();
@@ -11849,9 +11913,11 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 	        var targetDateKey = formatReviewDateKey(targetDateObj);
 	        var teacherName = getActiveTeacherName();
 	        var previousPromise = previousSheetName
-	          ? callServer(teacherName ? "getTeacherGridData" : "getFixedGridData", teacherName ? [previousSheetName, teacherName, true] : [previousSheetName, true]).catch(function() { return null; })
+	          ? withReviewTimeout(callServer(teacherName ? "getTeacherGridData" : "getFixedGridData", teacherName ? [previousSheetName, teacherName, true] : [previousSheetName, true]),8500,"지난주 시간표").catch(function() { return null; })
 	          : Promise.resolve(null);
-	        previousPromise.then(function(previousData) {
+	        var viewFlight={sequence:reviewModalSequence,epoch:reviewReadEpoch,sheet:currentSheetName,session:getScheduleSessionKey()};
+        reviewViewFlight=viewFlight;
+        viewFlight.promise=previousPromise.then(function(previousData) {
           if (!reviewCurrent()) return;
 	          var issues = [];
 	          var comparison = null;
@@ -11868,7 +11934,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 	          }
 	          var loadingExternalReview = { loading: true, targetDateKey: targetDateKey };
 	          renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, !!(previousData && previousData.grid), loadingExternalReview);
-	          loadReviewExternalContext(targetDateKey, currentSnapshot).then(function(externalReview) {
+	          return loadReviewExternalContext(targetDateKey, currentSnapshot).then(function(externalReview) {
             if (!reviewCurrent()) return;
 	            renderReviewIssues(issues, previousSheetName, comparison, currentSnapshot, !!(previousData && previousData.grid), externalReview);
 	          }).catch(function(err) {
@@ -11888,11 +11954,13 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 	              patternMissing: []
 	            });
 	          });
-	        });
+	        }).finally(function(){if(reviewViewFlight===viewFlight)reviewViewFlight=null;});
+        return viewFlight.promise;
       }
       
       var reviewModalSequence = 0;
       function closeReviewModal() {
+        invalidateReviewReads("LEAVE");
         reviewModalSequence++;
         document.getElementById('reviewModal').style.display = 'none';
       }
