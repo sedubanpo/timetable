@@ -13,7 +13,7 @@ function fixture(){
     return {ok:true,status:200,url:'https://script.google.com/macros/s/example/exec',text:async()=>htmlSource?'<html>Google Drive is temporarily unavailable. PrivateName secret-content</html>':JSON.stringify(failSource?{ok:false}:{ok:true,snapshots:[snapshot],sheets:[sheet,'10/3(토)'],catalogCapturedAt:now})};
   },require:name=>({
     'firebase-admin/app':{initializeApp(){}},'firebase-admin/auth':{getAuth:()=>({verifyIdToken:async(token,revoked)=>{assert.equal(revoked,true);if(token!=='valid')throw Error('auth');return {uid:'u'};}})},
-    'firebase-admin/storage':{getStorage:()=>({bucket:()=>({file:()=>({save:async()=>{}})})})},'./visitor-media':require('./visitor-media'),'firebase-admin/firestore':{getFirestore:()=>db},'firebase-functions/v2/https':{onRequest:(config,handler)=>Object.assign(handler,{config})},
+    'firebase-admin/storage':{getStorage:()=>({bucket:()=>({file:()=>({save:async()=>{}})})})},'./annex-guides':require('./annex-guides'),'./visitor-media':require('./visitor-media'),'firebase-admin/firestore':{getFirestore:()=>db},'firebase-functions/v2/https':{onRequest:(config,handler)=>Object.assign(handler,{config})},
     'firebase-functions/v2/scheduler':{onSchedule:(config,handler)=>Object.assign(handler,{config})},'firebase-functions/params':{defineSecret:()=>({value:()=>secret})},'node:crypto':crypto,'./core':{...core,isSnapshotRestTime:()=>restTime}
   })[name]};
   vm.runInNewContext(fs.readFileSync(__dirname+'/index.js','utf8'),context);
@@ -162,3 +162,5 @@ test('banner API permits managing staff and revokes immediately with permissions
  f.data.set('userAppAccess/u',{permissions:{}});
  assert.equal((await f.request({action:'visitor_banner_hide',slot:2})).status,403);
 });
+
+test('annex completion API checks active role and survives date changes',async()=>{const f=fixture();f.data.set('users/u',{role:'DESK',status:'ACTIVE',name:'직원'});assert.equal((await f.request({action:'annex_guide_mark',student:'검증',building:3,done:true})).ok,true);assert.equal((await f.request({action:'annex_guide_read',student:'검증',sheet:'10/20'})).guides[3].done,true);f.data.set('users/u',{role:'TEACHER',status:'ACTIVE',name:'강사'});assert.equal((await f.request({action:'annex_guide_read',student:'검증'})).status,403);});

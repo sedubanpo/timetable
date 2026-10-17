@@ -2064,6 +2064,7 @@
         body.visitor-lookup-mode .toolbar-first-row > #digitalClock {top:auto;bottom:12px;right:24px;transform:none;margin:0;}
       }
 
+      #annexGuidePanel h3{font-size:16px;margin:18px 0 8px}#annexGuidePanel p{font-size:12px;color:#526781;line-height:1.6}#annexGuidePanel .annex-guide-item{padding:12px;margin:10px 0;background:white;border:1px solid #dce3eb;border-radius:8px}#annexGuidePanel span{display:block;font-size:12px;color:#2856a0;margin:5px 0}#annexGuidePanel img{width:100%;height:auto;border-radius:4px}#annexGuidePanel button{display:block;width:100%;padding:10px 6px;margin-top:8px;border:1px solid #bdcde5;border-radius:7px;background:#f0f5ff;color:#173c72;font-weight:700;cursor:pointer}
       /* Administrative controls: neutral actions, one operational row and a compact status row. */
       .staff-toolbar-enabled #mainPage .top-bar {display:block;padding:0;background:#fff;backdrop-filter:none;}
       .staff-toolbar-enabled .top-bar > .toolbar-first-row,
@@ -2241,7 +2242,7 @@
         <input id="studentImageSearch" type="search" placeholder="학생 이름 검색" aria-label="학생 이름 검색" oninput="filterStudentImageList()">
         <div class="card-state-filter"><button data-card-filter="all" onclick="setStudentCardFilter('all')">전체</button><button data-card-filter="wait" onclick="setStudentCardFilter('wait')">미발송</button><button data-card-filter="done" onclick="setStudentCardFilter('done')">완료</button></div><div id="studentImageList" class="student-list"></div></div>
         <div class="student-preview-panel"><div class="student-preview-panel-head"><div><div class="student-preview-panel-title">시간표 카드 미리보기</div><div class="student-preview-panel-sub">학부모님께 전달될 이미지입니다.</div></div></div>
-        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div></aside></div></div></div>
+        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div></aside></div></div></div>
         <div class="card-actions"><button class="primary" onclick="copyLiveStudentCard()">이미지 복사</button><button onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button onclick="nextUnsentStudentCard()">다음 미발송</button><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
       </div></div>
     <div id="absenceNoticeModal">
@@ -7290,6 +7291,7 @@
         }
       }
       function openStudentImageModal() {
+        var guidePanel=document.getElementById('annexGuidePanel');if(guidePanel)delete guidePanel.dataset.key;
         previewNoteDrafts = Object.create(null);
         if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
         buildStudentImageMap();
@@ -8094,7 +8096,29 @@ function card(s){const lessons=mergedLessons(s);const subjects=[...new Set(lesso
       }
       function setStudentCardFilter(value){studentCardFilter=value;filterStudentImageList();}
       function nextUnsentStudentCard(){var names=Object.keys(studentImageScheduleMap).sort(function(a,b){return a.localeCompare(b,'ko');});var i=names.indexOf(selectedStudentForImage);var ordered=names.slice(i+1).concat(names.slice(0,i));var next=ordered.find(function(n){return !getStudentCardStatusRecord(n).sent;});if(next)selectStudentImageItem(next);else alert('다음 미발송 학생이 없습니다.');}
+      function renderAnnexGuidePanel(name, force){
+        var host=document.getElementById('annexGuidePanel');if(!host)return;
+        var model=name&&buildStudentCardViewModel(name),used=model?getStudentCardUsedBuildingMap(model.timelineRows):{};
+        var buildings=[2,3].filter(function(n){return used[n+'관'];});
+        var key=JSON.stringify([getScheduleSessionKey(),currentSheetName,name,buildings]);
+        if(!force&&host.dataset.key===key)return;host.dataset.key=key;
+        if(!buildings.length){host.innerHTML='';return;}
+        host.innerHTML='<h3>별도 약도 안내</h3><p>최초 안내 여부를 확인하는 중…</p>';
+        snapshotRequest('annex_guide_read','','',null,{student:name}).then(function(r){if(host.dataset.key!==key)return;draw(r.guides);}).catch(function(){if(host.dataset.key===key)host.innerHTML='<h3>별도 약도 안내</h3><p>안내 기록을 불러오지 못했습니다.</p><button onclick="renderAnnexGuidePanel(selectedStudentForImage,true)">다시 확인</button>';});
+        function draw(records){
+          host.innerHTML='<h3>별도 약도 안내</h3><p>시간표와 별도로 복사합니다. 실제 전달 후 안내 완료를 표시하세요.</p>'+buildings.map(function(n){var r=records[n],done=r&&r.done;return '<section class="annex-guide-item"><strong>'+n+'관 안내</strong><span>'+(done?'안내 완료 · '+new Date(r.updatedAt).toLocaleDateString('ko-KR'):'첫 안내 필요')+'</span><img src="assets/annex-'+n+'-directions.png" alt="'+n+'관 이동 안내"><p>반포쇼핑타운 '+n+'동 '+(n===2?'5':'4')+'층</p><button data-copy="'+n+'">'+n+'관 안내 이미지 복사</button><button data-mark="'+n+'" data-done="'+(!done)+'">'+(done?'안내 완료 취소':'안내 완료 표시')+'</button></section>';}).join('');
+          host.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){copyAnnexGuide(Number(b.dataset.copy));};});
+          host.querySelectorAll('[data-mark]').forEach(function(b){b.onclick=function(){host.querySelectorAll('button').forEach(function(el){el.disabled=true;});snapshotRequest('annex_guide_mark','','',null,{student:name,building:Number(b.dataset.mark),done:b.dataset.done==='true'}).then(function(r){if(host.dataset.key===key)draw(r.guides);}).catch(function(){if(host.dataset.key===key){alert('안내 상태를 저장하지 못했습니다. 기록을 다시 확인합니다.');renderAnnexGuidePanel(name,true);}});};});
+        }
+      }
+      function copyAnnexGuide(building){
+        if(![2,3].includes(building))return;
+        if(!navigator.clipboard||!navigator.clipboard.write||typeof ClipboardItem==='undefined'){alert('이미지 복사를 지원하는 Chrome에서 이용해 주세요.');return;}
+        var blob=fetch('assets/annex-'+building+'-directions.png').then(function(r){if(!r.ok)throw Error('IMAGE');return r.blob();});
+        navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){alert(building+'관 안내 이미지를 복사했습니다. 전달 후 안내 완료를 표시해 주세요.');}).catch(function(){alert('약도 복사에 실패했습니다. 브라우저 권한을 확인하고 다시 시도해 주세요.');});
+      }
       function renderCardDeliveryEditor(name){
+        renderAnnexGuidePanel(name);
         var panel=document.getElementById('studentCardDeliveryEditor');if(!panel)return;
         if(!name){panel.innerHTML='';delete panel.dataset.key;return;}
         var record=getStudentCardStatusRecord(name), disabled=!canChangeStudentCardStatus();

@@ -84,6 +84,7 @@ async function authenticate(req) {
   const name=String(account.name||profile.displayName||access.instructorName||'').trim();
   let loginId=String(account.loginId||profile.instructorId||String(user.email||'').split('@')[0]||user.uid).trim();
   if (/^\d[\d -]+$/.test(loginId)) { loginId=loginId.replace(/\D/g,''); if(loginId.length===8)loginId='010'+loginId; else if(loginId.length===10 && loginId.startsWith('10'))loginId='0'+loginId; }
+  who.uid=user.uid;
   who.login={ok:true,success:true,authSource:'firebase',firebaseUid:user.uid,loginId,teacherName:name,name,
     isMaster:who.full,isLookup:false,role:who.full?'ADMIN':'TEACHER',teacherNames:[],teacherRosterDeferred:who.full};
   return who;
@@ -93,6 +94,7 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
   if(req.method!=='POST')return res.status(405).json({ok:false,error:'METHOD_NOT_ALLOWED'});
   try {
     const who=await authenticate(req), {action,sheet,teacher}=req.body||{};
+    if(['annex_guide_read','annex_guide_mark'].includes(action))return res.json({ok:true,...await require('./annex-guides').handle(getFirestore(),who,who.uid,req.body)});
     if(action==='visitor_media') return res.json({ok:true,...await require('./visitor-media').read(getFirestore())});
     if(['visitor_banner_save','visitor_banner_hide'].includes(action)){
       if(!(who.role==='ADMIN'||(who.role==='STAFF'&&who.full===true)))coreFail('FORBIDDEN');
