@@ -1,0 +1,55 @@
+/* Keep navigation and search available; secondary tools expand in place on phones. */
+.mobile-toolbar-toggle{display:none!important}
+.first-lesson-notice-list button{display:flex;align-items:center;gap:8px;max-width:100%;text-align:left}
+.first-lesson-notice-name{font-weight:800;flex-shrink:0}
+.first-lesson-notice-meta{font-size:12px;font-weight:500;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:768px){
+ .staff-context{padding:4px 10px;gap:8px;min-height:32px;flex-wrap:nowrap}
+ .staff-context .header-logo-img{height:24px}
+ .staff-context .loading-bar-container{margin-left:auto;max-width:52px}
+ .staff-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:6px 10px;position:relative}
+ .staff-date{grid-column:1;grid-row:1;gap:3px}
+ .staff-query,.staff-actions{display:contents}
+ .staff-toolbar .search-wrapper{grid-column:1;grid-row:2;min-width:0;max-width:none;width:100%}
+ .staff-toolbar .search-input{height:44px!important;font-size:14px!important}
+ .staff-toolbar button,.staff-menu summary{min-height:44px;padding:6px 8px;font-size:12px}
+ .staff-actions>.mobile-toolbar-toggle{display:inline-flex!important;grid-column:2;grid-row:1}
+ .staff-actions>#attendanceInboxBtn{grid-column:2;grid-row:2;font-size:11px;gap:4px}
+ .staff-toolbar:not(.mobile-tools-open) .staff-query>#teacherPicker,
+ .staff-toolbar:not(.mobile-tools-open) .staff-query>#roomOverviewBtn,
+ .staff-toolbar:not(.mobile-tools-open) .staff-actions>:not(.mobile-toolbar-toggle):not(#attendanceInboxBtn){display:none!important}
+ .mobile-tools-open .staff-query>#teacherPicker,.mobile-tools-open .staff-query>#roomOverviewBtn{grid-column:auto;min-width:0;max-width:100%}
+ .mobile-tools-open .staff-actions>.staff-menu{position:static}
+ .staff-menu-panel{left:10px;right:10px;top:100%;width:auto;max-height:55dvh}
+ .staff-status{gap:4px;padding:2px 10px;flex-wrap:wrap}
+ .staff-status .attendance-window{min-width:0;flex-basis:calc(100% - 48px)}
+ .staff-status #snapshotNotice{width:auto;min-height:24px;flex:1;font-size:10px}
+ .staff-status .attendance-message-refresh,.staff-status #snapshotNotice button{min-height:44px;min-width:44px}
+ .staff-status:has(.attendance-window-empty) .attendance-window{display:none}
+ .staff-status:has(.attendance-window-empty) #attendanceMessageTools{margin-left:auto;order:2}
+ #firstLessonNotice{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 6px;max-height:none;padding:4px 10px;font-size:12px}
+ #firstLessonNotice>strong{grid-column:1;grid-row:1;font-size:11px}
+ #firstLessonNotice>.first-lesson-dismiss{grid-column:2;grid-row:1 / span 2;padding:4px 8px}
+ .first-lesson-notice-list{grid-column:1;grid-row:2;width:100%;gap:6px}
+ #firstLessonNotice .first-lesson-notice-list button{padding:4px 8px;gap:6px;flex-shrink:0;max-width:100%;font-size:13px}
+ .first-lesson-notice-meta{font-size:11px;line-height:1.35;max-width:210px}
+ #teacherMobileList{padding:6px 8px 80px}
+ .teacher-mobile-toolbar{padding:4px 10px;margin-bottom:6px;min-height:44px;border-radius:8px;box-shadow:none}
+ .teacher-simple-hour-card{padding:6px 8px;margin-bottom:8px;border-radius:8px;box-shadow:none}
+ .teacher-simple-hour-head{margin-bottom:4px;gap:6px}
+ .teacher-simple-hour-title{font-size:15px;font-variant-numeric:tabular-nums}
+ .teacher-simple-hour-sub{display:none}
+ .teacher-simple-students{gap:0}
+ .teacher-simple-student{padding:4px 0;gap:6px;border:0;border-top:1px solid #dce3eb;border-radius:0;background:transparent}
+ .teacher-simple-main{gap:0}
+ .teacher-simple-name-trigger{min-height:44px;font-size:16px}
+ .teacher-simple-name-row{gap:5px}
+ .teacher-simple-school{font-size:12px}
+ .teacher-simple-teacher-label{font-size:12px;font-weight:700;color:#334155}
+ .teacher-simple-inline{gap:3px}
+ .teacher-simple-chip{padding:2px 5px;border-radius:4px;font-size:11px}
+ .teacher-simple-student .attendance-report-btn{min-height:44px;padding:6px;font-size:11px}
+ .teacher-hour-card{padding:8px;margin-bottom:8px;box-shadow:none}
+ .teacher-student-item{padding:6px 8px}
+ .teacher-student-note-chip{padding:4px 6px}
+}

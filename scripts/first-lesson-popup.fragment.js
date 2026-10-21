@@ -4,11 +4,11 @@
         return !!(authState.loggedIn && !authState.isLookup && !isLookupViewActive() && (authState.isMaster || authState.teacherName));
       }
       function firstLessonContext() { return JSON.stringify([getScheduleSessionKey(),currentSheetName,authState.teacherName,!!authState.isMaster]); }
-      function firstLessonButton(name,school,status) {
+      function firstLessonButton(name,school,status,subject,teacher) {
         if(!canShowFirstLesson() || !/^(신규생|첫수업)$/.test(normalizeStatusLabel(status||'')))return '';
         clearTimeout(firstLessonUI.noticeTimer);
         firstLessonUI.noticeTimer=setTimeout(updateFirstLessonNotice,100);
-        return '<button type="button" class="first-lesson-trigger" data-first-lesson-name="'+escapeHtml(name)+'" data-first-lesson-school="'+escapeHtml(school||'')+'" aria-haspopup="dialog" aria-label="'+escapeHtml(name)+' 첫수업 정보 보기">첫수업 정보</button>';
+        return '<button type="button" class="first-lesson-trigger" data-first-lesson-name="'+escapeHtml(name)+'" data-first-lesson-school="'+escapeHtml(school||'')+'" data-first-lesson-subject="'+escapeHtml(subject||'')+'" data-first-lesson-teacher="'+escapeHtml(teacher||'')+'" aria-haspopup="dialog" aria-label="'+escapeHtml(name)+' 첫수업 정보 보기">첫수업 정보</button>';
       }
       function ensureFirstLessonUI() {
         if(document.getElementById('firstLessonDialog'))return;
@@ -27,10 +27,12 @@
         if(!canShowFirstLesson()){invalidateFirstLesson();return;}
         ensureFirstLessonUI();var notice=document.getElementById('firstLessonNotice'),context=firstLessonContext();
         if(firstLessonUI.context!==context){closeFirstLesson();firstLessonUI.context=context;firstLessonUI.dismissed='';}
-        var targets=[],seen=new Set();
+        var targets=[],seen=new Set(),lessonLabels=new Map();
         document.querySelectorAll('#mainPage [data-first-lesson-name]').forEach(function(b){
           if(b.closest('#firstLessonNotice')||!b.getClientRects().length)return;
           var key=JSON.stringify([b.dataset.firstLessonName,b.dataset.firstLessonSchool]);
+          var label=[b.dataset.firstLessonSubject,b.dataset.firstLessonTeacher].filter(Boolean).join(' · ');
+          if(!lessonLabels.has(key))lessonLabels.set(key,new Set());if(label)lessonLabels.get(key).add(label);
           if(!seen.has(key)){seen.add(key);targets.push(b);}
         });
         if(!targets.length||firstLessonUI.dismissed===context){notice.hidden=true;return;}
@@ -39,7 +41,8 @@
         var activeKey=activeTrigger?JSON.stringify([activeTrigger.dataset.firstLessonName,activeTrigger.dataset.firstLessonSchool]):'';
         notice.replaceChildren();var heading=document.createElement('strong');heading.textContent='신규생·첫수업 '+targets.length+'명';
         var list=document.createElement('div');list.className='first-lesson-notice-list';
-        targets.forEach(function(target){var b=document.createElement('button');b.type='button';b.textContent=target.dataset.firstLessonName;b.onclick=function(){openFirstLesson(target,b);};list.append(b);
+        targets.forEach(function(target){var b=document.createElement('button');b.type='button';var name=document.createElement('span');name.className='first-lesson-notice-name';name.textContent=target.dataset.firstLessonName;b.append(name);
+          var meta=document.createElement('span');meta.className='first-lesson-notice-meta';meta.textContent=Array.from(lessonLabels.get(JSON.stringify([target.dataset.firstLessonName,target.dataset.firstLessonSchool]))||[]).join(' / ');if(meta.textContent)b.append(meta);b.onclick=function(){openFirstLesson(target,b);};list.append(b);
           if(document.getElementById('firstLessonDialog').open&&activeKey===JSON.stringify([target.dataset.firstLessonName,target.dataset.firstLessonSchool])){
             firstLessonUI.trigger=target;
             if(noticeOpener)firstLessonUI.opener=b;

@@ -2172,6 +2172,62 @@
 #firstLessonDialog button:disabled{opacity:.5;cursor:wait}.first-lesson-trigger:focus-visible,#firstLessonNotice button:focus-visible,#firstLessonDialog :focus-visible{outline:3px solid #3269b1;outline-offset:2px}
 @media(max-width:600px){.first-lesson-trigger{min-height:44px}#firstLessonNotice{padding:6px 10px;gap:8px;font-size:12px}#firstLessonDialog{width:calc(100vw - 20px);max-height:76vh;max-height:76dvh}#firstLessonDialog header{padding:16px}#firstLessonBody{padding:16px}#firstLessonDialog footer{padding:10px 16px}#firstLessonDialog h2{font-size:18px}}
 
+/* Keep navigation and search available; secondary tools expand in place on phones. */
+.mobile-toolbar-toggle{display:none!important}
+.first-lesson-notice-list button{display:flex;align-items:center;gap:8px;max-width:100%;text-align:left}
+.first-lesson-notice-name{font-weight:800;flex-shrink:0}
+.first-lesson-notice-meta{font-size:12px;font-weight:500;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:768px){
+ .staff-context{padding:4px 10px;gap:8px;min-height:32px;flex-wrap:nowrap}
+ .staff-context .header-logo-img{height:24px}
+ .staff-context .loading-bar-container{margin-left:auto;max-width:52px}
+ .staff-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:6px 10px;position:relative}
+ .staff-date{grid-column:1;grid-row:1;gap:3px}
+ .staff-query,.staff-actions{display:contents}
+ .staff-toolbar .search-wrapper{grid-column:1;grid-row:2;min-width:0;max-width:none;width:100%}
+ .staff-toolbar .search-input{height:44px!important;font-size:14px!important}
+ .staff-toolbar button,.staff-menu summary{min-height:44px;padding:6px 8px;font-size:12px}
+ .staff-actions>.mobile-toolbar-toggle{display:inline-flex!important;grid-column:2;grid-row:1}
+ .staff-actions>#attendanceInboxBtn{grid-column:2;grid-row:2;font-size:11px;gap:4px}
+ .staff-toolbar:not(.mobile-tools-open) .staff-query>#teacherPicker,
+ .staff-toolbar:not(.mobile-tools-open) .staff-query>#roomOverviewBtn,
+ .staff-toolbar:not(.mobile-tools-open) .staff-actions>:not(.mobile-toolbar-toggle):not(#attendanceInboxBtn){display:none!important}
+ .mobile-tools-open .staff-query>#teacherPicker,.mobile-tools-open .staff-query>#roomOverviewBtn{grid-column:auto;min-width:0;max-width:100%}
+ .mobile-tools-open .staff-actions>.staff-menu{position:static}
+ .staff-menu-panel{left:10px;right:10px;top:100%;width:auto;max-height:55dvh}
+ .staff-status{gap:4px;padding:2px 10px;flex-wrap:wrap}
+ .staff-status .attendance-window{min-width:0;flex-basis:calc(100% - 48px)}
+ .staff-status #snapshotNotice{width:auto;min-height:24px;flex:1;font-size:10px}
+ .staff-status .attendance-message-refresh,.staff-status #snapshotNotice button{min-height:44px;min-width:44px}
+ .staff-status:has(.attendance-window-empty) .attendance-window{display:none}
+ .staff-status:has(.attendance-window-empty) #attendanceMessageTools{margin-left:auto;order:2}
+ #firstLessonNotice{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 6px;max-height:none;padding:4px 10px;font-size:12px}
+ #firstLessonNotice>strong{grid-column:1;grid-row:1;font-size:11px}
+ #firstLessonNotice>.first-lesson-dismiss{grid-column:2;grid-row:1 / span 2;padding:4px 8px}
+ .first-lesson-notice-list{grid-column:1;grid-row:2;width:100%;gap:6px}
+ #firstLessonNotice .first-lesson-notice-list button{padding:4px 8px;gap:6px;flex-shrink:0;max-width:100%;font-size:13px}
+ .first-lesson-notice-meta{font-size:11px;line-height:1.35;max-width:210px}
+ #teacherMobileList{padding:6px 8px 80px}
+ .teacher-mobile-toolbar{padding:4px 10px;margin-bottom:6px;min-height:44px;border-radius:8px;box-shadow:none}
+ .teacher-simple-hour-card{padding:6px 8px;margin-bottom:8px;border-radius:8px;box-shadow:none}
+ .teacher-simple-hour-head{margin-bottom:4px;gap:6px}
+ .teacher-simple-hour-title{font-size:15px;font-variant-numeric:tabular-nums}
+ .teacher-simple-hour-sub{display:none}
+ .teacher-simple-students{gap:0}
+ .teacher-simple-student{padding:4px 0;gap:6px;border:0;border-top:1px solid #dce3eb;border-radius:0;background:transparent}
+ .teacher-simple-main{gap:0}
+ .teacher-simple-name-trigger{min-height:44px;font-size:16px}
+ .teacher-simple-name-row{gap:5px}
+ .teacher-simple-school{font-size:12px}
+ .teacher-simple-teacher-label{font-size:12px;font-weight:700;color:#334155}
+ .teacher-simple-inline{gap:3px}
+ .teacher-simple-chip{padding:2px 5px;border-radius:4px;font-size:11px}
+ .teacher-simple-student .attendance-report-btn{min-height:44px;padding:6px;font-size:11px}
+ .teacher-hour-card{padding:8px;margin-bottom:8px;box-shadow:none}
+ .teacher-student-item{padding:6px 8px}
+ .teacher-student-note-chip{padding:4px 6px}
+}
+
 </style>
   </head>
   <body>
@@ -5825,7 +5881,7 @@ window.SeduHubAdapter={
       }
       var staffToolbarMoves=[], staffToolbarRoot=null;
       function syncStaffToolbar() {
-        var enabled=authState.loggedIn&&!authState.isLookup&&(authState.isMaster||['STAFF','DESK'].includes(authState.role));
+        var enabled=authState.loggedIn&&!authState.isLookup&&(authState.isMaster||['STAFF','DESK'].includes(authState.role)||window.innerWidth<=768);
         document.body.classList.toggle('staff-toolbar-enabled',!!enabled);
         document.body.classList.toggle('staff-toolbar-embedded',!!enabled&&window.self!==window.top);
         if(!enabled){
@@ -5838,6 +5894,9 @@ window.SeduHubAdapter={
         staffToolbarRoot=document.createElement('div');staffToolbarRoot.className='staff-toolbar';
         staffToolbarRoot.innerHTML='<div class="staff-context"></div><div class="staff-controls"><div class="staff-date" aria-label="날짜 이동"></div><div class="staff-query"></div><div class="staff-actions"></div></div><div class="staff-status"></div>';
         bar.appendChild(staffToolbarRoot);
+        var compactToggle=document.createElement('button');compactToggle.type='button';compactToggle.className='mobile-toolbar-toggle';compactToggle.textContent='도구';compactToggle.setAttribute('aria-expanded','false');compactToggle.setAttribute('aria-label','시간표 도구 펼치기');
+        compactToggle.onclick=function(){var open=staffToolbarRoot.classList.toggle('mobile-tools-open');compactToggle.setAttribute('aria-expanded',String(open));compactToggle.textContent=open?'접기':'도구';compactToggle.setAttribute('aria-label',open?'시간표 도구 접기':'시간표 도구 펼치기');};
+        staffToolbarRoot.querySelector('.staff-actions').appendChild(compactToggle);
         function move(selector,target){var node=document.querySelector(selector);if(!node)return;var marker=document.createComment('toolbar original position');node.before(marker);staffToolbarMoves.push({node:node,marker:marker});target.appendChild(node);}
         var date=staffToolbarRoot.querySelector('.staff-date'),query=staffToolbarRoot.querySelector('.staff-query'),actions=staffToolbarRoot.querySelector('.staff-actions'),status=staffToolbarRoot.querySelector('.staff-status'),context=staffToolbarRoot.querySelector('.staff-context');
         ['.toolbar-home','#digitalClock','.loading-bar-container'].forEach(function(s){move(s,context);});
@@ -5863,6 +5922,7 @@ window.SeduHubAdapter={
       }
       document.addEventListener('click',function(e){if(staffToolbarRoot)staffToolbarRoot.querySelectorAll('details[open]').forEach(function(d){if(!d.contains(e.target))d.open=false;});});
       document.addEventListener('keydown',function(e){if(e.key==='Escape'&&staffToolbarRoot){var d=staffToolbarRoot.querySelector('details[open]');if(d){d.open=false;d.querySelector('summary').focus();}}});
+      if(window.matchMedia){var mobileToolbarMedia=window.matchMedia('(max-width:768px)');if(mobileToolbarMedia.addEventListener)mobileToolbarMedia.addEventListener('change',function(){syncStaffToolbar();});}
       function applyRoleUi() {
         syncStaffToolbar();
         document.getElementById('visitorBannerAdminBtn').hidden=!(authState.loggedIn&&authState.isMaster&&!authState.isLookup);
@@ -6278,7 +6338,7 @@ window.SeduHubAdapter={
          var table = document.getElementById('scheduleTable');
          var container = document.getElementById('tableContainer');
          var now = new Date(), h = now.getHours();
-         var enabled = !(isTeacherViewActive() && window.innerWidth <= 768) && document.getElementById('timelineToggle').checked;
+         var enabled = !(authState.loggedIn && !isLookupViewActive() && window.innerWidth <= 768) && document.getElementById('timelineToggle').checked;
          var row = enabled && h >= SCHEDULE_START_HOUR && h <= SCHEDULE_END_HOUR && table
            ? table.querySelector('tbody tr[data-hour="' + h + '"]') : null;
          var timeCell = row && row.querySelector('.time-cell');
@@ -7055,11 +7115,11 @@ window.SeduHubAdapter={
         return !!(authState.loggedIn && !authState.isLookup && !isLookupViewActive() && (authState.isMaster || authState.teacherName));
       }
       function firstLessonContext() { return JSON.stringify([getScheduleSessionKey(),currentSheetName,authState.teacherName,!!authState.isMaster]); }
-      function firstLessonButton(name,school,status) {
+      function firstLessonButton(name,school,status,subject,teacher) {
         if(!canShowFirstLesson() || !/^(신규생|첫수업)$/.test(normalizeStatusLabel(status||'')))return '';
         clearTimeout(firstLessonUI.noticeTimer);
         firstLessonUI.noticeTimer=setTimeout(updateFirstLessonNotice,100);
-        return '<button type="button" class="first-lesson-trigger" data-first-lesson-name="'+escapeHtml(name)+'" data-first-lesson-school="'+escapeHtml(school||'')+'" aria-haspopup="dialog" aria-label="'+escapeHtml(name)+' 첫수업 정보 보기">첫수업 정보</button>';
+        return '<button type="button" class="first-lesson-trigger" data-first-lesson-name="'+escapeHtml(name)+'" data-first-lesson-school="'+escapeHtml(school||'')+'" data-first-lesson-subject="'+escapeHtml(subject||'')+'" data-first-lesson-teacher="'+escapeHtml(teacher||'')+'" aria-haspopup="dialog" aria-label="'+escapeHtml(name)+' 첫수업 정보 보기">첫수업 정보</button>';
       }
       function ensureFirstLessonUI() {
         if(document.getElementById('firstLessonDialog'))return;
@@ -7078,10 +7138,12 @@ window.SeduHubAdapter={
         if(!canShowFirstLesson()){invalidateFirstLesson();return;}
         ensureFirstLessonUI();var notice=document.getElementById('firstLessonNotice'),context=firstLessonContext();
         if(firstLessonUI.context!==context){closeFirstLesson();firstLessonUI.context=context;firstLessonUI.dismissed='';}
-        var targets=[],seen=new Set();
+        var targets=[],seen=new Set(),lessonLabels=new Map();
         document.querySelectorAll('#mainPage [data-first-lesson-name]').forEach(function(b){
           if(b.closest('#firstLessonNotice')||!b.getClientRects().length)return;
           var key=JSON.stringify([b.dataset.firstLessonName,b.dataset.firstLessonSchool]);
+          var label=[b.dataset.firstLessonSubject,b.dataset.firstLessonTeacher].filter(Boolean).join(' · ');
+          if(!lessonLabels.has(key))lessonLabels.set(key,new Set());if(label)lessonLabels.get(key).add(label);
           if(!seen.has(key)){seen.add(key);targets.push(b);}
         });
         if(!targets.length||firstLessonUI.dismissed===context){notice.hidden=true;return;}
@@ -7090,7 +7152,8 @@ window.SeduHubAdapter={
         var activeKey=activeTrigger?JSON.stringify([activeTrigger.dataset.firstLessonName,activeTrigger.dataset.firstLessonSchool]):'';
         notice.replaceChildren();var heading=document.createElement('strong');heading.textContent='신규생·첫수업 '+targets.length+'명';
         var list=document.createElement('div');list.className='first-lesson-notice-list';
-        targets.forEach(function(target){var b=document.createElement('button');b.type='button';b.textContent=target.dataset.firstLessonName;b.onclick=function(){openFirstLesson(target,b);};list.append(b);
+        targets.forEach(function(target){var b=document.createElement('button');b.type='button';var name=document.createElement('span');name.className='first-lesson-notice-name';name.textContent=target.dataset.firstLessonName;b.append(name);
+          var meta=document.createElement('span');meta.className='first-lesson-notice-meta';meta.textContent=Array.from(lessonLabels.get(JSON.stringify([target.dataset.firstLessonName,target.dataset.firstLessonSchool]))||[]).join(' / ');if(meta.textContent)b.append(meta);b.onclick=function(){openFirstLesson(target,b);};list.append(b);
           if(document.getElementById('firstLessonDialog').open&&activeKey===JSON.stringify([target.dataset.firstLessonName,target.dataset.firstLessonSchool])){
             firstLessonUI.trigger=target;
             if(noticeOpener)firstLessonUI.opener=b;
@@ -7204,7 +7267,7 @@ window.SeduHubAdapter={
         teacherMobileSimpleView = !teacherMobileSimpleView;
         var toggle = document.getElementById('teacherSimpleViewToggle');
         if (toggle) toggle.checked = teacherMobileSimpleView;
-        if (lastData) renderTeacherMobileView(lastData);
+        if (lastData) {renderTeacherMobileView(lastData);if(document.getElementById('searchInput').value.trim())searchTable();}
       }
       function toggleSelectAll() {
         var chk = document.getElementById('selectAllCheckbox').checked;
@@ -9631,7 +9694,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         }
         // The visible mobile projection owns its DOM. Desktop is rebuilt from
         // current data at the breakpoint, never constructed as a hidden cache.
-        if (isTeacherViewActive() && window.innerWidth <= 768) {
+        if (authState.loggedIn && !isLookupViewActive() && window.innerWidth <= 768) {
           renderTeacherMobileView(data);
           syncStudentSelection();
           if (isRefresh && container) {
@@ -9751,6 +9814,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
                 itemDiv.dataset.scheduleHour = String(h);
                 itemDiv.dataset.scheduleRoom = String(data.headers[i] || "");
                 itemDiv.dataset.scheduleSubject = getSubjectName(teacherItem || "");
+                itemDiv.dataset.scheduleTeacher = teacherItem ? extractTeacherName(String(teacherItem)) : "";
                 itemDiv.dataset.scheduleLessonType = detectClassType(teacherItem || "");
                 renderTableItem(itemDiv, text); 
                 appendTeacherAttendanceButton(itemDiv, text);
@@ -9805,7 +9869,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         var mobileWrap = document.getElementById('teacherMobileList');
         var table = document.getElementById('scheduleTable');
         var timeline = document.getElementById('liveTimeline');
-        var active = isTeacherViewActive() && window.innerWidth <= 768;
+        var active = authState.loggedIn && !isLookupViewActive() && window.innerWidth <= 768;
 
         if (!active) {
           mobileWrap.innerHTML = "";
@@ -9888,8 +9952,9 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
                   "<div class='teacher-simple-inline'>" +
                     (entry.lessonType ? getMobileTypeBadgeHtml(entry.lessonType) : "") +
                     (entry.status ? "<span class='teacher-simple-chip " + statusClass + "'>" + escapeHtml(statusLabel) + "</span>" : "") +
-                    firstLessonButton(entry.name,entry.school,entry.status) + "<span class='teacher-simple-chip subject'>" + escapeHtml(entry.subject) + "</span>" +
+                    firstLessonButton(entry.name,entry.school,entry.status,entry.subject,entry.teacher) + "<span class='teacher-simple-chip subject'>" + escapeHtml(entry.subject) + "</span>" +
                     "<span class='teacher-simple-chip room'>" + escapeHtml(entry.room) + "</span>" +
+                    (entry.teacher ? "<span class='teacher-simple-teacher-label'>" + escapeHtml(entry.teacher) + "T</span>" : "") +
                   "</div>" +
                 "</div>" +
                 "<div class='teacher-simple-teacher'>" + buildTeacherAttendanceButtonHtml(attendanceContext) + "</div>" +
@@ -9969,7 +10034,8 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
               room: data.headers[i],
               students: students,
               lessonType: lessonType,
-              subject: subjectName
+              subject: subjectName,
+              teacher: teacherItem ? extractTeacherName(String(teacherItem)) : ""
             });
           }
 
@@ -9978,8 +10044,6 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           var start = h + ":00";
           var end = (h + 1) + ":00";
           if (!lessons.length) {
-            card.innerHTML = "<div class='teacher-hour-title'>" + start + " - " + end + "</div><div class='teacher-empty' style='padding:6px 0;'>수업 없음</div>";
-            mobileWrap.appendChild(card);
             continue;
           }
 
@@ -10007,13 +10071,13 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
               var attendanceContext = buildAttendanceContext(st, h, lesson.room, lesson.subject, lesson.lessonType);
               return "<div class='teacher-student-item" + alertClass + "'><div class='teacher-student-head'><div class='teacher-student-name'>" + escapeHtml(parsed.name || "학생") +
                      (parsed.school ? "<span class='teacher-student-school'>" + escapeHtml(parsed.school) + "</span>" : "") + "</div>" +
-                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + firstLessonButton(parsed.name,parsed.school,normalizedStatus) + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") + buildTeacherAttendanceButtonHtml(attendanceContext) + "</div></div>" +
+                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + firstLessonButton(parsed.name,parsed.school,normalizedStatus,lesson.subject,lesson.teacher) + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") + buildTeacherAttendanceButtonHtml(attendanceContext) + "</div></div>" +
                      progressBar +
                      "<div class='teacher-student-note-chip'>" + escapeHtml(noteText) + "</div>" +
                      "</div>";
             }).join("") : "<div class='teacher-empty' style='padding:4px 0;'>학생 정보 없음</div>";
             return "<div class='teacher-lesson-row'>" +
-              "<div class='teacher-lesson-head'><div class='teacher-room-chip'>" + escapeHtml(lesson.room) + warn + "</div>" + typeBadge + subjectBadge + "</div>" +
+              "<div class='teacher-lesson-head'><div class='teacher-room-chip'>" + escapeHtml(lesson.room) + warn + "</div>" + typeBadge + subjectBadge + (lesson.teacher ? "<span class='teacher-simple-teacher-label'>" + escapeHtml(lesson.teacher) + "T</span>" : "") + "</div>" +
               "<div class='teacher-student-list'>" + studentHtml + "</div>" +
             "</div>";
           }).join("");
@@ -10607,7 +10671,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           return;
         }
 
-        if (isTeacherViewActive() && window.innerWidth <= 768) {
+        if (authState.loggedIn && !isLookupViewActive() && window.innerWidth <= 768) {
           var cards = mobileWrap.querySelectorAll('.teacher-hour-card, .teacher-simple-hour-card');
           var cardTexts = Array.from(cards, function(card) { return (card.innerText || card.textContent || "").toUpperCase(); });
           cards.forEach(function(card, index) {
@@ -12277,7 +12341,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           var noteButton = getStatusButtonHtml(statusLabel, parsed.note);
           var schoolText = parsed.school ? (" <span class='school-text'>" + escapeHtml(parsed.school) + "</span>") : "";
           itemDiv.dataset.studentIdentity = JSON.stringify([studentName.trim(), String(parsed.school || '').replace(/\s+/g, '')]);
-          itemDiv.innerHTML = "<span class='student-info'><button type='button' class='student-name-button' aria-pressed='false' aria-label='" + escapeHtml(studentName + " 같은 날 수업 강조") + "'>" + escapeHtml(studentName) + "</button>" + schoolText + "</span>" + noteButton + firstLessonButton(studentName,parsed.school,statusLabel) + allBadges;
+          itemDiv.innerHTML = "<span class='student-info'><button type='button' class='student-name-button' aria-pressed='false' aria-label='" + escapeHtml(studentName + " 같은 날 수업 강조") + "'>" + escapeHtml(studentName) + "</button>" + schoolText + "</span>" + noteButton + firstLessonButton(studentName,parsed.school,statusLabel,itemDiv.dataset.scheduleSubject,itemDiv.dataset.scheduleTeacher) + allBadges;
         } 
       }
       // [Excel Export Logic]
