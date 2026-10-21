@@ -2157,6 +2157,21 @@
 
 #studentImageModal .student-dashboard-layout{grid-template-rows:minmax(0,1fr);align-items:stretch}#studentImageModal .student-preview-panel{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:0}#studentImageModal .student-preview-panel-head{padding:18px 24px;background:white;margin:0;border-bottom:1px solid #dce3eb}#studentImageModal .card-workarea{overflow:auto;min-height:0;display:flex;gap:22px;align-items:flex-start;justify-content:center;padding:24px}#studentImageModal #studentImagePreview{flex:0 0 520px;width:520px;max-width:none;padding:0;background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}#studentImageModal #cardEditorSidebar{flex:0 0 220px;width:220px}#studentImageModal #studentCardDeliveryEditor{padding:16px 0;border:0;border-top:1px solid #cad6e8;background:transparent}#studentImageModal .preview-note-editor{margin-top:18px;padding:12px;background:white;border:1px solid #dce3eb}#studentImageModal .preview-note-field textarea{box-sizing:border-box;width:100%}.card-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.card-modal-head .modal-title{font-size:26px;font-weight:800;margin:0}.card-modal-head button,#studentCardDeliveryEditor button{background:white;border:1px solid #cbd5e1;border-radius:8px;padding:10px 16px;color:#183755;cursor:pointer}#studentImageSearch{width:100%;padding:12px;border:1px solid #bac8d9;border-radius:7px;margin:14px 0}#studentImageModal .student-list-group{background:transparent}#studentImageModal .student-list-group-head{background:#f5f7fa}#studentImageModal .student-list-item.active{border-left:1px solid #a2bff2}#studentImageModal .card-hide-note{font-weight:700;font-size:14px}#studentImageModal .card-hide-note input{width:16px;height:16px;accent-color:#215ed4}#studentImageModal button:disabled{opacity:.5;cursor:default}
 @media(max-width:1200px){#studentImageModal .card-workarea{flex-direction:column;align-items:center}#studentImageModal #cardEditorSidebar{width:100%;flex:auto;max-width:520px;order:-1}#studentImageModal .student-card-preview-frame>div{zoom:1}}@media(max-width:800px){#studentImageModal #studentImagePreview{width:338px;flex-basis:auto}#studentImageModal .student-card-preview-frame>div{zoom:.65}#studentImageModal .card-workarea{padding:16px}}@media(max-width:560px){#studentImageModal .student-dashboard-layout{display:flex;flex-direction:column}#studentImageModal .student-list-panel{flex:0 0 250px}#studentImageModal .student-preview-panel{overflow:visible;flex:none}#studentImageModal .card-workarea{overflow:visible}#studentImageModal #studentImagePreview{width:302px}#studentImageModal .student-card-preview-frame>div{zoom:.58}.card-modal-head .modal-title{font-size:22px}}
+/* First-lesson notice stays in layout: it never covers timetable cells. */
+.first-lesson-trigger{font:inherit;font-size:12px;font-weight:700;color:#174b83;background:#edf5ff;border:1px solid #adc9e8;border-radius:6px;padding:5px 7px;cursor:pointer;white-space:nowrap}
+#firstLessonNotice{display:flex;flex:0 0 auto;align-items:center;gap:12px;padding:8px 16px;background:#edf5ff;border-bottom:1px solid #c8d9ec;color:#173d68;font-size:13px;max-height:76px;box-sizing:border-box}
+#firstLessonNotice[hidden]{display:none}#firstLessonNotice strong{flex-shrink:0}.first-lesson-notice-list{display:flex;gap:8px;overflow:auto;min-width:0;flex:1}.first-lesson-notice-list button{white-space:nowrap}
+#firstLessonNotice button,#firstLessonDialog button{font:inherit;cursor:pointer;min-height:44px;border:1px solid #a5b9d0;border-radius:8px;padding:8px 12px;background:#fff;color:#173d68;font-weight:700;flex-shrink:0}
+#firstLessonDialog{box-sizing:border-box;width:min(640px,calc(100vw - 32px));max-height:80vh;max-height:80dvh;padding:0;border:0;border-radius:12px;background:#fff;color:#172b43;box-shadow:0 18px 60px #0b254b40;font-family:inherit}
+#firstLessonDialog[open]{display:flex;flex-direction:column}#firstLessonDialog::backdrop{background:#11243d55}
+#firstLessonDialog header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px;border-bottom:1px solid #dce3eb;flex-shrink:0}
+#firstLessonDialog h2{font-size:20px;line-height:1.4;margin:0}#firstLessonStudent{margin:6px 0 0;font-size:14px;color:#4b5c70;overflow-wrap:anywhere}
+#firstLessonBody{padding:20px;overflow:auto;overscroll-behavior:contain;min-height:80px;font-size:16px;line-height:1.7;overflow-wrap:anywhere}
+#firstLessonBody article+article{margin-top:24px;padding-top:20px;border-top:1px solid #dce3eb}.first-lesson-meta{font-size:13px;color:#526379;margin:0 0 8px}.first-lesson-content{white-space:pre-wrap}
+#firstLessonDialog footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-top:1px solid #dce3eb;flex-shrink:0;font-size:12px;color:#526379}
+#firstLessonDialog button:disabled{opacity:.5;cursor:wait}.first-lesson-trigger:focus-visible,#firstLessonNotice button:focus-visible,#firstLessonDialog :focus-visible{outline:3px solid #3269b1;outline-offset:2px}
+@media(max-width:600px){.first-lesson-trigger{min-height:44px}#firstLessonNotice{padding:6px 10px;gap:8px;font-size:12px}#firstLessonDialog{width:calc(100vw - 20px);max-height:76vh;max-height:76dvh}#firstLessonDialog header{padding:16px}#firstLessonBody{padding:16px}#firstLessonDialog footer{padding:10px 16px}#firstLessonDialog h2{font-size:18px}}
+
 </style>
   </head>
   <body>
@@ -7016,6 +7031,102 @@
         if (s === "결석예고" || s === "휴강" || s === "자습" || s === "오늘만") return "status-note-gray";
         return "status-note-blue";
       }
+      // First-lesson details are opt-in reads; the automatic notice contains timetable data only.
+      var firstLessonUI = { sequence:0, controller:null, timer:null, noticeTimer:null, dismissed:'', context:'', trigger:null, opener:null };
+      function canShowFirstLesson() {
+        return !!(authState.loggedIn && !authState.isLookup && !isLookupViewActive() && (authState.isMaster || authState.teacherName));
+      }
+      function firstLessonContext() { return JSON.stringify([getScheduleSessionKey(),currentSheetName,authState.teacherName,!!authState.isMaster]); }
+      function firstLessonButton(name,school,status) {
+        if(!canShowFirstLesson() || !/^(신규생|첫수업)$/.test(normalizeStatusLabel(status||'')))return '';
+        clearTimeout(firstLessonUI.noticeTimer);
+        firstLessonUI.noticeTimer=setTimeout(updateFirstLessonNotice,100);
+        return '<button type="button" class="first-lesson-trigger" data-first-lesson-name="'+escapeHtml(name)+'" data-first-lesson-school="'+escapeHtml(school||'')+'" aria-haspopup="dialog" aria-label="'+escapeHtml(name)+' 첫수업 정보 보기">첫수업 정보</button>';
+      }
+      function ensureFirstLessonUI() {
+        if(document.getElementById('firstLessonDialog'))return;
+        var notice=document.createElement('section');notice.id='firstLessonNotice';notice.hidden=true;notice.setAttribute('aria-label','신규생·첫수업 안내');
+        document.querySelector('#mainPage .top-bar').after(notice);
+        var dialog=document.createElement('dialog');dialog.id='firstLessonDialog';dialog.setAttribute('aria-labelledby','firstLessonTitle');
+        dialog.innerHTML='<header><div><h2 id="firstLessonTitle">첫수업 정보</h2><p id="firstLessonStudent"></p></div><button type="button" class="first-lesson-close" aria-label="첫수업 정보 닫기">닫기</button></header><div id="firstLessonBody" tabindex="0" role="region" aria-label="첫수업 기록" aria-live="polite"></div><footer><span>S-LMS · 일반 학생 기록</span><button type="button" id="firstLessonRetry">다시 조회</button></footer>';
+        document.body.append(dialog);
+        dialog.querySelector('.first-lesson-close').onclick=closeFirstLesson;
+        dialog.addEventListener('cancel',function(e){e.preventDefault();closeFirstLesson();});
+        dialog.addEventListener('click',function(e){if(e.target===dialog){var b=dialog.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom)closeFirstLesson();}});
+        document.getElementById('firstLessonRetry').onclick=function(){if(firstLessonUI.trigger)openFirstLesson(firstLessonUI.trigger,firstLessonUI.opener);};
+      }
+      function scheduleFirstLessonNotice() {clearTimeout(firstLessonUI.noticeTimer);firstLessonUI.noticeTimer=setTimeout(updateFirstLessonNotice,100);}
+      function updateFirstLessonNotice() {
+        if(!canShowFirstLesson()){invalidateFirstLesson();return;}
+        ensureFirstLessonUI();var notice=document.getElementById('firstLessonNotice'),context=firstLessonContext();
+        if(firstLessonUI.context!==context){closeFirstLesson();firstLessonUI.context=context;firstLessonUI.dismissed='';}
+        var targets=[],seen=new Set();
+        document.querySelectorAll('#mainPage [data-first-lesson-name]').forEach(function(b){
+          if(b.closest('#firstLessonNotice')||!b.getClientRects().length)return;
+          var key=JSON.stringify([b.dataset.firstLessonName,b.dataset.firstLessonSchool]);
+          if(!seen.has(key)){seen.add(key);targets.push(b);}
+        });
+        if(!targets.length||firstLessonUI.dismissed===context){notice.hidden=true;return;}
+        notice.replaceChildren();var heading=document.createElement('strong');heading.textContent='신규생·첫수업 '+targets.length+'명';
+        var list=document.createElement('div');list.className='first-lesson-notice-list';
+        targets.forEach(function(target){var b=document.createElement('button');b.type='button';b.textContent=target.dataset.firstLessonName;b.onclick=function(){openFirstLesson(target,b);};list.append(b);});
+        var dismiss=document.createElement('button');dismiss.type='button';dismiss.className='first-lesson-dismiss';dismiss.textContent='접기';dismiss.setAttribute('aria-label','자동 안내 접기');dismiss.onclick=function(){firstLessonUI.dismissed=context;notice.hidden=true;};
+        notice.append(heading,list,dismiss);notice.hidden=false;
+      }
+      function closeFirstLesson(restoreFocus) {
+        firstLessonUI.sequence++;clearTimeout(firstLessonUI.timer);
+        if(firstLessonUI.controller)firstLessonUI.controller.abort();firstLessonUI.controller=null;
+        var dialog=document.getElementById('firstLessonDialog'),wasOpen=!!(dialog&&dialog.open);if(wasOpen)dialog.close();
+        var body=document.getElementById('firstLessonBody');if(body)body.textContent='';
+        if(wasOpen&&restoreFocus!==false&&firstLessonUI.opener&&firstLessonUI.opener.isConnected)firstLessonUI.opener.focus({preventScroll:true});
+      }
+      function invalidateFirstLesson() {
+        closeFirstLesson();firstLessonUI.dismissed='';firstLessonUI.context='';clearTimeout(firstLessonUI.noticeTimer);
+        var n=document.getElementById('firstLessonNotice');if(n)n.hidden=true;
+      }
+      async function openFirstLesson(button,opener) {
+        if(!canShowFirstLesson()||!button.isConnected)return;
+        ensureFirstLessonUI();closeFirstLesson(false);firstLessonUI.trigger=button;firstLessonUI.opener=opener||button;
+        var requestTimer;var context=firstLessonContext(),seq=firstLessonUI.sequence,controller=new AbortController();firstLessonUI.controller=controller;
+        var dialog=document.getElementById('firstLessonDialog'),body=document.getElementById('firstLessonBody'),retry=document.getElementById('firstLessonRetry');
+        var name=button.dataset.firstLessonName,school=button.dataset.firstLessonSchool||'';
+        document.getElementById('firstLessonStudent').textContent=name+(school?' · '+school:'');body.textContent='첫수업 정보를 확인하고 있습니다.';retry.disabled=true;
+        dialog.showModal();dialog.querySelector('.first-lesson-close').focus();
+        function current(){return seq===firstLessonUI.sequence&&context===firstLessonContext()&&canShowFirstLesson()&&!controller.signal.aborted&&dialog.open;}
+        function check(){if(!current())throw Error('STALE');}
+        async function work(){
+          await authorizeReviewRead();check();var auth=await getLiveFirebaseAuth(),user=auth.currentUser;if(!user)throw Error('HTTP_401');var token=await user.getIdToken();check();
+          async function query(collection,field,value,limit){
+            check();if(auth.currentUser!==user)throw Error('HTTP_401');
+            var response=await fetch('https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(LIVE_FIREBASE_CONFIG.projectId)+'/databases/(default)/documents:runQuery',{method:'POST',signal:controller.signal,cache:'no-store',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:collection}],where:{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:{stringValue:value}}},limit:limit}})});
+            if(!response.ok)throw Error('HTTP_'+response.status);var payload=await response.json();check();if(auth.currentUser!==user)throw Error('HTTP_401');
+            if(!Array.isArray(payload)||payload.some(function(r){return r.error;}))throw Error('INVALID_RESPONSE');
+            return payload.filter(function(r){return r.document;}).map(function(r){return parseFirestoreRestDocument(r.document);});
+          }
+          // Exact name queries only: never scan students or log collections, never select a namesake arbitrarily.
+          var pairs=await Promise.all([query('students','studentName',name,3),query('students','name',name,3)]);
+          if(pairs.some(function(a){return a.length>=3;}))throw Error('AMBIGUOUS');
+          var ids=new Map();pairs.flat().forEach(function(r){ids.set(r.studentId||r.__id,r);});var students=Array.from(ids.values());
+          if(school){var key=normalizeScheduleStudentSchool(school).replace(/\d+$/,'');students=students.filter(function(r){return normalizeScheduleStudentSchool(r.school||'').replace(/\d+$/,'')===key;});}
+          if(students.length!==1)throw Error(students.length?'AMBIGUOUS':'NO_STUDENT');
+          var student=students[0];if(getEnrollmentStatusLabel(student))throw Error('INACTIVE_STUDENT');
+          var records=await query('studentLogs','studentId',String(student.studentId||student.__id),101);
+          if(records.length>100)throw Error('LIMIT');
+          return records.filter(function(r){var tags=Array.isArray(r.tags)?r.tags:String(r.tagsText||'').split(',');return tags.some(function(t){return String(t).replace(/\s/g,'')==='첫수업정보';});}).sort(function(a,b){return String(b.createdAt||b.updatedAt||'').localeCompare(String(a.createdAt||a.updatedAt||''));});
+        }
+        try{
+          var records=await Promise.race([work(),new Promise(function(_,reject){controller.signal.addEventListener('abort',function(){reject(Error('CANCELLED'));},{once:true});requestTimer=setTimeout(function(){reject(Error('TIMEOUT'));controller.abort();},8500);firstLessonUI.timer=requestTimer;})]);check();body.replaceChildren();
+          if(!records.length)body.textContent='등록된 첫수업 정보가 없습니다. S-LMS에서 첫수업 정보를 입력해 주세요.';
+          records.forEach(function(r){var article=document.createElement('article'),meta=document.createElement('p'),content=document.createElement('div');meta.className='first-lesson-meta';meta.textContent=[r.createdByName,String(r.createdAt||r.updatedAt||'').slice(0,10)].filter(Boolean).join(' · ');content.className='first-lesson-content';content.textContent=String(r.content||'내용 없음');article.append(meta,content);body.append(article);});
+        }catch(error){
+          if(seq!==firstLessonUI.sequence||context!==firstLessonContext()||!dialog.open)return;
+          var code=error.message||'';
+          body.textContent=/401/.test(code)?'로그인이 만료되었습니다. 다시 로그인해 주세요.':/403/.test(code)?'이 학생의 첫수업 정보를 열람할 권한이 없습니다. 관리자에게 확인해 주세요.':code==='AMBIGUOUS'?'동명이인 정보가 있어 학생을 확정할 수 없습니다. S-LMS에서 학생을 확인해 주세요.':code==='NO_STUDENT'?'일치하는 학생 정보를 찾지 못했습니다. 이름과 학교를 S-LMS에서 확인해 주세요.':code==='INACTIVE_STUDENT'?'학생의 등록 상태를 확인해야 합니다. S-LMS에서 확인해 주세요.':code==='LIMIT'?'학생 기록이 많아 일부만 표시하지 않았습니다. S-LMS에서 전체 기록을 확인해 주세요.':code==='TIMEOUT'?'응답이 지연되었습니다. 다시 조회해 주세요.':'첫수업 정보를 불러오지 못했습니다. 다시 조회해 주세요.';
+        }finally{clearTimeout(requestTimer);if(seq===firstLessonUI.sequence){retry.disabled=false;firstLessonUI.controller=null;}}
+      }
+      document.addEventListener('click',function(e){var b=e.target.closest('[data-first-lesson-name]');if(b){e.preventDefault();e.stopPropagation();openFirstLesson(b);}});
+      window.addEventListener('pagehide',invalidateFirstLesson);
+
       function getStatusButtonHtml(status, noteText) {
         var s = normalizeStatusLabel(status);
         if (!s) return "";
@@ -9469,6 +9580,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
       
       // [renderTable: 휴강 숨김 & 원장실 조건부 숨김 적용]
       function renderTable(data, isRefresh) {
+        if(typeof scheduleFirstLessonNotice==='function')scheduleFirstLessonNotice();
         var container = document.getElementById('tableContainer');
         if(isRefresh && container) lastScrollPosition = container.scrollTop;
         var table = document.getElementById('scheduleTable'); table.innerHTML = ""; 
@@ -9662,6 +9774,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         if (document.getElementById('searchInput').value.trim()) searchTable();
       }
       function renderTeacherMobileView(data) {
+        if(typeof scheduleFirstLessonNotice==='function')scheduleFirstLessonNotice();
         var mobileWrap = document.getElementById('teacherMobileList');
         var table = document.getElementById('scheduleTable');
         var timeline = document.getElementById('liveTimeline');
@@ -9748,7 +9861,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
                   "<div class='teacher-simple-inline'>" +
                     (entry.lessonType ? getMobileTypeBadgeHtml(entry.lessonType) : "") +
                     (entry.status ? "<span class='teacher-simple-chip " + statusClass + "'>" + escapeHtml(statusLabel) + "</span>" : "") +
-                    "<span class='teacher-simple-chip subject'>" + escapeHtml(entry.subject) + "</span>" +
+                    firstLessonButton(entry.name,entry.school,entry.status) + "<span class='teacher-simple-chip subject'>" + escapeHtml(entry.subject) + "</span>" +
                     "<span class='teacher-simple-chip room'>" + escapeHtml(entry.room) + "</span>" +
                   "</div>" +
                 "</div>" +
@@ -9867,7 +9980,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
               var attendanceContext = buildAttendanceContext(st, h, lesson.room, lesson.subject, lesson.lessonType);
               return "<div class='teacher-student-item" + alertClass + "'><div class='teacher-student-head'><div class='teacher-student-name'>" + escapeHtml(parsed.name || "학생") +
                      (parsed.school ? "<span class='teacher-student-school'>" + escapeHtml(parsed.school) + "</span>" : "") + "</div>" +
-                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") + buildTeacherAttendanceButtonHtml(attendanceContext) + "</div></div>" +
+                     "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + firstLessonButton(parsed.name,parsed.school,normalizedStatus) + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") + buildTeacherAttendanceButtonHtml(attendanceContext) + "</div></div>" +
                      progressBar +
                      "<div class='teacher-student-note-chip'>" + escapeHtml(noteText) + "</div>" +
                      "</div>";
@@ -10572,6 +10685,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
       window.addEventListener('pagehide',function(){invalidateReviewReads('LEAVE');});
 
       function invalidateReviewReads(reason) {
+        if(typeof invalidateFirstLesson==='function')invalidateFirstLesson();
         if(reason==='LEAVE')reviewReadManager.cancelPending();else{reviewReadEpoch++;reviewReadManager.invalidate();}
         if(reason==='AUTH'||reason==='401'||reason==='403')reviewIdentitySignature=null;
         window.seduReviewContextCache={};
@@ -12136,7 +12250,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           var noteButton = getStatusButtonHtml(statusLabel, parsed.note);
           var schoolText = parsed.school ? (" <span class='school-text'>" + escapeHtml(parsed.school) + "</span>") : "";
           itemDiv.dataset.studentIdentity = JSON.stringify([studentName.trim(), String(parsed.school || '').replace(/\s+/g, '')]);
-          itemDiv.innerHTML = "<span class='student-info'><button type='button' class='student-name-button' aria-pressed='false' aria-label='" + escapeHtml(studentName + " 같은 날 수업 강조") + "'>" + escapeHtml(studentName) + "</button>" + schoolText + "</span>" + noteButton + allBadges;
+          itemDiv.innerHTML = "<span class='student-info'><button type='button' class='student-name-button' aria-pressed='false' aria-label='" + escapeHtml(studentName + " 같은 날 수업 강조") + "'>" + escapeHtml(studentName) + "</button>" + schoolText + "</span>" + noteButton + firstLessonButton(studentName,parsed.school,statusLabel) + allBadges;
         } 
       }
       // [Excel Export Logic]
