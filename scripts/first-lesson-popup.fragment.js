@@ -34,9 +34,18 @@
           if(!seen.has(key)){seen.add(key);targets.push(b);}
         });
         if(!targets.length||firstLessonUI.dismissed===context){notice.hidden=true;return;}
+        // Keep detail retry and focus targets current when responsive redraws replace buttons.
+        var activeTrigger=firstLessonUI.trigger,noticeOpener=!!(firstLessonUI.opener&&notice.contains(firstLessonUI.opener));
+        var activeKey=activeTrigger?JSON.stringify([activeTrigger.dataset.firstLessonName,activeTrigger.dataset.firstLessonSchool]):'';
         notice.replaceChildren();var heading=document.createElement('strong');heading.textContent='신규생·첫수업 '+targets.length+'명';
         var list=document.createElement('div');list.className='first-lesson-notice-list';
-        targets.forEach(function(target){var b=document.createElement('button');b.type='button';b.textContent=target.dataset.firstLessonName;b.onclick=function(){openFirstLesson(target,b);};list.append(b);});
+        targets.forEach(function(target){var b=document.createElement('button');b.type='button';b.textContent=target.dataset.firstLessonName;b.onclick=function(){openFirstLesson(target,b);};list.append(b);
+          if(document.getElementById('firstLessonDialog').open&&activeKey===JSON.stringify([target.dataset.firstLessonName,target.dataset.firstLessonSchool])){
+            firstLessonUI.trigger=target;
+            if(noticeOpener)firstLessonUI.opener=b;
+            else if(firstLessonUI.opener&&!firstLessonUI.opener.isConnected)firstLessonUI.opener=target;
+          }
+        });
         var dismiss=document.createElement('button');dismiss.type='button';dismiss.className='first-lesson-dismiss';dismiss.textContent='접기';dismiss.setAttribute('aria-label','자동 안내 접기');dismiss.onclick=function(){firstLessonUI.dismissed=context;notice.hidden=true;};
         notice.append(heading,list,dismiss);notice.hidden=false;
       }

@@ -23,6 +23,10 @@ await p.screenshot({path:path.join(out,label+'-notice.png')});await p.locator('#
 assert((await p.locator('#firstLessonBody').textContent()).includes('학습 진도'));assert(!(await p.locator('#firstLessonBody').textContent()).includes('다른 태그'));assert.equal(await p.locator('#firstLessonBody img').count(),0);
 const bounds=await p.locator('#firstLessonDialog').boundingBox();assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=height+1);
 assert(await p.locator('#firstLessonBody').evaluate(e=>e.scrollHeight>e.clientHeight&&e.scrollWidth<=e.clientWidth+1));await p.screenshot({path:path.join(out,label+'-detail.png')});
+// A resize/table redraw can replace both the source trigger and notice opener.
+await p.evaluate(()=>{document.querySelectorAll('#scheduleTable [data-first-lesson-name]').forEach(b=>b.replaceWith(b.cloneNode(true)));updateFirstLessonNotice();});
+await p.locator('#firstLessonRetry').click();await p.waitForFunction(()=>!document.getElementById('firstLessonRetry').disabled);
+assert((await p.locator('#firstLessonBody').textContent()).includes('학습 진도'));
 await p.keyboard.press('Escape');assert(!(await p.locator('#firstLessonDialog').isVisible()));assert(await p.locator('#firstLessonNotice .first-lesson-notice-list button').first().evaluate(e=>document.activeElement===e));
 for(const [mode,text] of [['empty','등록된 첫수업 정보가 없습니다'],['401','로그인이 만료'],['403','권한이 없습니다'],['ambiguous','동명이인'],['limit','일부만 표시하지']]){await p.evaluate(m=>F.mode=m,mode);await p.locator('[data-first-lesson-name]').first().click();await p.waitForFunction(()=>!document.getElementById('firstLessonRetry').disabled);assert((await p.locator('#firstLessonBody').textContent()).includes(text));await p.keyboard.press('Escape');}
 await p.evaluate(()=>{F.mode='hold';openFirstLesson(document.querySelector('[data-first-lesson-name]'));});await p.waitForFunction(()=>F.resolve);await p.evaluate(()=>{invalidateFirstLesson();F.resolve();});assert(!(await p.locator('#firstLessonDialog').isVisible()));
