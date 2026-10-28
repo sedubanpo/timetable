@@ -10,3 +10,5 @@
 @media(max-width:1200px){#studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel:not([hidden])){flex-basis:auto;width:100%}}
 
 #studentImageModal #cardUnsentReason{box-sizing:border-box;max-width:100%}
+
+#studentImageModal .student-list-item[data-student-name]{flex-direction:column;align-items:stretch;gap:8px}#studentImageModal .student-list-actions{flex-wrap:wrap;justify-content:space-between}#studentImageModal .student-list-actions button:not(.student-list-toggle-btn){min-height:44px;padding:8px 10px;border:1px solid #aebed2;border-radius:6px;background:white;color:#183755;font:inherit;font-size:13px}
