@@ -2228,6 +2228,26 @@
  .teacher-student-note-chip{padding:4px 6px}
 }
 
+
+/* Card delivery workspace: separate image work from message review. */
+#studentImageModal .card-mode-tabs{display:flex;gap:24px;border-bottom:1px solid #dce3eb;margin:0 0 16px}
+#studentImageModal .card-mode-tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:12px 2px;color:#526276;font:inherit;font-weight:700;min-height:44px;cursor:pointer}
+#studentImageModal .card-mode-tabs button[aria-selected="true"]{color:#194caf;border-bottom-color:#245bd3}
+#studentImageModal button:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+#studentImageModal[data-card-mode="image"] [data-card-channel="message"],#studentImageModal[data-card-mode="message"] [data-card-channel="image"]{display:none!important}
+#studentImageModal[data-card-mode="image"] .student-list-actions button:not(.student-list-toggle-btn){display:none}
+#studentImageModal[data-card-mode="message"] .card-hide-note,#studentImageModal[data-card-mode="message"] #cardNoteEditorSlot,#studentImageModal[data-card-mode="message"] #studentCardDeliveryEditor,#studentImageModal[data-card-mode="message"] #annexGuidePanel{display:none}
+#studentImageModal[data-card-mode="message"] .card-workarea{display:grid;grid-template-columns:minmax(300px,1fr) 520px;align-items:start;justify-content:stretch;gap:24px}
+#studentImageModal[data-card-mode="message"] #cardEditorSidebar{grid-column:1;grid-row:1;width:auto;max-width:none;min-width:0}
+#studentImageModal[data-card-mode="message"] #studentImagePreview{grid-column:2;grid-row:1}
+#studentImageModal .card-reference-note{color:#526276;font-size:13px;line-height:1.6;margin:0 0 18px}
+#studentImageModal .card-reference-title{font-size:18px;margin:0 0 8px;color:#183755}
+#studentImageModal .card-reference-body{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:15px;line-height:1.85;background:#fff;padding:24px;border:1px solid #dce3eb;border-radius:12px;margin:0}
+#studentImageModal #cardAlimtalkPanel{margin:20px 0 0;padding:18px 0 0;border:0;border-top:1px solid #dce3eb;background:transparent;box-shadow:none}
+#studentImageModal .card-test-tools{position:relative}#studentImageModal .card-test-tools summary{padding:12px;cursor:pointer;font-size:13px;color:#526276}#studentImageModal .card-test-tools[open]{display:flex;flex-wrap:wrap}
+@media(max-width:1400px) and (min-width:801px){#studentImageModal[data-card-mode="message"] .student-dashboard-layout{grid-template-columns:210px minmax(0,1fr)}#studentImageModal[data-card-mode="message"] .card-workarea{grid-template-columns:minmax(270px,1fr) 338px;gap:16px;padding:16px}#studentImageModal[data-card-mode="message"] #studentImagePreview{width:338px}#studentImageModal[data-card-mode="message"] .student-card-preview-frame>div{zoom:.65}}
+@media(max-width:800px){#studentImageModal[data-card-mode="message"] .card-workarea{display:flex;flex-direction:column;align-items:center}#studentImageModal[data-card-mode="message"] #cardEditorSidebar{width:100%;order:0}#studentImageModal[data-card-mode="message"] #studentImagePreview{order:1}#studentImageModal .card-mode-tabs{gap:18px}#studentImageModal .card-mode-tabs button{font-size:14px}#studentImageModal .card-reference-body{padding:16px}}
+
 </style>
   <!-- ALIMTALK shared contract and UI: generated from assets, parity-tested -->
 <style>.alimtalk-panel{color:#183755;font:inherit;background:#fff;padding:16px;border:1px solid #cbd5e1;border-radius:8px;overflow-wrap:anywhere;min-width:0}
@@ -2485,15 +2505,16 @@ root.TimetableAlimtalkReviewUI={mount};
         </div>
       </div>
     </div>
-      <div id="studentImageModal"><div class="modal-box student-img-box">
+      <div id="studentImageModal" data-card-mode="image"><div class="modal-box student-img-box">
         <div class="card-modal-head"><div class="modal-title">시간표 카드 생성</div><button id="studentImageRefreshBtn" onclick="refreshStudentImageDashboard()">새로고침</button></div>
+        <div class="card-mode-tabs" role="tablist" aria-label="시간표 전달 방식" onkeydown="handleCardModeKey(event)"><button id="cardImageTab" role="tab" data-card-tab="image" aria-selected="true" aria-controls="cardDeliveryWorkspace" onclick="setStudentCardMode('image')">기존 시간표 이미지 발송</button><button id="cardMessageTab" role="tab" data-card-tab="message" aria-selected="false" aria-controls="cardDeliveryWorkspace" tabindex="-1" onclick="setStudentCardMode('message')">시간표 알림톡</button></div>
         <div id="studentCardStatusNotice" role="status" aria-live="polite" hidden></div>
-        <div class="student-dashboard-layout"><div class="student-list-panel"><div class="student-list-panel-title">발송 대상</div>
+        <div id="cardDeliveryWorkspace" role="tabpanel" aria-labelledby="cardImageTab" class="student-dashboard-layout"><div class="student-list-panel"><div class="student-list-panel-title">발송 대상</div>
         <input id="studentImageSearch" type="search" placeholder="학생 이름 검색" aria-label="학생 이름 검색" oninput="filterStudentImageList()">
         <div class="card-state-filter"><button data-card-filter="all" onclick="setStudentCardFilter('all')">전체</button><button data-card-filter="wait" onclick="setStudentCardFilter('wait')">미발송</button><button data-card-filter="done" onclick="setStudentCardFilter('done')">완료</button></div><div id="studentImageList" class="student-list"></div></div>
         <div class="student-preview-panel"><div class="student-preview-panel-head"><div><div class="student-preview-panel-title">시간표 카드 미리보기</div><div class="student-preview-panel-sub">학부모님께 전달될 이미지입니다.</div></div></div>
-        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
-        <div class="card-actions"><button class="primary" onclick="copyLiveStudentCard()">이미지 복사</button><button onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button onclick="nextUnsentStudentCard()">다음 미발송</button><button onclick="openCardAlimtalkReview()">학생 연결·연락 확인</button><button onclick="openCardAlimtalk(false)">알림톡 미리보기</button><button onclick="openCardAlimtalk(true)">발송 결과</button><button onclick="openCardAlimtalkTest()">관리자 알림톡 테스트</button><button onclick="openCardAlimtalkRealTest()">실제 일정 관리자 테스트</button><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
+        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><section id="cardMessageReference" hidden><h3 class="card-reference-title">예상 발송 문구</h3><p class="card-reference-note">검토용 문구입니다. 실제 발송 전 학생·수신자와 서버 본문을 확인하세요. 이미지의 비고·공강·학원 안내문은 포함되지 않습니다.</p><pre id="cardMessageReferenceBody" class="card-reference-body"></pre></section><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
+        <div class="card-actions"><button class="primary" data-card-channel="image" onclick="copyLiveStudentCard()">이미지 복사</button><button data-card-channel="image" onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" data-card-channel="image" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button data-card-channel="image" onclick="nextUnsentStudentCard()">다음 미발송</button><button data-card-channel="message" onclick="openCardAlimtalkReview()">학생 연결·연락 확인</button><button data-card-channel="message" onclick="openCardAlimtalk(false)">알림톡 미리보기</button><button data-card-channel="message" onclick="openCardAlimtalk(true)">발송 결과</button><details class="card-test-tools" data-card-channel="message"><summary>관리자 테스트</summary><button onclick="openCardAlimtalkTest()">가상 일정 테스트</button><button onclick="openCardAlimtalkRealTest()">실제 일정 관리자 테스트</button></details><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
       </div></div>
     <div id="absenceNoticeModal">
       <div class="modal-box absence-notice-box">
@@ -7745,6 +7766,7 @@ root.TimetableAlimtalkReviewUI={mount};
         buildStudentImageMap();
         studentCardHideNote = true;studentCardFilter='all';
         document.getElementById('studentImageModal').style.display = 'flex';
+        setStudentCardMode('image');
         document.getElementById('studentImageSearch').value = "";
         var hideToggle = document.getElementById('studentImageHideNoteToggle');
         if (hideToggle) hideToggle.checked = true;
@@ -7753,6 +7775,28 @@ root.TimetableAlimtalkReviewUI={mount};
         loadStudentCardStatuses();
         syncStudentCardActionButtons();
         var cardSession=getScheduleSessionKey();Promise.all([loadSharedSubjectIcons(),loadCardTeacherAssets()]).then(function(){if(cardSession===getScheduleSessionKey()&&isStudentImageModalOpen()&&selectedStudentForImage)renderStudentImagePreview(selectedStudentForImage);});
+      }
+      var studentCardMode='image';
+      function setStudentCardMode(mode){
+        studentCardMode=mode==='message'?'message':'image';
+        var modal=document.getElementById('studentImageModal');modal.dataset.cardMode=studentCardMode;
+        document.getElementById('cardDeliveryWorkspace').setAttribute('aria-labelledby',studentCardMode==='message'?'cardMessageTab':'cardImageTab');
+        modal.querySelector('.student-list-panel-title').textContent=studentCardMode==='message'?'학생 선택 · 수동 전달 기록':'발송 대상';
+        modal.querySelectorAll('[data-card-tab]').forEach(function(b){var active=b.dataset.cardTab===studentCardMode;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;});
+        modal.querySelector('.student-preview-panel-title').textContent=studentCardMode==='message'?'문구와 시간표 비교':'시간표 카드 미리보기';
+        modal.querySelector('.student-preview-panel-sub').textContent=studentCardMode==='message'?'왼쪽 예상 문구와 오른쪽 시간표를 대조한 뒤 수신자·발송 내용을 확인하세요.':'학부모님께 전달될 이미지입니다.';
+        document.getElementById('cardMessageReference').hidden=studentCardMode!=='message';
+        if(studentCardMode==='image')resetCardAlimtalk();else renderCardMessageReference();
+      }
+      function handleCardModeKey(event){if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();var mode=event.key==='Home'?'image':event.key==='End'?'message':studentCardMode==='image'?'message':'image';setStudentCardMode(mode);document.querySelector('[data-card-tab="'+mode+'"]').focus();}
+      function renderCardMessageReference(){
+        var out=document.getElementById('cardMessageReferenceBody');if(!out)return;
+        if(!selectedStudentForImage){out.textContent='학생을 선택하면 예상 문구가 표시됩니다.';return;}
+        var rows=buildStudentCardViewModel(selectedStudentForImage).timelineRows.filter(function(r){return !r.isBreak;}),clock=function(h){return String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round((h%1)*60)).padStart(2,'0');};
+        if(!rows.length){out.textContent='안내할 수업이 없습니다. 선택 날짜와 취소·결석 상태를 확인하세요.';return;}
+        var list=rows.map(function(r,i){var m=r.title.match(/^(.*)\((.*)T\)$/),room=getStudentCardRoomMeta(r.room);return (i<20?String.fromCodePoint(0x2460+i):String(i+1)+'.')+' '+(m?m[1]:r.title)+' '+clock(r.start)+'–'+clock(r.end)+'\n'+(m?m[2]+' 선생님':'강사 확인 필요')+' · '+(room.building||'관 확인 필요')+' · '+(room.room||'강의실 확인 필요')+' · '+(r.classType||'유형 확인 필요');}).join('\n');
+        var vars={'학생명':selectedStudentForImage,'수업일':attendanceDateKey(currentSheetName),'등원시각':clock(rows[0].start),'수업목록':list};
+        out.textContent=TimetableAlimtalk.content.replace(/#\{([^}]+)\}/g,function(_,k){return vars[k]||'확인 필요';});
       }
       var cardAlimtalkTest=null,cardAlimtalkRealTest=null;
       var cardAlimtalkController=null,cardAlimtalkReview=null,cardAlimtalkSelections=Object.create(null),cardAlimtalkRequestGeneration=0;
@@ -7778,17 +7822,20 @@ root.TimetableAlimtalkReviewUI={mount};
         finally{clearTimeout(timer);}
       }
       function openCardAlimtalkReview(){
+        setStudentCardMode('message');
         resetCardAlimtalk();var host=document.getElementById('cardAlimtalkPanel');host.hidden=false;
         if(!cardAlimtalkReview)cardAlimtalkReview=TimetableAlimtalkReviewUI.mount({host:host,api:cardAlimtalkApi,context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),session:cardAlimtalkKey()};}});
         cardAlimtalkReview.open().then(function(){if(!host.hidden)host.scrollIntoView({block:'start'});});
       }
       function openCardAlimtalk(results){
+        setStudentCardMode('message');
         resetCardAlimtalk();var host=document.getElementById('cardAlimtalkPanel');host.hidden=false;
         if(!cardAlimtalkController)cardAlimtalkController=TimetableAlimtalkUI.mount({host:host,
           context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),studentId:cardAlimtalkSelections[cardAlimtalkKey()]||null,session:cardAlimtalkKey()};},api:cardAlimtalkApi});
         var task=results?cardAlimtalkController.showResults():cardAlimtalkController.load();task.then(function(){if(!host.hidden)host.scrollIntoView({block:'start'});});
       }
       function openCardAlimtalkRealTest(){
+        setStudentCardMode('message');
         resetCardAlimtalk();var host=document.getElementById('cardAlimtalkPanel');host.hidden=false;
         if(!cardAlimtalkRealTest)cardAlimtalkRealTest=TimetableAlimtalkUI.mount({host:host,
           context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),studentId:cardAlimtalkSelections[cardAlimtalkKey()]||null,session:cardAlimtalkKey()};},
@@ -7796,6 +7843,7 @@ root.TimetableAlimtalkReviewUI={mount};
         cardAlimtalkRealTest.load().then(function(){if(!host.hidden)host.scrollIntoView({block:'start'});});
       }
       function openCardAlimtalkTest(){
+        setStudentCardMode('message');
         resetCardAlimtalk();var host=document.getElementById('cardAlimtalkPanel');host.hidden=false;
         if(!cardAlimtalkTest)cardAlimtalkTest=TimetableAlimtalkUI.mount({host:host,
           context:function(){return {name:'관리자 테스트(가상)',date:new Date(Date.now()+9*3600000).toISOString().slice(0,10),studentId:'__alimtalk_admin_test__',session:cardAlimtalkKey()};},
@@ -8069,6 +8117,7 @@ root.TimetableAlimtalkReviewUI={mount};
         selectedStudentForImage = String(name || "").trim();
         if (!opts.skipListRender) filterStudentImageList();
         renderStudentImagePreview(selectedStudentForImage);
+        if(studentCardMode==='message')renderCardMessageReference();
       }
       function syncStudentCardActionButtons() {
         var notice = document.getElementById('studentCardStatusNotice');
@@ -8548,6 +8597,7 @@ root.TimetableAlimtalkReviewUI={mount};
         var editor=document.getElementById('cardNoteEditor');if(editor)document.getElementById('cardNoteEditorSlot').appendChild(editor);
         var preview = document.getElementById('studentImagePreview');
         selectedStudentForImage = name;
+        if(studentCardMode==='message')renderCardMessageReference();
         renderCardDeliveryEditor(name);
         if (!name) { preview.innerHTML = ""; syncStudentCardActionButtons(); return; }
         var model = buildStudentCardViewModel(name);
