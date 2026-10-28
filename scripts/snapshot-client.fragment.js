@@ -1,10 +1,39 @@
       // Independent Firebase endpoint: reading a saved copy never calls Apps Script.
       var snapshotView = null, snapshotSaveBusy = false;
       var SNAPSHOT_API_URL = 'https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableSnapshotApi';
-      function snapshotRequest(action, sheet, teacher, receipt) {
+      function snapshotRequest(action, sheet, teacher, receipt, extra) {
+        if(action==='save'){
+          timetableReadPool.invalidate();
+          return snapshotRequestUnshared(action,sheet,teacher,receipt,extra).finally(function(){timetableReadPool.invalidate();});
+        }
+        if(action!=='read' && action!=='rooms')return snapshotRequestUnshared(action,sheet,teacher,receipt,extra);
+        var scope=timetableReadScope(), started=Date.now();
+        return timetableReadPool.read('snapshot-auth:'+scope,12000,function(){
+          if(!authState.loggedIn)throw new Error('UNAUTHORIZED');
+          return authState.isLookup ? null : getLiveFirebaseAuth();
+        }).then(function(auth){
+          if(scope!==timetableReadScope())throw new Error('INVALIDATED');
+          var user=auth && auth.currentUser;
+          if(auth && !user)throw new Error('UNAUTHORIZED');
+          var key=JSON.stringify(['snapshot',scope,user?user.uid:'LOOKUP',action,sheet,teacher||'']);
+          return timetableReadPool.read(key,Math.max(1,12000-(Date.now()-started)),async function(signal,current){
+            function valid(){return current() && scope===timetableReadScope() && (!auth || auth.currentUser===user);}
+            var identity=auth?{token:await user.getIdToken()}:{lookupToken:authState.snapshotLookupToken};
+            if(!auth && !identity.lookupToken)throw new Error('LOOKUP_RELOGIN_REQUIRED');
+            if(!valid())throw new Error('INVALIDATED');
+            var response=await fetch(SNAPSHOT_API_URL,{method:'POST',signal:signal,cache:'no-store',headers:Object.assign({'Content-Type':'application/json'},identity.token?{Authorization:'Bearer '+identity.token}:{}),body:JSON.stringify({action:action,sheet:sheet,teacher:teacher||'',lookupToken:identity.lookupToken||'',receipt:null})});
+            var result=await response.json();
+            if(!valid())throw new Error('INVALIDATED');
+            if(response.status===401 || response.status===403)throw new Error(response.status===401?'UNAUTHORIZED':'FORBIDDEN');
+            if(!result || !result.ok)throw new Error(result && result.error || 'SNAPSHOT_UNAVAILABLE');
+            return result;
+          });
+        });
+      }
+      function snapshotRequestUnshared(action, sheet, teacher, receipt, extra) {
         var session = getScheduleSessionKey();
         var controller = new AbortController();
-        var timer = setTimeout(function(){controller.abort();}, action === 'save' ? 95000 : 12000);
+        var timer = setTimeout(function(){controller.abort();}, (action === 'save' || action === 'visitor_banner_save') ? 95000 : 12000);
         return Promise.resolve().then(function() {
           if (!authState.loggedIn) throw new Error('UNAUTHORIZED');
           if (authState.isLookup) {
@@ -19,7 +48,7 @@
           if (controller.signal.aborted || session !== getScheduleSessionKey()) throw new Error('SESSION_CHANGED');
           return fetch(SNAPSHOT_API_URL, {method:'POST',signal:controller.signal,cache:'no-store',
             headers:Object.assign({'Content-Type':'application/json'},identity.token?{Authorization:'Bearer '+identity.token}:{}),
-            body:JSON.stringify({action:action,sheet:sheet,teacher:teacher||'',lookupToken:identity.lookupToken||'',receipt:receipt||null})});
+            body:JSON.stringify(Object.assign({},extra||{},{action:action,sheet:sheet,teacher:teacher||'',lookupToken:identity.lookupToken||'',receipt:receipt||null}))});
         }).then(function(response){return response.json();}).then(function(result){
           if (session !== getScheduleSessionKey()) throw new Error('SESSION_CHANGED');
           if (!result || !result.ok) throw new Error(result && result.error || 'SNAPSHOT_UNAVAILABLE');

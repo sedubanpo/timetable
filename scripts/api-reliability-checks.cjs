@@ -28,7 +28,7 @@ async function main(){
  f.reply(1,{ok:true,data:{version:'second'}});assert.equal((await p).data.version,'second');
  f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1});f.reply(0,{ok:false,error:'UNAUTHORIZED'});assert.equal((await p).error,'UNAUTHORIZED');f.advance(65000);assert.equal(f.scripts.length,1);
  f=fixture();p=f.ctx.apiJsonp({action:'grid'},{retries:1}).catch(e=>e);f.advance(65000);assert.equal((await p).code,'API_TIMEOUT');assert.equal(f.scripts.length,1);
- const app=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(s=>s.trim()).pop();
+ const app=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes('function loadData('));
  const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{setAttribute(){},style:{},value:'',classList:{add(){},remove(){}}});return elements.get(id);};
  const s={window:{innerWidth:1440,addEventListener(){}},document:{getElementById:el,addEventListener(){},body:{classList:{add(){},remove(){}}}},localStorage:{getItem(){return null;}},console,alert(){},setTimeout(){},clearTimeout(){},setInterval(){},clearInterval(){},URLSearchParams,Date,Promise,Set,Map};
  vm.createContext(s);vm.runInContext(app,s);

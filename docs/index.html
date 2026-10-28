@@ -2980,42 +2980,55 @@
           })
         ]);
       }
-      function fetchEnrollmentStatusStudents(idToken) {
-        var projectId = (LIVE_FIREBASE_CONFIG && LIVE_FIREBASE_CONFIG.projectId) || "fir-lms-prod";
-        var base = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(projectId) + "/databases/(default)/documents/students";
-        function loadPage(pageToken, rows) {
-          var url = base + "?pageSize=300" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
-          return fetch(url, { headers: { "Authorization": "Bearer " + idToken, "Accept": "application/json" } }).then(function(res) {
-            if (!res.ok) throw new Error("Firebase 학생 상태 조회 실패(" + res.status + ")");
-            return res.json();
-          }).then(function(payload) {
-            var nextRows = rows.concat(((payload && payload.documents) || []).map(parseFirestoreRestDocument));
-            // 학생명 기준으로 상태를 대조하므로, 과거 중지 레코드만 먼저 읽고
-            // 현재 등록 레코드가 다음 페이지에 남는 일이 없도록 전체 페이지를 조회한다.
-            if (payload && payload.nextPageToken) return loadPage(payload.nextPageToken, nextRows);
-            return nextRows;
-          });
+      // Transient reads only: no completed cache and no consumer-owned cancellation.
+      function createTimetableReadPool() {
+        var generation=0, pending=new Map();
+        function read(key, deadline, loader) {
+          if(pending.has(key))return pending.get(key).promise;
+          var stamp=generation, controller=new AbortController(), entry={}, rejectCancel;
+          function current(){return stamp===generation && pending.get(key)===entry && !controller.signal.aborted;}
+          var cancelled=new Promise(function(_,reject){rejectCancel=reject;});
+          entry.cancel=function(code){controller.abort();rejectCancel(new Error(code||'INVALIDATED'));};
+          pending.set(key,entry);
+          var timer=setTimeout(function(){entry.cancel('TIMEOUT');},deadline);
+          var work=Promise.resolve().then(function(){if(!current())throw new Error('INVALIDATED');return loader(controller.signal,current);});
+          entry.promise=Promise.race([work,cancelled]).then(function(value){if(!current())throw new Error('INVALIDATED');return value;})
+            .finally(function(){clearTimeout(timer);if(pending.get(key)===entry)pending.delete(key);});
+          return entry.promise;
         }
-        return withFirestoreTimeout(loadPage("", []), 20000, "Firebase 학생 상태");
+        return {read:read,invalidate:function(){generation++;pending.forEach(function(e){e.cancel();});pending.clear();},generation:function(){return generation;}};
       }
-      function fetchSlmsSchoolEventsCollection(idToken) {
-        if (!idToken) return Promise.reject(new Error("Firebase 로그인 토큰 없음"));
-        var projectId = (LIVE_FIREBASE_CONFIG && LIVE_FIREBASE_CONFIG.projectId) || "fir-lms-prod";
-        var base = "https://firestore.googleapis.com/v1/projects/" + encodeURIComponent(projectId) + "/databases/(default)/documents/events";
-        function loadPage(pageToken, rows) {
-          var url = base + "?pageSize=300" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
-          return fetch(url, { headers: { "Authorization": "Bearer " + idToken, "Accept": "application/json" } }).then(function(res) {
-            if (!res.ok) throw new Error("Firebase 학교 일정 조회 실패(" + res.status + ")");
-            return res.json();
-          }).then(function(payload) {
-            var nextRows = rows.concat(((payload && payload.documents) || []).map(parseFirestoreRestDocument));
-            if (payload && payload.nextPageToken && nextRows.length < 1500) return loadPage(payload.nextPageToken, nextRows);
-            return nextRows.slice(0, 1500);
-          });
-        }
-        return withFirestoreTimeout(loadPage("", []), 12000, "Firebase 학교 일정");
+      var timetableReadPool=createTimetableReadPool();
+      function timetableReadScope(){return JSON.stringify([getScheduleSessionKey(),timetableLoginSequence,timetableReadPool.generation()]);}
+      function fetchTimetableCollection(collection,idToken,deadline,maxRows,ownerCurrent,identity) {
+        var scope=timetableReadScope();
+        var key=JSON.stringify(['collection',collection,identity||scope,scope]);
+        return timetableReadPool.read(key,deadline,async function(signal,active){
+          function current(){return active() && scope===timetableReadScope() && (!ownerCurrent || ownerCurrent());}
+          var rows=[],token='';
+          do {
+            if(!current())throw new Error('INVALIDATED');
+            var url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(LIVE_FIREBASE_CONFIG.projectId)+'/databases/(default)/documents/'+collection+'?pageSize=300'+(token?'&pageToken='+encodeURIComponent(token):'');
+            var response=await fetch(url,{signal:signal,headers:{Authorization:'Bearer '+idToken,Accept:'application/json'}});
+            if(!current())throw new Error('INVALIDATED');
+            if(!response.ok)throw new Error('HTTP_'+response.status);
+            var payload=await response.json();
+            if(!current())throw new Error('INVALIDATED');
+            rows=rows.concat((payload.documents||[]).map(parseFirestoreRestDocument));token=payload.nextPageToken||'';
+            if(maxRows && (rows.length>maxRows || (token && rows.length>=maxRows)))throw new Error('LIMIT_EXCEEDED');
+          } while(token);
+          return rows;
+        });
+      }
+      function fetchEnrollmentStatusStudents(idToken,current,identity) {
+        return fetchTimetableCollection('students',idToken,20000,0,current,identity);
+      }
+      function fetchSlmsSchoolEventsCollection(idToken,current,identity) {
+        if(!idToken)return Promise.reject(new Error('Firebase 로그인 토큰 없음'));
+        return fetchTimetableCollection('events',idToken,12000,1500,current,identity);
       }
       function resetStudentEnrollmentStatus(preserveReview) {
+        timetableReadPool.invalidate();
         if(!preserveReview&&typeof reviewReadManager!=="undefined"&&reviewReadManager){reviewReadUser=null;invalidateReviewReads("AUTH");}
         studentEnrollmentStatusSequence++;
         studentEnrollmentStatusContext = "";
@@ -3059,7 +3072,7 @@
           var loading = Promise.resolve().then(function() {
             if (!isCurrent()) return null;
             return user.getIdToken().then(function(token) {
-              return isCurrent() ? fetchEnrollmentStatusStudents(token) : null;
+              return isCurrent() ? fetchEnrollmentStatusStudents(token,isCurrent,user.uid) : null;
             });
           }).then(function(rows) {
             if (!isCurrent() || rows === null) return false;
@@ -4336,7 +4349,7 @@
               var user = auth && auth.currentUser;
               if (!user) throw new Error("S-LMS 로그인 정보가 없습니다.");
               return user.getIdToken().then(function(idToken) {
-                return fetchSlmsSchoolEventsCollection(idToken);
+                return fetchSlmsSchoolEventsCollection(idToken,function(){return auth.currentUser===user && sessionKey===getScheduleSessionKey();},user.uid);
               });
             }).then(function(events) {
               var rows = Array.isArray(events) ? events : [];
@@ -6469,6 +6482,35 @@ window.SeduHubAdapter={
       var snapshotView = null, snapshotSaveBusy = false;
       var SNAPSHOT_API_URL = 'https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableSnapshotApi';
       function snapshotRequest(action, sheet, teacher, receipt, extra) {
+        if(action==='save'){
+          timetableReadPool.invalidate();
+          return snapshotRequestUnshared(action,sheet,teacher,receipt,extra).finally(function(){timetableReadPool.invalidate();});
+        }
+        if(action!=='read' && action!=='rooms')return snapshotRequestUnshared(action,sheet,teacher,receipt,extra);
+        var scope=timetableReadScope(), started=Date.now();
+        return timetableReadPool.read('snapshot-auth:'+scope,12000,function(){
+          if(!authState.loggedIn)throw new Error('UNAUTHORIZED');
+          return authState.isLookup ? null : getLiveFirebaseAuth();
+        }).then(function(auth){
+          if(scope!==timetableReadScope())throw new Error('INVALIDATED');
+          var user=auth && auth.currentUser;
+          if(auth && !user)throw new Error('UNAUTHORIZED');
+          var key=JSON.stringify(['snapshot',scope,user?user.uid:'LOOKUP',action,sheet,teacher||'']);
+          return timetableReadPool.read(key,Math.max(1,12000-(Date.now()-started)),async function(signal,current){
+            function valid(){return current() && scope===timetableReadScope() && (!auth || auth.currentUser===user);}
+            var identity=auth?{token:await user.getIdToken()}:{lookupToken:authState.snapshotLookupToken};
+            if(!auth && !identity.lookupToken)throw new Error('LOOKUP_RELOGIN_REQUIRED');
+            if(!valid())throw new Error('INVALIDATED');
+            var response=await fetch(SNAPSHOT_API_URL,{method:'POST',signal:signal,cache:'no-store',headers:Object.assign({'Content-Type':'application/json'},identity.token?{Authorization:'Bearer '+identity.token}:{}),body:JSON.stringify({action:action,sheet:sheet,teacher:teacher||'',lookupToken:identity.lookupToken||'',receipt:null})});
+            var result=await response.json();
+            if(!valid())throw new Error('INVALIDATED');
+            if(response.status===401 || response.status===403)throw new Error(response.status===401?'UNAUTHORIZED':'FORBIDDEN');
+            if(!result || !result.ok)throw new Error(result && result.error || 'SNAPSHOT_UNAVAILABLE');
+            return result;
+          });
+        });
+      }
+      function snapshotRequestUnshared(action, sheet, teacher, receipt, extra) {
         var session = getScheduleSessionKey();
         var controller = new AbortController();
         var timer = setTimeout(function(){controller.abort();}, (action === 'save' || action === 'visitor_banner_save') ? 95000 : 12000);
@@ -10335,6 +10377,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
       function visitorTeacherKey(name) { return String(name || '').replace(/(?:선생님|T)\s*$/,'').replace(/\s/g,''); }
       var visitorBanner = null, visitorMediaLoadedAt = 0;
       function loadVisitorPortraits(force) {
+        if(document.hidden)return;
         if (!authState.loggedIn || !authState.isLookup) { visitorPortraits=Object.create(null);visitorPortraitKey='';return; }
         var key=getScheduleSessionKey();
         if(visitorPortraitPending || (!force && visitorPortraitKey===key && Date.now()-visitorMediaLoadedAt<55000))return;
@@ -10773,9 +10816,15 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         return {read:read,invalidate:invalidate,cancelPending:cancelPending,generation:function(){return generation;}};
       }
       var reviewReadManager=createReviewReadManager(), reviewReadEpoch=0, reviewReadUser=null, reviewIdentitySignature=null, reviewViewFlight=null;
-      window.addEventListener('pagehide',function(){invalidateReviewReads('LEAVE');});
+      window.addEventListener('pagehide',function(){timetableReadPool.invalidate();invalidateReviewReads('LEAVE');});
 
       function invalidateReviewReads(reason) {
+        // Closing the review is one consumer leaving, not a page-wide cancellation.
+        if(reason!=='LEAVE'){timetableReadPool.invalidate();studentEnrollmentStatusSequence++;studentEnrollmentStatusState.loading=null;}
+        if(reason==='AUTH'||reason==='401'||reason==='403') {
+          resetStudentEnrollmentStatus(true);
+          operationMemoState.slmsEvents=[];operationMemoState.slmsLoadedAt=0;
+        }
         if(typeof invalidateFirstLesson==='function')invalidateFirstLesson();
         if(reason==='LEAVE')reviewReadManager.cancelPending();else{reviewReadEpoch++;reviewReadManager.invalidate();}
         if(reason==='AUTH'||reason==='401'||reason==='403')reviewIdentitySignature=null;

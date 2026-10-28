@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const html=fs.readFileSync('Index.html','utf8'),app=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(s=>s.trim()).pop();
+const html=fs.readFileSync('Index.html','utf8'),app=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes('function loadData('));
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
 const elements=new Map(),timers=new Map();let id=0;
 const el=k=>{if(!elements.has(k))elements.set(k,{style:{},classList:{add(){},remove(){}},setAttribute(){},removeAttribute(){}});return elements.get(k);};

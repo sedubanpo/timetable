@@ -11,7 +11,7 @@ for(const file of ['Index.html','docs/index.html']){
  scope.studentCardHideNote=true;model=scope.buildStudentCardViewModel('검증학생');assert.equal(model.timelineRows[0].note,'');assert.equal(model.timelineRows[0].end,14.5);
  const key=scope.previewNoteKey('card','검증학생',rows[0]);
  scope.previewNoteDrafts[key]={text:'12:30-14:00 안내',hidden:true};
- model=scope.buildStudentCardViewModel('검증학생');assert.equal(model.timelineRows[0].end,14);assert.equal(model.timelineRows[0].note,'');assert.match(rows[0].note,/내부 메모/);
+ model=scope.buildStudentCardViewModel('검증학생');assert.equal(model.timelineRows[0].end,14.5,'unchanged second interval still ends at 14:30');assert.equal(model.timelineRows[0].note,'');assert.match(rows[0].note,/내부 메모/);
  for(const note of ['도착 12:30','12:30-14:30 / 13:00-14:00','12:99-14:30','18:30-20:30']){const r=scope.getCardNoteTimeRange({start:12,end:14,note});assert.equal(r.start,12,note);assert.equal(r.end,14,note);}
  assert.equal(scope.getCardNoteTimeRange({start:14,end:17,note:'2:30 - 5:00 선생님톡 확인'}).start,14.5);
  assert.equal(scope.getExportTimeRange({start:12,end:14,note:'12:30-14:30'}).end,14,'Excel strict bounds unchanged');
