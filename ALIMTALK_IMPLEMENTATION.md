@@ -425,3 +425,22 @@ Chrome에서 동명이인 후보 2명 표시 → 학생 직접 선택 → 연결
 - 오류 화면에 ‘미리보기 다시 확인’과 ‘발송 결과 확인’을 추가. 자동 재시도·자동 발송 없음. 미확인 전송은 결과 확인 우선. 기존 auth/UID/컨텍스트 세대 검사 유지.
 - 실제 Index.html/docs/index.html의 transport 함수를 VM으로 검증: AbortSignal.timeout이 없는 환경, 인증/토큰/네트워크/JSON 실패, never-settling 토큰 및 늦은 응답, 계정 교체, 서버 RESULT_UNCERTAIN 보존 및 재요청0. 초기 테스트2건은 fixture 토큰 Promise 진입 전에 타이머를 실행한 테스트 순서 문제로 실패했고, setImmediate 경계 후 검증하도록 수정해 재실행했다.
 - 전체114/114 재통과(실패/skip0). 로그 evidence/alimtalk-20261028/transport-full-regression.log. 서버 코드 변경 없음. 실제 사용자 오류의 해결 여부는 재시도에서 반환되는 구체 코드/운영 관찰로 확인해야 한다.
+
+### 18.1 프런트 후속 배포 결과
+
+- Pages 소스 0b604b45773ea0633a4d3756e29cf5aaacaa1539, workflow40691307592 success: https://github.com/sedubanpo/timetable/actions/runs/40691307592 . 운영 HTML과 검증 docs/index.html 바이트 일치, SHA256 9dd041d58d563d5067f0415e06fb31ccd5c0831bdfce605176185e4139150859.
+- 서버는17.1의 timetablealimtalkapi-00003-qec 유지. 최초 배포 후 해당 revision의 severity>=ERROR 최대10건 범위 조회는0건이었다(실제 사용자 업무 성공 증거 아님).
+- Chrome 기존 URL로 cua.getTab 직접 재연결도 Local browser use is disabled in Work settings로 거부됨. 운영 UI를 대신 조작하거나 인증 토큰을 추출하지 않았다.
+- 에이전트 실제 발송0건. 사용자 테스트 발송/수신 여부는 확인되지 않았다. 발송 단계가 불명확하므로 재발송 대신 기존 결과 확인을 우선해야 한다. 다음에는 새로고침한 화면의 구체 오류 코드와 발생 단계로 이어서 확인할 수 있다.
+- 이번 단계의 코드 수정/격리 회귀/배포/산출물 확인은 완료. 실제 관리자 테스트의 수신 및 결과 연동 최종 확인은 미완료. 일반 학생 발송 잠금 유지. 롤백 없음.
+
+- 사용자 후속 답변: 오류 발생은 ‘관리자 알림톡 테스트를 처음 열 때’. 발송 확인 버튼 이후 실패로 보고된 것이 아니다. 새 배포 화면을 새로고침해 미리보기만 다시 열고 구체 오류 코드 또는 정상 여부를 확인하도록 요청함. 이 확인에는 실제 발송이 필요하지 않음.
+
+## 19. 운영 미리보기의 PROVIDER_UNAVAILABLE 조사
+
+- 사용자 재시도 결과 첫 진입 미리보기에서 PROVIDER_UNAVAILABLE. 실제 발송 단계가 아니며 서버의 SOLAPI 템플릿 조회가 실패한 것임.
+- 읽기 전용 승인 템플릿 preflight 재실행: authenticated/approved/templateMatches/variablesMatch 모두true, 변수4개 및 버튼1개. 실제 production provider 코드에 동일 secret을 주입해 정확히 해당 템플릿 GET만 허용한 검사도 HTTP200/templateMatches:true. 발송 요청0.
+- 운영 함수가 바인딩한 API Key/Secret은 둘 다 version1이며, Secret Manager에도 각 version1만 ENABLED. 값의 경계/내부 공백 없음(값·길이·서명 출력하지 않음). 로컬과 운영 차이의 원인을 현재 증거로 확정하지 않음.
+- SOLAPI 공식 인증 규약 확인: https://solapi.com/developers/api/authentication-api-key . InvalidAPIKey, SignatureDoesNotMatch, RequestTimeTooSkewed, DuplicatedSignature는 고정 내부 코드로 변환. 나머지는 HTTP 상태의 고정 분류로 변환한다. provider 원문 응답은 사용자/로그로 전달하지 않는다.
+- 운영 실패 시 고정 code/status/read-or-send만 기록하도록 제한. 요청/본문/번호/키/서명/계정 정보는 로그에 포함하지 않는다. 자동 재시도나 실제 발송 추가 없음. 보안 설정/키 변경 없음.
+- 전체115/115 통과, 실패/skip0. evidence/alimtalk-20261028/provider-errors-full-regression.log. 테스트는 known/unknown 오류 모두 비밀정보 미노출을 확인한다.

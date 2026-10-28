@@ -8,7 +8,14 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
   const date=new Date().toISOString(),salt=crypto.randomBytes(24).toString('hex');
   const signature=crypto.createHmac('sha256',apiSecret).update(date+salt).digest('hex');
   const r=await request('https://api.solapi.com'+path,{method,headers:{Authorization:`HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),redirect:'error',signal});
-  if(!r.ok)fail('PROVIDER_UNAVAILABLE');return r.json();
+  if(!r.ok){
+   // Never forward provider bodies: they may contain account or request information.
+   const known={InvalidAPIKey:'PROVIDER_KEY_INVALID',SignatureDoesNotMatch:'PROVIDER_SIGNATURE_MISMATCH',RequestTimeTooSkewed:'PROVIDER_CLOCK_SKEW',DuplicatedSignature:'PROVIDER_SIGNATURE_REUSED'};
+   let detail;try{detail=await r.json();}catch{}
+   const code=Object.hasOwn(known,detail?.errorCode)?known[detail.errorCode]:({400:'PROVIDER_REQUEST_REJECTED',401:'PROVIDER_AUTH_REJECTED',403:'PROVIDER_ACCESS_DENIED',404:'PROVIDER_RESOURCE_NOT_FOUND',429:'PROVIDER_RATE_LIMIT'}[r.status]||'PROVIDER_UNAVAILABLE');
+   console.warn('timetableAlimtalkProviderFailure',{code,status:Number.isInteger(r.status)?r.status:0,operation:method==='GET'?'read':'send'});
+   fail(code);
+  }return r.json();
  }
  function event(m,groupId,key){
   if(!m?.messageId||!groupId||m.customFields?.timetableKey!==key)fail('RESULT_MISMATCH');
