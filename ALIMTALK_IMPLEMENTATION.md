@@ -405,3 +405,23 @@ Chrome에서 동명이인 후보 2명 표시 → 학생 직접 선택 → 연결
 - 격리 전체 회귀104/104 통과, 실패/skip0. 에뮬레이터 demo 프로젝트만 사용. 미식별 원본 차단, 취소 제외, 개별 시간/강의실 보류, 타 학생 정합성, 모든 원본의 연결 검증, 권한 철회, 동시성, timeout, 결과 처리 포함. 로그: evidence/alimtalk-20261028/source-holds-full-regression.log.
 - 배포 전 운영 main=25f3f73d85e2965d53f6a06cbc035cdcaf01bee4, 최신 Pages40686416722 성공/진행 중 workflow 없음 확인. 직전 소스는 /tmp/timetable-alimtalk-before-source-holds-25f3f73.tar 보존. 신규 배포는 기존 timetableAlimtalkApi와 Pages만 대상으로 한다.
 - 브라우저는 여전히 도구 설정상 차단. 실제 렌더·관리자 테스트 발송 확인을 통과한 것으로 기록하지 않는다. 일반 학생 발송은 계속 비활성. 실제 발송은0건.
+
+### 17.1 배포 완료 및 확인 범위
+
+- 대응 소스: fb15a3e80b75b9129672840988fd0fd483f84dda.
+- 서버: timetableAlimtalkApi, revision timetablealimtalkapi-00003-qec, ACTIVE, build fe0a7709-261e-4fad-b121-2c158895d199, update 2026-10-28T12:43:30.782422430Z (21:43:30 KST). 기존 함수 한 개만 배포. 규칙·스키마·인덱스·타 앱 변경 없음.
+- Pages: workflow40690325389 success, https://github.com/sedubanpo/timetable/actions/runs/40690325389 . 운영 https://sedubanpo.github.io/timetable/ HTML이 검증 docs/index.html과 바이트 동일. SHA256 6136ade2c25d8382eda91882d3d4fa38406cd142d69ded36ef0086579cfc75dd.
+- 운영 안전 확인: 인증 없는 inspect403/FORBIDDEN, testPreview403/FORBIDDEN, 일반 send409/SENDING_DISABLED. 실제 업무 원장을 읽거나 발송하지 않는 경로만 실행.
+- 추가 합성 확인: 한 학생에게 정상 수업과 보류 수업이 섞인 경우 전체 발송 HELD, provider 호출0. 최초 단독 실행은 fixture 확장자 누락으로 시작 실패했으며 `.cjs` 경로 수정 후 통과(앱 코드 변경 없음).
+- 브라우저 연결은 계속 비활성 응답. 운영 인증 사용자로 변경된 inspect 화면을 직접 조작한 검증 및 실제 관리자 수신 확인은 미완료다. 사용자에게 기존 관리자 화면의 테스트 전용 경로에서 가상 학생/마스킹 번호를 확인하고1건만 발송·결과 확인하도록 요청했다. 이 요청 자체를 발송 증거로 기록하지 않는다.
+- 롤백 미실행. 필요한 경우 현재 release가 이번 revision/commit인지 먼저 확인한 뒤25f3f73의 해당 함수와 Pages만 복구한다. 저장된 매핑·연락 확인·발송/감사 이력 삭제 없음. 뒤이은 배포가 있으면 자동 전체 롤백하지 않는다.
+- 현재 완료: 전체 원본 조회를 막던 항목 손실 문제 수정, 개별 발송 보류 및 제외 보존, 격리104건 회귀, 서버/프런트 배포와 정적/권한 경계 확인. 남음: 운영 관리자 화면 확인과 관리자 테스트1건의 실제 수신·웹훅/결과 조회 확인. 일반 학생 알림톡 발송은 여전히 차단 상태.
+
+## 18. 관리자 테스트 화면의 일반 오류 문구 보완
+
+- 사용자가 ‘확인을 완료하지 못했습니다. 다시 시도해 주세요.’를 보고했다. 12:40 UTC 이후 해당 함수 최근35개 로그에서 사용자가 실행한 신규 POST는 확인되지 않았고, 직접 수행한 비인증 점검3건만 확인됐다. 미리보기/발송/결과 중 발생 단계를 사용자에게 질문했다. 이 제한된 로그만으로 특정 브라우저/네트워크 원인을 확정하지 않는다.
+- 운영 CORS preflight 읽기 점검: OPTIONS204, Origin=https://sedubanpo.github.io, 허용 POST/OPTIONS와 Authorization/Content-Type 확인. 발송·원장 쓰기 없음.
+- 프런트 transport의 AbortSignal.timeout 의존을 AbortController+명시적10초 deadline으로 대체. 인증 로딩/토큰 발급도 같은 기한에 포함. 만료 뒤 늦은 토큰은 HTTP를 시작할 수 없음. auth/token/network/response 오류를 고정 코드로 구분하며 원문 오류·토큰은 표시/로그하지 않음.
+- 오류 화면에 ‘미리보기 다시 확인’과 ‘발송 결과 확인’을 추가. 자동 재시도·자동 발송 없음. 미확인 전송은 결과 확인 우선. 기존 auth/UID/컨텍스트 세대 검사 유지.
+- 실제 Index.html/docs/index.html의 transport 함수를 VM으로 검증: AbortSignal.timeout이 없는 환경, 인증/토큰/네트워크/JSON 실패, never-settling 토큰 및 늦은 응답, 계정 교체, 서버 RESULT_UNCERTAIN 보존 및 재요청0. 초기 테스트2건은 fixture 토큰 Promise 진입 전에 타이머를 실행한 테스트 순서 문제로 실패했고, setImmediate 경계 후 검증하도록 수정해 재실행했다.
+- 전체114/114 재통과(실패/skip0). 로그 evidence/alimtalk-20261028/transport-full-regression.log. 서버 코드 변경 없음. 실제 사용자 오류의 해결 여부는 재시도에서 반환되는 구체 코드/운영 관찰로 확인해야 한다.
