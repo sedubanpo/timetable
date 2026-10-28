@@ -25,3 +25,5 @@ test('permission withdrawn during candidate lookup cannot return directory data'
  let allowed=true;const service=createReviewService({authorize:async()=>({uid:'synthetic',role:'ADMIN',active:allowed,academyId:'banpo',canSendTimetable:true}),searchStudents:async()=>{allowed=false;return [{id:'s1',name:'가상'}];},loadSource:async()=>{},resolveStudent:async()=>{},store:{}});
  await assert.rejects(service.candidates('',{query:'가상'}),{code:'FORBIDDEN'});
 });
+
+test('incomplete source exposes only allowlisted diagnostics and never allows mapping',async()=>{const f=setup();f.source.complete=false;f.source.issues=['ROOM_UNRECOGNIZED','PARTIAL_TIME_REVIEW_REQUIRED','private raw note'];const r=await f.service.inspect('',f.input);assert.deepEqual(r.entries,[]);assert.equal(r.complete,false);assert.deepEqual(r.issues,['ROOM_UNRECOGNIZED','PARTIAL_TIME_REVIEW_REQUIRED']);assert(!JSON.stringify(r).includes('private'));await assert.rejects(f.service.saveMapping('',f.input),{code:'SOURCE_UNVERIFIED'});assert.equal(f.getMapping(),null);f.actor.active=false;await assert.rejects(f.service.inspect('',f.input),{code:'FORBIDDEN'});});

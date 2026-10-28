@@ -10,7 +10,7 @@ function mount({host,api,context}){
  try{await Promise.race([fn(()=>g===generation&&key===JSON.stringify(context())),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('요청 시간 초과 — 저장 결과를 확인한 뒤 다시 진행하세요.')),8000);})]);}
  catch(e){if(g===generation&&key===JSON.stringify(context())){const p=el('p',e.code||e.message||'확인 실패');p.setAttribute('role','alert');host.append(p,button('연결 기록 다시 확인',()=>open()));}}
  finally{clearTimeout(timer);if(g===generation){generation++;busy=false;host.querySelectorAll('button').forEach(b=>b.disabled=false);}}}
- async function open(){reset();return run(async current=>{const s=await api('inspect',context());if(!current())return;source=s;draw();});}
+ async function open(){reset();return run(async current=>{const s=await api('inspect',context());if(!current())return;if(s.complete===false){host.replaceChildren(el('h3','원본 시간표 확인 필요'));const reasons={PARTIAL_TIME_REVIEW_REQUIRED:'등원·수업 시간 메모가 있어 실제 수업 시각을 확정할 수 없습니다.',ROOM_UNRECOGNIZED:'강의실로 해석할 수 없는 열이 포함되어 있습니다.',STUDENT_TEXT_UNRECOGNIZED:'학생 정보로 해석할 수 없는 항목이 있습니다.'};const p=el('p','일부 수업이 누락된 안내를 막기 위해 학생 연결과 발송을 보류했습니다.');p.setAttribute('role','alert');host.append(p);for(const code of s.issues||[])if(reasons[code])host.append(el('p',reasons[code]));host.append(button('원본 다시 확인',()=>open()));return;}source=s;draw();});}
  function draw(){host.replaceChildren(el('h3','학생 연결 · 연락 가능 확인'),el('p','원본 수업을 선택하고 학생 ID를 확인하세요. 같은 이름이라는 이유로 자동 연결하지 않습니다.'));
  const list=el('fieldset');list.append(el('legend',source.date+' 원본 시간표'));const ids=[];
  for(const entry of source.entries){const [l,c]=field(entry.label+' · '+entry.summary,'checkbox');c.onchange=()=>{if(c.checked)ids.push(entry.id);else ids.splice(ids.indexOf(entry.id),1);};list.append(l);}host.append(list);

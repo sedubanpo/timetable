@@ -23,6 +23,7 @@
     for(const r of rows){
       if(r.studentId!==studentId||r.date!==date){reasons.push('학생 ID 또는 대상일 불일치');continue;}
       const why=exclusion(r);if(why){excluded.push({sourceId:r.sourceId||'',reason:why});continue;}
+      if(Array.isArray(r.reviewReasons)&&r.reviewReasons.length){reasons.push(...r.reviewReasons.map(reason=>['시간 메모 확인 필요','강의실 표기 확인 필요'].includes(reason)?reason:'원본 수업 확인 필요'));continue;}
       const fields=['subject','teacher','building','room','type','sourceId'];
       if(fields.some(k=>typeof r[k]!=='string'||!r[k].trim())){reasons.push('필수 수업 정보 누락');continue;}
       const start=time(r.start),end=time(r.end);

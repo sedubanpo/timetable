@@ -364,3 +364,44 @@ Chrome에서 동명이인 후보 2명 표시 → 학생 직접 선택 → 연결
 - Node22 전체75/75(에뮬레이터3건과 규칙 검사 포함), 기존서버30/30, 카드 검사3종 통과. 최초 실행은 에뮬레이터 시작 전 규칙검사 실패 후, 기동 후 전체 재실행75/75. PC 모의 요청은 접수로 표시, 모바일390px 패널 client315/scroll315.
 - 공식 계약: https://solapi.com/developers/api/messages , https://solapi.com/developers/api/msg-getList , https://solapi.com/developers/api/msgstatus , https://solapi.com/developers/api/webhook
 - 복구 기준: 이전 frontend04021a8 / server revision timetablealimtalkapi-00001-vis. 자신의 배포인지 확인 후 이전 소스의 해당 함수만 재배포하고 frontend 변경만 되돌림. 이력/원장 삭제 없음.
+
+### 15.1 후속 배포 및 운영 확인
+
+- 배포 소스: `25f3f73d85e2965d53f6a06cbc035cdcaf01bee4` (main).
+- API revision: `timetablealimtalkapi-00002-vil`, Cloud Build `b6cc425c-f908-45bc-b5db-d09cf8cd0fae`, ACTIVE, 2026-10-28 21:15:49 KST.
+- 두 신규 secret에 기존 compute 서비스 계정의 secretAccessor가 Firebase CLI로 부여되었음. Firestore 규칙·인덱스 변경 없음.
+- SOLAPI SINGLE-REPORT 웹훅 등록: `WH01WH261028121619880BSIrH3RzFn7`, ACTIVE. 기존 등록0 확인 후 생성. 목적지 `https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableAlimtalkApi/webhook`.
+- 안전 확인: 인증 없는 testPreview403, 일반 send409 SENDING_DISABLED, 잘못된 웹훅 서명503, 정상 서명의 빈 이벤트200. 빈 이벤트는 업무 데이터 쓰기/발송 없음. 실제 SOLAPI 이벤트 수신 성공을 뜻하지 않음.
+- 관리자 테스트 번호 enabled 확인. 실제 번호·secret 값 출력/저장하지 않음. 현재 실제 전송0건.
+- 운영 관리자 로그인과 카드 진입 확인, inspect의 SOURCE_UNVERIFIED 확인. 학생 매핑/연락처 원장 변경 없음. 일반 학부모 발송은 차단 유지.
+- 후속 브라우저 제어는 Work 설정의 Local browser use disabled로 중단. 사용자가 다시 켰다고 응답했으나 도구는 계속 차단. 다른 인증정보 추출 방식으로 우회하지 않음. 관리자 실 API 미리보기/테스트 발송/실제 수신 결과 확인은 미완료.
+- 관리자가 사용할 경로: 라이브 시간표 → 업무 도구 → 시간표 카드 → 관리자 알림톡 테스트 → 관리자 수신자 체크 → 알림톡 미리보기 → 관리자 번호로 테스트 발송 → 확인 후 발송 요청. 가상 학생 일정, 지정 관리자 한 번호만 허용. 발송 결과의 ‘서버에서 결과 확인’으로 저장 messageId만 조회. 동일 날짜/일정/번호 재요청은 중복 방지.
+- 증거: `admin-test-node22.log`, `admin-test-existing.log`, `admin-test-deploy.log`, `admin-test-postdeploy.json`, `admin-test-mobile.png` (모의 화면).
+- 실제 부하/전달 성공/청구 절감률 측정 없음. 운영 학생 발송 준비 완료로 해석하지 않음.
+
+- Pages workflow `40686416722` success: https://github.com/sedubanpo/timetable/actions/runs/40686416722 . 운영 https://sedubanpo.github.io/timetable/ HTML과 시험한 docs/index.html 바이트 일치. SHA256 `3f657c69a3e1dd314780239c1e93ceb529916590d482844006bed58a0c55a529`.
+- 배포 후 ERROR 로그1건은 직접 수행한 잘못된 웹훅 서명 검사의503 요청(12:16:34Z)과 일치. 그 외 해당 revision 오류는 조회 범위에서 발견하지 못함. 실제 업무 정상 관찰을 대신하지 않음.
+- 최종 상태: 관리자 전용 테스트/결과 transport/웹훅 배포 완료, 실제 관리자 테스트 메시지 발송 및 수신 확인 미완료(브라우저 도구 차단). 일반 학생 원본 해석 보류도 미해결. 롤백 실행 없음. 다음 단계는 브라우저 도구 재연결 후 관리자 테스트1건의 실제 결과 확인, 별도 운영 시간표 파서 보류 원인 해소 및 실학생 경로 재검증이다.
+
+## 16. 원본 보류 원인 재확인 및 진단 화면 보완 (2026-10-28 21:33 KST)
+
+- 운영 원본 `10/28(수)` / `2026-10-28` 한 날짜만 서명된 snapshot_export로 읽었다. 학생 원문·연락처·secret을 출력하거나 보관하지 않았다. Firestore 전체조회·동기화·원장 수정·실제 발송 없음.
+- 코드와 운영 응답으로 확인한 보류 유형: `PARTIAL_TIME_REVIEW_REQUIRED`, `ROOM_UNRECOGNIZED`. 기존 파서가 인식한 항목은156개이나 전체 유효 수업 수로 해석할 수 없다. 시간 메모 분류는 clock+arrivalNote16, clock5, clock+arrivalNote+lessonNote2(원문 항목 기준, 유일 학생 수 아님). 비정형 열3개가 있어 강의실 번호를 추측하거나 열을 일괄 무시할 수 없다.
+- 기존 inspect가 위 원인을 모두 SOURCE_UNVERIFIED로 숨겨 관리자에게 원인을 설명하지 못하는 문제를 로컬 수정. 권한 재검증 후 허용된 사유 코드만 반환하고, incomplete이면 수업 entries는 빈 배열과 complete:false로 전달한다. UI는 정상 빈 시간표 대신 명확한 보류 안내와 재확인 버튼을 표시한다. 원문 메모·알 수 없는 진단값은 반환하지 않는다.
+- saveMapping 및 발송 경로의 완전성 검사는 유지. 보류를 해제하거나 임의 시간 보정·이름 매칭을 하지 않았다. `SOURCE_UNVERIFIED`의 진단 불가 문제만 보완했으며 실제 원본 해석과 발송 준비가 해결됐다는 뜻이 아니다.
+- 변경: snapshot-functions/alimtalk-review.js, assets/alimtalk-review-ui.js, Index.html, docs/index.html, scripts/alimtalk-review-test.cjs, scripts/alimtalk-ui-test.cjs.
+- 격리 검증: Node22 Alimtalk 하위 suite59/59(에뮬레이터 transaction3 및 운영 규칙의 로컬 접근 차단112건/양성대조3건 포함), 기본 Alimtalk·기존 서버·카드 suite43/43. 전체102/102, 실패/skip0. 테스트는 demo-timetable-alimtalk /127.0.0.1:18829로 실행. 두 HTML의 embedded UI는 assets 원본과 일치하며, 각 HTML은 HEAD 대비 해당 embedded UI 변경만 있음. 두 HTML 전체는 기존 허브 연결 코드 차이가 있어 바이트 동일하지 않음(전체 동일성 assertion은 실패 후 원인 확인). 기존 플랫폼 차이는 보존. git diff --check 통과. 실제 브라우저 렌더 검증은 차단으로 미완료.
+- 증거: evidence/alimtalk-20261028/source-diagnostics-regression.log, source-diagnostics-existing.log.
+- 사용자 브라우저 재활성화 응답 후에도 cua.getState()는 browsers:[] 및 Local browser use is disabled in Work settings를 반환. 브라우저 토큰 추출/다른 제어 경로로 우회하지 않음. 관리자 실제 미리보기·1건 발송·수신 결과·실제 웹훅 이벤트 확인은 여전히 미완료. 실제 발송0건 유지.
+- 이번 진단 수정은 아직 미배포. 운영은15.1의 배포를 유지하며 롤백 없음. 다음 작업은 브라우저 연결 복구, 시간 메모 해석을 카드와 공통화할 수 있는지 확인, 비정형 열의 실제 의미 검증이다. 각 원본 항목의 유효 수업/제외 여부를 입증하기 전 일반 발송 잠금을 해제하지 않는다.
+
+## 17. 개별 수업 보류로 하루 전체 차단 해소 (2026-10-28)
+
+- 16절 후속: 식별 가능한 학생의 불명확한 시간·강의실을 전역 파싱 실패로 버리지 않고 `lesson.reviewReasons`와 함께 유지한다. 원본 학생이 식별되지 않으면 전역 보류를 유지한다. 연결 검토에는 항목별 보류/제외 사유를 표시하며, 학생 ID 연결 저장이 보류를 해제하지 않는다.
+- 공통 normalize는 reviewReasons가 있는 유효 수업을 해당 학생의 발송 보류로 처리한다. 동일 학생의 정상 수업만 부분 발송하지 않는다. 다른 학생은 영향받지 않되, 기존 전체 원본 항목 ID 연결 완전성 검사는 유지한다. 필수값을 추측하지 않는다.
+- 휴강 열은 기존 이미지 카드와 동일하게 전송 제외한다. 취소 학생도 ID 연결 항목으로 남겨서 원본 누락으로 오해하지 않게 한다. 자동 생성 공강/취소 제외 기준 및 일반 발송 차단은 유지한다.
+- 파서 fingerprint에 source-parser-v2를 포함하여 이전 해석으로 저장한 매핑은 재확인을 요구한다. 권한·연락 확인·정규화 학생 ID·원자적 중복방지·발송 이력 구조 변경 없음.
+- 운영 한 날짜 read-only 확인: 수정 파서 complete:true, issues:[], 원본 항목183개. 이는 발송 가능한 학생 수가 아니다. 시간 메모 등 보류 학생은 여전히 발송 불가. 원문/PII 저장 없음.
+- 격리 전체 회귀104/104 통과, 실패/skip0. 에뮬레이터 demo 프로젝트만 사용. 미식별 원본 차단, 취소 제외, 개별 시간/강의실 보류, 타 학생 정합성, 모든 원본의 연결 검증, 권한 철회, 동시성, timeout, 결과 처리 포함. 로그: evidence/alimtalk-20261028/source-holds-full-regression.log.
+- 배포 전 운영 main=25f3f73d85e2965d53f6a06cbc035cdcaf01bee4, 최신 Pages40686416722 성공/진행 중 workflow 없음 확인. 직전 소스는 /tmp/timetable-alimtalk-before-source-holds-25f3f73.tar 보존. 신규 배포는 기존 timetableAlimtalkApi와 Pages만 대상으로 한다.
+- 브라우저는 여전히 도구 설정상 차단. 실제 렌더·관리자 테스트 발송 확인을 통과한 것으로 기록하지 않는다. 일반 학생 발송은 계속 비활성. 실제 발송은0건.

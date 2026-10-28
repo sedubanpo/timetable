@@ -11,22 +11,26 @@ function parseSnapshot(snapshot,now=Date.now()){
  for(let hour=8;hour<=23;hour++)snapshot.data.grid[hour].forEach((items,col)=>{
   if(!items.length)return;
   const roomText=snapshot.data.headers[col],room=roomText.match(/^(?:(본관|2관|3관)\s*)?(\d+강의실)$/);
-  if(!room){issues.push('ROOM_UNRECOGNIZED');return;}
   const headers=items.filter(s=>/^(?:(?:\S+)\s+)+[가-힣A-Za-z]+T$/.test(s.trim())&&s.trim().split(/\s+/).slice(0,-1).every(t=>subject.test(t)||classType.test(t)));
   const header=headers.length===1?headers[0]:null,tokens=header?.trim().split(/\s+/)||[];
   for(let index=0;index<items.length;index++){
    const raw=items[index].trim();if(!raw||headers.includes(items[index]))continue;
    if(/^(자습|자기주도학습)$/.test(raw))continue; // Explicit label, not a named student's lesson.
-   // The image card interprets note-based partial-hour changes. Until that parser is shared, never send the unadjusted hour.
-   if(/\d{1,2}\s*:\s*\d{2}|\d{1,2}\s*시|시간\s*변경/.test(raw)){issues.push('PARTIAL_TIME_REVIEW_REQUIRED');continue;}
    const parts=raw.split(/\s+/),name=parts[0],school=parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
    if(!/^[가-힣A-Za-z]+$/.test(name)||!school){issues.push('STUDENT_TEXT_UNRECOGNIZED');continue;}
    const found=parts.slice(1).filter(s=>statuses.has(s)),cancel=found.find(s=>exclusion({status:s}));
-   const status=cancel||found[0]||'';
-   const id=hash([snapshot.sheet,snapshot.date,hour,col,index]),fingerprint=hash([raw,headers,roomText]);
-   const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:tokens.find(t=>subject.test(t))||'',type:tokens.find(t=>classType.test(t))||'',teacher:header?tokens.at(-1).slice(0,-1):'',building:room[1]||'본관',room:room[2],status};
+   const status=/휴강/.test(roomText)?'휴강':cancel||found[0]||'';
+   // Preserve every identifiable occurrence, including held/cancelled lessons.
+   // Human ID mapping cannot clear a lesson hold; compose independently blocks that student.
+   const reviewReasons=[];
+   if(!exclusion({status})){
+    if(!room)reviewReasons.push('강의실 표기 확인 필요');
+    if(/\d{1,2}\s*:\s*\d{2}|\d{1,2}\s*시|시간\s*변경/.test(raw))reviewReasons.push('시간 메모 확인 필요');
+   }
+   const id=hash([snapshot.sheet,snapshot.date,hour,col,index]),fingerprint=hash(['source-parser-v2',raw,headers,roomText]);
+   const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:tokens.find(t=>subject.test(t))||'',type:tokens.find(t=>classType.test(t))||'',teacher:header?tokens.at(-1).slice(0,-1):'',building:room?(room[1]||'본관'):'',room:room?room[2]:'',status,reviewReasons};
    // Missing teacher/subject/type remains a student's hold reason in compose.
-   entries.push({id,fingerprint,label:name+' · '+school,summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher,lesson});
+   entries.push({id,fingerprint,label:name+' · '+school,summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
   }
  });
  return {academyId:'banpo',date:snapshot.date,revision:snapshot.data.version,complete:issues.length===0,entries,issues:[...new Set(issues)]};
