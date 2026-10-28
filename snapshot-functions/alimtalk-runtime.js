@@ -10,16 +10,8 @@ const {firestoreStore}=require('./alimtalk-store');
 const {createService}=require('./alimtalk-service');
 const {createHandler}=require('./alimtalk-http');
 const fail=code=>{throw Object.assign(Error(code),{code});};
-function templateProvider({apiKey,apiSecret,request}){
- return {async getTemplate(id,signal){
-  if(id!==rules.templateId)fail('TEMPLATE_MISMATCH');
-  const date=new Date().toISOString(),salt=crypto.randomBytes(24).toString('hex');
-  const signature=crypto.createHmac('sha256',apiSecret).update(date+salt).digest('hex');
-  const response=await request('https://api.solapi.com/kakao/v2/templates/'+id,{method:'GET',headers:{Authorization:`HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`},redirect:'error',signal});
-  if(!response.ok)fail('TEMPLATE_UNAVAILABLE');return response.json();
- },async sendOne(){fail('SENDING_DISABLED');},async lookup(){fail('SENDING_DISABLED');}};
-}
-function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,now=Date.now}){
+const templateProvider=options=>require('./alimtalk-provider').createProvider(options);
+function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,testPhone='',webhookSecret='',enableTestSend=false,now=Date.now}){
  if(typeof request!=='function')fail('TRANSPORT_REQUIRED');
  const authorize=createAuthorizer({verifyIdToken:(t,r)=>auth.verifyIdToken(t,r),readAccount:firestoreAccountReader(db)});
  const rs=firestoreReviewStore(db),store=firestoreStore(db),resolveStudent=createStudentAdapter(firestoreStudentReader(db));
@@ -43,9 +35,10 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   return docs.filter(d=>{const s=d.data();return !s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS';}).map(d=>{const s=d.data();return {id:d.id,name:s.name||'',school:s.school||'',grade:s.grade||'',status:s.status||''};});
  }});
  const mapped=createMappedDay({loadSource,readDayAssignments:rs.dayAssignments,readMapping:rs.mapping});
- const delivery=createService({authorize,loadDay:withStudentDirectory({loadMappedDay:mapped,resolveStudent,readClearance:(a,id,d)=>rs.clearance(a.academyId,d,id),now}),store,provider:templateProvider({apiKey,apiSecret,request}),now});
+ const delivery=createService({authorize,loadDay:withStudentDirectory({loadMappedDay:mapped,resolveStudent,readClearance:(a,id,d)=>rs.clearance(a.academyId,d,id),now}),store,provider:templateProvider({apiKey,apiSecret,request}),webhookSecret,now});
  // Every review action is rate limited too; permission is checked before rate-store writes.
  for(const action of Object.keys(review)){const original=review[action];review[action]=async(session,input)=>{const a=await authorize(session);await store.rate(a.uid,'review:'+action,now(),20);return original(session,input);};}
- return createHandler({review,delivery,allowedOrigins:['https://sedubanpo.github.io'],allowSend:false});
+ const testDelivery=require('./alimtalk-admin-test').createAdminTest({authorize,store,provider:templateProvider({apiKey,apiSecret,request,testPhone,enableTestSend}),testPhone,now});
+ return createHandler({review,delivery,testDelivery,allowTestSend:enableTestSend&&/^010\d{8}$/.test(testPhone),allowedOrigins:['https://sedubanpo.github.io'],allowSend:false});
 }
 module.exports={createRuntime,templateProvider};

@@ -12,7 +12,7 @@
     async function run(fn){if(busy)return;busy=true;const g=++generation;requestContext=JSON.stringify(context());host.querySelectorAll('button').forEach(b=>b.disabled=true);let timer;try{await Promise.race([fn(g),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),deadline);})]);}catch(e){if(current(g))error(e);}finally{clearTimeout(timer);if(current(g)){generation++;busy=false;host.querySelectorAll('button').forEach(b=>{if(!b.dataset.locked)b.disabled=false;});}}}
     function locked(b){b.disabled=true;b.dataset.locked='true';return b;}
     function draw(p){
-      shell();preview=p;
+      shell();preview=p;if(p.testMode)host.append(el('p','관리자 테스트 전용 · 가상 학생 일정 · '+p.testRecipient+' · 실제 학부모에게는 발송하지 않습니다.'));
       if(!p.rows?.length){host.append(el('p','확인할 학생이 없습니다.'));return;}
       for(const row of p.rows){
         const section=el('section');section.append(el('h4',(row.name||'학생 ID 미확인')+' · '+(row.date||p.date||'')));
@@ -29,7 +29,7 @@
       }
       const c=p.counts||{students:0,messages:0,numbers:0};host.append(el('p','학생 '+c.students+'명 · 메시지 '+c.messages+'건 · 수신번호 '+c.numbers+'개'));
       host.append(button('알림톡 미리보기',()=>load()));
-      const send=button('선택 알림톡 발송',()=>confirmSend(false));
+      const send=button(p.testMode?'관리자 번호로 테스트 발송':'선택 알림톡 발송',()=>confirmSend(false));
       if(p.sendEnabled===false)host.append(el('p','실제 발송은 아직 비활성화되어 있습니다. 관리자 테스트 번호 지정 후 활성화합니다.'));
       if(p.sendEnabled===false||!p.previewId||!c.messages||p.rows.some(r=>r.reasons.length))locked(send);
       host.append(send,button('발송 결과',()=>showResults()));
@@ -40,6 +40,7 @@
     });}
     function confirmSend(confirmChanges){
       if(!preview)return;const p=preview,c=p.counts;const box=el('div');box.className='alimtalk-confirm';box.setAttribute('role','group');box.setAttribute('aria-label','알림톡 발송 확인');
+      if(p.testMode)box.append(el('p','실제 알림톡 1건이 관리자 테스트 번호 '+p.testRecipient+'로 발송됩니다. 가상 학생 일정입니다.'));
       box.append(el('p',c.students+'명의 하루 수업 안내 '+c.messages+'건을 '+c.numbers+'개 번호로 요청합니다. API 접수는 수신 완료나 읽음을 뜻하지 않습니다.'));
       const commit=button('확인 후 발송 요청',()=>run(async g=>{
         const r=await api('send',{previewId:p.previewId,confirmChanges});if(!current(g))return;

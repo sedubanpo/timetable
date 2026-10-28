@@ -2319,7 +2319,7 @@
     async function run(fn){if(busy)return;busy=true;const g=++generation;requestContext=JSON.stringify(context());host.querySelectorAll('button').forEach(b=>b.disabled=true);let timer;try{await Promise.race([fn(g),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),deadline);})]);}catch(e){if(current(g))error(e);}finally{clearTimeout(timer);if(current(g)){generation++;busy=false;host.querySelectorAll('button').forEach(b=>{if(!b.dataset.locked)b.disabled=false;});}}}
     function locked(b){b.disabled=true;b.dataset.locked='true';return b;}
     function draw(p){
-      shell();preview=p;
+      shell();preview=p;if(p.testMode)host.append(el('p','관리자 테스트 전용 · 가상 학생 일정 · '+p.testRecipient+' · 실제 학부모에게는 발송하지 않습니다.'));
       if(!p.rows?.length){host.append(el('p','확인할 학생이 없습니다.'));return;}
       for(const row of p.rows){
         const section=el('section');section.append(el('h4',(row.name||'학생 ID 미확인')+' · '+(row.date||p.date||'')));
@@ -2336,7 +2336,7 @@
       }
       const c=p.counts||{students:0,messages:0,numbers:0};host.append(el('p','학생 '+c.students+'명 · 메시지 '+c.messages+'건 · 수신번호 '+c.numbers+'개'));
       host.append(button('알림톡 미리보기',()=>load()));
-      const send=button('선택 알림톡 발송',()=>confirmSend(false));
+      const send=button(p.testMode?'관리자 번호로 테스트 발송':'선택 알림톡 발송',()=>confirmSend(false));
       if(p.sendEnabled===false)host.append(el('p','실제 발송은 아직 비활성화되어 있습니다. 관리자 테스트 번호 지정 후 활성화합니다.'));
       if(p.sendEnabled===false||!p.previewId||!c.messages||p.rows.some(r=>r.reasons.length))locked(send);
       host.append(send,button('발송 결과',()=>showResults()));
@@ -2347,6 +2347,7 @@
     });}
     function confirmSend(confirmChanges){
       if(!preview)return;const p=preview,c=p.counts;const box=el('div');box.className='alimtalk-confirm';box.setAttribute('role','group');box.setAttribute('aria-label','알림톡 발송 확인');
+      if(p.testMode)box.append(el('p','실제 알림톡 1건이 관리자 테스트 번호 '+p.testRecipient+'로 발송됩니다. 가상 학생 일정입니다.'));
       box.append(el('p',c.students+'명의 하루 수업 안내 '+c.messages+'건을 '+c.numbers+'개 번호로 요청합니다. API 접수는 수신 완료나 읽음을 뜻하지 않습니다.'));
       const commit=button('확인 후 발송 요청',()=>run(async g=>{
         const r=await api('send',{previewId:p.previewId,confirmChanges});if(!current(g))return;
@@ -2491,7 +2492,7 @@ root.TimetableAlimtalkReviewUI={mount};
         <div class="card-state-filter"><button data-card-filter="all" onclick="setStudentCardFilter('all')">전체</button><button data-card-filter="wait" onclick="setStudentCardFilter('wait')">미발송</button><button data-card-filter="done" onclick="setStudentCardFilter('done')">완료</button></div><div id="studentImageList" class="student-list"></div></div>
         <div class="student-preview-panel"><div class="student-preview-panel-head"><div><div class="student-preview-panel-title">시간표 카드 미리보기</div><div class="student-preview-panel-sub">학부모님께 전달될 이미지입니다.</div></div></div>
         <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
-        <div class="card-actions"><button class="primary" onclick="copyLiveStudentCard()">이미지 복사</button><button onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button onclick="nextUnsentStudentCard()">다음 미발송</button><button onclick="openCardAlimtalkReview()">학생 연결·연락 확인</button><button onclick="openCardAlimtalk(false)">알림톡 미리보기</button><button onclick="openCardAlimtalk(true)">발송 결과</button><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
+        <div class="card-actions"><button class="primary" onclick="copyLiveStudentCard()">이미지 복사</button><button onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button onclick="nextUnsentStudentCard()">다음 미발송</button><button onclick="openCardAlimtalkReview()">학생 연결·연락 확인</button><button onclick="openCardAlimtalk(false)">알림톡 미리보기</button><button onclick="openCardAlimtalk(true)">발송 결과</button><button onclick="openCardAlimtalkTest()">관리자 알림톡 테스트</button><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
       </div></div>
     <div id="absenceNoticeModal">
       <div class="modal-box absence-notice-box">
@@ -7752,9 +7753,10 @@ root.TimetableAlimtalkReviewUI={mount};
         syncStudentCardActionButtons();
         var cardSession=getScheduleSessionKey();Promise.all([loadSharedSubjectIcons(),loadCardTeacherAssets()]).then(function(){if(cardSession===getScheduleSessionKey()&&isStudentImageModalOpen()&&selectedStudentForImage)renderStudentImagePreview(selectedStudentForImage);});
       }
+      var cardAlimtalkTest=null;
       var cardAlimtalkController=null,cardAlimtalkReview=null,cardAlimtalkSelections=Object.create(null),cardAlimtalkRequestGeneration=0;
       function cardAlimtalkKey(){return getScheduleSessionKey()+'|'+timetableLoginSequence+'|'+attendanceDateKey(currentSheetName)+'|'+selectedStudentForImage;}
-      function resetCardAlimtalk(){cardAlimtalkRequestGeneration++;if(cardAlimtalkController)cardAlimtalkController.reset();if(cardAlimtalkReview)cardAlimtalkReview.reset();var host=document.getElementById('cardAlimtalkPanel');if(host)host.hidden=true;}
+      function resetCardAlimtalk(){cardAlimtalkRequestGeneration++;if(cardAlimtalkTest)cardAlimtalkTest.reset();if(cardAlimtalkController)cardAlimtalkController.reset();if(cardAlimtalkReview)cardAlimtalkReview.reset();var host=document.getElementById('cardAlimtalkPanel');if(host)host.hidden=true;}
       async function cardAlimtalkApi(action,input){
         var requestGeneration=cardAlimtalkRequestGeneration,context=cardAlimtalkKey(),auth=await getLiveFirebaseAuth(),user=auth.currentUser;
         if(!user)throw Object.assign(Error('UNAUTHORIZED'),{code:'UNAUTHORIZED'});
@@ -7775,6 +7777,13 @@ root.TimetableAlimtalkReviewUI={mount};
         if(!cardAlimtalkController)cardAlimtalkController=TimetableAlimtalkUI.mount({host:host,
           context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),studentId:cardAlimtalkSelections[cardAlimtalkKey()]||null,session:cardAlimtalkKey()};},api:cardAlimtalkApi});
         var task=results?cardAlimtalkController.showResults():cardAlimtalkController.load();task.then(function(){if(!host.hidden)host.scrollIntoView({block:'start'});});
+      }
+      function openCardAlimtalkTest(){
+        resetCardAlimtalk();var host=document.getElementById('cardAlimtalkPanel');host.hidden=false;
+        if(!cardAlimtalkTest)cardAlimtalkTest=TimetableAlimtalkUI.mount({host:host,
+          context:function(){return {name:'관리자 테스트(가상)',date:new Date(Date.now()+9*3600000).toISOString().slice(0,10),studentId:'__alimtalk_admin_test__',session:cardAlimtalkKey()};},
+          api:function(action,input){return cardAlimtalkApi({preview:'testPreview',send:'testSend',results:'testResults',reconcile:'testReconcile'}[action],input);}});
+        cardAlimtalkTest.load().then(function(){if(!host.hidden)host.scrollIntoView({block:'start'});});
       }
       function closeStudentImageModal() {
         resetCardAlimtalk();

@@ -339,3 +339,28 @@ Chrome에서 동명이인 후보 2명 표시 → 학생 직접 선택 → 연결
 | Before | After |
 |---|---|
 | 학생별 미리보기 버튼 추가로 좁은 PC 목록에서 학생명이 한 글자씩 줄바꿈됨 | 목록을 이름·설명과 상태·버튼의 두 줄로 배치하고 버튼44px 보장 |
+
+## 14. 이번 배포 결과 (2026-10-28)
+
+- **학생 연결·연락 확인·미리보기 단계 배포 완료. 실제 발송 운영 활성화는 미완료이며 차단 상태.**
+- 운영 화면: https://sedubanpo.github.io/timetable/
+- Pages commit: `04021a8a565738019545dc1c5779b78600e34166`; workflow `40682313930` success. https://github.com/sedubanpo/timetable/actions/runs/40682313930
+- API: https://asia-northeast3-fir-lms-prod.cloudfunctions.net/timetableAlimtalkApi ; revision `timetablealimtalkapi-00001-vis`, build `96abc390-7957-4055-8f2b-04c12e19c8e7`, 서버 대응 commit `816b7ce` (04021a8에는 서버 변경 없음).
+- 배포 후 운영 HTML은 검증한 docs/index.html과 바이트 동일. SHA256 `39e185d7c051a6e9d4b4130cc164e82e629583aa88e72dc3fd2a13678db0e57d`. 마지막 원격 main 확인도04021a8과 일치.
+- 신규 revision 오류 로그 조회: severity>=ERROR 0건(조회 시점·최대20 범위). 이는 정상 업무 실사용의 대체 증거가 아니다.
+- 검증 범위: 합성 로컬 카드 HTML·권한/동시성·저장/timeout 회귀, 실제 demo Firestore 규칙/transaction, 운영 산출물 적용, 업무 읽기/쓰기 전 종료되는 HTTP4건. 운영 앱을 인증 사용자로 열어 신규학생/연락처를 조회하거나 mapping/clearance를 저장하지 않았다. **실제 운영 업무 기능 확인 미완료**로 남긴다.
+- 실제 문자·알림톡 발송0. 관리자 테스트 수신번호 미지정. 프런트와 HTTP 및 provider send 모두 차단. 발송/결과 transport·웹훅 활성화와 관리자 번호 한정 발송 검증은 남은 단계이며, API 배포를 실제 전달 성공으로 표현하지 않는다.
+- 이번 배포 관련 확인된 회귀/노출/오류 없음. 롤백 미실행. 직전 정상 HTML 및 Git 기준커밋은 보존했다. 사용자 업무·감사 원본 삭제/복원 없음.
+
+재현 환경: Node22 (`npm exec --yes --package=node@22 -- node ...`), 기존 Firestore emulator1.19.8/Java21, UI DOM 시험용 jsdom26은 /tmp/timetable-alimtalk-test-tools에 --ignore-scripts로 별도 설치(릴리스 의존성에 포함하지 않음). 신규 runtime 의존성 및 운영 package-lock 변경 없음. 브라우저 검증 harness와 합성 fixture는 scripts/에 있으며 Pages docs/ 및 Functions source의 배포 실행 경로로 들어가지 않는다.
+
+## 15. 관리자 전용 실제 전송·결과 연동 후속 (2026-10-28)
+
+- 운영 관리자 로그인/시간표 카드 진입 확인. 학생 연결 inspect는 SOURCE_UNVERIFIED로 보류됨: 원본 파서의 보수적 문법/부분시간 보류로 실학생 발송 가능 상태가 아님. 보류를 우회하지 않음.
+- 신규 관리자 테스트 경로는 고정 가상 학생·가상 수업만 사용하며 TIMETABLE_SOLAPI_TEST_PHONE 번호 이외 발송을 provider에서 거부. 일반 send는 HTTP/provider에서 차단 유지. 학생/보호자 원장 변경 없음.
+- 사용자가 테스트 번호 secret 등록 완료. 상태 enabled 확인, 값 출력 없음. 웹훅 검증용 TIMETABLE_SOLAPI_WEBHOOK_SECRET 신규 생성(값 비공개). 두 secret을 기존 함수에 바인딩 예정.
+- SOLAPI 승인 템플릿, 본문, 변수4개, 수업 문의 버튼을 읽기 API로 재확인. ATA 전용, disableSms=true, 각 요청 한 메시지, 재시도 없음. 조회는 저장된 messageId에만 limit2로 제한. ID가 없는 불명확 요청은 전체 목록을 탐색하거나 재발송하지 않음.
+- 웹훅은 SHA1 헤더 검증 후 동일 delivery key/messageId/groupId 검증, 저장 후 응답. 타 업무 이벤트는 무시. 실제 등록/운영 확인은 별도 결과로 기록.
+- Node22 전체75/75(에뮬레이터3건과 규칙 검사 포함), 기존서버30/30, 카드 검사3종 통과. 최초 실행은 에뮬레이터 시작 전 규칙검사 실패 후, 기동 후 전체 재실행75/75. PC 모의 요청은 접수로 표시, 모바일390px 패널 client315/scroll315.
+- 공식 계약: https://solapi.com/developers/api/messages , https://solapi.com/developers/api/msg-getList , https://solapi.com/developers/api/msgstatus , https://solapi.com/developers/api/webhook
+- 복구 기준: 이전 frontend04021a8 / server revision timetablealimtalkapi-00001-vis. 자신의 배포인지 확인 후 이전 소스의 해당 함수만 재배포하고 frontend 변경만 되돌림. 이력/원장 삭제 없음.

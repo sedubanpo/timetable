@@ -1,11 +1,11 @@
 'use strict';
-// Unwired proposal: only tests instantiate this service. No production client or secret is loaded.
+// Delivery core; all transports and authorization are injected server-side.
 const crypto=require('node:crypto');
 const rules=require('./alimtalk-contract');
 const hash=v=>crypto.createHash('sha256').update(JSON.stringify(v)).digest('hex');
 const fail=code=>{throw Object.assign(new Error(code),{code});};
 const bounded=async(fn,ms=8000)=>{let timer;const controller=new AbortController();try{return await Promise.race([Promise.resolve().then(()=>fn(controller.signal)),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Object.assign(new Error('TIMEOUT'),{code:'TIMEOUT'}));},ms);})]);}finally{clearTimeout(timer);}};
-function status(code){return {'2000':'ACCEPTED','3000':'PROCESSING','4000':'DELIVERED','5000':'FAILED'}[String(code)]||'UNKNOWN';}
+function status(code){const c=String(code);if(['3014','3048'].includes(c))return 'UNKNOWN';return {'2000':'ACCEPTED','3000':'PROCESSING','4000':'DELIVERED','5000':'FAILED'}[c]||(/^[123]\d{3}$/.test(c)?'FAILED':'UNKNOWN');}
 function verifyWebhook(secret,header){
   if(typeof secret!=='string'||!secret||typeof header!=='string'||!/^[a-f0-9]{40}$/.test(header))return false;
   return crypto.timingSafeEqual(Buffer.from(crypto.createHash('sha1').update(secret).digest('hex')),Buffer.from(header));
@@ -76,18 +76,18 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   async function reconcile(session,id){const a=await auth(session);await store.rate(a.uid,'reconcile',now(),10);const old=await store.get(id);if(!old||old.academyId!==a.academyId)fail('FORBIDDEN');
     const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:id},signal),deadline);
     if(!r||r.key!==id||!r.messageId||!r.groupId)return publicRecord(old); // Absence is not proof that a timeout was never sent.
-    return publicRecord(await apply(id,r));
+    const result=await apply(id,r);await auth(session);return publicRecord(result);
   }
   async function apply(id,event){return store.update(id,old=>{
     if(!old||event.key!==id||(old.messageId&&old.messageId!==event.messageId)||(old.groupId&&old.groupId!==event.groupId))fail('RESULT_MISMATCH');
-    const next=status(event.statusCode),terminal=['DELIVERED','FAILED'];
+    const next=event.registrationFailed===true?'FAILED':status(event.statusCode),terminal=['DELIVERED','FAILED'];
     if(terminal.includes(old.state))return old; // duplicate and stale events cannot undo a final result
     if(old.state==='PROCESSING'&&next==='ACCEPTED')return old;
     return {...old,state:next,messageId:event.messageId,groupId:event.groupId,errorCode:next==='FAILED'||next==='UNKNOWN'?String(event.statusCode):null,updatedAt:now()};
   });}
   async function webhook(header,events){if(!verifyWebhook(webhookSecret,header))fail('UNAUTHORIZED');if(!Array.isArray(events)||events.length>100)fail('INVALID_REQUEST');
     // Persist before acknowledging; failed storage returns non-2xx to permit provider retry.
-    for(const e of events){const id=e.customFields?.timetableKey;if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');if(!await store.get(id))fail('UNKNOWN_RESULT');await apply(id,{...e,key:id});}return {ok:true};}
+    for(const e of events){const id=e.customFields?.timetableKey;if(id===undefined)continue;if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');if(!await store.get(id))continue;await apply(id,{...e,key:id});}return {ok:true};}
   return {preview,send,results,reconcile,webhook};
 }
 module.exports={createService,status,verifyWebhook,hash};
