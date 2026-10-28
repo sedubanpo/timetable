@@ -137,3 +137,13 @@ exports.timetableSnapshotEveryTwoHours=onSchedule({schedule:'0 0,10-22/2 * * *',
   if(core.isSnapshotRestTime(Date.now())) {console.info('snapshotSyncRestHours');return;}
   try {await sync('');}catch(error){console.error('timetableSnapshotSync',{code:error.code==='SAVE_IN_PROGRESS'?'SAVE_IN_PROGRESS':'FAILED'});throw new Error('SNAPSHOT_SYNC_FAILED');}
 });
+
+// Alimtalk administration and preview only. All actual dispatch is server-disabled.
+const timetableSolapiKey=defineSecret('TIMETABLE_SOLAPI_API_KEY');
+const timetableSolapiSecret=defineSecret('TIMETABLE_SOLAPI_API_SECRET');
+exports.timetableAlimtalkApi=onRequest({region:'asia-northeast3',timeoutSeconds:30,memory:'256MiB',maxInstances:2,cors:false,secrets:[secret,timetableSolapiKey,timetableSolapiSecret]},async(req,res)=>{
+  try{
+    const handler=require('./alimtalk-runtime').createRuntime({db:getFirestore(),auth:getAuth(),sourceUrl:source,sourceSecret:secret.value(),apiKey:timetableSolapiKey.value(),apiSecret:timetableSolapiSecret.value(),request:fetch});
+    return await handler(req,res);
+  }catch{res.status(503).json({code:'ALIMTALK_UNAVAILABLE'});}
+});

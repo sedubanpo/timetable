@@ -1,0 +1,12 @@
+.alimtalk-panel{color:#183755;font:inherit;background:#fff;padding:16px;border:1px solid #cbd5e1;border-radius:8px;overflow-wrap:anywhere;min-width:0}
+.alimtalk-panel h3{font-size:19px;margin:0 0 12px}.alimtalk-panel h4{font-size:16px;margin:20px 0 8px}.alimtalk-panel p,.alimtalk-panel label{font-size:14px;line-height:1.6}
+.alimtalk-panel pre{white-space:pre-wrap;word-break:break-word;font:inherit;font-size:14px;line-height:1.7;background:#f4f7fb;padding:12px;border-radius:6px}
+.alimtalk-panel button{min-height:44px;max-width:100%;padding:9px 12px;margin:4px 4px 4px 0;color:#183755;background:#fff;border:1px solid #aebed2;border-radius:6px;cursor:pointer;font:inherit;font-size:14px}
+.alimtalk-panel button:hover{background:#edf3ff}.alimtalk-panel button:focus-visible,.alimtalk-panel input:focus-visible{outline:3px solid #215ed4;outline-offset:2px}
+.alimtalk-panel button:disabled{opacity:.6;cursor:not-allowed}.alimtalk-panel fieldset{border:1px solid #cad6e8;margin:10px 0;padding:10px}.alimtalk-panel label{display:block;padding:6px 0}.alimtalk-confirm{border-top:1px solid #aebed2;margin-top:16px;padding-top:8px}
+
+.alimtalk-panel,.alimtalk-panel fieldset,.alimtalk-panel input{box-sizing:border-box}.alimtalk-panel fieldset{min-inline-size:0;max-width:100%}.alimtalk-panel input[type=text]{display:block;width:100%;min-width:0;min-height:44px;margin-top:6px;padding:8px;border:1px solid #aebed2;border-radius:6px}.alimtalk-panel legend{max-width:100%;white-space:normal}.alimtalk-panel p{font-variant-numeric:tabular-nums}
+#studentImageModal #cardEditorSidebar{min-width:0}#studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel:not([hidden])){flex-basis:320px;width:320px;max-width:100%}
+@media(max-width:1200px){#studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel:not([hidden])){flex-basis:auto;width:100%}}
+
+#studentImageModal #cardUnsentReason{box-sizing:border-box;max-width:100%}

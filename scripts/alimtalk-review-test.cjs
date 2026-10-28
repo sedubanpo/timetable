@@ -1,0 +1,27 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict');
+global.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
+const {createReviewService}=require('../snapshot-functions/alimtalk-review');
+function setup(){const actor={uid:'admin',role:'ADMIN',active:true,academyId:'banpo',canSendTimetable:true},student={id:'s1',name:'가상',identityRevision:'i1',recipients:[{id:'mother',relation:'모',phone:'01000000001',verified:true}]},source={date:'2026-10-28',academyId:'banpo',complete:true,revision:'v1',entries:[{id:'e1',fingerprint:'f1',label:'가상',summary:'수학'}]};let mapping=null,review=null;
+const store={mapping:async()=>mapping,saveMapping:async(m,expected)=>{if((mapping?.revision||null)!==expected)throw Object.assign(Error('CONFLICT'),{code:'CONFLICT'});mapping=m;},saveClearance:async(r,expected,m)=>{if((review?.revision||null)!==expected||mapping.revision!==m)throw Object.assign(Error('CONFLICT'),{code:'CONFLICT'});review=r;}};
+const service=createReviewService({authorize:async()=>actor,loadSource:async()=>source,searchStudents:async()=>[{id:'s1',name:'가상'},{id:'s2',name:'가상'}],resolveStudent:async id=>{if(id!==student.id)throw Error('NO_STUDENT');return student;},store,now:()=>1});const input={date:source.date,sourceRevision:'v1',entryIds:['e1'],studentId:'s1',confirmed:true};return {actor,student,source,service,input,getMapping:()=>mapping,getReview:()=>review};}
+test('candidate names never auto select; explicit mapping stamps server actor',async()=>{const f=setup();assert.equal((await f.service.candidates('',{query:'가상'})).candidates.length,2);await f.service.saveMapping('',{...f.input,verifiedBy:'forged'});assert.equal(f.getMapping().verifiedBy,'admin');});
+test('mapping requires confirmation and unchanged source',async()=>{const f=setup();await assert.rejects(f.service.saveMapping('',{...f.input,confirmed:false}));f.source.revision='v2';await assert.rejects(f.service.saveMapping('',f.input),{code:'SOURCE_CHANGED'});});
+test('concurrent mappings cannot overwrite one another',async()=>{const f=setup();const r=await Promise.allSettled([f.service.saveMapping('',f.input),f.service.saveMapping('',f.input)]);assert.equal(r.filter(x=>x.status==='fulfilled').length,1);});
+test('masked contact choice then explicit recorded clearance; client hash/actor ignored',async()=>{const f=setup();await f.service.saveMapping('',f.input);const c=await f.service.contactChoices('',f.input);assert(!JSON.stringify(c).includes('01000000001'));await f.service.saveClearance('',{...f.input,...c,relations:['mother'],campusConfirmed:true,contactConfirmed:true,note:'합성 확인 기록',checkedBy:'forged',phoneHash:'forged'});assert.equal(f.getReview().checkedBy,'admin');assert.notEqual(f.getReview().recipients.mother.phoneHash,'forged');});
+test('changed number or unconfirmed campus cannot save review',async()=>{const f=setup();await f.service.saveMapping('',f.input);const c=await f.service.contactChoices('',f.input);const input={...f.input,...c,relations:['mother'],campusConfirmed:true,contactConfirmed:true,note:'합성 확인'};await assert.rejects(f.service.saveClearance('',{...input,campusConfirmed:false}));f.student.recipients[0].phone='01000000002';await assert.rejects(f.service.saveClearance('',input),{code:'CONTACT_CHANGED'});});
+test('revoked admin cannot inspect or save',async()=>{const f=setup();f.actor.active=false;await assert.rejects(f.service.inspect('',f.input),{code:'FORBIDDEN'});await assert.rejects(f.service.saveMapping('',f.input),{code:'FORBIDDEN'});});
+test('persistent store transaction rejects cross-student assignment and keeps immutable audits',async()=>{
+ const {firestoreReviewStore}=require('../snapshot-functions/alimtalk-review-store');const data=new Map();let chain=Promise.resolve();
+ const ref=path=>({path,get:async()=>({data:()=>structuredClone(data.get(path))})});
+ const db={collection:c=>({doc:id=>ref(c+'/'+id)}),runTransaction:fn=>{const p=chain.then(async()=>{const pending=[];const result=await fn({get:r=>r.get(),set:(r,v)=>pending.push([r.path,v]),create:(r,v)=>{if(data.has(r.path))throw Error('EXISTS');pending.push([r.path,v]);}});pending.forEach(([p,v])=>data.set(p,structuredClone(v)));return result;});chain=p.catch(()=>{});return p;}};
+ const s=firestoreReviewStore(db),m={academyId:'banpo',date:'2026-10-28',studentId:'s1',revision:'m1',entries:[{id:'e1',fingerprint:'f1'}]};
+ await s.saveMapping(m,null);await assert.rejects(s.saveMapping({...m,studentId:'s2',revision:'m2'},null),{code:'ENTRY_ALREADY_ASSIGNED'});
+ const r={academyId:m.academyId,date:m.date,studentId:m.studentId,revision:'r1'};await s.saveClearance(r,null,'m1');await assert.rejects(s.saveClearance({...r,revision:'r2'},null,'m1'),{code:'REVIEW_CONFLICT'});
+ await s.saveMapping({...m,revision:'m3'},'m1');await assert.rejects(s.saveClearance({...r,revision:'r2'},'r1','m1'),{code:'MAPPING_CHANGED'});
+ assert.equal([...data.keys()].filter(k=>k.startsWith('timetableAlimtalkReviewHistory/')).length,3);
+});
+test('permission withdrawn during candidate lookup cannot return directory data',async()=>{
+ let allowed=true;const service=createReviewService({authorize:async()=>({uid:'synthetic',role:'ADMIN',active:allowed,academyId:'banpo',canSendTimetable:true}),searchStudents:async()=>{allowed=false;return [{id:'s1',name:'가상'}];},loadSource:async()=>{},resolveStudent:async()=>{},store:{}});
+ await assert.rejects(service.candidates('',{query:'가상'}),{code:'FORBIDDEN'});
+});
