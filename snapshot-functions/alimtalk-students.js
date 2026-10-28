@@ -38,7 +38,7 @@ function createStudentAdapter({readStudent,findMappings}){
       if(!['ACTIVE','RETURNED'].includes(doc.status)||doc.active===false||doc.isActive===false)fail('STUDENT_NOT_ACTIVE');
       if(typeof doc.name!=='string'||!doc.name.trim())fail('STUDENT_NAME_REQUIRED');
       if(signal?.aborted)fail('ABORTED');
-      return {id:current,name:doc.name.trim(),recipients:contacts(doc),identityRevision:digest([current,[...seen],doc.canonicalStudentId||'',doc.studentIdAliases||[],doc.status])};
+      return {id:current,name:doc.name.trim(),school:doc.school||'',grade:doc.grade||'',recipients:contacts(doc),identityRevision:digest([current,[...seen],doc.canonicalStudentId||'',doc.studentIdAliases||[],doc.status,doc.name,doc.school||'',doc.grade||''])};
     }
     fail('IDENTITY_DEPTH_LIMIT');
   };

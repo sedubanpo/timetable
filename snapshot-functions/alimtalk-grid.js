@@ -17,12 +17,13 @@ function parseSnapshot(snapshot,now=Date.now()){
    const raw=items[index].trim();if(!raw||headers.includes(items[index]))continue;
    if(/^(자습|자기주도학습)$/.test(raw))continue; // Explicit label, not a named student's lesson.
    const parts=raw.split(/\s+/),name=parts[0],school=parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
-   if(!/^[가-힣A-Za-z]+$/.test(name)||!school){issues.push('STUDENT_TEXT_UNRECOGNIZED');continue;}
+   if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!(header&&parts.slice(1).some(s=>statuses.has(s))))){issues.push('STUDENT_TEXT_UNRECOGNIZED');continue;}
    const found=parts.slice(1).filter(s=>statuses.has(s)),cancel=found.find(s=>exclusion({status:s}));
    const status=/휴강/.test(roomText)?'휴강':cancel||found[0]||'';
    // Preserve every identifiable occurrence, including held/cancelled lessons.
    // Human ID mapping cannot clear a lesson hold; compose independently blocks that student.
    const reviewReasons=[];
+   if(!school)reviewReasons.push('학교·학년 확인 필요');
    if(!exclusion({status})){
     if(!room)reviewReasons.push('강의실 표기 확인 필요');
     if(/\d{1,2}\s*:\s*\d{2}|\d{1,2}\s*시|시간\s*변경/.test(raw))reviewReasons.push('시간 메모 확인 필요');
@@ -30,7 +31,7 @@ function parseSnapshot(snapshot,now=Date.now()){
    const id=hash([snapshot.sheet,snapshot.date,hour,col,index]),fingerprint=hash(['source-parser-v2',raw,headers,roomText]);
    const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:tokens.find(t=>subject.test(t))||'',type:tokens.find(t=>classType.test(t))||'',teacher:header?tokens.at(-1).slice(0,-1):'',building:room?(room[1]||'본관'):'',room:room?room[2]:'',status,reviewReasons};
    // Missing teacher/subject/type remains a student's hold reason in compose.
-   entries.push({id,fingerprint,label:name+' · '+school,summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
+   entries.push({id,fingerprint,sourceName:name,sourceSchool:school||'',label:name+' · '+(school||'학교·학년 미기재'),summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
   }
  });
  return {academyId:'banpo',date:snapshot.date,revision:snapshot.data.version,complete:issues.length===0,entries,issues:[...new Set(issues)]};

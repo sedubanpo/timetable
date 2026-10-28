@@ -10,7 +10,7 @@ function verifyWebhook(secret,header){
   if(typeof secret!=='string'||!secret||typeof header!=='string'||!/^[a-f0-9]{40}$/.test(header))return false;
   return crypto.timingSafeEqual(Buffer.from(crypto.createHash('sha1').update(secret).digest('hex')),Buffer.from(header));
 }
-function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8000,webhookSecret}){
+function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8000,webhookSecret,kind='daily-lessons'}){
   async function auth(session){const a=await bounded(()=>authorize(session),deadline);if(!a?.uid||a.role!=='ADMIN'||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
   async function plan(actor,input){
     if(!rules.validDate(input.date)||!Array.isArray(input.targets)||!input.targets.length||input.targets.length>20)fail('INVALID_REQUEST');
@@ -42,15 +42,15 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   }
   function publicPlan(p){return {...p,rows:p.rows.map(r=>({...r,recipients:r.recipients.map(({phone,...r})=>r)})),counts:{students:p.rows.filter(r=>!r.reasons.length).length,messages:p.rows.filter(r=>!r.reasons.length).reduce((n,r)=>n+r.recipients.length,0),numbers:new Set(p.rows.filter(r=>!r.reasons.length).flatMap(r=>r.recipients.map(x=>x.phone))).size}};}
   function publicRecord(r){if(!r)return null;const {phone,variables,...rest}=r;return {...rest,masked:rules.mask(phone),label:rules.labels[r.state]};}
-  async function preview(session,input){const a=await auth(session);await store.rate(a.uid,'preview',now(),30);const p=await plan(a,input);await auth(session);const id=crypto.randomUUID();await store.savePreview(id,{actor:a.uid,academyId:a.academyId,input,plan:p,expires:now()+300000});await auth(session);return {...publicPlan(p),previewId:id};}
+  async function preview(session,input){const a=await auth(session);await store.rate(a.uid,'preview',now(),30);const p=await plan(a,input);await auth(session);const id=crypto.randomUUID();await store.savePreview(id,{actor:a.uid,academyId:a.academyId,input,kind,plan:p,expires:now()+300000});await auth(session);return {...publicPlan(p),previewId:id};}
   async function send(session,{previewId,confirmChanges=false}){
     const a=await auth(session);await store.rate(a.uid,'send',now(),10);await store.rate('academy:'+a.academyId,'send',now(),30);
     const saved=await store.preview(previewId);
-    if(!saved||saved.actor!==a.uid||saved.academyId!==a.academyId||saved.expires<=now())fail('PREVIEW_EXPIRED');
+    if(!saved||(saved.kind||'daily-lessons')!==kind||saved.actor!==a.uid||saved.academyId!==a.academyId||saved.expires<=now())fail('PREVIEW_EXPIRED');
     const fresh=await plan(a,saved.input);
     if(fresh.fingerprint!==saved.plan.fingerprint)return {changed:true,previous:publicPlan(saved.plan),current:publicPlan(fresh),requiresNewPreview:true};
     if(fresh.rows.some(r=>r.reasons.length))fail('HELD');
-    const prior=await store.history(a.academyId,fresh.date,fresh.rows.map(r=>r.studentId));
+    const prior=(await store.history(a.academyId,fresh.date,fresh.rows.map(r=>r.studentId))).filter(r=>(r.kind||'daily-lessons')===kind);
     if(prior.some(p=>['REQUESTING','UNKNOWN'].includes(p.state)))fail('PREVIOUS_RESULT_UNCERTAIN');
     const changes=fresh.rows.flatMap(r=>prior.filter(p=>p.studentId===r.studentId&&p.version!==r.version).map(p=>({studentId:r.studentId,previous:p.text,current:r.text})));
     if(changes.length&&!confirmChanges)return {requiresChangeConfirmation:true,changes};
@@ -58,8 +58,8 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     const results=[];
     for(const row of fresh.rows)for(const recipient of row.recipients){
       await auth(session);
-      const id=hash([a.academyId,row.studentId,fresh.date,recipient.phone,'daily-lessons',row.version]);
-      const record={id,academyId:a.academyId,studentId:row.studentId,date:fresh.date,version:row.version,phone:recipient.phone,relation:recipient.relation,text:row.text,variables:row.variables,kind:'daily-lessons',actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
+      const id=hash([a.academyId,row.studentId,fresh.date,recipient.phone,kind,row.version]);
+      const record={id,academyId:a.academyId,studentId:row.studentId,date:fresh.date,version:row.version,phone:recipient.phone,relation:recipient.relation,text:row.text,variables:row.variables,kind,actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
       const claim=await store.claim(id,record);
       if(!claim.created){results.push(publicRecord(claim.record));continue;}
       try{
@@ -72,8 +72,8 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     }
     return {results};
   }
-  async function results(session,input){const a=await auth(session);if(!rules.validDate(input.date)||!Array.isArray(input.studentIds)||input.studentIds.length>20||input.studentIds.some(id=>typeof id!=='string'||!id))fail('INVALID_REQUEST');await store.rate(a.uid,'results',now(),30);const records=await store.history(a.academyId,input.date,input.studentIds);for(let i=0;i<records.length;i++){const r=records[i];if(r.state==='REQUESTING'&&now()-r.createdAt>deadline)records[i]=await store.update(r.id,old=>old.state==='REQUESTING'?{...old,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN'}:old);}await auth(session);return {results:records.map(publicRecord)};}
-  async function reconcile(session,id){const a=await auth(session);await store.rate(a.uid,'reconcile',now(),10);const old=await store.get(id);if(!old||old.academyId!==a.academyId)fail('FORBIDDEN');
+  async function results(session,input){const a=await auth(session);if(!rules.validDate(input.date)||!Array.isArray(input.studentIds)||input.studentIds.length>20||input.studentIds.some(id=>typeof id!=='string'||!id))fail('INVALID_REQUEST');await store.rate(a.uid,'results',now(),30);const records=(await store.history(a.academyId,input.date,input.studentIds)).filter(r=>(r.kind||'daily-lessons')===kind);for(let i=0;i<records.length;i++){const r=records[i];if(r.state==='REQUESTING'&&now()-r.createdAt>deadline)records[i]=await store.update(r.id,old=>old.state==='REQUESTING'?{...old,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN'}:old);}await auth(session);return {results:records.map(publicRecord)};}
+  async function reconcile(session,id){const a=await auth(session);await store.rate(a.uid,'reconcile',now(),10);const old=await store.get(id);if(!old||old.academyId!==a.academyId||(old.kind||'daily-lessons')!==kind)fail('FORBIDDEN');
     const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:id},signal),deadline);
     if(!r||r.key!==id||!r.messageId||!r.groupId)return publicRecord(old); // Absence is not proof that a timeout was never sent.
     const result=await apply(id,r);await auth(session);return publicRecord(result);
