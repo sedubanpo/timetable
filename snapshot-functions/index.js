@@ -126,10 +126,10 @@ exports.timetableSnapshotApi=onRequest({region:'asia-northeast3',timeoutSeconds:
     }
     return res.json({ok:true,...await core.read(getFirestore(),sheet,who,teacher,action==='rooms')});
   }catch(error){
-    const known=['INVALID_IMAGE','UNAUTHORIZED','FORBIDDEN','INVALID_ACTION','INVALID_SHEET','INVALID_SNAPSHOT','SNAPSHOT_NOT_FOUND','SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','SOURCE_RATE_LIMIT','INVALID_RECEIPT','RECEIPT_EXPIRED','SNAPSHOT_TOO_LARGE'];
+    const known=['INVALID_IMAGE','UNAUTHORIZED','FORBIDDEN','INVALID_ACTION','INVALID_SHEET','SNAPSHOT_EXPIRED','INVALID_SNAPSHOT','SNAPSHOT_NOT_FOUND','SAVE_IN_PROGRESS','SOURCE_UNAVAILABLE','SOURCE_RATE_LIMIT','INVALID_RECEIPT','RECEIPT_EXPIRED','SNAPSHOT_TOO_LARGE'];
     const code=known.includes(error.code)?error.code:'UNAVAILABLE';
-    console.warn('timetableSnapshotApi',{code});
-    res.status(code==='UNAUTHORIZED'?401:code==='FORBIDDEN'?403:code==='SNAPSHOT_NOT_FOUND'?404:code==='SAVE_IN_PROGRESS'?409:503).json({ok:false,error:code});
+    console.warn('timetableSnapshotApi',{code,reason:['schema','date','captured_at','future','expired','data_shape','row_shape','cell_owners','size','json','document_key'].includes(error.reason)?error.reason:undefined,action:['read','rooms','save','history','bootstrap','visitor_media','annex_guide_read','annex_guide_mark','visitor_banner_save','visitor_banner_hide'].includes(req.body?.action)?req.body.action:'unknown'});
+    res.status(code==='UNAUTHORIZED'?401:code==='FORBIDDEN'?403:code==='SNAPSHOT_NOT_FOUND'?404:code==='SAVE_IN_PROGRESS'?409:code==='SNAPSHOT_EXPIRED'?410:code==='INVALID_SNAPSHOT'||code==='SNAPSHOT_TOO_LARGE'?422:503).json({ok:false,error:code});
   }
 });
 // Duration stays zero so retryCount is the exact cap, not a minimum within a retry window.

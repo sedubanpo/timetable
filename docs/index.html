@@ -6626,21 +6626,26 @@ window.SeduHubAdapter={
         }).finally(function(){if(request===snapshotHistorySequence)retry.disabled=false;});
       }
       function withScheduleSnapshot(live, sheet, teacher, accept, roomView) {
-        var finished=false, pending=null;
+        var finished=false, pending=null, backupError=null;
         function fallback(){
           if (pending) return pending;
           pending=snapshotRequest(roomView?'rooms':'read',sheet,teacher).then(function(result){
             if (finished) return false;
             if (!result.data || !Number.isFinite(result.savedAt) || Date.now()-result.savedAt>86400000 || result.savedAt>Date.now()+60000 || result.sheet!==sheet) return false;
             return accept(result)!==false;
-          }).catch(function(){return false;});
+          }).catch(function(error){backupError=error;return false;});
           return pending;
         }
         // Start with the saved copy immediately while the live request is already in flight.
         var timer=setTimeout(fallback,0);
         return live.then(function(value){finished=true;return value;},function(error){
           if (/AUTH|FORBIDDEN|BLOCKED|권한|로그인/i.test(String(error && error.message))) {finished=true;throw error;}
-          return fallback().then(function(used){finished=true;if(used)return {__snapshotHandled:true};throw error;});
+          return fallback().then(function(used){
+            finished=true;if(used)return {__snapshotHandled:true};
+            var notice={SNAPSHOT_EXPIRED:'저장본이 24시간 유효기간을 지나 사용할 수 없습니다.',INVALID_SNAPSHOT:'저장본 검증에 실패해 표시하지 않았습니다.',SNAPSHOT_TOO_LARGE:'저장본 크기 제한을 초과해 표시하지 않았습니다.',SNAPSHOT_NOT_FOUND:'이 날짜의 저장본이 없습니다.'}[backupError && backupError.message];
+            if(notice)throw new Error((error && error.message || '원본 조회 실패')+' · '+notice+' 원본 연결을 확인한 뒤 새로고침해 주세요.');
+            throw error;
+          });
         }).finally(function(){clearTimeout(timer);finished=true;});
       }
       function loadData(n,r,requestOptions){

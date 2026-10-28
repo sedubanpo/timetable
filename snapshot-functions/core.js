@@ -2,7 +2,7 @@
 const crypto = require('node:crypto');
 const COLLECTION = 'liveTimetableSnapshots';
 const MAX_AGE = 24 * 60 * 60 * 1000;
-function fail(code) { const error = new Error(code); error.code = code; throw error; }
+function fail(code, reason) { const error = new Error(code); error.code = code; if (reason) error.reason = reason; throw error; }
 function normalize(s) { return String(s || '').replace(/\u00a0/g,' ').trim().replace(/\s+/g,'').replace(/선생님$/i,'').replace(/T$/i,'').replace(/[·ㆍ•]/g,'').toLowerCase(); }
 function isSnapshotRestTime(now=Date.now()) {
   const hour=new Date(now+9*3600000).getUTCHours();
@@ -41,15 +41,19 @@ function identity(user, profile = {}, access = {}) {
   return {role,full,name};
 }
 function validate(snapshot, now = Date.now()) {
-  if (!snapshot || snapshot.schema !== 1 || snapshot.date !== dateForSheet(snapshot.sheet,now) || !Number.isFinite(snapshot.capturedAt) || snapshot.capturedAt > now+60000 || now-snapshot.capturedAt > MAX_AGE) fail('INVALID_SNAPSHOT');
+  if (!snapshot || snapshot.schema !== 1) fail('INVALID_SNAPSHOT','schema');
+  if (snapshot.date !== dateForSheet(snapshot.sheet,now)) fail('INVALID_SNAPSHOT','date');
+  if (!Number.isFinite(snapshot.capturedAt)) fail('INVALID_SNAPSHOT','captured_at');
+  if (snapshot.capturedAt > now+60000) fail('INVALID_SNAPSHOT','future');
+  if (now-snapshot.capturedAt > MAX_AGE) fail('SNAPSHOT_EXPIRED','expired');
   const data=snapshot.data;
-  if (!data || typeof data.version !== 'string' || !data.version || !Array.isArray(data.headers) || !data.headers.length || data.headers.length > 100 || !data.headers.every(s=>typeof s==='string' && s.length<200) || !data.grid || !snapshot.owners || !snapshot.rooms) fail('INVALID_SNAPSHOT');
+  if (!data || typeof data.version !== 'string' || !data.version || !Array.isArray(data.headers) || !data.headers.length || data.headers.length > 100 || !data.headers.every(s=>typeof s==='string' && s.length<200) || !data.grid || !snapshot.owners || !snapshot.rooms) fail('INVALID_SNAPSHOT','data_shape');
   for (let hour=8;hour<=23;hour++) {
     const row=data.grid[hour], owners=snapshot.owners[hour];
-    if (!Array.isArray(row) || row.length!==data.headers.length || !Array.isArray(owners) || owners.length!==row.length) fail('INVALID_SNAPSHOT');
-    row.forEach((cell,i)=>{if (!Array.isArray(cell) || !cell.every(s=>typeof s==='string' && s.length<10000) || !Array.isArray(owners[i]) || !owners[i].every(s=>typeof s==='string')) fail('INVALID_SNAPSHOT');});
+    if (!Array.isArray(row) || row.length!==data.headers.length || !Array.isArray(owners) || owners.length!==row.length) fail('INVALID_SNAPSHOT','row_shape');
+    row.forEach((cell,i)=>{if (!Array.isArray(cell) || !cell.every(s=>typeof s==='string' && s.length<10000) || !Array.isArray(owners[i]) || !owners[i].every(s=>typeof s==='string')) fail('INVALID_SNAPSHOT','cell_owners');});
   }
-  if (Buffer.byteLength(JSON.stringify(snapshot)) > 850000) fail('SNAPSHOT_TOO_LARGE');
+  if (Buffer.byteLength(JSON.stringify(snapshot)) > 850000) fail('SNAPSHOT_TOO_LARGE','size');
   return snapshot;
 }
 function project(snapshot, who, teacher = '', roomView = false, now = Date.now()) {
@@ -108,8 +112,8 @@ async function read(db, sheet, who, teacher, roomView, now = Date.now()) {
   const date=dateForSheet(sheet,now);
   const doc=await db.collection(COLLECTION).doc(key(sheet,date)).get();
   if (!doc.exists) fail('SNAPSHOT_NOT_FOUND');
-  let snap; try {snap=JSON.parse(doc.data().json);} catch {fail('INVALID_SNAPSHOT');}
-  if (snap.sheet!==sheet || snap.date!==date) fail('INVALID_SNAPSHOT');
+  let snap; try {snap=JSON.parse(doc.data().json);} catch {fail('INVALID_SNAPSHOT','json');}
+  if (snap.sheet!==sheet || snap.date!==date) fail('INVALID_SNAPSHOT','document_key');
   return project(snap,who,teacher,roomView,now);
 }
 function sheetNames(names) {

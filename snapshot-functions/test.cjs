@@ -35,3 +35,8 @@ test('last known good preserved on invalid or older writes; date-key isolation',
 test('KST rest boundary is 01:00 inclusive to 09:00 exclusive',()=>{
   for(const [stamp,expected] of [['2026-09-29T15:59:59Z',false],['2026-09-29T16:00:00Z',true],['2026-09-29T23:59:59Z',true],['2026-09-30T00:00:00Z',false],['2026-09-30T01:00:00Z',false]]) assert.equal(core.isSnapshotRestTime(Date.parse(stamp)),expected,stamp);
 });
+test('validation reasons separate expiry from malformed snapshots without accepting either',()=>{
+ for(const [change,code,reason] of [
+ [s=>s.schema=2,'INVALID_SNAPSHOT','schema'],[s=>s.date='2026-09-27','INVALID_SNAPSHOT','date'],[s=>s.capturedAt=null,'INVALID_SNAPSHOT','captured_at'],[s=>s.capturedAt=now+60001,'INVALID_SNAPSHOT','future'],[s=>s.capturedAt=now-86400001,'SNAPSHOT_EXPIRED','expired'],[s=>delete s.data.grid[8],'INVALID_SNAPSHOT','row_shape'],[s=>s.owners[8][0]=[null],'INVALID_SNAPSHOT','cell_owners']]){const s=sample();change(s);assert.throws(()=>core.validate(s,now),e=>e.code===code&&e.reason===reason);}
+ const boundary=sample();boundary.capturedAt=now-86400000;assert.equal(core.validate(boundary,now),boundary);
+});

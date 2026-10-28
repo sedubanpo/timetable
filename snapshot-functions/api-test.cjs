@@ -164,3 +164,13 @@ test('banner API permits managing staff and revokes immediately with permissions
 });
 
 test('annex completion API checks active role and survives date changes',async()=>{const f=fixture();f.data.set('users/u',{role:'DESK',status:'ACTIVE',name:'직원'});assert.equal((await f.request({action:'annex_guide_mark',student:'검증',building:3,done:true})).ok,true);assert.equal((await f.request({action:'annex_guide_read',student:'검증',sheet:'10/20'})).guides[3].done,true);f.data.set('users/u',{role:'TEACHER',status:'ACTIVE',name:'강사'});assert.equal((await f.request({action:'annex_guide_read',student:'검증'})).status,403);});
+
+test('expired read is 410, corruption is 422, valid data and role checks unchanged',async()=>{
+ const f=fixture();await f.request({action:'save',sheet:f.sheet});const key='liveTimetableSnapshots/'+core.key(f.sheet,f.snapshot.date),saved=f.data.get(key);
+ const stale=JSON.parse(saved.json);stale.capturedAt=Date.now()-86400001;f.data.set(key,{...saved,json:JSON.stringify(stale)});
+ const expired=await f.request({action:'read',sheet:f.sheet});assert.equal(expired.status,410);assert.equal(expired.error,'SNAPSHOT_EXPIRED');assert(!expired.data);assert(f.logs.some(x=>x[1]?.reason==='expired'&&x[1]?.action==='read'));
+ f.data.set(key,{...saved,json:'broken'});const corrupt=await f.request({action:'rooms',sheet:f.sheet});assert.equal(corrupt.status,422);assert.equal(corrupt.error,'INVALID_SNAPSHOT');assert(!corrupt.data);assert(f.logs.some(x=>x[1]?.reason==='json'));
+ f.data.set(key,saved);assert.equal((await f.request({action:'read',sheet:f.sheet})).status,200);
+ f.data.set('users/u',{role:'ADMIN',status:'DISABLED'});assert.equal((await f.request({action:'read',sheet:f.sheet})).status,403);
+ assert(!JSON.stringify(f.logs).includes('학생A'));
+});
