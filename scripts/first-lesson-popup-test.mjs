@@ -15,7 +15,7 @@ await p.evaluate(()=>{
  if(c==='studentLogs'&&F.mode==='limit')while(rows.length<101)rows.push(rows[0]);
  if(c==='students'&&F.mode==='ambiguous')rows.push(doc('s2',{studentId:'s2',studentName:'합성학생',school:'합성고'}));return {ok:true,json:async()=>rows};};
  document.getElementById('loginGate').style.display='none';document.getElementById('mainPage').style.display='flex';
- const table=document.getElementById('scheduleTable');table.innerHTML='<tbody><tr><th>시간</th><th>1강의실</th><th>2강의실</th></tr>'+Array.from({length:8},(_,i)=>'<tr style="height:120px"><th>'+(10+i)+':00</th><td><div class="fixture-student"></div></td><td>수업 시간표</td></tr>').join('')+'</tbody>';
+ const table=document.getElementById('scheduleTable');table.innerHTML='<tbody><tr><th>시간</th><th>1강의실</th><th>2강의실</th></tr>'+Array.from({length:8},(_,i)=>'<tr style="height:120px"><th>'+(10+i)+':00</th><td><div class="student-item fixture-student"></div></td><td>수업 시간표</td></tr>').join('')+'</tbody>';
  table.querySelectorAll('.fixture-student').forEach(el=>renderTableItem(el,'합성학생 합성고1 신규생'));
 });
 await p.waitForTimeout(160);assert.equal(await p.evaluate(()=>F.calls.length),0);assert(await p.locator('#firstLessonNotice').isVisible());

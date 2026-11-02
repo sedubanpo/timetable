@@ -2248,6 +2248,16 @@
 @media(max-width:1400px) and (min-width:801px){#studentImageModal[data-card-mode="message"] .student-dashboard-layout{grid-template-columns:210px minmax(0,1fr)}#studentImageModal[data-card-mode="message"] .card-workarea{grid-template-columns:minmax(270px,1fr) 338px;gap:16px;padding:16px}#studentImageModal[data-card-mode="message"] #studentImagePreview{width:338px}#studentImageModal[data-card-mode="message"] .student-card-preview-frame>div{zoom:.65}}
 @media(max-width:800px){#studentImageModal[data-card-mode="message"] .card-workarea{display:flex;flex-direction:column;align-items:center}#studentImageModal[data-card-mode="message"] #cardEditorSidebar{width:100%;order:0}#studentImageModal[data-card-mode="message"] #studentImagePreview{order:1}#studentImageModal .card-mode-tabs{gap:18px}#studentImageModal .card-mode-tabs button{font-size:14px}#studentImageModal .card-reference-body{padding:16px}}
 
+
+/* Compact timetable identity controls: consistent badges and first-lesson affordance. */
+.type-badge,.subject-badge,.mobile-type-badge{border-radius:3px;}
+#scheduleTable .type-badge,#scheduleTable .subject-badge{display:inline-flex;align-items:center;min-height:16px;box-sizing:border-box;line-height:1.3;transform:none;vertical-align:middle;}
+.first-lesson-trigger{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;min-height:24px;padding:0;margin-left:3px;vertical-align:middle;box-sizing:border-box;color:#174b83;background:#e7f0ff;border:1px solid #91b6e4;border-radius:4px;}
+.first-lesson-trigger:hover{background:#d6e7ff;border-color:#2563a6;}
+.first-lesson-trigger svg{flex:none;}
+#scheduleTable .student-item.is-new-student{box-sizing:border-box;max-width:100%;border:2px solid #437bc4;border-left:4px solid #225ca8;border-radius:5px;background:#f4f8ff;white-space:normal;overflow-wrap:anywhere;}
+#scheduleTable .is-new-student .student-new-mark{display:none;}
+@media(pointer:coarse){.first-lesson-trigger{width:32px;height:32px;min-height:32px;}}
 </style>
   <!-- ALIMTALK shared contract and UI: generated from assets, parity-tested -->
 <style>.alimtalk-panel{color:#183755;font:inherit;background:#fff;padding:16px;border:1px solid #cbd5e1;border-radius:8px;overflow-wrap:anywhere;min-width:0}
@@ -6582,7 +6592,7 @@ root.TimetableAlimtalkReviewUI={mount};
           renderCalendar();
         }catch(e){console.error(e);} 
       }
-      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['월','화','수','목','금','토','일'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'+(d==='토'?' calendar-saturday':d==='일'?' calendar-sunday':''); D.textContent=d; G.appendChild(D); }); var F=(new Date(Y,M,1).getDay()+6)%7, L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'+(new Date(Y,M,d).getDay()===6?' calendar-saturday':new Date(Y,M,d).getDay()===0?' calendar-sunday':''); C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.setAttribute('role','button'); C.tabIndex=0; C.setAttribute('aria-label',(M+1)+'월 '+d+'일 시간표'); C.onclick=function(){handleDateClick(K);}; C.onkeydown=function(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();handleDateClick(K);}}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
+      function renderCalendar() { var Y=currentDate.getFullYear(), M=currentDate.getMonth(), T=new Date(); var activeMap=getCalendarSheetMap(); document.getElementById('calTitle').textContent=Y+"년 "+(M+1)+"월"; var G=document.getElementById('calendarGrid'); G.innerHTML=""; ['일','월','화','수','목','금','토'].forEach(function(d){ var D=document.createElement('div'); D.className='day-name'+(d==='토'?' calendar-saturday':d==='일'?' calendar-sunday':''); D.textContent=d; G.appendChild(D); }); var F=new Date(Y,M,1).getDay(), L=new Date(Y,M+1,0).getDate(); for(var i=0;i<F;i++) G.appendChild(document.createElement('div')); for(var d=1;d<=L;d++){ (function(d){ var C=document.createElement('div'); C.className='day-cell'+(new Date(Y,M,d).getDay()===6?' calendar-saturday':new Date(Y,M,d).getDay()===0?' calendar-sunday':''); C.textContent=d; var K=(M+1)+"-"+d; if(activeMap&&activeMap[K]){ C.classList.add('day-active'); C.setAttribute('role','button'); C.tabIndex=0; C.setAttribute('aria-label',(M+1)+'월 '+d+'일 시간표'); C.onclick=function(){handleDateClick(K);}; C.onkeydown=function(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();handleDateClick(K);}}; if(T.getFullYear()===Y&&T.getMonth()===M&&T.getDate()===d) C.classList.add('day-today'); } G.appendChild(C); })(d); } }
       function handleDateClick(k){ var s=getCalendarSheetMap()[k]; if(!s)return; if(isLookupViewActive()){ s=s.filter(function(name){return !isLookupHiddenSheetName(name);}); if(!s.length)return; } if(s.length===1)loadData(s[0],true,{preferServerCache:true}); else showVersionModal(s); }
       function showVersionModal(s){ var l=document.getElementById('versionList'); l.innerHTML=""; s.forEach(function(n){ var b=document.createElement('div'); b.className='version-btn'; var d=n.replace(/^\d+\/\d+(\([가-힣]\))?\s*_?/,""); if(d.trim()==="")d=n; b.textContent=d; b.onclick=function(){loadData(n,true,{preferServerCache:true});closeModal();}; l.appendChild(b); }); document.getElementById('versionModal').style.display='flex'; }
       function closeModal(){ document.getElementById('versionModal').style.display='none'; }
@@ -7059,10 +7069,10 @@ root.TimetableAlimtalkReviewUI={mount};
         var grid = document.getElementById('calendarDateGrid'), aux = document.getElementById('calendarAux');
         grid.replaceChildren(); aux.replaceChildren();
         document.getElementById('calendarMonthLabel').textContent = year + '년 ' + (m + 1) + '월';
-        ['월','화','수','목','금','토','일'].forEach(function(label) {
+        ['일','월','화','수','목','금','토'].forEach(function(label) {
           var el = document.createElement('span'); el.className = 'calendar-weekday' + (label === '토' ? ' calendar-saturday' : label === '일' ? ' calendar-sunday' : ''); el.textContent = label; grid.appendChild(el);
         });
-        for (var i = 0; i < (new Date(year,m,1).getDay() + 6) % 7; i++) grid.appendChild(document.createElement('span'));
+        for (var i = 0; i < new Date(year,m,1).getDay(); i++) grid.appendChild(document.createElement('span'));
         function addSheetButton(name) {
           var option = document.createElement('button'); option.type = 'button'; option.className = 'calendar-sheet-option'; option.textContent = name;
           option.onclick = function() { calendarChoose(name); }; aux.appendChild(option);
@@ -7344,7 +7354,7 @@ root.TimetableAlimtalkReviewUI={mount};
         if(!canShowFirstLesson() || !/^(신규생|첫수업)$/.test(normalizeStatusLabel(status||'')))return '';
         clearTimeout(firstLessonUI.noticeTimer);
         firstLessonUI.noticeTimer=setTimeout(updateFirstLessonNotice,100);
-        return '<button type="button" class="first-lesson-trigger" data-first-lesson-name="'+escapeHtml(name)+'" data-first-lesson-school="'+escapeHtml(school||'')+'" data-first-lesson-subject="'+escapeHtml(subject||'')+'" data-first-lesson-teacher="'+escapeHtml(teacher||'')+'" aria-haspopup="dialog" aria-label="'+escapeHtml(name)+' 첫수업 정보 보기">첫수업 정보</button>';
+        return '<button type="button" class="first-lesson-trigger" data-first-lesson-name="'+escapeHtml(name)+'" data-first-lesson-school="'+escapeHtml(school||'')+'" data-first-lesson-subject="'+escapeHtml(subject||'')+'" data-first-lesson-teacher="'+escapeHtml(teacher||'')+'" aria-haspopup="dialog" aria-label="'+escapeHtml(name)+' 첫수업 정보 보기" title="첫수업 정보 보기"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3h8l4 4v14H4V3h4Zm7 0v5h5M8 12h8M8 16h5"/></svg></button>';
       }
       function ensureFirstLessonUI() {
         if(document.getElementById('firstLessonDialog'))return;
@@ -9114,7 +9124,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         var selected=dates.find(function(d){return d.targetDateLabel===teacherDashboardHistoryDate;});
         var selectedDate=selected?selected.targetDateObj:parseTeacherLogTargetDate(teacherDashboardHistoryDate,getTeacherLogReferenceDate());
         if(!teacherDashboardCalendarMonth)teacherDashboardCalendarMonth=teacherDashboardDateKey(selectedDate||getTeacherLogReferenceDate()).slice(0,7);
-        var parts=teacherDashboardCalendarMonth.split('-').map(Number),first=new Date(parts[0],parts[1]-1,1,12),last=new Date(parts[0],parts[1],0,12),offset=(first.getDay()+6)%7;
+        var parts=teacherDashboardCalendarMonth.split('-').map(Number),first=new Date(parts[0],parts[1]-1,1,12),last=new Date(parts[0],parts[1],0,12),offset=first.getDay();
         var selectedKey=teacherDashboardSelectedDate||(selectedDate?teacherDashboardDateKey(selectedDate):''),today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
         var byDay={};dates.forEach(function(d){var key=teacherDashboardDateKey(d.targetDateObj);if(!byDay[key])byDay[key]=[];byDay[key].push(d);});
         var count=dates.filter(function(d){return teacherDashboardDateKey(d.targetDateObj).slice(0,7)===teacherDashboardCalendarMonth;}).reduce(function(sum,d){return sum+d.totalViews;},0);
@@ -9124,7 +9134,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           var label=group?group.targetDateLabel:(date.getMonth()+1)+'/'+day+'('+['일','월','화','수','목','금','토'][date.getDay()]+')',views=groups.reduce(function(sum,d){return sum+d.totalViews;},0);
           cells+='<button type="button" id="td-day-'+key+'" class="td-cal-day'+(key===today?' is-today':'')+'" data-sheet="'+escapeTeacherLogHtml(label)+'" data-date="'+key+'" onclick="selectTeacherDashboardDay(this)" aria-pressed="'+(key===selectedKey)+'"'+(key===today?' aria-current="date"':'')+' aria-label="'+escapeTeacherLogHtml(parts[0]+'년 '+label+' · '+(views?views+'회 열람':'불러온 기록 없음'))+'"><span>'+day+'</span><small>'+(views?views+'회':'')+'</small></button>';
         }
-        return '<aside class="td-calendar" aria-label="월별 열람 캘린더"><div class="td-cal-heading"><h3>'+parts[0]+'년 <strong>'+parts[1]+'월</strong></h3><div><button id="td-month-prev" type="button" aria-label="이전 달" onclick="shiftTeacherDashboardMonth(-1)">‹</button><button id="td-month-next" type="button" aria-label="다음 달" onclick="shiftTeacherDashboardMonth(1)">›</button></div></div><p class="td-cal-intro">날짜를 선택해 열람 기록을 확인하세요.</p><div class="td-cal-week" aria-hidden="true">'+['월','화','수','목','금','토','일'].map(function(d){return '<span>'+d+'</span>';}).join('')+'</div><div class="td-cal-grid">'+cells+'</div><div class="td-cal-foot"><span>이번 달 열람 <strong>'+count+'회</strong></span><button id="td-current-day" onclick="returnTeacherDashboardCurrent()">현재 시간표</button></div><p class="td-cal-note">시간표 날짜별 집계 · 불러온 기록 기준<br>오늘은 날짜 아래에 밑줄로 표시합니다.</p></aside>';
+        return '<aside class="td-calendar" aria-label="월별 열람 캘린더"><div class="td-cal-heading"><h3>'+parts[0]+'년 <strong>'+parts[1]+'월</strong></h3><div><button id="td-month-prev" type="button" aria-label="이전 달" onclick="shiftTeacherDashboardMonth(-1)">‹</button><button id="td-month-next" type="button" aria-label="다음 달" onclick="shiftTeacherDashboardMonth(1)">›</button></div></div><p class="td-cal-intro">날짜를 선택해 열람 기록을 확인하세요.</p><div class="td-cal-week" aria-hidden="true">'+['일','월','화','수','목','금','토'].map(function(d){return '<span>'+d+'</span>';}).join('')+'</div><div class="td-cal-grid">'+cells+'</div><div class="td-cal-foot"><span>이번 달 열람 <strong>'+count+'회</strong></span><button id="td-current-day" onclick="returnTeacherDashboardCurrent()">현재 시간표</button></div><p class="td-cal-note">시간표 날짜별 집계 · 불러온 기록 기준<br>오늘은 날짜 아래에 밑줄로 표시합니다.</p></aside>';
       }
       function teacherViewDetailRecords(name,sheet) {
         return (teacherViewLogsCache||[]).map(normalizeTeacherLogItem).filter(function(x){return x&&!x.isManualOverride&&normalizeTeacherLogName(x.teacherName)===normalizeTeacherLogName(name)&&x.sheetName===sheet&&(!teacherDashboardSelectedDate||teacherDashboardDateKey(parseTeacherLogTargetDate(x.sheetName,x.viewedDateObj))===teacherDashboardSelectedDate);}).sort(function(a,b){return b.viewedDateObj-a.viewedDateObj;});

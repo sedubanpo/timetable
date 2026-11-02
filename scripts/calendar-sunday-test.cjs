@@ -1,0 +1,9 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {JSDOM}=require('/tmp/timetable-alimtalk-test-tools/node_modules/jsdom');
+for(const file of ['Index.html','docs/index.html'])test(file+' Sunday-first calendars preserve date selection',()=>{
+const html=fs.readFileSync(file,'utf8'),dom=new JSDOM(html),document=dom.window.document;
+const c={document,Date,currentDate:new Date(2026,10,1),calendarViewMonth:new Date(2026,10,1),currentSheetName:'11/2(월)',getCalendarSheetMap:()=>({'11-1':'11/1(일)','11-2':'11/2(월)'}),getSheetSelectorNames:()=>['11/1(일)','11/2(월)'],buildSheetMapFromNames:()=>({'11-1':['11/1(일)'],'11-2':['11/2(월)']}),parseTeacherLogTargetDate:()=>new Date(2026,10,1),calendarPosition:()=>{},calendarChoose:n=>c.chosen=n,handleDateClick:k=>c.clicked=k};vm.createContext(c);
+vm.runInContext(html.match(/function renderCalendar\(\) \{[^\n]+/)[0],c);
+vm.runInContext(html.slice(html.indexOf('      function calendarRender()'),html.indexOf("      document.addEventListener('keydown'",html.indexOf('      function calendarRender()'))),c);
+for(const month of [10,11,1]){c.currentDate=c.calendarViewMonth=new Date(2026,month,1);c.renderCalendar();c.calendarRender();for(const id of ['calendarGrid','calendarDateGrid']){const cells=[...document.getElementById(id).children];assert.equal(cells.slice(0,7).map(x=>x.textContent).join(''),'일월화수목금토');assert.equal(cells.findIndex((x,i)=>i>=7&&x.textContent==='1'),7+new Date(2026,month,1).getDay());}}
+c.currentDate=c.calendarViewMonth=new Date(2026,10,1);c.renderCalendar();c.calendarRender();document.querySelector('#calendarGrid .day-active').click();assert.equal(c.clicked,'11-1');document.querySelector('#calendarDateGrid .calendar-date').click();assert.equal(c.chosen,'11/1(일)');assert(document.querySelector('#calendarDateGrid [aria-pressed="true"]'));dom.window.close();});
