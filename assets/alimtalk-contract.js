@@ -42,11 +42,22 @@
     if(!merged.length)reasons.push('발송할 유효 수업 없음');
     return {lessons:merged,excluded,reasons:[...new Set(reasons)]};
   }
+  function formatLesson(l, index){
+    const number=index<20?String.fromCharCode(0x2460+index):(index+1)+'.';
+    const minutes=l.end-l.start, hours=Math.floor(minutes/60), rest=minutes%60;
+    const duration=[hours&&hours+'시간',rest&&rest+'분'].filter(Boolean).join(' ');
+    const teacher=l.teacher?l.teacher.replace(/(?:\s*(?:선생님|T))+$/iu,'').trimEnd()+'T':'강사 확인 필요';
+    return [
+      number+' '+l.subject+' '+clock(l.start)+'–'+clock(l.end),
+      teacher+' · '+l.type+' '+duration,
+      l.building+' '+l.room
+    ].join('\n');
+  }
   function compose(student,date,rows){
     const result=normalize(rows,student.id,date);
     if(!student.name||student.mappingVerified!==true)result.reasons.push('학생 ID 매핑 미확인');
     const variables={'#{학생명}':student.name||'','#{수업일}':date,'#{등원시각}':result.lessons.length?clock(result.lessons[0].start):'',
-      '#{수업목록}':result.lessons.map((l,i)=>(i<20?String.fromCharCode(0x2460+i):String(i+1)+'.')+' '+l.subject+' '+clock(l.start)+'–'+clock(l.end)+'\n'+l.teacher.replace(/(?:\s*선생님|T)$/,'')+' 선생님 · '+l.building+' · '+l.room+' · '+l.type).join('\n')};
+      '#{수업목록}':result.lessons.map(formatLesson).join('\n\n')};
     const text=content.replace(/#\{[^}]+\}/g,key=>variables[key]);
     if(text.length>1000)result.reasons.push('본문 1,000자 제한 초과');
     if(/#\{[^}]+\}/.test(text))result.reasons.push('치환되지 않은 변수 또는 입력 확인 필요');
@@ -56,5 +67,5 @@
     return !!t&&t.templateId===templateId&&(t.channelId||t.pfId)===pfId&&t.name===templateName&&t.status==='APPROVED'&&t.content===content&&!t.isDeleted&&!t.isHidden;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,exclusion,normalize,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,exclusion,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });
