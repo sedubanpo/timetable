@@ -2367,7 +2367,7 @@
         const section=el('section');section.append(el('h4',(row.name||'학생 ID 미확인')+' · '+(row.date||p.date||'')));
         const receivers=el('fieldset');receivers.append(el('legend','수신자 직접 선택'));
         for(const r of row.choices||[]){const label=el('label');const check=el('input');check.type='checkbox';check.checked=(selection.find(t=>t.studentId===row.studentId)?.recipientIds||[]).includes(r.id);
-          check.onchange=()=>{preview=null;let target=selection.find(t=>t.studentId===row.studentId);if(!target){target={studentId:row.studentId,recipientIds:[]};selection.push(target);}target.recipientIds=check.checked?[...new Set([...target.recipientIds,r.id])]:target.recipientIds.filter(id=>id!==r.id);send.disabled=true;send.dataset.locked='true';};
+          check.onchange=()=>{host.querySelector('.alimtalk-confirm')?.remove();preview=null;let target=selection.find(t=>t.studentId===row.studentId);if(!target){target={studentId:row.studentId,recipientIds:[]};selection.push(target);}target.recipientIds=check.checked?[...new Set([...target.recipientIds,r.id])]:target.recipientIds.filter(id=>id!==r.id);send.disabled=true;send.dataset.locked='true';};
           label.append(check,document.createTextNode(' '+r.relation+' · '+r.masked));receivers.append(label);}
         if(!row.choices?.length)receivers.append(el('p','학생 ID로 연결된 수신자 확인이 필요합니다. 자동 선택하지 않습니다.'));
         section.append(receivers);
@@ -2389,9 +2389,11 @@
     });}
     function confirmSend(confirmChanges){
       if(!preview)return;const p=preview,c=p.counts;const box=el('div');box.className='alimtalk-confirm';box.setAttribute('role','group');box.setAttribute('aria-label','알림톡 발송 확인');
+      if(!p.testMode)for(const row of p.rows)box.append(el('p',row.name+' · '+row.date+' · '+(row.recipients||[]).map(r=>r.relation+' '+r.masked).join(', ')));
       if(p.testMode)box.append(el('p','선택한 관리자에게만 실제 알림톡을 발송합니다. '+(p.realScheduleTest?'실제 학생 일정입니다.':'가상 학생 일정입니다.')));
       box.append(el('p',c.students+'명의 하루 수업 안내 '+c.messages+'건을 '+c.numbers+'개 번호로 요청합니다. API 접수는 수신 완료나 읽음을 뜻하지 않습니다.'));
       const commit=button('확인 후 발송 요청',()=>run(async g=>{
+        if(preview!==p)return;
         const r=await api('send',{previewId:p.previewId,confirmChanges});if(!current(g))return;
         if(r.changed){preview=null;shell();host.append(el('p','미리보기 이후 일정 또는 수신자 정보가 변경됐습니다. 다시 미리보기해 주세요.'));changes(r.previous?.rows,r.current?.rows);host.append(button('최신 미리보기',()=>load()));return;}
         if(r.requiresChangeConfirmation){shell();host.append(el('p','이전에 안내한 일정과 다릅니다. 변경 내용을 확인하세요.'));changes(r.changes.map(x=>({text:x.previous})),r.changes.map(x=>({text:x.current})));host.append(button('변경 내용 확인 후 재안내',()=>confirmSend(true)));return;}

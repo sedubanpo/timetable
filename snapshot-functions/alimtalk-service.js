@@ -33,8 +33,9 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
         if(candidates.length!==1||!r.relation||r.verified!==true||!/^010\d{8}$/.test(r.phone||'')){c.reasons.push('수신자 관계·번호 연결 확인 필요');continue;}
         if(!recipients.some(p=>p.phone===r.phone))recipients.push({id:r.id,relation:r.relation,phone:r.phone,masked:rules.mask(r.phone)});
       }
-      const version=hash([actor.academyId,input.date,s.id,c.lessons,c.excluded,s.mappingRevision||day.mappingRevision]);
-      rows.push({studentId:s.id,name:s.name,date:input.date,version,text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
+      const reviewRevision=s.mappingRevision||day.mappingRevision;
+      const version=kind==='daily-lessons'?hash([actor.academyId,input.date,s.id,c.text]):hash([actor.academyId,input.date,s.id,c.lessons,c.excluded,reviewRevision]);
+      rows.push({studentId:s.id,name:s.name,date:input.date,version,reviewRevision,text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
         choices:(s.recipients||[]).map(r=>({id:r.id,relation:r.relation||'관계 확인 필요',masked:rules.mask(r.phone||'')}))});
     }
     const fingerprint=hash(rows);

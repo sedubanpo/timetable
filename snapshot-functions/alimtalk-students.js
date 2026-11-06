@@ -73,7 +73,8 @@ function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,now=Da
         if(student.id!==id)fail('CANONICAL_RECONFIRM_REQUIRED');
         const clearance=typeof readClearance==='function'?await readClearance(actor,id,date,signal):null;
         if(!clearance||clearance.academyId!==actor.academyId||clearance.studentId!==id||clearance.date!==date||clearance.mappingRevision!==mapped.mappingRevision||clearance.identityRevision!==student.identityRevision||!clearance.revision||!clearance.checkedBy||!Number.isFinite(clearance.checkedAt)||clearance.checkedAt>now()||clearance.campusConfirmed!==true)fail('CONTACT_CLEARANCE_REQUIRED');
-        student.recipients=student.recipients.map(r=>({...r,verified:r.verified&&clearance.recipients?.[r.id]?.allowed===true&&clearance.recipients[r.id].phoneHash===digest(r.phone)}));
+        if(mapped.identityRevision && mapped.identityRevision!==student.identityRevision)fail('IDENTITY_CHANGED');
+        student.recipients=student.recipients.filter(r=>r.id==='father'||r.id==='mother').map(r=>({...r,verified:r.verified&&clearance.recipients?.[r.id]?.allowed===true&&clearance.recipients[r.id].phoneHash===digest(r.phone)})).filter(r=>r.verified);
         students.push({...mapped,...student,mappingRevision:digest([mapped.mappingRevision,student.identityRevision,clearance.revision])});
       }catch(e){
         if(signal?.aborted||e.code==='ABORTED')throw e;

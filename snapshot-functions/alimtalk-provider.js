@@ -2,7 +2,7 @@
 // Only this server-side transport can reach SOLAPI. No retries of dispatch requests.
 const crypto=require('node:crypto'),rules=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
-function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=false}){
+function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=false,guardianSend=false}){
  const testPhones=require('./alimtalk-test-recipients').testRecipients(testPhone).map(r=>r.phone);
  if(typeof request!=='function')fail('TRANSPORT_REQUIRED');
  async function call(path,method,body,signal){
@@ -25,8 +25,8 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
  return {
   async getTemplate(id,signal){if(id!==rules.templateId)fail('TEMPLATE_MISMATCH');return call('/kakao/v2/templates/'+id,'GET',null,signal);},
   async sendOne(m,signal){
-   if(!enableTestSend||!testPhones.length)fail('SENDING_DISABLED');
-   if(!testPhones.includes(m.to)||m.type!=='ATA'||m.kakaoOptions?.pfId!==rules.pfId||m.kakaoOptions?.templateId!==rules.templateId||m.kakaoOptions?.disableSms!==true||!(/^[a-f0-9]{64}$/).test(m.customFields?.timetableKey||''))fail('TEST_RECIPIENT_REQUIRED');
+   if(!guardianSend&&(!enableTestSend||!testPhones.length))fail('SENDING_DISABLED');
+   if((guardianSend?!/^010\d{8}$/.test(m.to):!testPhones.includes(m.to))||m.type!=='ATA'||m.kakaoOptions?.pfId!==rules.pfId||m.kakaoOptions?.templateId!==rules.templateId||m.kakaoOptions?.disableSms!==true||!(/^[a-f0-9]{64}$/).test(m.customFields?.timetableKey||''))fail('TEST_RECIPIENT_REQUIRED');
    const message={to:m.to,type:'ATA',country:'82',autoTypeDetect:false,kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:m.kakaoOptions.variables,disableSms:true,buttons:[{buttonType:'WL',buttonName:'수업 문의',linkMo:'https://pf.kakao.com/_KIZxin',linkPc:'https://pf.kakao.com/_KIZxin'}]},customFields:{timetableKey:m.customFields.timetableKey}};
    const r=await call('/messages/v4/send-many/detail','POST',{messages:[message],showMessageList:true,allowDuplicates:false},signal);
    const good=r.messageList||[],bad=r.failedMessageList||[];
