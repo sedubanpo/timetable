@@ -38,11 +38,18 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   if(ids.length!==1)fail('SELECT_ONE_STUDENT');
   return require('./alimtalk-verified-day').verifiedStudentDay({actor,date,id:ids[0],signal,loadSource,resolveStudent,reviewStore:rs});
  };
- const delivery=createService({authorize,loadDay:withStudentDirectory({loadMappedDay:mapped,resolveStudent,readClearance:(a,id,d)=>rs.clearance(a.academyId,d,id),now}),store,provider:templateProvider({apiKey,apiSecret,request,guardianSend:true}),webhookSecret,now});
+ function deliveryFor(audience,kind){
+  const loadDay=withStudentDirectory({
+   loadMappedDay:mapped,resolveStudent,readClearance:(actor,id,date)=>rs.clearance(actor.academyId,date,id),now,audience
+  });
+  return createService({authorize,loadDay,store,provider:templateProvider({apiKey,apiSecret,request,verifiedRecipientSend:true}),webhookSecret,now,kind});
+ }
+ const delivery=deliveryFor('guardian','daily-lessons');
+ const studentDelivery=deliveryFor('student','student-daily-lessons');
  // Every review action is rate limited too; permission is checked before rate-store writes.
  for(const action of Object.keys(review)){const original=review[action];review[action]=async(session,input)=>{const a=await authorize(session);await store.rate(a.uid,'review:'+action,now(),20);return original(session,input);};}
  const testDelivery=require('./alimtalk-admin-test').createAdminTest({authorize,store,provider:templateProvider({apiKey,apiSecret,request,testPhone,enableTestSend}),testPhone,now});
  const realTestDelivery=require('./alimtalk-real-admin-test').createRealAdminTest({authorize,store,provider:templateProvider({apiKey,apiSecret,request,testPhone,enableTestSend}),testPhone,loadSource,resolveStudent,reviewStore:rs,now});
- return createHandler({review,delivery,testDelivery,realTestDelivery,allowTestSend:enableTestSend&&require('./alimtalk-test-recipients').testRecipients(testPhone).length>0,allowedOrigins:['https://sedubanpo.github.io'],allowSend:true});
+ return createHandler({review,delivery,studentDelivery,testDelivery,realTestDelivery,allowTestSend:enableTestSend&&require('./alimtalk-test-recipients').testRecipients(testPhone).length>0,allowedOrigins:['https://sedubanpo.github.io'],allowSend:true});
 }
 module.exports={createRuntime,templateProvider};

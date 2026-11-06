@@ -34,7 +34,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
         if(!recipients.some(p=>p.phone===r.phone))recipients.push({id:r.id,relation:r.relation,phone:r.phone,masked:rules.mask(r.phone)});
       }
       const reviewRevision=s.mappingRevision||day.mappingRevision;
-      const version=kind==='daily-lessons'?hash([actor.academyId,input.date,s.id,c.text]):hash([actor.academyId,input.date,s.id,c.lessons,c.excluded,reviewRevision]);
+      const version=['daily-lessons','student-daily-lessons'].includes(kind)?hash([actor.academyId,input.date,s.id,c.text]):hash([actor.academyId,input.date,s.id,c.lessons,c.excluded,reviewRevision]);
       rows.push({studentId:s.id,name:s.name,date:input.date,version,reviewRevision,text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
         choices:(s.recipients||[]).map(r=>({id:r.id,relation:r.relation||'관계 확인 필요',masked:rules.mask(r.phone||'')}))});
     }

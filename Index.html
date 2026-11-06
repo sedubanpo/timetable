@@ -2258,6 +2258,35 @@
 #scheduleTable .student-item.is-new-student{box-sizing:border-box;max-width:100%;border:2px solid #437bc4;border-left:4px solid #225ca8;border-radius:5px;background:#f4f8ff;white-space:normal;overflow-wrap:anywhere;}
 #scheduleTable .is-new-student .student-new-mark{display:none;}
 @media(pointer:coarse){.first-lesson-trigger{width:32px;height:32px;min-height:32px;}}
+
+#studentImageModal .card-mode-tabs button{display:inline-flex;align-items:center;gap:8px}
+#cardMessageTab svg{background:#fee873;color:#392e14;border-radius:6px;padding:4px;box-sizing:content-box}
+#cardImageTab svg{background:#e7f0ff;color:#244b88;border-radius:6px;padding:4px;box-sizing:content-box}
+#studentImageModal[data-card-mode="message"] :is(#studentImagePreview,.card-state-filter,#studentCardStatusNotice){display:none!important}
+#studentImageModal[data-card-mode="message"] .card-workarea{display:block;background:#f5f7fa;padding:clamp(12px,2vw,28px)}
+#studentImageModal[data-card-mode="message"] #cardEditorSidebar{width:100%;max-width:720px;margin:auto;display:block}
+#studentImageModal .recipient-setup,#studentImageModal[data-card-mode="message"] #cardAlimtalkPanel:not([hidden]){padding:18px;border:1px solid #d6e0eb;border-radius:12px;background:white;margin:0 0 14px}
+#studentImageModal .recipient-setup h3{margin:0 0 12px;font-size:17px;color:#163252}
+#studentImageModal .recipient-setup p{font-size:14px;color:#485d72;margin:12px 0}
+#studentImageModal .recipient-switch,#studentImageModal .recipient-actions{display:flex;gap:6px;flex-wrap:wrap}
+#studentImageModal .recipient-setup button{padding:9px 14px;min-height:40px;border-radius:7px;border:1px solid #c6d3df;color:#23405b;background:white;font:inherit;font-size:14px;font-weight:650;cursor:pointer}
+#studentImageModal .recipient-switch button[aria-pressed="true"],#studentImageModal .recipient-setup .primary{background:#173e66;color:white;border-color:#173e66}
+#studentImageModal .recipient-student{display:block;text-align:left;width:100%;background:white;border:0;border-bottom:1px solid #e6ecf1;padding:11px 14px;font:inherit;font-weight:650;color:#263d52;cursor:pointer}
+#studentImageModal .recipient-student[aria-pressed="true"]{background:#eaf2ff;box-shadow:inset 3px 0 #285ca3;color:#173f7a}
+#studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel:not([hidden])) #cardMessageReference{display:none}
+#studentImageModal .student-list-badge.sent::before{content:'✓';margin-right:4px}
+#studentImageModal .student-list-toggle-btn{border-radius:7px;color:#115442;border-color:#92bfac;background:#f3faf6}
+#studentImageModal .alimtalk-panel .send-action{background:#164f80;color:white;border-color:#164f80}
+#studentImageModal .delivery-success{display:inline-flex;align-items:center;border:1px solid #a4d5be;border-radius:20px;padding:4px 10px;background:#e9f7ef;color:#14533d;font-size:13px}
+#studentImageModal[data-card-mode="message"] #cardEditorSidebar:has(#cardAlimtalkPanel:not([hidden])){width:100%;max-width:720px}
+#studentImageModal[data-card-mode="message"] .student-list-group-head{background:#f1f5f9;color:#38516d;border-bottom:1px solid #d7e2eb}
+@media(max-width:560px){
+  #studentImageModal[data-card-mode="message"] .student-list-panel{flex:0 0 auto;max-height:27dvh;padding:8px 12px;gap:4px}
+  #studentImageModal[data-card-mode="message"] .student-list{min-height:40px;max-height:12dvh}
+  #studentImageModal[data-card-mode="message"] .student-preview-panel-head{padding:10px 14px}
+  #studentImageModal[data-card-mode="message"] .card-workarea{padding:10px}
+  #studentImageModal .recipient-setup{padding:12px}
+}
 </style>
   <!-- ALIMTALK shared contract and UI: generated from assets, parity-tested -->
 <style>.alimtalk-panel{color:#183755;font:inherit;background:#fff;padding:16px;border:1px solid #cbd5e1;border-radius:8px;overflow-wrap:anywhere;min-width:0}
@@ -2377,8 +2406,8 @@
         host.append(section);
       }
       const c=p.counts||{students:0,messages:0,numbers:0};host.append(el('p','학생 '+c.students+'명 · 메시지 '+c.messages+'건 · 수신번호 '+c.numbers+'개'));
-      host.append(button('알림톡 미리보기',()=>load()));
-      const send=button(p.testMode?'관리자 번호로 테스트 발송':'선택 알림톡 발송',()=>confirmSend(false));
+      host.append(button('선택한 번호로 본문 확인',()=>load()));
+      const send=button(p.testMode?'관리자 번호로 테스트 발송':(context().audience==='student'?'학생 본인에게 발송':'학부모에게 발송'),()=>confirmSend(false));send.className='send-action';
       if(p.sendEnabled===false)host.append(el('p','실제 발송은 아직 비활성화되어 있습니다. 관리자 테스트 번호 지정 후 활성화합니다.'));
       if(p.sendEnabled===false||!p.previewId||!c.messages||p.rows.some(r=>r.reasons.length))locked(send);
       host.append(send,button('발송 결과',()=>showResults()));
@@ -2402,7 +2431,10 @@
     }
     function changes(before=[],after=[]){host.append(el('h4','이전 안내'));before.forEach(x=>host.append(el('pre',x.text||'')));host.append(el('h4','현재 안내'));after.forEach(x=>host.append(el('pre',x.text||'')));}
     function renderResults(rows){shell();host.append(el('h4','발송 결과'));if(!rows.length)host.append(el('p','알림톡 이력이 없습니다. 수동 전달 기록과는 별도입니다.'));
-      for(const r of rows){const line=el('section');line.append(el('p',(r.date||'')+' · '+r.masked+' · '+(R.labels[r.state]||'결과 확인 필요')));
+      for(const r of rows){const line=el('section');
+        line.append(el('p',[r.date,r.relation,r.masked].filter(Boolean).join(' · ')));
+        const state=el('strong',(r.state==='DELIVERED'?'✓ ':'')+(R.labels[r.state]||'결과 확인 필요'));
+        state.className=r.state==='DELIVERED'?'delivery-success':'delivery-state';line.append(state);
         if(r.errorCode)line.append(el('p','오류 코드: '+r.errorCode));if(r.messageId)line.append(el('p','메시지 ID: '+r.messageId));if(r.groupId)line.append(el('p','그룹 ID: '+r.groupId));
         if(r.text){const details=el('details');details.append(el('summary','전송 내용 이력'),el('pre',r.text));line.append(details);}
         if(['UNKNOWN','REQUESTING','ACCEPTED','PROCESSING'].includes(r.state))line.append(button('서버에서 결과 확인',()=>run(async g=>{const result=await api('reconcile',{id:r.id});if(current(g))renderResults([result]);})));
@@ -2418,7 +2450,7 @@
 <script>
 (function(root){
 'use strict';
-function mount({host,api,context}){
+function mount({host,api,context,onReady}){
  let generation=0,busy=false,source=null,candidate=null,mapping=null,contacts=null,savedState=null;
  const el=(t,s)=>{const n=document.createElement(t);if(s!==undefined)n.textContent=s;return n;};
  const field=(label,type='text')=>{const l=el('label',label),i=el('input');i.type=type;l.append(i);return [l,i];};
@@ -2437,10 +2469,10 @@ function mount({host,api,context}){
  host.append(button('학생 후보 검색',()=>run(async current=>{const r=await api('candidates',{query:query.value});if(!current())return;candidate=null;confirmArea.replaceChildren();result.replaceChildren();for(const c of r.candidates){const b=button([c.name,c.school,c.grade,c.status,'ID: '+c.id].filter(Boolean).join(' · '),()=>{run(async valid=>{const state=await api('reviewState',{...context(),studentId:c.id});if(!valid())return;candidate=c;savedState=state;confirmArea.replaceChildren(el('p','선택 학생: '+c.name+' · '+c.id+(state.mappingRevision?' · 기존 연결 기록 있음':'')));});});result.append(b);}if(!r.candidates.length)result.append(el('p','검색 결과 없음'));})),result,confirmArea);
  const [confirmLabel,confirmed]=field('선택한 원본 수업이 이 학생의 수업임을 확인했습니다.','checkbox');host.append(confirmLabel);
  host.append(button('학생 연결 저장',()=>run(async current=>{if(!candidate||!ids.length||!confirmed.checked)throw Error('원본 수업·학생·확인을 모두 선택하세요.');const r=await api('saveMapping',{...context(),sourceRevision:source.revision,entryIds:ids.slice(),studentId:candidate.id,confirmed:true,expectedRevision:savedState?.mappingRevision||null});if(!current())return;mapping=r;await showContacts(current);})));}
- async function showContacts(current){const r=await api('contactChoices',{...context(),studentId:mapping.studentId});if(!current())return;contacts=r;host.replaceChildren(el('h3',r.name+' · 연락 가능 확인'),el('p','원본 문의의 연락 금지 여부를 포함해 실제 확인한 관계만 선택하세요. 기존 연락 금지 기록을 해제하는 기능이 아닙니다.'));const relations=[];
+ async function showContacts(current){const r=await api('contactChoices',{...context(),studentId:mapping.studentId});if(!current())return;contacts=r;host.replaceChildren(el('h3',r.name+' · 연락 가능 확인'),el('p','이 날짜에 연락 가능한 학생 본인·부·모를 모두 선택하세요. 저장하면 선택한 관계만 발송 후보에 표시됩니다.'));const relations=[];
  for(const c of r.choices){const [l,i]=field(c.relation+' · '+c.masked+(c.available?'':' · 확인 필요'),'checkbox');i.disabled=!c.available;i.onchange=()=>{if(i.checked)relations.push(c.id);else relations.splice(relations.indexOf(c.id),1);};host.append(l);}
  const [campusLabel,campus]=field('이 학생의 반포관 수업임을 확인했습니다.','checkbox'),[contactLabel,contact]=field('선택한 수신자에게 연락 가능한지 확인했습니다.','checkbox'),[noteLabel,note]=field('확인 근거 (개인 연락처는 입력하지 마세요)');note.maxLength=500;host.append(campusLabel,contactLabel,noteLabel);
- host.append(button('연락 확인 기록 저장',()=>run(async valid=>{if(!relations.length||!campus.checked||!contact.checked||!note.value.trim())throw Error('수신자와 확인 항목·근거를 입력하세요.');const saved=await api('saveClearance',{...context(),studentId:mapping.studentId,mappingRevision:contacts.mappingRevision,contactVersion:contacts.contactVersion,relations:relations.slice(),campusConfirmed:true,contactConfirmed:true,note:note.value,expectedRevision:savedState?.clearanceRevision||null});if(!valid())return;host.replaceChildren(el('h3','확인 기록 저장됨'),el('p','이제 알림톡 미리보기에서 전체 본문과 수신자를 다시 확인하세요. 아직 메시지를 보내지 않았습니다.'),el('p','기록 버전: '+saved.revision));})));}
+ host.append(button('연락 확인 기록 저장',()=>run(async valid=>{if(!relations.length||!campus.checked||!contact.checked||!note.value.trim())throw Error('수신자와 확인 항목·근거를 입력하세요.');const saved=await api('saveClearance',{...context(),studentId:mapping.studentId,mappingRevision:contacts.mappingRevision,contactVersion:contacts.contactVersion,relations:relations.slice(),campusConfirmed:true,contactConfirmed:true,note:note.value,expectedRevision:savedState?.clearanceRevision||null});if(!valid())return;host.replaceChildren(el('h3','확인 기록 저장됨'),el('p','이제 알림톡 미리보기에서 전체 본문과 수신자를 다시 확인하세요. 아직 메시지를 보내지 않았습니다.'),...(onReady?[button('수신자 선택으로 계속',onReady)]:[]));})));}
  return {open,reset};
 }
 root.TimetableAlimtalkReviewUI={mount};
@@ -2528,16 +2560,16 @@ root.TimetableAlimtalkReviewUI={mount};
         </div>
       </div>
     </div>
-      <div id="studentImageModal" data-card-mode="image"><div class="modal-box student-img-box">
+      <div id="studentImageModal" data-card-mode="message"><div class="modal-box student-img-box">
         <div class="card-modal-head"><div class="modal-title">시간표 카드 생성</div><button id="studentImageRefreshBtn" onclick="refreshStudentImageDashboard()">새로고침</button></div>
-        <div class="card-mode-tabs" role="tablist" aria-label="시간표 전달 방식" onkeydown="handleCardModeKey(event)"><button id="cardImageTab" role="tab" data-card-tab="image" aria-selected="true" aria-controls="cardDeliveryWorkspace" onclick="setStudentCardMode('image')">기존 시간표 이미지 발송</button><button id="cardMessageTab" role="tab" data-card-tab="message" aria-selected="false" aria-controls="cardDeliveryWorkspace" tabindex="-1" onclick="setStudentCardMode('message')">시간표 알림톡</button></div>
+        <div class="card-mode-tabs" role="tablist" aria-label="시간표 전달 방식" onkeydown="handleCardModeKey(event)"><button id="cardMessageTab" role="tab" data-card-tab="message" aria-selected="true" aria-controls="cardDeliveryWorkspace" onclick="setStudentCardMode('message')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-6 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h6"/></svg>시간표 알림톡</button><button id="cardImageTab" role="tab" data-card-tab="image" aria-selected="false" aria-controls="cardDeliveryWorkspace" tabindex="-1" onclick="setStudentCardMode('image')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 4-6 5 7"/></svg>시간표 이미지</button></div>
         <div id="studentCardStatusNotice" role="status" aria-live="polite" hidden></div>
-        <div id="cardDeliveryWorkspace" role="tabpanel" aria-labelledby="cardImageTab" class="student-dashboard-layout"><div class="student-list-panel"><div class="student-list-panel-title">발송 대상</div>
+        <div id="cardDeliveryWorkspace" role="tabpanel" aria-labelledby="cardMessageTab" class="student-dashboard-layout"><div class="student-list-panel"><div class="student-list-panel-title">발송 대상</div>
         <input id="studentImageSearch" type="search" placeholder="학생 이름 검색" aria-label="학생 이름 검색" oninput="filterStudentImageList()">
         <div class="card-state-filter"><button data-card-filter="all" onclick="setStudentCardFilter('all')">전체</button><button data-card-filter="wait" onclick="setStudentCardFilter('wait')">미발송</button><button data-card-filter="done" onclick="setStudentCardFilter('done')">완료</button></div><div id="studentImageList" class="student-list"></div></div>
         <div class="student-preview-panel"><div class="student-preview-panel-head"><div><div class="student-preview-panel-title">시간표 카드 미리보기</div><div class="student-preview-panel-sub">학부모님께 전달될 이미지입니다.</div></div></div>
-        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><section id="cardMessageReference" hidden><h3 class="card-reference-title">예상 발송 문구</h3><p class="card-reference-note">검토용 문구입니다. 실제 발송 전 학생·수신자와 서버 본문을 확인하세요. 이미지의 비고·공강·학원 안내문은 포함되지 않습니다.</p><pre id="cardMessageReferenceBody" class="card-reference-body"></pre></section><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
-        <div class="card-actions"><button class="primary" data-card-channel="image" onclick="copyLiveStudentCard()">이미지 복사</button><button data-card-channel="image" onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" data-card-channel="image" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button data-card-channel="image" onclick="nextUnsentStudentCard()">다음 미발송</button><button data-card-channel="message" onclick="openCardAlimtalkReview()">학생 연결·연락 확인</button><button data-card-channel="message" onclick="openCardAlimtalk(false)">알림톡 미리보기</button><button data-card-channel="message" onclick="openCardAlimtalk(true)">발송 결과</button><details class="card-test-tools" data-card-channel="message"><summary>관리자 테스트</summary><button onclick="openCardAlimtalkTest()">가상 일정 테스트</button><button onclick="openCardAlimtalkRealTest()">실제 일정 관리자 테스트</button></details><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
+        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><section data-card-channel="message" class="recipient-setup"><h3>발송 대상 선택</h3><div class="recipient-switch" role="group" aria-label="발송 대상"><button type="button" data-card-audience="guardian" aria-pressed="true" onclick="setCardAudience('guardian')">학부모 발송</button><button type="button" data-card-audience="student" aria-pressed="false" onclick="setCardAudience('student')">학생 본인 발송</button></div><p>선택한 수업일에 처음 보내는 학생은 ‘학생·연락처 확인’에서 시간표와 학생 원장을 연결하고 연락 가능한 번호를 기록하세요.</p><div class="recipient-actions"><button type="button" onclick="openCardAlimtalkReview()">학생·연락처 확인</button><button class="primary" type="button" onclick="openCardAlimtalk(false)">수신자 선택 · 본문 확인</button><button type="button" onclick="openCardAlimtalk(true)">발송 결과</button></div></section><section id="cardMessageReference" hidden><h3 class="card-reference-title">예상 발송 문구</h3><p class="card-reference-note">현재 시간표 기준입니다. 발송 전 최신 본문을 다시 확인합니다.</p><pre id="cardMessageReferenceBody" class="card-reference-body"></pre></section><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
+        <div class="card-actions"><button class="primary" data-card-channel="image" onclick="copyLiveStudentCard()">이미지 복사</button><button data-card-channel="image" onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" data-card-channel="image" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button data-card-channel="image" onclick="nextUnsentStudentCard()">다음 미발송</button><details class="card-test-tools" data-card-channel="message"><summary>관리자 테스트</summary><button onclick="openCardAlimtalkTest()">가상 일정 테스트</button><button onclick="openCardAlimtalkRealTest()">실제 일정 관리자 테스트</button></details><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
       </div></div>
     <div id="absenceNoticeModal">
       <div class="modal-box absence-notice-box">
@@ -7787,9 +7819,10 @@ root.TimetableAlimtalkReviewUI={mount};
         previewNoteDrafts = Object.create(null);
         if (!lastData) { alert("먼저 시간표를 불러와 주세요."); return; }
         buildStudentImageMap();
-        studentCardHideNote = true;studentCardFilter='all';
+        studentCardHideNote = true;studentCardFilter='all';selectedStudentForImage='';
         document.getElementById('studentImageModal').style.display = 'flex';
-        setStudentCardMode('image');
+        cardAudience='guardian';
+        setStudentCardMode('message');
         document.getElementById('studentImageSearch').value = "";
         var hideToggle = document.getElementById('studentImageHideNoteToggle');
         if (hideToggle) hideToggle.checked = true;
@@ -7800,20 +7833,38 @@ root.TimetableAlimtalkReviewUI={mount};
         var cardSession=getScheduleSessionKey();Promise.all([loadSharedSubjectIcons(),loadCardTeacherAssets()]).then(function(){if(cardSession===getScheduleSessionKey()&&isStudentImageModalOpen()&&selectedStudentForImage)renderStudentImagePreview(selectedStudentForImage);});
       }
       var studentCardMode='image';
+      var cardAudience='guardian';
+      function setCardAudience(audience){
+        resetCardAlimtalk();
+        cardAudience=audience;
+        updateCardAudience();
+      }
+      function updateCardAudience(){
+        document.querySelectorAll('[data-card-audience]').forEach(function(button){
+          button.setAttribute('aria-pressed',String(button.dataset.cardAudience===cardAudience));
+        });
+      }
       function setStudentCardMode(mode){
+        var changed=studentCardMode!==mode;
         studentCardMode=mode==='message'?'message':'image';
         var modal=document.getElementById('studentImageModal');modal.dataset.cardMode=studentCardMode;
         document.getElementById('cardDeliveryWorkspace').setAttribute('aria-labelledby',studentCardMode==='message'?'cardMessageTab':'cardImageTab');
-        modal.querySelector('.student-list-panel-title').textContent=studentCardMode==='message'?'학생 선택 · 수동 전달 기록':'발송 대상';
+        modal.querySelector('.student-list-panel-title').textContent=studentCardMode==='message'?'학생 선택':'학생 선택 · 이미지 전달 기록';
         modal.querySelectorAll('[data-card-tab]').forEach(function(b){var active=b.dataset.cardTab===studentCardMode;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;});
-        modal.querySelector('.student-preview-panel-title').textContent=studentCardMode==='message'?'문구와 시간표 비교':'시간표 카드 미리보기';
-        modal.querySelector('.student-preview-panel-sub').textContent=studentCardMode==='message'?'왼쪽 예상 문구와 오른쪽 시간표를 대조한 뒤 수신자·발송 내용을 확인하세요.':'학부모님께 전달될 이미지입니다.';
+        modal.querySelector('.student-preview-panel-title').textContent=studentCardMode==='message'?'알림톡 발송 준비':'시간표 카드 미리보기';
+        modal.querySelector('.student-preview-panel-sub').textContent=studentCardMode==='message'?'학생을 고른 뒤 발송 대상과 연락처를 확인하세요.':'학부모님께 전달될 이미지입니다.';
         document.getElementById('cardMessageReference').hidden=studentCardMode!=='message';
+        updateCardAudience();
         if(studentCardMode==='image')resetCardAlimtalk();else renderCardMessageReference();
+        if(changed)filterStudentImageList();
       }
-      function handleCardModeKey(event){if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();var mode=event.key==='Home'?'image':event.key==='End'?'message':studentCardMode==='image'?'message':'image';setStudentCardMode(mode);document.querySelector('[data-card-tab="'+mode+'"]').focus();}
+      function handleCardModeKey(event){if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();var mode=event.key==='Home'?'message':event.key==='End'?'image':studentCardMode==='image'?'message':'image';setStudentCardMode(mode);document.querySelector('[data-card-tab="'+mode+'"]').focus();}
       function renderCardMessageReference(){
         var out=document.getElementById('cardMessageReferenceBody');if(!out)return;
+        if(studentCardMode==='message'){
+          var title=document.querySelector('#studentImageModal .student-preview-panel-title');
+          title.textContent=selectedStudentForImage ? selectedStudentForImage+' · '+currentSheetName : '알림톡 발송 준비';
+        }
         if(!selectedStudentForImage){out.textContent='학생을 선택하면 예상 문구가 표시됩니다.';return;}
         var rows=buildStudentCardViewModel(selectedStudentForImage).timelineRows.filter(function(r){return !r.isBreak;}),clock=function(h){return String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round((h%1)*60)).padStart(2,'0');};
         if(!rows.length){out.textContent='안내할 수업이 없습니다. 선택 날짜와 취소·결석 상태를 확인하세요.';return;}
@@ -7854,14 +7905,20 @@ root.TimetableAlimtalkReviewUI={mount};
       function openCardAlimtalkReview(){
         setStudentCardMode('message');
         resetCardAlimtalk();var host=document.getElementById('cardAlimtalkPanel');host.hidden=false;
-        if(!cardAlimtalkReview)cardAlimtalkReview=TimetableAlimtalkReviewUI.mount({host:host,api:cardAlimtalkApi,context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),session:cardAlimtalkKey()};}});
+        if(!cardAlimtalkReview)cardAlimtalkReview=TimetableAlimtalkReviewUI.mount({host:host,api:cardAlimtalkApi,onReady:function(){openCardAlimtalk(false);},context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),session:cardAlimtalkKey()};}});
         cardAlimtalkReview.open().then(function(){if(!host.hidden)host.scrollIntoView({block:'start'});});
       }
       function openCardAlimtalk(results){
+        if(!selectedStudentForImage)return;
+        if(!results&&!cardAlimtalkSelections[cardAlimtalkKey()]){openCardAlimtalkReview();return;}
         setStudentCardMode('message');
         resetCardAlimtalk();var host=document.getElementById('cardAlimtalkPanel');host.hidden=false;
         if(!cardAlimtalkController)cardAlimtalkController=TimetableAlimtalkUI.mount({host:host,
-          context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),studentId:cardAlimtalkSelections[cardAlimtalkKey()]||null,session:cardAlimtalkKey()};},api:cardAlimtalkApi});
+          context:function(){return {name:selectedStudentForImage,date:attendanceDateKey(currentSheetName),studentId:cardAlimtalkSelections[cardAlimtalkKey()]||null,session:cardAlimtalkKey(),audience:cardAudience};},
+          api:function(action,input){
+            var studentActions={preview:'studentPreview',send:'studentSend',results:'studentResults',reconcile:'studentReconcile'};
+            return cardAlimtalkApi(cardAudience==='student'?studentActions[action]:action,input);
+          }});
         var task=results?cardAlimtalkController.showResults():cardAlimtalkController.load();task.then(function(){if(!host.hidden)host.scrollIntoView({block:'start'});});
       }
       function openCardAlimtalkRealTest(){
@@ -8135,8 +8192,9 @@ root.TimetableAlimtalkReviewUI={mount};
       function refreshStudentImageListSelectionState() {
         var list = document.getElementById('studentImageList');
         if (!list) return;
-        Array.prototype.slice.call(list.querySelectorAll('.student-list-item[data-student-name]')).forEach(function(row) {
+        Array.prototype.slice.call(list.querySelectorAll('[data-student-name]')).forEach(function(row) {
           var rowName = row.getAttribute('data-student-name') || "";
+          if(row.matches('.recipient-student'))row.setAttribute('aria-pressed',String(rowName===selectedStudentForImage));
           if (rowName === selectedStudentForImage) row.classList.add('active');
           else row.classList.remove('active');
         });
@@ -8302,7 +8360,7 @@ root.TimetableAlimtalkReviewUI={mount};
         var names = Object.keys(studentImageScheduleMap).sort(function(a, b) {
           var aSent = getStudentCardStatusRecord(a).sent ? 1 : 0;
           var bSent = getStudentCardStatusRecord(b).sent ? 1 : 0;
-          if (aSent !== bSent) return aSent - bSent;
+          if (studentCardMode==='image' && aSent !== bSent) return aSent - bSent;
           return a.localeCompare(b, "ko");
         });
         var list = document.getElementById('studentImageList');
@@ -8312,8 +8370,18 @@ root.TimetableAlimtalkReviewUI={mount};
         var pendingRows = [];
         var sentRows = [];
         names.forEach(function(name) {
+          if(studentCardMode==='message'){
+            if(keyword&&!name.toLowerCase().includes(keyword))return;
+            visibleNames.push(name);
+            var choice=document.createElement('button');
+            choice.type='button';choice.className='recipient-student';choice.dataset.studentName=name;
+            choice.textContent=name;
+            choice.setAttribute('aria-pressed',String(name===selectedStudentForImage));
+            choice.onclick=function(){selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();};
+            pendingRows.push(choice);return;
+          }
           var status = getStudentCardStatusRecord(name);
-          if(studentCardFilter==='wait'&&status.sent||studentCardFilter==='done'&&!status.sent)return;
+          if(studentCardMode==='image' && (studentCardFilter==='wait'&&status.sent||studentCardFilter==='done'&&!status.sent))return;
           var searchText = [name, getStudentCardStatusLabel(name), status.unsentReason, status.updatedAt].join(" ").toLowerCase();
           if (keyword && searchText.indexOf(keyword) === -1) return;
           visibleNames.push(name);
@@ -8339,7 +8407,7 @@ root.TimetableAlimtalkReviewUI={mount};
           toggleBtn.type = 'button';
           toggleBtn.className = 'student-list-toggle-btn';
           toggleBtn.disabled = !canChangeStudentCardStatus();
-          toggleBtn.textContent = status.sent ? '해제' : '표시';
+          toggleBtn.textContent = status.sent ? '완료 상태 변경' : '발송 완료 표시';
           toggleBtn.onclick = function(ev) {
             ev.stopPropagation();
             selectStudentImageItem(name);toggleSelectedStudentCardSent();
@@ -8354,7 +8422,7 @@ root.TimetableAlimtalkReviewUI={mount};
         if (!visibleNames.length) {
           list.innerHTML = "<div class='student-list-item' style='color:#94a3b8;'>검색 결과가 없습니다.</div>";
           preview.innerHTML = "";
-          selectedStudentForImage="";renderCardDeliveryEditor("");
+          selectedStudentForImage="";resetCardAlimtalk();renderCardMessageReference();renderCardDeliveryEditor("");
           syncStudentCardActionButtons();
           return;
         }
@@ -8369,7 +8437,7 @@ root.TimetableAlimtalkReviewUI={mount};
           rows.forEach(function(row) { group.appendChild(row); });
           list.appendChild(group);
         }
-        appendGroup(!studentCardStatusKnown || !isStudentCardStatusContextCurrent() ? "상태 확인 필요" : "미발송 명단", "pending-group", pendingRows);
+        appendGroup(studentCardMode==='message'?"대상 학생":!studentCardStatusKnown || !isStudentCardStatusContextCurrent() ? "상태 확인 필요" : "미발송 명단", "pending-group", pendingRows);
         appendGroup("발송 완료 명단", "sent-group", sentRows);
         if (!selectedStudentForImage || visibleNames.indexOf(selectedStudentForImage) === -1) {
           selectStudentImageItem(visibleNames[0], { skipListRender: true });
@@ -8623,6 +8691,10 @@ root.TimetableAlimtalkReviewUI={mount};
         }).join("");
       }
       function renderStudentImagePreview(name) {
+        if(studentCardMode==='message'){
+          document.getElementById('studentImagePreview').replaceChildren();
+          renderCardMessageReference();refreshStudentImageListSelectionState();return;
+        }
         renderPreviewNoteEditor("card",name,studentImageScheduleMap[name] || [],document.getElementById("studentImagePreview"));
         var editor=document.getElementById('cardNoteEditor');if(editor)document.getElementById('cardNoteEditorSlot').appendChild(editor);
         var preview = document.getElementById('studentImagePreview');

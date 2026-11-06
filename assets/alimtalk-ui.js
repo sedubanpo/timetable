@@ -28,8 +28,8 @@
         host.append(section);
       }
       const c=p.counts||{students:0,messages:0,numbers:0};host.append(el('p','학생 '+c.students+'명 · 메시지 '+c.messages+'건 · 수신번호 '+c.numbers+'개'));
-      host.append(button('알림톡 미리보기',()=>load()));
-      const send=button(p.testMode?'관리자 번호로 테스트 발송':'선택 알림톡 발송',()=>confirmSend(false));
+      host.append(button('선택한 번호로 본문 확인',()=>load()));
+      const send=button(p.testMode?'관리자 번호로 테스트 발송':(context().audience==='student'?'학생 본인에게 발송':'학부모에게 발송'),()=>confirmSend(false));send.className='send-action';
       if(p.sendEnabled===false)host.append(el('p','실제 발송은 아직 비활성화되어 있습니다. 관리자 테스트 번호 지정 후 활성화합니다.'));
       if(p.sendEnabled===false||!p.previewId||!c.messages||p.rows.some(r=>r.reasons.length))locked(send);
       host.append(send,button('발송 결과',()=>showResults()));
@@ -53,7 +53,10 @@
     }
     function changes(before=[],after=[]){host.append(el('h4','이전 안내'));before.forEach(x=>host.append(el('pre',x.text||'')));host.append(el('h4','현재 안내'));after.forEach(x=>host.append(el('pre',x.text||'')));}
     function renderResults(rows){shell();host.append(el('h4','발송 결과'));if(!rows.length)host.append(el('p','알림톡 이력이 없습니다. 수동 전달 기록과는 별도입니다.'));
-      for(const r of rows){const line=el('section');line.append(el('p',(r.date||'')+' · '+r.masked+' · '+(R.labels[r.state]||'결과 확인 필요')));
+      for(const r of rows){const line=el('section');
+        line.append(el('p',[r.date,r.relation,r.masked].filter(Boolean).join(' · ')));
+        const state=el('strong',(r.state==='DELIVERED'?'✓ ':'')+(R.labels[r.state]||'결과 확인 필요'));
+        state.className=r.state==='DELIVERED'?'delivery-success':'delivery-state';line.append(state);
         if(r.errorCode)line.append(el('p','오류 코드: '+r.errorCode));if(r.messageId)line.append(el('p','메시지 ID: '+r.messageId));if(r.groupId)line.append(el('p','그룹 ID: '+r.groupId));
         if(r.text){const details=el('details');details.append(el('summary','전송 내용 이력'),el('pre',r.text));line.append(details);}
         if(['UNKNOWN','REQUESTING','ACCEPTED','PROCESSING'].includes(r.state))line.append(button('서버에서 결과 확인',()=>run(async g=>{const result=await api('reconcile',{id:r.id});if(current(g))renderResults([result]);})));
