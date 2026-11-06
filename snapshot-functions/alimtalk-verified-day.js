@@ -1,12 +1,12 @@
 'use strict';
 const {hash}=require('./alimtalk-service');
 const fail=code=>{throw Object.assign(Error(code),{code});};
-async function verifiedStudentDay({actor,date,id,signal,loadSource,resolveStudent,reviewStore}){
+async function verifiedStudentDay({actor,date,id,signal,loadSource,resolveStudent,reviewStore,allowUnchangedCells=false}){
   const student=await resolveStudent(id,signal);
   if(student.id!==id)fail('CANONICAL_RECONFIRM_REQUIRED');
   const [source,m,assignments]=await Promise.all([loadSource(actor,date,signal),reviewStore.mapping(actor.academyId,date,student.id),reviewStore.dayAssignments(actor.academyId,date)]);
   if(!source.complete||source.date!==date||source.academyId!==actor.academyId)fail('SOURCE_INCOMPLETE');
-  if(!m||m.studentId!==student.id||m.academyId!==actor.academyId||m.date!==date||!m.verifiedBy||!m.revision||m.sourceRevision!==source.revision||m.identityRevision!==student.identityRevision)fail('MAPPING_CHANGED');
+  if(!m||m.studentId!==student.id||m.academyId!==actor.academyId||m.date!==date||!m.verifiedBy||!m.revision||(!m.sourceRevision||!allowUnchangedCells&&m.sourceRevision!==source.revision)||m.identityRevision!==student.identityRevision)fail('MAPPING_CHANGED');
   const entries=source.entries.filter(e=>e.sourceName===student.name);
   if(!entries.length||entries.some(e=>!e.sourceSchool)||new Set(entries.map(e=>e.sourceSchool)).size!==1)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
   const school=String(student.school||'').trim().replace(/고등학교$/,'고').replace(/중학교$/,'중').replace(/초등학교$/,'초');

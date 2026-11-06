@@ -16,6 +16,11 @@ function firestoreStore(db){
       if(snap.size>200)throw Object.assign(new Error('HISTORY_LIMIT'),{code:'HISTORY_LIMIT'});
       return snap.docs.map(d=>d.data());
     },
+    async dayHistory(academyId,date,kind){
+      const snap=await records.where('academyId','==',academyId).where('date','==',date).where('kind','==',kind).limit(1501).get();
+      if(snap.size>1500)throw Object.assign(Error('HISTORY_LIMIT'),{code:'HISTORY_LIMIT'});
+      return snap.docs.map(d=>d.data());
+    },
     async rate(uid,action,now,limit){
       const id=require('node:crypto').createHash('sha256').update(uid+'|'+action).digest('hex');
       return db.runTransaction(async tx=>{const ref=db.collection('timetableAlimtalkLimits').doc(id),snap=await tx.get(ref),old=snap.data();const count=old&&old.until>now?old.count:0;

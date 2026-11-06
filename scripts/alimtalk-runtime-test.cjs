@@ -21,6 +21,10 @@ test('assembled HTTP runtime: source → mapping → recorded contact → previe
   const held=(await api('preview',{date,targets:[{studentId:'s1',recipientIds:[id]}]})).body;
   assert.equal(held.counts.messages,0);assert.equal((await api('send',{previewId:held.previewId})).body.code,'HELD');
  }
+ const roster=(await api('batchRoster',{date,audience:'guardian'})).body;
+ assert.equal(roster.rows.find(r=>r.studentId==='s1').state,'unsent');assert.equal(roster.rows.find(r=>r.name==='다른학생').studentId,null);
+ const bulk=(await api('batchPreview',{date,audience:'guardian',mode:'unsent'})).body;assert.deepEqual(bulk.items.map(i=>i.relation),['모']);
+ assert.equal((await api('batchSend',{date,audience:'student',mode:'unsent',previewId:bulk.previewId,tickets:bulk.items.map(i=>i.ticket),confirmed:true})).body.code,'PREVIEW_EXPIRED');
  const studentPlan=async ids=>(await api('studentPreview',{date,targets:[{studentId:'s1',recipientIds:ids}]})).body;
  const studentPreview=await studentPlan(['student']);
  assert.deepEqual(studentPreview.rows[0].choices.map(r=>r.id),['student']);

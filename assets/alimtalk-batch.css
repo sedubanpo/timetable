@@ -1,0 +1,28 @@
+#studentImageModal .batch-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 18px;margin:0 0 12px;padding:12px;background:#f3f6fa;border:1px solid #dae3ed;border-radius:12px;color:#233d57}
+#studentImageModal .batch-bar .recipient-switch,#studentImageModal .batch-actions{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+#studentImageModal .batch-bar button,#batchRosterStatus button{font:inherit;font-size:14px;font-weight:700;cursor:pointer;color:#24415c;background:#fff;border:1px solid #c6d2df;border-radius:7px;padding:8px 12px;min-height:40px}
+#studentImageModal .batch-bar .recipient-switch button[aria-pressed=true]{background:#183e62;color:#fff;border-color:#183e62}
+#studentImageModal #batchInitial{background:#1d4d78;color:#fff;border-color:#1d4d78}
+#studentImageModal #batchChanges{background:#fff5ce;border-color:#d9bb5c;color:#674b0e}
+#studentImageModal button:focus-visible,#studentImageModal summary:focus-visible{outline:3px solid #4272bd;outline-offset:2px}
+#studentImageModal .batch-bar button:active{transform:scale(.96)}
+#studentImageModal #batchRosterStatus{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px;color:#536778;font-size:13px}
+#studentImageModal .roster-group{padding:7px;background:var(--paper);border-bottom:1px solid white}
+#studentImageModal .roster-changed{--paper:#fff4c8;--ink:#74530b}
+#studentImageModal .roster-unsent{--paper:#ffebeb;--ink:#833b43}
+#studentImageModal .roster-sent{--paper:#e2f5e9;--ink:#235940}
+#studentImageModal .roster-pending,#studentImageModal .roster-held{--paper:#edf1f6;--ink:#42556c}
+#studentImageModal .roster-heading{display:flex;justify-content:space-between;align-items:center;padding:6px 5px 8px;color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums}
+#studentImageModal .roster-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,138px),1fr));gap:5px}
+#studentImageModal .roster-tiles button{background:rgba(255,255,255,.64);border:1px solid transparent;border-radius:6px;min-height:40px;padding:7px 9px;line-height:1.35;color:#283b4c}
+#studentImageModal .roster-tiles button:hover{background:white}
+#studentImageModal .roster-tiles button[aria-pressed=true]{background:white;border-color:#326c9d;box-shadow:inset 3px 0 #326c9d}
+#studentImageModal .roster-tiles small{display:block;color:#58616c;font-size:12px;font-weight:450;margin-top:2px}
+#studentImageModal .bulk-review-row{margin:10px 0;padding:12px;border:1px solid #d5dfea;border-radius:8px}
+#studentImageModal .bulk-review-row label,#studentImageModal .bulk-pick{display:flex;align-items:center;gap:6px;min-height:40px;margin:0}
+#studentImageModal .bulk-review-row summary,#studentImageModal .alimtalk-panel details>summary{padding:7px 0;color:#214b78;cursor:pointer;font-weight:650}
+#studentImageModal .bulk-note{color:#475c6c}
+#studentImageModal .bulk-confirm-footer{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:8px;background:white;border-top:1px solid #cedbe6;padding:10px 0}
+#studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) .recipient-setup{display:none}
+@media(min-width:561px){#studentImageModal[data-card-mode=message] .student-dashboard-layout{grid-template-columns:clamp(315px,34%,490px) minmax(0,1fr)}}
+@media(max-width:560px){#studentImageModal .batch-bar{padding:7px;margin-bottom:5px;gap:4px}#studentImageModal .batch-bar button{font-size:12px;padding:6px 8px}#studentImageModal[data-card-mode=message] .student-list-panel{max-height:34dvh}#studentImageModal[data-card-mode=message] .student-list{max-height:18dvh}#studentImageModal .roster-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}

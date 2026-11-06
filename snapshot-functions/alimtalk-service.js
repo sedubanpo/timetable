@@ -5,6 +5,15 @@ const rules=require('./alimtalk-contract');
 const hash=v=>crypto.createHash('sha256').update(JSON.stringify(v)).digest('hex');
 const fail=code=>{throw Object.assign(new Error(code),{code});};
 const bounded=async(fn,ms=8000)=>{let timer;const controller=new AbortController();try{return await Promise.race([Promise.resolve().then(()=>fn(controller.signal)),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Object.assign(new Error('TIMEOUT'),{code:'TIMEOUT'}));},ms);})]);}finally{clearTimeout(timer);}};
+function deliveryId(academy,row,date,phone,kind,history,retryFailed){
+  const base=[academy,row.studentId,date,phone,kind,row.version];
+  const records=history.filter(r=>r.studentId===row.studentId&&r.phone===phone&&(r.kind||'daily-lessons')===kind)
+    .sort((a,b)=>b.createdAt-a.createdAt||b.id.localeCompare(a.id));
+  const latest=records[0];
+  if(latest?.version===row.version&&!(retryFailed&&latest.state==='FAILED'))return latest.id;
+  // A → B → A is a new notification; a reviewed retry also retains the original failed attempt.
+  return hash(records.some(r=>r.version===row.version)?[...base,latest.id]:base);
+}
 function status(code){const c=String(code);if(['3014','3048'].includes(c))return 'UNKNOWN';return {'2000':'ACCEPTED','3000':'PROCESSING','4000':'DELIVERED','5000':'FAILED'}[c]||(/^[123]\d{3}$/.test(c)?'FAILED':'UNKNOWN');}
 function verifyWebhook(secret,header){
   if(typeof secret!=='string'||!secret||typeof header!=='string'||!/^[a-f0-9]{40}$/.test(header))return false;
@@ -58,20 +67,27 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     // Revalidate authorization after source/template I/O and before each irreversible boundary.
     const results=[];
     for(const row of fresh.rows)for(const recipient of row.recipients){
+      results.push(await dispatch(session,a,fresh.date,row,recipient,prior));
+    }
+    return {results};
+  }
+  // Internal only: both single and batch paths must verify the server plan before claiming.
+  async function dispatch(session,a,date,row,recipient,prior,batchId=null,retryFailed=false){
       await auth(session);
-      const id=hash([a.academyId,row.studentId,fresh.date,recipient.phone,kind,row.version]);
-      const record={id,academyId:a.academyId,studentId:row.studentId,date:fresh.date,version:row.version,phone:recipient.phone,relation:recipient.relation,text:row.text,variables:row.variables,kind,actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
+      const id=deliveryId(a.academyId,row,date,recipient.phone,kind,prior,retryFailed);
+      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(batchId?{batchId}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
       const claim=await store.claim(id,record);
-      if(!claim.created){results.push(publicRecord(claim.record));continue;}
+      if(!claim.created){return publicRecord(claim.record);}
       try{
         // One message per provider group: siblings sharing a number never suppress one another.
         const r=await bounded(signal=>provider.sendOne({to:recipient.phone,type:'ATA',kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:row.variables,disableSms:true},customFields:{timetableKey:id}},signal),deadline);
         if(!r?.messageId||!r?.groupId)fail('UNKNOWN_RESULT');
         await apply(id,{...r,key:id});
-      }catch{await store.update(id,old=>(['DELIVERED','FAILED'].includes(old.state)?old:{...old,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN',updatedAt:now()}));}
-      results.push(publicRecord(await store.get(id)));
-    }
-    return {results};
+      }catch(e){
+        const rejected=['PROVIDER_REQUEST_REJECTED','PROVIDER_AUTH_REJECTED','PROVIDER_ACCESS_DENIED','PROVIDER_RATE_LIMIT','PROVIDER_KEY_INVALID','PROVIDER_SIGNATURE_MISMATCH'].includes(e.code);
+        await store.update(id,old=>(['DELIVERED','FAILED'].includes(old.state)?old:{...old,state:rejected?'FAILED':'UNKNOWN',errorCode:rejected?e.code:'RESULT_UNCERTAIN',updatedAt:now()}));
+      }
+      return publicRecord(await store.get(id));
   }
   async function results(session,input){const a=await auth(session);if(!rules.validDate(input.date)||!Array.isArray(input.studentIds)||input.studentIds.length>20||input.studentIds.some(id=>typeof id!=='string'||!id))fail('INVALID_REQUEST');await store.rate(a.uid,'results',now(),30);const records=(await store.history(a.academyId,input.date,input.studentIds)).filter(r=>(r.kind||'daily-lessons')===kind);for(let i=0;i<records.length;i++){const r=records[i];if(r.state==='REQUESTING'&&now()-r.createdAt>deadline)records[i]=await store.update(r.id,old=>old.state==='REQUESTING'?{...old,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN'}:old);}await auth(session);return {results:records.map(publicRecord)};}
   async function reconcile(session,id){const a=await auth(session);await store.rate(a.uid,'reconcile',now(),10);const old=await store.get(id);if(!old||old.academyId!==a.academyId||(old.kind||'daily-lessons')!==kind)fail('FORBIDDEN');
@@ -89,6 +105,6 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   async function webhook(header,events){if(!verifyWebhook(webhookSecret,header))fail('UNAUTHORIZED');if(!Array.isArray(events)||events.length>100)fail('INVALID_REQUEST');
     // Persist before acknowledging; failed storage returns non-2xx to permit provider retry.
     for(const e of events){const id=e.customFields?.timetableKey;if(id===undefined)continue;if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');if(!await store.get(id))continue;await apply(id,{...e,key:id});}return {ok:true};}
-  return {preview,send,results,reconcile,webhook};
+  return {preview,send,results,reconcile,webhook,dispatch,apply};
 }
 module.exports={createService,status,verifyWebhook,hash};
