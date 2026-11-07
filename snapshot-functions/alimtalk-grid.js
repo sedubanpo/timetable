@@ -15,7 +15,7 @@ function parseSnapshot(snapshot,now=Date.now()){
   const header=headers.length===1?headers[0]:null,tokens=header?.trim().split(/\s+/)||[];
   for(let index=0;index<items.length;index++){
    const raw=items[index].trim();if(!raw||headers.includes(items[index]))continue;
-   if(/^(자습|자기주도|자기주도학습)$/.test(raw))continue; // Explicit label, not a named student's lesson.
+   if(/^(자습|자기주도(?:\s*학습)?)$/.test(raw))continue; // Explicit label, not a named student's lesson.
    const chunks=raw.match(/\S+\s*/g),parts=chunks.map(s=>s.trimEnd()),name=parts[0];
    const schoolToken=isRetakerLabel(parts[1])?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
    const school=isRetakerLabel(schoolToken)?'재수생':schoolToken;

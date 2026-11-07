@@ -96,7 +96,7 @@ test('retaker aliases are academic fields, not a match on words in a note',()=>{
 });
 
 test('standalone self study heading is not a student and does not block the date',()=>{
- for(const label of ['자습','자기주도','자기주도학습']){
+ for(const label of ['자습','자기주도','자기주도학습','자기주도 학습']){
   const s=fixture();s.data.grid[15]=[[label]];const p=parseSnapshot(s,now);
   assert(p.complete);assert.equal(p.entries.length,1);assert.equal(p.entries[0].sourceName,'가학생');
  }
