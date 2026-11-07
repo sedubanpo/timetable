@@ -7992,7 +7992,7 @@ root.TimetableAlimtalkReviewUI={mount};
                 teacher: teacherName,
                 classType: isSelfStudy ? "자기주도학습" : classType,
                 status: sourceSubtype ? sourceSubtype[1] : parsed.status,
-                note: parsed.note,
+                note: sourceSubtype ? normalizeNoticeText(raw.trim().slice(sourceSubtype[0].length)) : parsed.note,
                 school: parsed.school,
                 raw: clean
               });

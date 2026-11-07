@@ -23,6 +23,16 @@ for(const file of ['Index.html','docs/index.html']){
  scope.studentImageScheduleMap['정규보충검증']=social;
  const lessons=Array.from(scope.buildStudentCardViewModel('정규보충검증').timelineRows,r=>[r.start,r.end,r.status]);
  assert.deepEqual(lessons,[[13,15,'정규'],[15,15.5,'보충']]);
+ // Exercise the raw grid entry (the status parser otherwise consumes the word 보강 at the end of the note).
+ Object.assign(scope,{SCHEDULE_START_HOUR:16,SCHEDULE_END_HOUR:16,lastData:{headers:['스터디카페'],grid:{
+   16:[['1:1 과학 검증T','검증학생 가상초5 결석보강 11/7(토), 16:30까지 보강']]
+ }}});
+ for(const n of ['getSubjectName','extractTeacherName','isTeacherHeader','detectClassType','detectStudentCardClassType','detectStudentStatus','detectStudentStatusFromTokens','normalizeNoticeText','normalizeStatusLabel','parseStudentRawText','buildStudentImageMap']){
+   vm.runInContext(extract(n),scope);
+ }
+ scope.buildStudentImageMap();
+ const makeup=scope.buildStudentCardViewModel('검증학생').timelineRows[0];
+ assert.equal(makeup.status,'결석보강');assert.equal(makeup.end,16.5);assert.match(makeup.timeNote,/16:30까지 보강/);
  scope.currentSheetName='9/22';assert.match(scope.previewNoteValue('card','검증학생',rows[0]),/내부 메모/);
  assert.match(source,/onclick="downloadAbsenceNoticeImage\(\)">이미지 저장<\/button>\s*<button[^>]+onclick="copyAbsenceNoticeImage\(\)">이미지 복사/);
  assert.match(source,/previewNoteHidden\("absence",name,v\)/);
