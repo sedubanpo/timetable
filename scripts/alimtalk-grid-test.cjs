@@ -11,3 +11,14 @@ test('note-based partial-hour schedule is held rather than silently sent as full
 
 test('cancelled entries keep identity coverage but time/room notes do not prevent exclusion',()=>{const s=fixture();s.data.headers=['휴강 명단'];s.data.grid[16][0][1]='가학생 가상중2 정규 16:30 등원';const p=parseSnapshot(s,now);assert(p.complete);assert.equal(p.entries.length,1);assert.equal(p.entries[0].lesson.status,'휴강');assert.deepEqual(p.entries[0].lesson.reviewReasons,[]);const R=require('../snapshot-functions/alimtalk-contract');const result=R.normalize([{...p.entries[0].lesson,studentId:'s1'}],'s1',s.date);assert.equal(result.excluded[0].reason,'휴강');assert.equal(result.lessons.length,0);});
 test('mapped held occurrence is retained and blocks its student without poisoning other students',async()=>{const s=fixture();s.data.grid[17]=[['1:1 수학 가상T','나학생 가상중2 정규 17:30 등원']];const p=parseSnapshot(s,now),assignments={},mappings={};p.entries.forEach((e,i)=>{const id='s'+i,revision='m'+i;assignments[hash(e.id)]={studentId:id,fingerprint:e.fingerprint,revision};mappings[id]={academyId:'banpo',date:s.date,studentId:id,sourceRevision:p.revision,revision,verifiedBy:'admin',entries:[{id:e.id,fingerprint:e.fingerprint}]};});const load=createMappedDay({loadSource:async()=>p,readDayAssignments:async()=>assignments,readMapping:async(a,d,id)=>mappings[id]});const day=await load({academyId:'banpo'},s.date,['s0','s1']);const R=require('../snapshot-functions/alimtalk-contract');assert.equal(R.normalize(day.students[0].lessons,'s0',s.date).reasons.length,0);assert(R.normalize(day.students[1].lessons,'s1',s.date).reasons.includes('시간 메모 확인 필요'));delete assignments[hash(p.entries[1].id)];await assert.rejects(load({academyId:'banpo'},s.date,['s0']),{code:'SOURCE_MAPPING_INCOMPLETE'});});
+test('regular hours and supplemental half hour stay separate in the actual message variables',()=>{
+ const s=fixture(),rules=require('../snapshot-functions/alimtalk-contract');
+ s.data.grid[16]=[[]];
+ for(const h of [13,14,15])s.data.grid[h]=[['개별 사탐 검증T','가학생 가상고3 '+(h===15?'보충 11/7(토) 확정, 3:00-3:30, 5일 미진행 된 개별 30분에 대한 보충':'정규 11/7(토) 확정')]];
+ const compose=()=>rules.compose({id:'s',name:'가학생',mappingVerified:true},s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
+ const result=compose();assert.deepEqual(result.reasons,[]);assert.deepEqual(result.lessons.map(l=>[l.start,l.end,l.status]),[[780,900,'정규'],[900,930,'보충']]);
+ assert.match(result.variables['#{수업목록}'],/① 사탐 정규 13:00–15:00\n검증T · 개별 2시간[\s\S]*② 사탐 보충 15:00–15:30\n검증T · 개별 30분/);
+ for(const note of ['3:00-3:30, 3:30-4:00','9:00-9:30','3:00-3:30, 16:00 등원','3:15-3:45']){
+  s.data.grid[15][0][1]='가학생 가상고3 보충 '+note;assert(compose().reasons.includes('시간 메모 확인 필요'),note);
+ }
+});

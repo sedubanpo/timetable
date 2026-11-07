@@ -2447,6 +2447,34 @@ root.TimetableBatchUI={mount,errorText};
   function time(s){if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(s)))return NaN;return Number(s.slice(0,2))*60+Number(s.slice(3));}
   function clock(n){return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
   function validDate(d){return /^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;}
+  // A clock without 오전/오후 is resolved only against this lesson's grid block.
+  function readTimeNote(note){
+    const token='(오전|오후)?\\s*(\\d+)(?::(\\d+)|\\s*시(?:\\s*(\\d+)\\s*분?)?)';
+    const pattern=new RegExp('(?:^|[^\\d:])'+token+'\\s*[-~～–—]\\s*'+token+'(?![\\d:])','g');
+    function candidates(hour,minute,period){
+      hour=Number(hour);minute=Number(minute);
+      if(hour>24||minute>=60||minute%30||hour===24&&minute)return [];
+      const hours=period?(hour>=1&&hour<=12?[hour%12+(period==='오후'?12:0)]:[]):hour>=1&&hour<=12?[hour%12,hour%12+12]:[hour];
+      return hours.map(h=>h*60+minute);
+    }
+    const ranges=[];
+    const rest=note.replace(pattern,(_,p1,h1,m1,k1,p2,h2,m2,k2)=>{
+      ranges.push([candidates(h1,m1||k1||0,p1),candidates(h2,m2||k2||0,p2)]);return ' ';
+    });
+    const held=/\d+\s*분\s*\d+\s*초|\d+:\d+:\d+/.test(note)||/\d{1,2}\s*:\s*\d{2}|\d+\s*시(?!간)|시간\s*변경/.test(rest)
+      ||ranges.some(([a,b])=>!a.length||!b.length);
+    return {ranges,held};
+  }
+  function applyTimeNotes(block){
+    let selected=null;
+    for(const [starts,ends] of block.timeRanges){
+      const possible=starts.flatMap(start=>ends.filter(end=>end>start&&start>=block.start-30&&end<=block.end+30).map(end=>[start,end]));
+      if(possible.length!==1||(selected&&(selected[0]!==possible[0][0]||selected[1]!==possible[0][1])))return false;
+      selected=possible[0];
+    }
+    if(selected)[block.start,block.end]=selected;
+    return true;
+  }
   function normalize(rows,studentId,date){
     const reasons=[],excluded=[],lessons=[];
     if(!studentId)reasons.push('학생 ID 연결 필요');
@@ -2459,17 +2487,23 @@ root.TimetableBatchUI={mount,errorText};
       if(fields.some(k=>typeof r[k]!=='string'||!r[k].trim())){reasons.push('필수 수업 정보 누락');continue;}
       const start=time(r.start),end=time(r.end);
       if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start){reasons.push('수업 시각 확인 필요');continue;}
-      lessons.push({subject:r.subject.trim(),teacher:r.teacher.trim(),building:r.building.trim(),room:r.room.trim(),type:r.type.trim(),start,end,sourceIds:[r.sourceId]});
+      lessons.push({subject:r.subject.trim(),teacher:r.teacher.trim(),building:r.building.trim(),room:r.room.trim(),type:r.type.trim(),status:String(r.status||'').trim(),timeRanges:[...(r.timeRanges||[])],start,end,sourceIds:[r.sourceId]});
     }
     lessons.sort((a,b)=>a.start-b.start||a.end-b.end||JSON.stringify(a).localeCompare(JSON.stringify(b)));
     const merged=[];
     for(const l of lessons){
       const last=merged[merged.length-1];
-      const same=last&&['subject','teacher','building','room','type'].every(k=>last[k]===l[k]);
+      const same=last&&['subject','teacher','building','room','type','status'].every(k=>last[k]===l[k]);
       // Only adjacent repeated cells merge. Overlapping entries always require human review.
       if(last&&l.start<last.end)reasons.push('수업 시간 충돌');
-      if(same&&last.end===l.start){last.end=l.end;last.sourceIds.push(...l.sourceIds);}else merged.push(l);
+      if(same&&last.end===l.start){last.end=l.end;last.timeRanges.push(...l.timeRanges);last.sourceIds.push(...l.sourceIds);}else merged.push(l);
     }
+    for(const block of merged){
+      if(!applyTimeNotes(block))reasons.push('시간 메모 확인 필요');
+      delete block.timeRanges;
+    }
+    merged.sort((a,b)=>a.start-b.start||a.end-b.end);
+    if(merged.some((l,i)=>i>0&&l.start<merged[i-1].end))reasons.push('수업 시간 충돌');
     if(!merged.length)reasons.push('발송할 유효 수업 없음');
     return {lessons:merged,excluded,reasons:[...new Set(reasons)]};
   }
@@ -2479,7 +2513,7 @@ root.TimetableBatchUI={mount,errorText};
     const duration=[hours&&hours+'시간',rest&&rest+'분'].filter(Boolean).join(' ');
     const teacher=l.teacher?l.teacher.replace(/(?:\s*(?:선생님|T))+$/iu,'').trimEnd()+'T':'강사 확인 필요';
     return [
-      number+' '+l.subject+' '+clock(l.start)+'–'+clock(l.end),
+      number+' '+[l.subject,['정규','보충'].includes(l.status)?l.status:''].filter(Boolean).join(' ')+' '+clock(l.start)+'–'+clock(l.end),
       teacher+' · '+l.type+' '+duration,
       l.building+' '+l.room
     ].join('\n');
@@ -2498,7 +2532,7 @@ root.TimetableBatchUI={mount,errorText};
     return !!t&&t.templateId===templateId&&(t.channelId||t.pfId)===pfId&&t.name===templateName&&t.status==='APPROVED'&&t.content===content&&!t.isDeleted&&!t.isHidden;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,exclusion,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,exclusion,readTimeNote,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });
 </script>
 <script>(function(root){
@@ -8020,7 +8054,7 @@ window.SeduHubAdapter={
           return TimetableAlimtalk.formatLesson({
             subject:title?title[1]:row.title, teacher:title?title[2]:'',
             start:Math.round(row.start*60), end:Math.round(row.end*60),
-            type:row.classType||'유형 확인 필요', building:room.building||'관 확인 필요', room:room.room||'강의실 확인 필요'
+            status:row.status, type:row.classType||'유형 확인 필요', building:room.building||'관 확인 필요', room:room.room||'강의실 확인 필요'
           },index);
         }).join('\n\n');
         var vars={'학생명':selectedStudentForImage,'수업일':attendanceDateKey(currentSheetName),'등원시각':clock(rows[0].start),'수업목록':list};

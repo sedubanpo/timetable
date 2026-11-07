@@ -1,6 +1,6 @@
 'use strict';
 const {hash}=require('./alimtalk-service'),core=require('./core');
-const {exclusion}=require('./alimtalk-contract');
+const {exclusion,readTimeNote}=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 // Conservative grammar: unsupported cells are held, never guessed or silently omitted.
 const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
@@ -23,13 +23,14 @@ function parseSnapshot(snapshot,now=Date.now()){
    // Preserve every identifiable occurrence, including held/cancelled lessons.
    // Human ID mapping cannot clear a lesson hold; compose independently blocks that student.
    const reviewReasons=[];
+   const timeNote=readTimeNote(parts.slice(1).join(' '));
    if(!school)reviewReasons.push('학교·학년 확인 필요');
    if(!exclusion({status})){
     if(!room)reviewReasons.push('강의실 표기 확인 필요');
-    if(/\d{1,2}\s*:\s*\d{2}|\d{1,2}\s*시|시간\s*변경/.test(raw))reviewReasons.push('시간 메모 확인 필요');
+    if(timeNote.held)reviewReasons.push('시간 메모 확인 필요');
    }
    const id=hash([snapshot.sheet,snapshot.date,hour,col,index]),fingerprint=hash(['source-parser-v2',raw,headers,roomText]);
-   const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:tokens.find(t=>subject.test(t))||'',type:tokens.find(t=>classType.test(t))||'',teacher:header?tokens.at(-1).slice(0,-1):'',building:room?(room[1]||'본관'):'',room:room?room[2]:'',status,reviewReasons};
+   const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:tokens.find(t=>subject.test(t))||'',type:tokens.find(t=>classType.test(t))||'',teacher:header?tokens.at(-1).slice(0,-1):'',building:room?(room[1]||'본관'):'',room:room?room[2]:'',status,timeRanges:timeNote.ranges,reviewReasons};
    // Missing teacher/subject/type remains a student's hold reason in compose.
    entries.push({id,fingerprint,sourceName:name,sourceSchool:school||'',label:name+' · '+(school||'학교·학년 미기재'),summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
   }
