@@ -24,7 +24,48 @@
     const label=Object.hasOwn(labels,status)?labels[status]:'';
     return todayOnly&&label!=='오늘만'?[label,'오늘만'].filter(Boolean).join(' · '):label;
   }
-  function readTimeNote(note,status){
+  // Retaker labels are academic fields. Do not search free-text notes for them.
+  function isRetakerLabel(value){
+    return /^(?:고3@|재수(?:생|[12])?|교육청(?:[123](?:학년)?)?)$/.test(String(value||'').replace(/\s+/g,''));
+  }
+  function directorySchoolKey(school,grade){
+    const name=String(school||'').trim();
+    const level=String(grade||'').trim();
+    if(isRetakerLabel(name)||isRetakerLabel(level)||isRetakerLabel(name+level))return '재수생';
+    const digit=level.match(/^(?:초|중|고)?([1-6])(?:학년)?$/);
+    if(!name||!digit)return '';
+    return name.replace(/고등학교$/,'고').replace(/중학교$/,'중').replace(/초등학교$/,'초')+digit[1];
+  }
+  // Each grid cell is scoped before adjacent lessons are merged. Only a dated
+  // heading starts a new entry; dates mentioned inside an explanation do not.
+  function timeNoteForDate(note,date){
+    const text=String(note||'').trim();
+    if(!text||!validDate(date))return text;
+    const heading=/(?:^|[;,，\n]|\s+\/\s+)\s*(?:(\d{4})-(\d{1,2})-(\d{1,2})|(?:(\d{4})\s*[/년]\s*)?(\d{1,2})\s*[/월]\s*(\d{1,2})일?)(?!\d)(?:\s*\([월화수목금토일](?:요일)?\))?/g;
+    const entries=[...text.matchAll(heading)];
+    if(!entries.length)return text;
+    const kept=[text.slice(0,entries[0].index)];
+    entries.forEach((entry,index)=>{
+      const body=text.slice(entry.index+entry[0].length,entries[index+1]?.index??text.length);
+      const month=Number(entry[2]||entry[5]),day=Number(entry[3]||entry[6]);
+      const targetYear=Number(date.slice(0,4));
+      let year=Number(entry[1]||entry[4]||targetYear);
+      if(!entry[1]&&!entry[4]){
+        const distance=month-Number(date.slice(5,7));
+        if(distance>6)year--;
+        if(distance< -6)year++;
+      }
+      const key=[year,String(month).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
+      const effectiveFrom=/^\s*(?:부터|이후)/.test(body)&&key<=date;
+      const effectiveUntil=/^\s*까지/.test(body)&&date<=key;
+      const oneDayOnly=body.includes('오늘만');
+      // Keep ambiguous date ranges for review rather than discard an applicable instruction.
+      if(!validDate(key)||key===date||/^\s*[-~～–]/.test(body)||(!oneDayOnly&&(effectiveFrom||effectiveUntil)))kept.push(body);
+    });
+    return kept.join(' ').trim();
+  }
+  function readTimeNote(note,status,date){
+    note=timeNoteForDate(note,date);
     // Only 오늘만 introduces this shorthand. Dates and durations are not clock ranges.
     const todayRange=/(오늘만\s*)(\d{1,2})\s*[-~～–—]\s*(\d{1,2})\s*시(?![간\d]|\s*\d)/g;
     let todayOnly=false;
@@ -33,7 +74,7 @@
       return prefix+start+':00-'+end+':00';
     });
     // Explicit arrival records are attendance notes, not lesson start/end overrides.
-    if(/지각/.test(note))note=note.replace(/(?:오전|오후)?\s*\d{1,2}:\d{2}\s*도착(?:\s*예정)?/g,' ');
+    if(status==='지각'||/지각/.test(note))note=note.replace(/(?:오전|오후)?\s*\d{1,2}:\d{2}\s*도착(?:\s*예정)?/g,' ');
     const token='(오전|오후)?\\s*(\\d+)(?::(\\d+)|\\s*시(?:\\s*(\\d+)\\s*분?)?)';
     const pattern=new RegExp('(?:^|[^\\d:])'+token+'\\s*[-~～–—]\\s*'+token+'(?![\\d:])','g');
     function candidates(hour,minute,period){
@@ -134,5 +175,5 @@
     return !!t&&t.templateId===templateId&&(t.channelId||t.pfId)===pfId&&t.name===templateName&&t.status==='APPROVED'&&t.content===content&&!t.isDeleted&&!t.isHidden;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,exclusion,scheduleStatus,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,exclusion,isRetakerLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });

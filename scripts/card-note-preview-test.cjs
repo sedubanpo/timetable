@@ -5,7 +5,7 @@ for(const file of ['Index.html','docs/index.html']){
  const rows=[12,13].map(hour=>({hour,subject:'수학',teacher:'검증',room:'1강의실',classType:'개별',note:'12:30-14:30 내부 메모'}));
  const scope={TimetableAlimtalk:require("../assets/alimtalk-contract"),console,Set,Map,Date,Promise,previewNoteDrafts:Object.create(null),currentSheetName:'9/21',getScheduleSessionKey:()=> 'test',studentCardHideNote:false,studentImageScheduleMap:{검증학생:rows}};
  vm.createContext(scope);
- ['previewNoteKey','previewNoteValue','previewNoteHidden','getExportTimeRange','getCardNoteTimeRange','formatCardHour','buildStudentCardViewModel'].forEach(n=>vm.runInContext(extract(n),scope));
+ ['attendanceDateKey','previewNoteKey','previewNoteValue','previewNoteHidden','getExportTimeRange','getCardNoteTimeRange','formatCardHour','buildStudentCardViewModel'].forEach(n=>vm.runInContext(extract(n),scope));
  let model=scope.buildStudentCardViewModel('검증학생');
  assert.equal(model.timelineRows[0].start,12.5);assert.equal(model.timelineRows[0].end,14.5);assert.equal(scope.formatCardHour(12.5),'12:30');
  scope.studentCardHideNote=true;model=scope.buildStudentCardViewModel('검증학생');assert.equal(model.timelineRows[0].note,'');assert.equal(model.timelineRows[0].end,14.5);
@@ -24,7 +24,7 @@ for(const file of ['Index.html','docs/index.html']){
  const lessons=Array.from(scope.buildStudentCardViewModel('정규보충검증').timelineRows,r=>[r.start,r.end,r.status]);
  assert.deepEqual(lessons,[[13,15,'정규'],[15,15.5,'보충']]);
  // Exercise the raw grid entry (the status parser otherwise consumes the word 보강 at the end of the note).
- Object.assign(scope,{SCHEDULE_START_HOUR:16,SCHEDULE_END_HOUR:16,lastData:{headers:['스터디카페'],grid:{
+ Object.assign(scope,{currentSheetName:'11/7(토)',SCHEDULE_START_HOUR:16,SCHEDULE_END_HOUR:16,lastData:{headers:['스터디카페'],grid:{
    16:[['1:1 과학 검증T','검증학생 가상초5 결석보강 11/7(토), 16:30까지 보강']]
  }}});
  for(const n of ['getSubjectName','extractTeacherName','isTeacherHeader','detectClassType','detectStudentCardClassType','detectStudentStatus','detectStudentStatusFromTokens','normalizeNoticeText','normalizeStatusLabel','parseStudentRawText','buildStudentImageMap']){
@@ -46,6 +46,16 @@ for(const file of ['Index.html','docs/index.html']){
   assert.equal(scope.TimetableAlimtalk.lessonStatusLabel(scheduled[0].status,false),status==='지각'?'정규':status);
  }
  assert.equal(scope.parseStudentRawText('검증학생 가상중3 정규 지각, 10:11 도착').status,'지각','live attendance still shows lateness');
+ for(const label of ['고3@','재수','재수1','재수2','교육청']){
+  scope.SCHEDULE_START_HOUR=10;scope.SCHEDULE_END_HOUR=12;
+  scope.lastData={headers:['1강의실'],grid:{}};
+  for(let h=10;h<13;h++)scope.lastData.grid[h]=[['개별 수학 검증T','검증학생 '+label+' 정규 10/31(토) 확정 10:30–12:00']];
+  scope.buildStudentImageMap();
+  const rows=scope.buildStudentCardViewModel('검증학생').timelineRows;
+  assert.equal(rows.length,1);assert.equal(rows[0].school,'재수생');assert.equal(rows[0].start,10);assert.equal(rows[0].end,13);
+  scope.lastData.grid[12][0][1]='검증학생 '+label+' 정규 11/7(토) 확정, 10:30–13:00';
+  scope.buildStudentImageMap();assert.equal(scope.buildStudentCardViewModel('검증학생').timelineRows[0].start,10.5);
+ }
  scope.currentSheetName='9/22';assert.match(scope.previewNoteValue('card','검증학생',rows[0]),/내부 메모/);
  assert.match(source,/onclick="downloadAbsenceNoticeImage\(\)">이미지 저장<\/button>\s*<button[^>]+onclick="copyAbsenceNoticeImage\(\)">이미지 복사/);
  assert.match(source,/previewNoteHidden\("absence",name,v\)/);

@@ -1,8 +1,8 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),{parseSnapshot,createMappedDay}=require('../snapshot-functions/alimtalk-grid'),{hash}=require('../snapshot-functions/alimtalk-service');
 global.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
-const now=Date.parse('2026-10-28T03:00:00Z');
-function fixture(){const grid={},owners={};for(let h=8;h<=23;h++){grid[h]=[[]];owners[h]=[[]];}grid[16]=[['1:1 수학 가상T','가학생 가상중2 정규']];return {schema:1,date:'2026-10-28',sheet:'10/28(수)',capturedAt:now,data:{headers:['2관 3강의실'],version:'v1',grid},owners,rooms:{rooms:['2관 3강의실'],rows:[]}};}
+const now=Date.parse('2026-11-07T03:00:00Z');
+function fixture(){const grid={},owners={};for(let h=8;h<=23;h++){grid[h]=[[]];owners[h]=[[]];}grid[16]=[['1:1 수학 가상T','가학생 가상중2 정규']];return {schema:1,date:'2026-11-07',sheet:'11/7(토)',capturedAt:now,data:{headers:['2관 3강의실'],version:'v1',grid},owners,rooms:{rooms:['2관 3강의실'],rows:[]}};}
 test('actual string grid produces explicit source references and exact room metadata',()=>{const s=parseSnapshot(fixture(),now);assert(s.complete);assert.equal(s.entries[0].lesson.building,'2관');assert.equal(s.entries[0].lesson.room,'3강의실');assert.equal(s.entries[0].lesson.type,'1:1');assert.equal(s.entries[0].lesson.teacher,'가상');});
 test('unsupported room/student strings held; missing headers not guessed',()=>{const x=fixture();x.data.headers=['unknown'];assert(parseSnapshot(x,now).complete);assert.deepEqual(parseSnapshot(x,now).entries[0].lesson.reviewReasons,['강의실 표기 확인 필요']);const y=fixture();y.data.grid[16][0]=['공지사항'];assert(!parseSnapshot(y,now).complete);const z=fixture();z.data.grid[16][0]=['가학생 가상중2 정규'];assert.equal(parseSnapshot(z,now).entries[0].lesson.teacher,'');});
 test('cancelled source remains mapped with exclusion status; generated gaps not invented',()=>{const x=fixture();x.data.grid[16][0][1]='가학생 가상중2 당일취소';const s=parseSnapshot(x,now);assert.equal(s.entries.length,1);assert.equal(s.entries[0].lesson.status,'당일취소');});
@@ -70,4 +70,27 @@ test('held arrival/start note keeps the full grid lesson visible without permitt
  for(let h=10;h<13;h++)s.data.grid[h]=[['개별 수학 검증T','가학생 가상고2 정규'+(h===10?' 지각, 10시 또는 11시 시작':'')]];
  const c=R.compose({id:'s',name:'가학생',mappingVerified:true},s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
  assert.deepEqual(c.reasons,['시간 메모 확인 필요']);assert.equal(c.lessons.length,1);assert.match(c.text,/수학 정규 10:00–13:00/);
+});
+
+test('only timing instructions for the lesson date affect a server preview',()=>{
+ const R=require('../snapshot-functions/alimtalk-contract'),s=fixture();
+ s.data.grid[16]=[[]];
+ for(let h=10;h<13;h++)s.data.grid[h]=[['개별 수학 검증T','가학생 가상고2 정규 10/31(토), 지각, 10시 또는 11시 시작']];
+ const compose=()=>R.compose({id:'s',name:'가학생',mappingVerified:true},s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
+ assert.deepEqual(compose().reasons,[]);assert.match(compose().text,/수학 정규 10:00–13:00/);
+ s.data.grid[10][0][1]+='\n11/7(토) 10:30–13:00';
+ assert.deepEqual(compose().reasons,[]);assert.match(compose().text,/정규 10:30–13:00/);
+ s.data.grid[10][0][1]='가학생 가상고2 정규 11/7(토), 10시 또는 11시 시작';
+ assert.deepEqual(compose().reasons,['시간 메모 확인 필요']);
+});
+test('retaker aliases are academic fields, not a match on words in a note',()=>{
+ const R=require('../snapshot-functions/alimtalk-contract'),s=fixture();
+ for(const label of ['고3@','재수','재수1','재수2','재수생','교육청','교육청3']){
+  s.data.grid[16][0][1]='가학생 '+label+' 정규';
+  const e=parseSnapshot(s,now).entries[0];assert.equal(e.sourceSchool,'재수생');assert.deepEqual(e.lesson.reviewReasons,[]);
+ }
+ for(const [school,grade] of [['재수','1'],['고','3@'],['교육청','3']])assert.equal(R.directorySchoolKey(school,grade),'재수생');
+ s.data.grid[16][0][1]='가학생 가상고3 정규 교육청 모의고사';assert.equal(parseSnapshot(s,now).entries[0].sourceSchool,'가상고3');
+ s.data.grid[16][0][1]='가학생 정규 교육청 모의고사';assert.equal(parseSnapshot(s,now).entries[0].sourceSchool,'');
+ assert.equal(R.directorySchoolKey('가상고','3'),'가상고3');
 });

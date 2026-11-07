@@ -1,6 +1,6 @@
 'use strict';
 const {hash}=require('./alimtalk-service'),core=require('./core');
-const {exclusion,readTimeNote}=require('./alimtalk-contract');
+const {exclusion,isRetakerLabel,readTimeNote}=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 // Conservative grammar: unsupported cells are held, never guessed or silently omitted.
 const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
@@ -16,14 +16,18 @@ function parseSnapshot(snapshot,now=Date.now()){
   for(let index=0;index<items.length;index++){
    const raw=items[index].trim();if(!raw||headers.includes(items[index]))continue;
    if(/^(자습|자기주도학습)$/.test(raw))continue; // Explicit label, not a named student's lesson.
-   const parts=raw.split(/\s+/),name=parts[0],school=parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
+   const chunks=raw.match(/\S+\s*/g),parts=chunks.map(s=>s.trimEnd()),name=parts[0];
+   const schoolToken=isRetakerLabel(parts[1])?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
+   const school=isRetakerLabel(schoolToken)?'재수생':schoolToken;
    if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!(header&&parts.slice(1).some(s=>statuses.has(s))))){issues.push('STUDENT_TEXT_UNRECOGNIZED');continue;}
    const found=parts.slice(1).filter(s=>statuses.has(s)),cancel=found.find(s=>exclusion({status:s}));
    const status=/휴강/.test(roomText)?'휴강':cancel||found[0]||'';
    // Preserve every identifiable occurrence, including held/cancelled lessons.
    // Human ID mapping cannot clear a lesson hold; compose independently blocks that student.
    const reviewReasons=[];
-   const timeNote=readTimeNote(parts.slice(1).join(' '),status);
+   let noteIndex=schoolToken&&parts[1]===schoolToken?2:1;
+   if(statuses.has(parts[noteIndex]))noteIndex++;
+   const timeNote=readTimeNote(chunks.slice(noteIndex).join(''),status,snapshot.date);
    if(!school)reviewReasons.push('학교·학년 확인 필요');
    if(!exclusion({status})){
     if(!room)reviewReasons.push('강의실 표기 확인 필요');
