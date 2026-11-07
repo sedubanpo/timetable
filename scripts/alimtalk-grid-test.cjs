@@ -94,3 +94,11 @@ test('retaker aliases are academic fields, not a match on words in a note',()=>{
  s.data.grid[16][0][1]='가학생 정규 교육청 모의고사';assert.equal(parseSnapshot(s,now).entries[0].sourceSchool,'');
  assert.equal(R.directorySchoolKey('가상고','3'),'가상고3');
 });
+
+test('standalone self study heading is not a student and does not block the date',()=>{
+ for(const label of ['자습','자기주도','자기주도학습']){
+  const s=fixture();s.data.grid[15]=[[label]];const p=parseSnapshot(s,now);
+  assert(p.complete);assert.equal(p.entries.length,1);assert.equal(p.entries[0].sourceName,'가학생');
+ }
+ const s=fixture();s.data.grid[15]=[['자기주도 확인필요']];assert.equal(parseSnapshot(s,now).complete,false);
+});

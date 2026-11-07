@@ -111,3 +111,19 @@ test('lesson comparison ignores numbering, highlights changed fields, separates 
  assert.equal(changes.length,2);assert.equal(changes[0].before.time,'10:00–12:00');assert.equal(changes[0].after.room,'본관 2강의실');assert(!changes[1].before);
  assert.equal(diff(body([sci]),body([]))[0].after,undefined);assert.equal(diff('이전 양식',body([])),null);
 });
+
+test('authorized staff operate both audiences and histories; revoked access cannot refresh or send',async()=>{
+ for(const role of ['STAFF','DESK']){
+  const x=setup(1);Object.assign(x.auth,{role,canSendTimetable:true});
+  for(const audience of ['guardian','student']){
+   const p=await x.preview({audience});assert(p.previewId);assert.equal(p.items.length,1);
+   assert.equal((await x.b.batchHistory('',{...x.base,audience})).results.length,0);
+   const sent=await x.send(p);assert.equal(sent.results.length,1);
+   const history=await x.b.batchHistory('',{...x.base,audience});assert.equal(history.results.length,1);assert(!JSON.stringify(history).includes('0100000'));
+   await x.b.batchRefresh('',{...x.base,audience,ids:history.results.map(r=>r.id)});
+  }
+  x.auth.active=false;
+  await assert.rejects(x.b.batchHistory('',x.base),{code:'FORBIDDEN'});
+  await assert.rejects(x.b.batchRefresh('',{...x.base,ids:[]}),{code:'FORBIDDEN'});
+ }
+});

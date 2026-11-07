@@ -7,7 +7,8 @@ function createAdminTest({authorize,store,provider,testPhone,now=Date.now}){
  const recipients=require('./alimtalk-test-recipients').testRecipients(testPhone);
  const id='__alimtalk_admin_test__';
  const today=()=>new Date(now()+9*3600000).toISOString().slice(0,10);
- const service=createService({authorize,store,provider,now,loadDay:async(actor,date,ids)=>{
+ const adminAuthorize=async session=>{const actor=await authorize(session);if(actor?.role!=='ADMIN')fail('FORBIDDEN');return actor;};
+ const service=createService({authorize:adminAuthorize,store,provider,now,loadDay:async(actor,date,ids)=>{
   if(date!==today()||ids.length!==1||ids[0]!==id)fail('TEST_SCOPE_REQUIRED');
   if(!recipients.length)fail('TEST_PHONE_NOT_CONFIGURED');
   const lessons=[{sourceId:'admin-test-1',studentId:id,date,subject:'수학',teacher:'테스트담당',building:'본관',room:'6강의실',type:'1:1',start:'16:00',end:'17:00',status:'정규'}];

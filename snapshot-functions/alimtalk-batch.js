@@ -20,7 +20,7 @@ async function pooled(items,fn){
  return result;
 }
 function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,provider,services,now=Date.now}){
- async function actor(session){const a=await authorize(session);if(!a?.uid||a.role!=='ADMIN'||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
+ async function actor(session){const a=await authorize(session);if(!a?.uid||!['ADMIN','STAFF','DESK'].includes(a.role)||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
  async function reviewer(session){
   const a=await authorize(session,{reviewBatch:true});
   if(!a?.uid||a.active!==true||a.academyId!=='banpo'||!['ADMIN','STAFF','DESK'].includes(a.role))fail('FORBIDDEN');

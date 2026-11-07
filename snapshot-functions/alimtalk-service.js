@@ -20,7 +20,7 @@ function verifyWebhook(secret,header){
   return crypto.timingSafeEqual(Buffer.from(crypto.createHash('sha1').update(secret).digest('hex')),Buffer.from(header));
 }
 function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8000,webhookSecret,kind='daily-lessons'}){
-  async function auth(session){const a=await bounded(()=>authorize(session),deadline);if(!a?.uid||a.role!=='ADMIN'||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
+  async function auth(session){const a=await bounded(()=>authorize(session),deadline);if(!a?.uid||!['ADMIN','STAFF','DESK'].includes(a.role)||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
   async function plan(actor,input){
     if(!rules.validDate(input.date)||!Array.isArray(input.targets)||!input.targets.length||input.targets.length>20)fail('INVALID_REQUEST');
     if(input.targets.some(t=>typeof t.studentId!=='string'||!t.studentId||t.studentId.length>128))fail('STUDENT_ID_REQUIRED');

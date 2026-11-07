@@ -5,7 +5,7 @@ const button=(s,fn)=>{const b=el('button',s);b.type='button';b.onclick=fn;return
 const body=(title,text)=>{const d=el('details');d.append(el('summary',title),el('pre',text));return d;};
 const audienceName=a=>a==='student'?'학생 본인':'학부모';
 const errorText=e=>({BATCH_CHANGED:'시간표, 번호 또는 발송 기록이 바뀌었습니다. 명단과 본문을 다시 확인하세요.',
- PREVIEW_EXPIRED:'검토 시간이 지났거나 대상이 바뀌었습니다. 다시 검토하세요.',FORBIDDEN:'반포관 관리자 로그인이 필요합니다.',
+ PREVIEW_EXPIRED:'검토 시간이 지났거나 대상이 바뀌었습니다. 다시 검토하세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 허브 로그인과 시간표·데스크 접근 권한을 확인해 주세요.',
  SOURCE_INCOMPLETE:'원본 시간표에 해석할 수 없는 수업이 있습니다.',RATE_LIMIT:'잠시 후 이력을 확인하고 다시 검토하세요.',
  TEMPLATE_MISMATCH:'승인된 알림톡 양식을 확인할 수 없습니다.'}[e?.code]||'서버에서 확인하지 못했습니다. '+(e?.code||''));
 function readLessons(text){
