@@ -64,3 +64,10 @@ test('arrival records preserve a contiguous regular schedule; uncertain lesson s
  assert.equal(R.readTimeNote('지각, 10시 또는 11시 시작','정규').held,true);
  assert.equal(R.readTimeNote('지각, 10:20 도착예정','정규').held,false);
 });
+
+test('held arrival/start note keeps the full grid lesson visible without permitting send',()=>{
+ const R=require('../snapshot-functions/alimtalk-contract'),s=fixture();s.data.grid[16]=[[]];
+ for(let h=10;h<13;h++)s.data.grid[h]=[['개별 수학 검증T','가학생 가상고2 정규'+(h===10?' 지각, 10시 또는 11시 시작':'')]];
+ const c=R.compose({id:'s',name:'가학생',mappingVerified:true},s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
+ assert.deepEqual(c.reasons,['시간 메모 확인 필요']);assert.equal(c.lessons.length,1);assert.match(c.text,/수학 정규 10:00–13:00/);
+});
