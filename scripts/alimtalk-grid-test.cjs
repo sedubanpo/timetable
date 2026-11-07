@@ -40,14 +40,27 @@ test('source subtypes and day-specific shorthand survive both message formatting
  const R=require('../assets/alimtalk-contract');
  for(const [from,to,raw,label] of [
    [13,15,'당취보충 11/7(토) 수업은 11/6(금) 2시간 당취에 대한 당취보충','당취보충'],
-   [18,21,'신규생 11/7(토)부터 합류, 오늘만 18-21시. 이후로 시간 수정.','오늘만'],
-   [19,22,'첫수업 11/7(토) 첫수업. 오늘만 19-22시, 다음주부터 조정','오늘만']
+   [18,21,'신규생 11/7(토)부터 합류, 오늘만 18-21시. 이후로 시간 수정.','신규생 · 오늘만'],
+   [19,22,'첫수업 11/7(토) 첫수업. 오늘만 19-22시, 다음주부터 조정','첫수업 · 오늘만']
  ]){
    const s=fixture();s.data.grid[16]=[[]];
    for(let h=from;h<to;h++)s.data.grid[h]=[['개별 과학 검증T','가학생 가상중3 '+raw]];
    const c=R.compose({id:'s',name:'가학생',mappingVerified:true},s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
    assert.deepEqual(c.reasons,[]);assert.equal(c.lessons.length,1);
    assert(c.text.includes('과학 '+label+' '+from+':00–'+to+':00'));
-   const card=R.cardTimeRange(from,to,raw);assert.equal(card.start,from);assert.equal(card.end,to);assert.equal(card.todayOnly,label==='오늘만');
+   const card=R.cardTimeRange(from,to,raw);assert.equal(card.start,from);assert.equal(card.end,to);assert.equal(card.todayOnly,label.includes('오늘만'));
  }
+});
+
+test('arrival records preserve a contiguous regular schedule; uncertain lesson starts remain held',()=>{
+ const R=require('../assets/alimtalk-contract');
+ for(const status of ['정규','지각']){
+  const s=fixture();s.data.grid[16]=[[]];
+  s.data.grid[10]=[['개별 국어 검증T','가학생 가상중3 '+status+' 지각, 10:11 도착']];
+  s.data.grid[11]=[['개별 국어 검증T','가학생 가상중3 정규']];
+  const c=R.compose({id:'s',name:'가학생',mappingVerified:true},s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
+  assert.deepEqual(c.reasons,[]);assert.equal(c.lessons.length,1);assert.match(c.text,/국어 정규 10:00–12:00/);
+ }
+ assert.equal(R.readTimeNote('지각, 10시 또는 11시 시작','정규').held,true);
+ assert.equal(R.readTimeNote('지각, 10:20 도착예정','정규').held,false);
 });

@@ -17,8 +17,10 @@
   function clock(n){return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
   function validDate(d){return /^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;}
   // A clock without 오전/오후 is resolved only against this lesson's grid block.
+  // Attendance lateness does not change the scheduled lesson category.
+  function scheduleStatus(status){const s=String(status||'').trim();return s==='지각'?'정규':s;}
   function lessonStatusLabel(status,todayOnly){
-    const labels={정규:'정규',보충:'보충',보강:'보강',결석보강:'결석보강',당취보충:'당취보충',일반보충:'보충',오늘만:'오늘만'};
+    const labels={정규:'정규',보충:'보충',보강:'보강',결석보강:'결석보강',당취보충:'당취보충',일반보충:'보충',오늘만:'오늘만',첫수업:'첫수업',신규생:'신규생'};
     const label=Object.hasOwn(labels,status)?labels[status]:'';
     return todayOnly&&label!=='오늘만'?[label,'오늘만'].filter(Boolean).join(' · '):label;
   }
@@ -30,6 +32,8 @@
       todayOnly=true;
       return prefix+start+':00-'+end+':00';
     });
+    // Explicit arrival records are attendance notes, not lesson start/end overrides.
+    if(/지각/.test(note))note=note.replace(/(?:오전|오후)?\s*\d{1,2}:\d{2}\s*도착(?:\s*예정)?/g,' ');
     const token='(오전|오후)?\\s*(\\d+)(?::(\\d+)|\\s*시(?:\\s*(\\d+)\\s*분?)?)';
     const pattern=new RegExp('(?:^|[^\\d:])'+token+'\\s*[-~～–—]\\s*'+token+'(?![\\d:])','g');
     function candidates(hour,minute,period){
@@ -79,7 +83,7 @@
       if(fields.some(k=>typeof r[k]!=='string'||!r[k].trim())){reasons.push('필수 수업 정보 누락');continue;}
       const start=time(r.start),end=time(r.end);
       if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start){reasons.push('수업 시각 확인 필요');continue;}
-      lessons.push({subject:r.subject.trim(),teacher:r.teacher.trim(),building:r.building.trim(),room:r.room.trim(),type:r.type.trim(),status:String(r.status||'').trim(),timeRanges:[...(r.timeRanges||[])],todayOnly:r.todayOnly===true,start,end,sourceIds:[r.sourceId]});
+      lessons.push({subject:r.subject.trim(),teacher:r.teacher.trim(),building:r.building.trim(),room:r.room.trim(),type:r.type.trim(),status:scheduleStatus(r.status),timeRanges:[...(r.timeRanges||[])],todayOnly:r.todayOnly===true,start,end,sourceIds:[r.sourceId]});
     }
     lessons.sort((a,b)=>a.start-b.start||a.end-b.end||JSON.stringify(a).localeCompare(JSON.stringify(b)));
     const merged=[];
@@ -124,5 +128,5 @@
     return !!t&&t.templateId===templateId&&(t.channelId||t.pfId)===pfId&&t.name===templateName&&t.status==='APPROVED'&&t.content===content&&!t.isDeleted&&!t.isHidden;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,exclusion,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,exclusion,scheduleStatus,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });

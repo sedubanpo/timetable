@@ -33,6 +33,19 @@ for(const file of ['Index.html','docs/index.html']){
  scope.buildStudentImageMap();
  const makeup=scope.buildStudentCardViewModel('검증학생').timelineRows[0];
  assert.equal(makeup.status,'결석보강');assert.equal(makeup.end,16.5);assert.match(makeup.timeNote,/16:30까지 보강/);
+ // The real frontend parser retains attendance details but schedule grouping uses the source status.
+ for(const status of ['정규','지각','보충','첫수업','신규생']){
+  Object.assign(scope,{SCHEDULE_START_HOUR:10,SCHEDULE_END_HOUR:11,lastData:{headers:['1강의실'],grid:{
+   10:[['개별 국어 검증T','검증학생 가상중3 '+status+' 지각, 10:11 도착']],
+   11:[['개별 국어 검증T','검증학생 가상중3 '+(status==='지각'?'정규':status)]]
+  }}});
+  scope.buildStudentImageMap();
+  const scheduled=scope.buildStudentCardViewModel('검증학생').timelineRows;
+  assert.equal(scheduled.length,1,status);assert.equal(scheduled[0].start,10);assert.equal(scheduled[0].end,12);
+  assert.equal(scheduled[0].status,status==='지각'?'정규':status);
+  assert.equal(scope.TimetableAlimtalk.lessonStatusLabel(scheduled[0].status,false),status==='지각'?'정규':status);
+ }
+ assert.equal(scope.parseStudentRawText('검증학생 가상중3 정규 지각, 10:11 도착').status,'지각','live attendance still shows lateness');
  scope.currentSheetName='9/22';assert.match(scope.previewNoteValue('card','검증학생',rows[0]),/내부 메모/);
  assert.match(source,/onclick="downloadAbsenceNoticeImage\(\)">이미지 저장<\/button>\s*<button[^>]+onclick="copyAbsenceNoticeImage\(\)">이미지 복사/);
  assert.match(source,/previewNoteHidden\("absence",name,v\)/);
