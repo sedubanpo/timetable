@@ -83,9 +83,20 @@ test('RETURNED accepted by user policy; deleted and disabled documents rejected'
   const f=setup();f.docs[f.student.id].status='RETURNED';assert.equal((await f.resolve(f.student.id)).id,f.student.id);
   for(const patch of [{isDeleted:true},{deletedAt:'synthetic-date'},{disabled:true}]){const g=setup();Object.assign(g.docs[g.student.id],patch);await assert.rejects(g.resolve(g.student.id),{code:'STUDENT_NOT_ACTIVE'});}
 });
-test('missing contact/campus review never inferred from administrator campus',async()=>{
-  const f=setup();f.deps.loadDay=withStudentDirectory({loadMappedDay:async()=>structuredClone(f.day),resolveStudent:f.resolve});
-  const p=await createService(f.deps).preview('',f.input);assert.equal(p.counts.messages,0);assert(p.rows[0].reasons.length);
+test('missing contact clearance keeps a verified lesson mapping and blocks every recipient',async()=>{
+  const f=setup();
+  f.student.identityRevision=(await f.resolve(f.student.id)).identityRevision;
+  f.deps.loadDay=withStudentDirectory({loadMappedDay:async()=>structuredClone(f.day),resolveStudent:f.resolve});
+  const service=createService(f.deps),preview=await service.preview('',f.input);
+  assert.equal(preview.counts.messages,0);
+  assert.deepEqual(preview.rows[0].choices,[]);
+  assert(preview.rows[0].reasons.includes('받는 번호·연락 가능 여부 확인 필요'));
+  assert(!preview.rows[0].reasons.includes('학생 ID 매핑 미확인'));
+  await assert.rejects(service.send('',{previewId:preview.previewId}),{code:'HELD'});
+  f.student.identityRevision='outdated';
+  const changed=await service.preview('',f.input);
+  assert(changed.rows[0].reasons.includes('학생 ID 매핑 미확인'));
+  assert.equal(f.sent.length,0);
 });
 test('review scope, identity, mapping, relation, number and revocation checked again before send',async()=>{
   for(const mutate of [r=>r.academyId='other',r=>r.studentId='other',r=>r.date='2026-10-29',r=>r.mappingRevision='old',r=>r.identityRevision='old',r=>r.campusConfirmed=false,r=>r.checkedBy='',r=>r.checkedAt=Infinity,r=>r.recipients.mother.allowed=false,r=>r.recipients.mother.phoneHash='wrong']){

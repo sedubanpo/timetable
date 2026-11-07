@@ -65,20 +65,27 @@ function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,now=Da
       const matches=(day.students||[]).filter(s=>s.id===id);
       if(matches.length!==1){students.push({id,name:'',mappingVerified:false,lessons:[],recipients:[],holdReasons:['학생 원본 매핑 불명확']});continue;}
       const mapped=matches[0];
+      let student;
       try{
         if(mapped.mappingVerified!==true||!mapped.mappingRevision)fail('SOURCE_MAPPING_UNVERIFIED');
-        const student=await resolveStudent(id,signal);
+        student=await resolveStudent(id,signal);
         // A merge requires operator re-confirmation and historical dedupe reconciliation.
         // Do not silently change the key used by previews and delivery records.
         if(student.id!==id)fail('CANONICAL_RECONFIRM_REQUIRED');
+        if(mapped.identityRevision && mapped.identityRevision!==student.identityRevision)fail('IDENTITY_CHANGED');
+      }catch(e){
+        if(signal?.aborted||e.code==='ABORTED')throw e;
+        students.push({...mapped,mappingVerified:false,recipients:[],holdReasons:[e.code||'STUDENT_DIRECTORY_UNAVAILABLE']});
+        continue;
+      }
+      try{
         const clearance=typeof readClearance==='function'?await readClearance(actor,id,date,signal):null;
         if(!clearance||clearance.academyId!==actor.academyId||clearance.studentId!==id||clearance.date!==date||clearance.mappingRevision!==mapped.mappingRevision||clearance.identityRevision!==student.identityRevision||!clearance.revision||!clearance.checkedBy||!Number.isFinite(clearance.checkedAt)||clearance.checkedAt>now()||clearance.campusConfirmed!==true)fail('CONTACT_CLEARANCE_REQUIRED');
-        if(mapped.identityRevision && mapped.identityRevision!==student.identityRevision)fail('IDENTITY_CHANGED');
         student.recipients=student.recipients.filter(r=>audience==='student'?r.id==='student':r.id==='father'||r.id==='mother').map(r=>({...r,verified:r.verified&&clearance.recipients?.[r.id]?.allowed===true&&clearance.recipients[r.id].phoneHash===digest(r.phone)})).filter(r=>r.verified);
         students.push({...mapped,...student,mappingRevision:digest([mapped.mappingRevision,student.identityRevision,clearance.revision])});
       }catch(e){
         if(signal?.aborted||e.code==='ABORTED')throw e;
-        students.push({...mapped,mappingVerified:false,recipients:[],holdReasons:[e.code||'STUDENT_DIRECTORY_UNAVAILABLE']});
+        students.push({...mapped,name:student.name,recipients:[],holdReasons:['CONTACT_CLEARANCE_REQUIRED']});
       }
     }
     return {...day,students};
