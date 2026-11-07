@@ -25,7 +25,8 @@ function openCardBulk(mode){
  if(!cardBulkUI)cardBulkUI=TimetableBatchUI.mount({host,api:cardAlimtalkApi,context:cardBatchContext,refresh:reloadCardRoster});
  const label=cardAudience==='student'?'학생 본인':'학부모';
  document.querySelector('#studentImageModal .student-preview-panel-title').textContent=label+' · '+currentSheetName;
- host.hidden=false;host.dataset.bulk='true';
+ document.querySelector('#studentImageModal .student-preview-panel-sub').textContent=mode==='changed'?'수신 완료된 알림톡과 현재 시간표를 비교합니다.':mode==='history'?'수신자별 발송 결과를 확인하세요.':'받을 번호와 안내 본문을 확인하세요.';
+ host.hidden=false;host.dataset.bulk='true';host.dataset.bulkMode=mode;
  if(mode==='history')cardBulkUI.history();else cardBulkUI.review(mode);
  host.scrollIntoView({block:'nearest'});
 }

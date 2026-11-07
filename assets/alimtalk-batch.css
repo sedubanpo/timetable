@@ -26,3 +26,21 @@
 #studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) .recipient-setup{display:none}
 @media(min-width:561px){#studentImageModal[data-card-mode=message] .student-dashboard-layout{grid-template-columns:clamp(315px,34%,490px) minmax(0,1fr)}}
 @media(max-width:560px){#studentImageModal .batch-bar{padding:7px;margin-bottom:5px;gap:4px}#studentImageModal .batch-bar button{font-size:12px;padding:6px 8px}#studentImageModal[data-card-mode=message] .student-list-panel{max-height:34dvh}#studentImageModal[data-card-mode=message] .student-list{max-height:18dvh}#studentImageModal .roster-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#cardAlimtalkPanel .change-overview{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.4rem 1rem;border-bottom:1px solid #dce4ea;padding-bottom:12px}
+#cardAlimtalkPanel .change-overview h3,#cardAlimtalkPanel .change-student h4{margin:0;color:#173b55}
+#cardAlimtalkPanel .change-overview span,#cardAlimtalkPanel .change-caption,#cardAlimtalkPanel .change-lesson small{color:#536878;font-size:.85rem}
+#cardAlimtalkPanel .change-empty{margin:16px 0 0;padding:20px;background:#f1f7f5;border-radius:10px;color:#245448}
+#cardAlimtalkPanel .change-empty p,#cardAlimtalkPanel .change-lesson p{margin:.4rem 0 0}
+#cardAlimtalkPanel .change-count{font-weight:700;color:#324f64}
+#cardAlimtalkPanel .change-student{border:1px solid #d8e2eb;border-radius:12px;padding:16px;margin:12px 0;background:#fff}
+#cardAlimtalkPanel .change-caption{margin-top:12px}
+#cardAlimtalkPanel .change-hold{color:#865018;font-size:.85rem}
+#cardAlimtalkPanel .change-lesson{margin:7px 0;padding:12px;background:#f5f8fa;border-radius:8px;font-variant-numeric:tabular-nums;line-height:1.6}
+#cardAlimtalkPanel .change-title,#cardAlimtalkPanel .change-field{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+#cardAlimtalkPanel .change-field{margin-top:6px}
+#cardAlimtalkPanel .change-field del{color:#576979}
+#cardAlimtalkPanel .change-field strong{color:#184b69}
+#cardAlimtalkPanel .change-tag{border-radius:5px;padding:1px 7px;font-weight:700;font-size:.8rem}
+#cardAlimtalkPanel .change-tag.edit{background:#fff0bc;color:#70520d}
+#cardAlimtalkPanel .change-tag.add{background:#d8efe4;color:#205741}
+#cardAlimtalkPanel .change-tag.remove{background:#f9e2e2;color:#823b3d}

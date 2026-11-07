@@ -21,6 +21,11 @@ async function pooled(items,fn){
 }
 function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,provider,services,now=Date.now}){
  async function actor(session){const a=await authorize(session);if(!a?.uid||a.role!=='ADMIN'||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
+ async function reviewer(session){
+  const a=await authorize(session,{reviewChanges:true});
+  if(!a?.uid||a.active!==true||a.academyId!=='banpo'||!['ADMIN','STAFF','DESK'].includes(a.role))fail('FORBIDDEN');
+  return a;
+ }
  function validate({date,audience}){if(!rules.validDate(date)||typeof audience!=='string'||!Object.hasOwn(kinds,audience))fail('INVALID_REQUEST');}
  async function scan(a,{date,audience},only){
   const kind=kinds[audience];
@@ -64,10 +69,11 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    });
    // A removed/replaced number is not evidence that the new number has received anything.
    const byPhone=new Map();for(const r of received)if(!byPhone.has(r.phone))byPhone.set(r.phone,r);
+   const comparisons=[...byPhone.values()].filter(r=>r.version!==version).map(r=>({previous:r.text||'',relation:r.relation,receivedAt:r.createdAt}));
    const changed=items.some(t=>t.state==='changed')||(!items.length&&[...byPhone.values()].some(r=>r.version!==version));
    const state=changed?'changed':items.some(t=>t.state==='unsent')?'unsent':items.some(t=>t.state==='pending')?'pending':
     items.length?'sent':past.some(r=>outstanding.has(r.state))?'pending':received.length?'held':'unsent';
-   return {id,name,state,issue,text:c.text,items,failed:items.some(t=>t.lastState==='FAILED'),past};
+   return {id,name,state,issue,text:c.text,comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
   });
   if(!only){
    const seen=new Set(rows.map(r=>r.name));
@@ -79,21 +85,29 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
  }
  const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,failed:!!r.failed});
  async function roster(session,input){
-  const a=await actor(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
-  const rows=await scan(a,input);await actor(session);return {rows:rows.map(summary)};
+  const a=await reviewer(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
+  const rows=await scan(a,input);await reviewer(session);return {rows:rows.map(summary)};
  }
  async function prepare(session,input){
-  const a=await actor(session);validate(input);
-  const {date,audience,mode}=input;if(!['unsent','changed'].includes(mode))fail('INVALID_REQUEST');
+  const {date,audience,mode}=input;
+  const authorizePreview=mode==='changed'?reviewer:actor;
+  const a=await authorizePreview(session);validate(input);
+  if(!['unsent','changed'].includes(mode))fail('INVALID_REQUEST');
   await store.rate(a.uid,'batchPreview',now(),15);
-  const [rows,t]=await Promise.all([scan(a,input),provider.getTemplate(rules.templateId)]);
-  if(!rules.verifyTemplate(t))fail('TEMPLATE_MISMATCH');
+  const rows=await scan(a,input);
+  const changes=mode==='changed'?rows.filter(r=>r.comparisons?.length).map(r=>({
+   name:r.name,studentId:r.id,current:r.text,issue:r.issue,comparisons:r.comparisons
+  })):[];
+  const access=await authorizePreview(session);
+  if(!access.canSendTimetable||!a.canSendTimetable)
+   return {date,audience,mode,readOnly:true,changes,rows:rows.map(summary),items:[]};
+  if(!rules.verifyTemplate(await provider.getTemplate(rules.templateId)))fail('TEMPLATE_MISMATCH');
   const tickets=rows.flatMap(r=>r.items.filter(x=>x.state===mode));
   const previewId=randomUUID(),expires=now()+15*60000;
   await actor(session);
   if(tickets.length)await store.savePreview(previewId,{kind:'bulk',academyId:a.academyId,actor:a.uid,date,audience,mode,expires,
    tickets:Object.fromEntries(tickets.map(x=>[x.ticket,x.studentId]))});
-  return {date,audience,mode,previewId,expires,rows:rows.map(summary),items:tickets.map(x=>({
+  return {date,audience,mode,previewId,expires,changes,rows:rows.map(summary),items:tickets.map(x=>({
    ticket:x.ticket,studentId:x.studentId,name:x.name,relation:x.recipient.relation,masked:rules.mask(x.recipient.phone),previous:x.previous,text:x.text,retry:x.lastState==='FAILED'
   }))};
  }

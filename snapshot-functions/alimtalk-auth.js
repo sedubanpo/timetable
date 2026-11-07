@@ -3,14 +3,17 @@
 const blockedEmployment=new Set(['INACTIVE','RETIRED','RESIGNED','TERMINATED','LEAVE','ON_LEAVE','퇴사','퇴직','휴직']);
 function denied(){throw Object.assign(Error('FORBIDDEN'),{code:'FORBIDDEN'});}
 function createAuthorizer({verifyIdToken,readAccount}){
-  return async session=>{
+  return async (session,{reviewChanges=false}={})=>{
     const token=typeof session?.authorization==='string'?session.authorization.match(/^Bearer (\S+)$/)?.[1]:null;
     if(!token)denied();
     let decoded;try{decoded=await verifyIdToken(token,true);}catch{denied();}
     if(!decoded?.uid)denied();
     const {user={},access={},scope={}}=await readAccount(decoded.uid);
-    if(user.status!=='ACTIVE'||user.role!=='ADMIN'||user.active===false||user.isActive===false||user.disabled===true||blockedEmployment.has(user.employmentStatus)||scope.enabled!==true||scope.campusId!=='banpo'||access.apps?.deskPortal!==true||access.apps?.liveTimetable===false)denied();
-    return {uid:decoded.uid,role:'ADMIN',active:true,academyId:'banpo',canSendTimetable:true};
+    if(user.status!=='ACTIVE'||user.active===false||user.isActive===false||user.disabled===true||blockedEmployment.has(user.employmentStatus)||scope.enabled!==true||scope.campusId!=='banpo'||access.apps?.deskPortal!==true||access.apps?.liveTimetable===false)denied();
+    const admin=user.role==='ADMIN';
+    const staff=['STAFF','DESK'].includes(user.role) && access.apps?.liveTimetable===true;
+    if(!admin && !(reviewChanges && staff))denied();
+    return {uid:decoded.uid,role:user.role,active:true,academyId:'banpo',canSendTimetable:admin};
   };
 }
 function firestoreAccountReader(db){return async uid=>{

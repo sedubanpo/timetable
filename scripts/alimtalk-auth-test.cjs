@@ -7,3 +7,13 @@ const session={authorization:'Bearer synthetic-token'};
 test('strict administrator and campus independent of Origin; revocation checked each call',async()=>{const f=setup();await f.auth({...session,origin:'https://any.invalid'});await f.auth(session);assert.deepEqual(f.calls,[true,true]);f.data.scope.enabled=false;await assert.rejects(f.auth(session),{code:'FORBIDDEN'});});
 test('delegated account manager, inactive, disabled, leave, missing scope and app denied',async()=>{for(const mutate of [d=>{d.user.role='STAFF';d.access.permissions={canManageAccounts:true};},d=>d.user.active=false,d=>d.user.isActive=false,d=>d.user.disabled=true,d=>d.user.status='DISABLED',d=>d.user.employmentStatus='휴직',d=>d.scope.campusId='other',d=>d.access.apps.deskPortal=false,d=>d.access.apps.liveTimetable=false]){const f=setup();mutate(f.data);await assert.rejects(f.auth(session),{code:'FORBIDDEN'});}});
 test('invalid token and missing authorization fail without data fallback',async()=>{const f=setup();await assert.rejects(f.auth({}),{code:'FORBIDDEN'});const auth=createAuthorizer({verifyIdToken:async()=>{throw Error('expired');},readAccount:async()=>{throw Error('SHOULD_NOT_READ');}});await assert.rejects(auth(session),{code:'FORBIDDEN'});});
+test('active campus staff can read schedule changes with both apps, without sending authority',async()=>{
+ for(const role of ['STAFF','DESK']){
+  const {auth,data}=setup();data.user.role=role;
+  assert.equal((await auth(session,{reviewChanges:true})).canSendTimetable,false);
+  await assert.rejects(auth(session),{code:'FORBIDDEN'});
+  for(const [obj,key,value] of [[data.scope,'enabled',false],[data.scope,'campusId','other'],[data.user,'role','TEACHER'],[data.user,'status','INACTIVE'],[data.access.apps,'liveTimetable',false],[data.access.apps,'deskPortal',false]]){
+   const prior=obj[key];obj[key]=value;await assert.rejects(auth(session,{reviewChanges:true}),{code:'FORBIDDEN'});obj[key]=prior;
+  }
+ }
+});

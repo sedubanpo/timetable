@@ -75,3 +75,25 @@ test('one history refresh applies terminal lookup results without sending and re
  const args={...x.base,ids:results.map(r=>r.id)};await assert.rejects(x.b.batchRefresh('',{...args,audience:'student'}),{code:'FORBIDDEN'});
  await x.b.batchRefresh('',args);const h=await x.b.batchHistory('',args);assert.deepEqual(h.results.map(r=>r.state).sort(),['DELIVERED','FAILED']);assert.equal(x.f.sent.length,2);
 });
+test('staff review compares the last delivery even when contact is held, and never issues tickets',async()=>{
+ const x=setup(1);await x.send(await x.preview());
+ x.src.entries[0].lesson.end='18:00';delete x.clear.id1;
+ Object.assign(x.auth,{role:'STAFF',canSendTimetable:false});
+ const p=await x.preview({mode:'changed'});
+ assert.equal(p.readOnly,true);assert.deepEqual(p.items,[]);assert(!p.previewId);
+ assert.equal(p.changes.length,1);assert.match(p.changes[0].issue,/번호/);
+ assert.match(p.changes[0].current,/18:00/);assert.match(p.changes[0].comparisons[0].previous,/17:00/);
+ assert(!JSON.stringify(p).includes('0100000'));
+ assert.deepEqual((await x.preview({mode:'changed',audience:'student'})).changes,[]);
+ await assert.rejects(x.preview(),{code:'FORBIDDEN'});await assert.rejects(x.send(p),{code:'FORBIDDEN'});
+});
+test('lesson comparison ignores numbering, highlights changed fields, separates ambiguous and removed lessons',()=>{
+ require('../assets/alimtalk-batch-ui');
+ const diff=globalThis.TimetableBatchUI.lessonChanges;
+ const block=(n,s,time,room='1강의실')=>n+' '+s+' '+time+'\n가상T · 개별 1시간\n본관 '+room;
+ const body=blocks=>'[수업 안내: 과목·시간·강사·관·강의실]\n'+blocks.join('\n\n')+'\n\n수업 일정에 관한 변경 문의';
+ const math=block('①','수학 정규','10:00–12:00'),sci=block('②','과학 보충','14:00–15:00');
+ const changes=diff(body([math,sci]),body([sci.replace('②','①'),block('②','수학 정규','11:00–12:00','2강의실'),block('③','영어 오늘만','17:00–18:00')]));
+ assert.equal(changes.length,2);assert.equal(changes[0].before.time,'10:00–12:00');assert.equal(changes[0].after.room,'본관 2강의실');assert(!changes[1].before);
+ assert.equal(diff(body([sci]),body([]))[0].after,undefined);assert.equal(diff('이전 양식',body([])),null);
+});
