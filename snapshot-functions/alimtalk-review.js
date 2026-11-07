@@ -3,7 +3,7 @@
 const crypto=require('node:crypto');
 const {hash}=require('./alimtalk-service');
 const {contactHash}=require('./alimtalk-students');
-const {mask,validDate}=require('./alimtalk-contract');
+const {mask,validDate,directorySchoolKey}=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 function createReviewService({authorize,loadSource,searchStudents,resolveStudent,store,now=Date.now}){
   async function auth(session){const a=await authorize(session);if(!a?.uid||!['ADMIN','STAFF','DESK'].includes(a.role)||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
@@ -18,6 +18,7 @@ function createReviewService({authorize,loadSource,searchStudents,resolveStudent
     const student=await resolveStudent(input.studentId);if(student.id!==input.studentId)fail('CANONICAL_RECONFIRM_REQUIRED');
     const revision=crypto.randomUUID();
     const mapping={academyId:a.academyId,date:s.date,studentId:student.id,sourceRevision:s.revision,revision,verifiedBy:a.uid,verifiedAt:now(),entries:entries.map(e=>({id:e.id,fingerprint:e.fingerprint})),identityRevision:student.identityRevision};
+    if(entries.every(e=>e.sourceName===student.name&&e.sourceSchool===directorySchoolKey(student.school,student.grade)))mapping.identityLink={name:student.name,school:student.school,grade:student.grade};
     // compareAndSet must reject already assigned entries and stale expected revision atomically.
     await auth(session);await store.saveMapping(mapping,input.expectedRevision||null);
     return {studentId:student.id,revision,name:student.name};

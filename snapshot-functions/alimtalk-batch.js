@@ -29,9 +29,10 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
  function validate({date,audience}){if(!rules.validDate(date)||typeof audience!=='string'||!Object.hasOwn(kinds,audience))fail('INVALID_REQUEST');}
  async function scan(a,{date,audience},only){
   const kind=kinds[audience];
-  const [src,assign,hist]=await Promise.all([loadSource(a,date),reviewStore.dayAssignments(a.academyId,date),
+  const [src,hist]=await Promise.all([loadSource(a,date),
    only?store.history(a.academyId,date,only):store.dayHistory(a.academyId,date,kind)]);
   if(!src.complete||!src.revision||src.date!==date||src.academyId!==a.academyId||src.entries.length>5000)fail('SOURCE_INCOMPLETE');
+  const assign=await reviewStore.dayAssignments(a.academyId,date);
   const history=hist.filter(r=>r.studentId!=='__alimtalk_admin_test__'&&(r.kind||'daily-lessons')===kind).sort(newest);
   const ids=only||[...new Set([...Object.values(assign).map(v=>v.studentId),...history.map(r=>r.studentId)])];
   if(ids.length>350)fail('ROSTER_LIMIT');
@@ -45,6 +46,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    const c=rules.compose({id,name,mappingVerified:true},date,entries.map(e=>({...e.lesson,studentId:id})));
    const version=hash([a.academyId,date,id,c.text]);
    let verified,recipients=[];
+   if(src.linkIssues?.[name])issue=src.linkIssues[name];
    if(!issue&&entries.length){
     try{
      const getStudent=async()=>({...student});
@@ -78,7 +80,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(!only){
    const seen=new Set(rows.map(r=>r.name));
    for(const e of src.entries)if(!seen.has(e.sourceName)&&!rules.exclusion(e.lesson)){
-    seen.add(e.sourceName);rows.push({id:null,name:e.sourceName,state:'unsent',issue:'학생과 받는 번호 확인 필요',items:[],past:[]});
+    seen.add(e.sourceName);rows.push({id:null,name:e.sourceName,state:'unsent',issue:src.linkIssues?.[e.sourceName]||'학생과 받는 번호 확인 필요',items:[],past:[]});
    }
   }
   return rows.sort((a,b)=>a.name.localeCompare(b.name,'ko'));

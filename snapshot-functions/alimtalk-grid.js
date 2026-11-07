@@ -39,7 +39,7 @@ function parseSnapshot(snapshot,now=Date.now()){
    entries.push({id,fingerprint,sourceName:name,sourceSchool:school||'',label:name+' · '+(school||'학교·학년 미기재'),summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
   }
  });
- return {academyId:'banpo',date:snapshot.date,revision:snapshot.data.version,complete:issues.length===0,entries,issues:[...new Set(issues)]};
+ return {academyId:'banpo',date:snapshot.date,capturedAt:snapshot.capturedAt,revision:snapshot.data.version,complete:issues.length===0,entries,issues:[...new Set(issues)]};
 }
 function createMappedDay({loadSource,readDayAssignments,readMapping}){
  return async(actor,date,ids,signal)=>{

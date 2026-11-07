@@ -131,6 +131,7 @@ function mount({host,api,context,refresh}){
     return;
    }
    const data=p.items,held=mode==='changed'?[]:p.rows.filter(r=>r.issue);
+   if(mode==='unsent')host.append(el('p','전체 '+p.rows.length+'명 · 발송 가능 '+data.length+'건 · 확인 필요 '+held.length+'명','change-count'));
    if(held.length){const h=el('details');h.append(el('summary','확인이 필요한 학생 '+held.length+'명'));held.forEach(r=>h.append(note(r.name+' · '+r.issue)));host.append(h);}
    if(!data.length){host.append(note(mode==='changed'?'이전에 받은 안내와 내용이 다르고, 받는 번호까지 확인된 대상이 없습니다.':'현재 발송할 수 있는 미발송 번호가 없습니다.'));return;}
    const chosen=new Set(),checks=[];

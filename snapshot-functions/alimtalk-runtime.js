@@ -19,12 +19,16 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   const response=await request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:options.body,signal:options.signal});
   if(!response.ok)fail('SOURCE_UNAVAILABLE');return response.json();
  }});
+ const linkSource=require('./alimtalk-links').createLinkResolver({store:rs,resolveStudent,now,findCandidates:async name=>{
+  const snap=await db.collection('students').where('name','==',name).limit(21).get();if(snap.size>20)fail('CANDIDATE_LIMIT');
+  return snap.docs.filter(d=>{const s=d.data();return ['ACTIVE','RETURNED'].includes(s.status)&&!s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS'&&s.active!==false&&s.isActive!==false&&s.disabled!==true;}).map(d=>d.id);
+ }});
  const loadSource=async(actor,date,signal)=>{
   if(actor.academyId!=='banpo'||!rules.validDate(date))fail('FORBIDDEN');
   const catalog=(await db.collection('liveTimetableSnapshotJobs').doc('catalog').get()).data();
   const sheets=(catalog?.sheets||[]).filter(s=>{try{return core.dateForSheet(s,now())===date;}catch{return false;}});
   if(sheets.length!==1)fail('SOURCE_SHEET_UNCONFIRMED');
-  return parseSnapshot(await reader({sheet:sheets[0],date,signal}),now());
+  return linkSource(actor,parseSnapshot(await reader({sheet:sheets[0],date,signal}),now()));
  };
  const review=createReviewService({authorize,loadSource,resolveStudent,store:rs,now,searchStudents:async(actor,query)=>{
   // Exact-name candidates only; no bootstrap/full roster and never auto choose.
