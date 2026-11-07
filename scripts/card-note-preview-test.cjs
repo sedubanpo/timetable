@@ -15,6 +15,11 @@ for(const file of ['Index.html','docs/index.html']){
  for(const note of ['도착 12:30','12:30-14:30 / 13:00-14:00','12:99-14:30','18:30-20:30']){const r=scope.getCardNoteTimeRange({start:12,end:14,note});assert.equal(r.start,12,note);assert.equal(r.end,14,note);}
  assert.equal(scope.getCardNoteTimeRange({start:14,end:17,note:'2:30 - 5:00 선생님톡 확인'}).start,14.5);
  assert.equal(scope.getExportTimeRange({start:12,end:14,note:'12:30-14:30'}).end,14,'Excel strict bounds unchanged');
+ const social=[13,14,15].map(hour=>({hour,subject:'사탐',teacher:'검증',room:'6강의실',classType:'개별',
+   school:'검증고3',status:hour===15?'보충':'정규',note:hour===15?'확정, 3:00-3:30':'확정'}));
+ scope.studentImageScheduleMap['정규보충검증']=social;
+ const lessons=Array.from(scope.buildStudentCardViewModel('정규보충검증').timelineRows,r=>[r.start,r.end,r.status]);
+ assert.deepEqual(lessons,[[13,15,'정규'],[15,15.5,'보충']]);
  scope.currentSheetName='9/22';assert.match(scope.previewNoteValue('card','검증학생',rows[0]),/내부 메모/);
  assert.match(source,/onclick="downloadAbsenceNoticeImage\(\)">이미지 저장<\/button>\s*<button[^>]+onclick="copyAbsenceNoticeImage\(\)">이미지 복사/);
  assert.match(source,/previewNoteHidden\("absence",name,v\)/);
