@@ -22,7 +22,7 @@ async function pooled(items,fn){
 function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,provider,services,now=Date.now}){
  async function actor(session){const a=await authorize(session);if(!a?.uid||a.role!=='ADMIN'||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
  async function reviewer(session){
-  const a=await authorize(session,{reviewChanges:true});
+  const a=await authorize(session,{reviewBatch:true});
   if(!a?.uid||a.active!==true||a.academyId!=='banpo'||!['ADMIN','STAFF','DESK'].includes(a.role))fail('FORBIDDEN');
   return a;
  }
@@ -90,18 +90,22 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
  }
  async function prepare(session,input){
   const {date,audience,mode}=input;
-  const authorizePreview=mode==='changed'?reviewer:actor;
-  const a=await authorizePreview(session);validate(input);
+  const a=await reviewer(session);validate(input);
   if(!['unsent','changed'].includes(mode))fail('INVALID_REQUEST');
   await store.rate(a.uid,'batchPreview',now(),15);
   const rows=await scan(a,input);
   const changes=mode==='changed'?rows.filter(r=>r.comparisons?.length).map(r=>({
    name:r.name,studentId:r.id,current:r.text,issue:r.issue,comparisons:r.comparisons
   })):[];
-  const access=await authorizePreview(session);
-  if(!access.canSendTimetable||!a.canSendTimetable)
-   return {date,audience,mode,readOnly:true,changes,rows:rows.map(summary),items:[]};
-  if(!rules.verifyTemplate(await provider.getTemplate(rules.templateId)))fail('TEMPLATE_MISMATCH');
+  if((mode==='unsent'||a.canSendTimetable)&&!rules.verifyTemplate(await provider.getTemplate(rules.templateId)))fail('TEMPLATE_MISMATCH');
+  const access=await reviewer(session);
+  if(!access.canSendTimetable||!a.canSendTimetable){
+   const eligibleStudents=mode==='unsent'?rows.flatMap(r=>{
+    const n=r.items.filter(x=>x.state==='unsent').length;
+    return n?[{name:r.name,count:n,text:r.text}]:[];
+   }):[];
+   return {date,audience,mode,readOnly:true,eligibleStudents,changes,rows:rows.map(summary),items:[]};
+  }
   const tickets=rows.flatMap(r=>r.items.filter(x=>x.state===mode));
   const previewId=randomUUID(),expires=now()+15*60000;
   await actor(session);

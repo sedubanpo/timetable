@@ -85,7 +85,21 @@ test('staff review compares the last delivery even when contact is held, and nev
  assert.match(p.changes[0].current,/18:00/);assert.match(p.changes[0].comparisons[0].previous,/17:00/);
  assert(!JSON.stringify(p).includes('0100000'));
  assert.deepEqual((await x.preview({mode:'changed',audience:'student'})).changes,[]);
- await assert.rejects(x.preview(),{code:'FORBIDDEN'});await assert.rejects(x.send(p),{code:'FORBIDDEN'});
+ assert.deepEqual((await x.preview()).eligibleStudents,[]);await assert.rejects(x.send(p),{code:'FORBIDDEN'});
+});
+test('staff unsent preview matches admin eligibility per audience without saving or disclosing delivery tickets',async()=>{
+ const x=setup(3);delete x.clear.id2;delete x.clear.id3.recipients.student;
+ x.clear.id1.recipients.father={allowed:true,phoneHash:contactHash(x.people.id1.recipients[1].phone)};
+ const admin=await x.preview();
+ Object.assign(x.auth,{role:'DESK',canSendTimetable:false});
+ x.f.deps.store.savePreview=()=>{throw Error('STAFF_TICKET_WRITE');};
+ for(const [audience,counts,held] of [['student',[1],2],['guardian',[2,1],1]]){
+  const p=await x.preview({audience});
+  assert(p.readOnly);assert(!p.previewId);assert.deepEqual(p.items,[]);
+  assert.deepEqual(p.eligibleStudents.map(r=>r.count),counts);assert.equal(p.rows.filter(r=>r.issue).length,held);
+  assert(!/0100000|"ticket"/.test(JSON.stringify(p)));assert(p.eligibleStudents.every(r=>r.text));
+ }
+ await assert.rejects(x.send(admin),{code:'FORBIDDEN'});assert.equal(x.f.sent.length,0);
 });
 test('lesson comparison ignores numbering, highlights changed fields, separates ambiguous and removed lessons',()=>{
  require('../assets/alimtalk-batch-ui');

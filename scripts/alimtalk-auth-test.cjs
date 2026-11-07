@@ -10,10 +10,10 @@ test('invalid token and missing authorization fail without data fallback',async(
 test('active campus staff can read schedule changes with both apps, without sending authority',async()=>{
  for(const role of ['STAFF','DESK']){
   const {auth,data}=setup();data.user.role=role;
-  assert.equal((await auth(session,{reviewChanges:true})).canSendTimetable,false);
+  assert.equal((await auth(session,{reviewBatch:true})).canSendTimetable,false);
   await assert.rejects(auth(session),{code:'FORBIDDEN'});
   for(const [obj,key,value] of [[data.scope,'enabled',false],[data.scope,'campusId','other'],[data.user,'role','TEACHER'],[data.user,'status','INACTIVE'],[data.access.apps,'liveTimetable',false],[data.access.apps,'deskPortal',false]]){
-   const prior=obj[key];obj[key]=value;await assert.rejects(auth(session,{reviewChanges:true}),{code:'FORBIDDEN'});obj[key]=prior;
+   const prior=obj[key];obj[key]=value;await assert.rejects(auth(session,{reviewBatch:true}),{code:'FORBIDDEN'});obj[key]=prior;
   }
  }
 });

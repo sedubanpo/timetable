@@ -109,6 +109,27 @@ function mount({host,api,context,refresh}){
     if(p.readOnly||!p.items.length)return;
     host.append(el('h4','변경 안내를 받을 번호 선택'));
    }
+   if(mode==='unsent'&&p.readOnly){
+    const head=el('div',undefined,'change-overview');
+    head.append(el('h3',who+' 일괄 발송 미리보기'),el('span',date+' · 조회 전용'));
+    const eligible=p.eligibleStudents,held=p.rows.filter(r=>r.issue);
+    const counts=el('p','전체 '+p.rows.length+'명 · 발송 가능 '+eligible.reduce((n,r)=>n+r.count,0)+'건 · 확인 필요 '+held.length+'명','change-count');
+    host.replaceChildren(head,counts);
+    if(eligible.length){
+     host.append(el('h4','발송 가능한 학생'));
+     for(const r of eligible)host.append(body(r.name+' · '+r.count+'건 · 본문 보기',r.text));
+    }
+    if(held.length){
+     host.append(el('h4','확인이 필요한 학생'));
+     const reasons=new Map();
+     for(const r of held){if(!reasons.has(r.issue))reasons.set(r.issue,[]);reasons.get(r.issue).push(r.name);}
+     for(const [reason,names] of reasons){
+      const group=el('section',undefined,'bulk-review-row');
+      group.append(el('strong',reason+' · '+names.length+'명'),el('p',names.join(', '),'bulk-names'));host.append(group);
+     }
+    }
+    return;
+   }
    const data=p.items,held=mode==='changed'?[]:p.rows.filter(r=>r.issue);
    if(held.length){const h=el('details');h.append(el('summary','확인이 필요한 학생 '+held.length+'명'));held.forEach(r=>h.append(note(r.name+' · '+r.issue)));host.append(h);}
    if(!data.length){host.append(note(mode==='changed'?'이전에 받은 안내와 내용이 다르고, 받는 번호까지 확인된 대상이 없습니다.':'현재 발송할 수 있는 미발송 번호가 없습니다.'));return;}

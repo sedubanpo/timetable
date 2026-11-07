@@ -2335,6 +2335,7 @@
 #cardAlimtalkPanel .change-tag.edit{background:#fff0bc;color:#70520d}
 #cardAlimtalkPanel .change-tag.add{background:#d8efe4;color:#205741}
 #cardAlimtalkPanel .change-tag.remove{background:#f9e2e2;color:#823b3d}
+#studentImageModal .bulk-names{line-height:1.8;word-break:keep-all;margin:.4em 0 0;color:#405569}
 </style>
 <script>
 (function(root){
@@ -2447,6 +2448,27 @@ function mount({host,api,context,refresh}){
     renderChanges(host,p,who);
     if(p.readOnly||!p.items.length)return;
     host.append(el('h4','변경 안내를 받을 번호 선택'));
+   }
+   if(mode==='unsent'&&p.readOnly){
+    const head=el('div',undefined,'change-overview');
+    head.append(el('h3',who+' 일괄 발송 미리보기'),el('span',date+' · 조회 전용'));
+    const eligible=p.eligibleStudents,held=p.rows.filter(r=>r.issue);
+    const counts=el('p','전체 '+p.rows.length+'명 · 발송 가능 '+eligible.reduce((n,r)=>n+r.count,0)+'건 · 확인 필요 '+held.length+'명','change-count');
+    host.replaceChildren(head,counts);
+    if(eligible.length){
+     host.append(el('h4','발송 가능한 학생'));
+     for(const r of eligible)host.append(body(r.name+' · '+r.count+'건 · 본문 보기',r.text));
+    }
+    if(held.length){
+     host.append(el('h4','확인이 필요한 학생'));
+     const reasons=new Map();
+     for(const r of held){if(!reasons.has(r.issue))reasons.set(r.issue,[]);reasons.get(r.issue).push(r.name);}
+     for(const [reason,names] of reasons){
+      const group=el('section',undefined,'bulk-review-row');
+      group.append(el('strong',reason+' · '+names.length+'명'),el('p',names.join(', '),'bulk-names'));host.append(group);
+     }
+    }
+    return;
    }
    const data=p.items,held=mode==='changed'?[]:p.rows.filter(r=>r.issue);
    if(held.length){const h=el('details');h.append(el('summary','확인이 필요한 학생 '+held.length+'명'));held.forEach(r=>h.append(note(r.name+' · '+r.issue)));host.append(h);}
@@ -8191,11 +8213,11 @@ root.TimetableAlimtalkReviewUI={mount};
       var cardAudience='guardian';
       function setCardAudience(audience){
         var panel=document.getElementById('cardAlimtalkPanel');
-        var reviewingChanges=!panel.hidden && panel.dataset.bulk==='true' && panel.dataset.bulkMode==='changed';
+        var reviewMode=!panel.hidden && panel.dataset.bulk==='true' && panel.dataset.bulkMode;
         resetCardAlimtalk();
         cardAudience=audience;
         updateCardAudience();renderCardMessageReference();reloadCardRoster();
-        if(reviewingChanges)openCardBulk('changed');
+        if(reviewMode==='changed'||reviewMode==='unsent')openCardBulk(reviewMode);
       }
       function updateCardAudience(){
         document.getElementById('batchInitial').textContent=(cardAudience==='student'?'학생':'학부모')+' 일괄 발송';
@@ -8266,7 +8288,7 @@ function openCardBulk(mode){
  if(!cardBulkUI)cardBulkUI=TimetableBatchUI.mount({host,api:cardAlimtalkApi,context:cardBatchContext,refresh:reloadCardRoster});
  const label=cardAudience==='student'?'학생 본인':'학부모';
  document.querySelector('#studentImageModal .student-preview-panel-title').textContent=label+' · '+currentSheetName;
- document.querySelector('#studentImageModal .student-preview-panel-sub').textContent=mode==='changed'?'수신 완료된 알림톡과 현재 시간표를 비교합니다.':mode==='history'?'수신자별 발송 결과를 확인하세요.':'받을 번호와 안내 본문을 확인하세요.';
+ document.querySelector('#studentImageModal .student-preview-panel-sub').textContent=mode==='changed'?'수신 완료된 알림톡과 현재 시간표를 비교합니다.':mode==='history'?'수신자별 발송 결과를 확인하세요.':'발송 가능한 건수와 확인이 필요한 학생을 확인하세요.';
  host.hidden=false;host.dataset.bulk='true';host.dataset.bulkMode=mode;
  if(mode==='history')cardBulkUI.history();else cardBulkUI.review(mode);
  host.scrollIntoView({block:'nearest'});
