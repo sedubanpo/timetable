@@ -8284,6 +8284,12 @@ window.SeduHubAdapter={
 var cardBulkUI=null,cardRosterRows=null,cardRosterScope='',cardRosterError='',cardRosterRead=0;
 function cardBatchContext(){return {date:attendanceDateKey(currentSheetName),audience:cardAudience,session:getScheduleSessionKey()+'|'+timetableLoginSequence};}
 function rosterKey(){return JSON.stringify(cardBatchContext());}
+function acceptCardRoster(rows,key){
+ if(key!==rosterKey()||!isStudentImageModalOpen()||studentCardMode!=='message'||!Array.isArray(rows))return;
+ // A completed preview supersedes older in-flight roster reads.
+ cardRosterRead++;cardRosterScope=key;cardRosterRows=rows;cardRosterError='';
+ filterStudentImageList();
+}
 async function reloadCardRoster(){
  if(!isStudentImageModalOpen()||studentCardMode!=='message')return;
  const key=rosterKey(),seq=++cardRosterRead;
@@ -8355,7 +8361,7 @@ function drawAlimtalkRoster(list,keyword){
       function cardAlimtalkKey(){return getScheduleSessionKey()+'|'+timetableLoginSequence+'|'+attendanceDateKey(currentSheetName)+'|'+selectedStudentForImage;}
       function resetCardAlimtalk(){cardAlimtalkRequestGeneration++;if(cardBulkUI)cardBulkUI.reset();if(cardAlimtalkRealTest)cardAlimtalkRealTest.reset();if(cardAlimtalkTest)cardAlimtalkTest.reset();if(cardAlimtalkController)cardAlimtalkController.reset();if(cardAlimtalkReview)cardAlimtalkReview.reset();var host=document.getElementById('cardAlimtalkPanel');if(host){host.hidden=true;delete host.dataset.bulk;}}
       async function cardAlimtalkApi(action,input,rosterRead){
-        var requestGeneration=cardAlimtalkRequestGeneration,context=rosterRead?rosterKey():cardAlimtalkKey(),auth,user,stage='auth',controller=new AbortController(),expired=false,timer;
+        var requestGeneration=cardAlimtalkRequestGeneration,context=rosterRead?rosterKey():cardAlimtalkKey(),rosterScope=rosterKey(),auth,user,stage='auth',controller=new AbortController(),expired=false,timer;
         function failure(code){return Object.assign(Error(code),{code:code});}
         function assertCurrent(){if(expired)throw failure('TIMEOUT');if((rosterRead?context!==rosterKey():requestGeneration!==cardAlimtalkRequestGeneration||context!==cardAlimtalkKey())||(auth&&user&&auth.currentUser!==user))throw failure('SESSION_CHANGED');}
         var work=(async function(){
@@ -8367,7 +8373,8 @@ function drawAlimtalkRoster(list,keyword){
           if(!response.ok)throw failure(result&&typeof result.code==='string'&&/^[A-Z_]{1,60}$/.test(result.code)?result.code:'REQUEST_FAILED');
           if(!result||typeof result!=='object'||Array.isArray(result))throw failure('INVALID_RESPONSE');
           if(action==='saveMapping')cardAlimtalkSelections[context]=result.studentId;
-          if(['send','studentSend','saveClearance','reconcile','studentReconcile'].includes(action))void reloadCardRoster();
+          if(action==='batchPreview'&&input.date===result.date&&input.audience===result.audience)acceptCardRoster(result.rows,rosterScope);
+          if(rosterScope===rosterKey()&&(['saveMapping','send','studentSend','saveClearance','reconcile','studentReconcile'].includes(action)||(action==='reviewState'&&result.mappingRevision)))void reloadCardRoster();
           return result;
         })();
         try{return await Promise.race([work,new Promise(function(_,reject){timer=setTimeout(function(){expired=true;controller.abort();reject(failure('TIMEOUT'));},action.startsWith('batch')?28000:10000);})]);}
