@@ -55,7 +55,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
      verified=day.students[0];
      if(verified.holdReasons?.length)issue=reason(verified.holdReasons[0]);
      else if(c.reasons.length)issue=c.reasons.join(' · ');
-     else if(!verified.recipients.length)issue='이 발송 대상의 확인된 번호 없음';
+     else if(!verified.recipients.length)issue=verified.recipientIssue||'이 발송 대상의 확인된 번호 없음';
      else recipients=verified.recipients.filter((r,i,all)=>r.verified&&all.findIndex(x=>x.phone===r.phone)===i);
     }catch(e){issue=reason(e.code);}
    }else if(!entries.length)issue='현재 시간표에 수업 없음 · 직접 확인';

@@ -79,7 +79,28 @@ function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,now=Da
         continue;
       }
       try{
-        const clearance=typeof readClearance==='function'?await readClearance(actor,id,date,signal):null;
+        if(typeof readClearance!=='function')fail('CONTACT_CLEARANCE_REQUIRED');
+        const clearance=await readClearance(actor,id,date,signal);
+        // From this lesson date, the directory supplies the default recipients.
+        // A saved daily selection still takes precedence (including restrictions).
+        if(clearance===null && date>='2026-11-07'){
+          const mother=student.recipients.find(r=>r.id==='mother');
+          const father=student.recipients.find(r=>r.id==='father');
+          const guardian=mother?.verified ? mother : father;
+          const recipient=audience==='student' ? student.recipients.find(r=>r.id==='student') : guardian;
+          const recipients=recipient?.verified ? [recipient] : [];
+          let recipientIssue='';
+          if(!recipients.length){
+            if(audience==='student' && recipient?.reason==='번호 없음'){
+              recipientIssue=guardian?.verified ? '본인 번호 없음 · 학부모만 안내' : '본인 번호 없음';
+            }else{
+              recipientIssue=audience==='student' ? '본인 번호 확인 필요' : '학부모 번호 확인 필요';
+            }
+          }
+          students.push({...mapped,...student,recipients,recipientIssue,
+            mappingRevision:digest([mapped.mappingRevision,student.identityRevision,audience,recipients.map(r=>[r.id,r.phone])])});
+          continue;
+        }
         if(!clearance||clearance.academyId!==actor.academyId||clearance.studentId!==id||clearance.date!==date||clearance.mappingRevision!==mapped.mappingRevision||clearance.identityRevision!==student.identityRevision||!clearance.revision||!clearance.checkedBy||!Number.isFinite(clearance.checkedAt)||clearance.checkedAt>now()||clearance.campusConfirmed!==true)fail('CONTACT_CLEARANCE_REQUIRED');
         student.recipients=student.recipients.filter(r=>audience==='student'?r.id==='student':r.id==='father'||r.id==='mother').map(r=>({...r,verified:r.verified&&clearance.recipients?.[r.id]?.allowed===true&&clearance.recipients[r.id].phoneHash===digest(r.phone)})).filter(r=>r.verified);
         students.push({...mapped,...student,mappingRevision:digest([mapped.mappingRevision,student.identityRevision,clearance.revision])});

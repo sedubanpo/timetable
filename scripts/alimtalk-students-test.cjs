@@ -107,3 +107,22 @@ test('review scope, identity, mapping, relation, number and revocation checked a
     const result=await service.send('',{previewId:p.previewId});assert.equal(result.requiresNewPreview,true);assert.equal(f.sent.length,0);
   }
 });
+
+test('directory timetable policy selects one guardian plus the registered student independently without a clearance write', async()=>{
+  const f=setup(), id=f.student.id, date='2026-11-07';
+  const doc=f.docs[id];doc.studentPhone='01000000002';doc.fatherPhone='01000000003';
+  const recipients=async(audience,day=date)=>{
+    const read=withStudentDirectory({loadMappedDay:async()=>structuredClone(f.day),resolveStudent:f.resolve,
+      readClearance:async()=>null,audience});
+    return (await read(f.actor,day,[id])).students[0];
+  };
+  assert.deepEqual((await recipients('guardian')).recipients.map(r=>r.id),['mother']);
+  assert.deepEqual((await recipients('student')).recipients.map(r=>r.id),['student']);
+  delete doc.studentPhone;
+  assert.equal((await recipients('student')).recipientIssue,'본인 번호 없음 · 학부모만 안내');
+  assert.deepEqual((await recipients('guardian')).recipients.map(r=>r.id),['mother']);
+  delete doc.motherContact;delete doc.motherPhone;
+  assert.deepEqual((await recipients('guardian')).recipients.map(r=>r.id),['father']);
+  assert.deepEqual((await recipients('guardian','2026-11-06')).recipients,[]);
+  assert.equal(f.sent.length,0);
+});
