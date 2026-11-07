@@ -52,7 +52,7 @@ function renderChanges(host,p,who){
  host.replaceChildren(count);
  if(!changes.length){
   const empty=el('section',undefined,'change-empty');
-  empty.append(el('strong','변경된 안내가 없습니다'),el('p','이 날짜에 '+who+'가 받은 알림톡과 현재 수업을 비교한 결과입니다.'));
+  empty.append(el('strong','변경된 안내가 없습니다'),el('p',who+'에게 전달된 알림톡 중 현재 시간표와 달라진 안내가 없습니다.'));
   host.append(empty);return;
  }
  host.append(el('p','수업 안내가 달라진 학생 '+changes.length+'명','change-count'));
