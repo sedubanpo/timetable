@@ -17,7 +17,19 @@
   function clock(n){return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
   function validDate(d){return /^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;}
   // A clock without 오전/오후 is resolved only against this lesson's grid block.
-  function readTimeNote(note){
+  function lessonStatusLabel(status,todayOnly){
+    const labels={정규:'정규',보충:'보충',보강:'보강',결석보강:'결석보강',당취보충:'당취보충',일반보충:'보충',오늘만:'오늘만'};
+    const label=Object.hasOwn(labels,status)?labels[status]:'';
+    return todayOnly&&label!=='오늘만'?[label,'오늘만'].filter(Boolean).join(' · '):label;
+  }
+  function readTimeNote(note,status){
+    // Only 오늘만 introduces this shorthand. Dates and durations are not clock ranges.
+    const todayRange=/(오늘만\s*)(\d{1,2})\s*[-~～–—]\s*(\d{1,2})\s*시(?![간\d]|\s*\d)/g;
+    let todayOnly=false;
+    note=String(note||'').replace(todayRange,(_,prefix,start,end)=>{
+      todayOnly=true;
+      return prefix+start+':00-'+end+':00';
+    });
     const token='(오전|오후)?\\s*(\\d+)(?::(\\d+)|\\s*시(?:\\s*(\\d+)\\s*분?)?)';
     const pattern=new RegExp('(?:^|[^\\d:])'+token+'\\s*[-~～–—]\\s*'+token+'(?![\\d:])','g');
     function candidates(hour,minute,period){
@@ -27,22 +39,33 @@
       return hours.map(h=>h*60+minute);
     }
     const ranges=[];
-    const rest=note.replace(pattern,(_,p1,h1,m1,k1,p2,h2,m2,k2)=>{
+    let rest=note.replace(pattern,(_,p1,h1,m1,k1,p2,h2,m2,k2)=>{
       ranges.push([candidates(h1,m1||k1||0,p1),candidates(h2,m2||k2||0,p2)]);return ' ';
     });
+    // The makeup ends at the stated time. Its start comes from its own grid block.
+    if(status==='보강'||status==='결석보강')rest=rest.replace(/(?:^|[,，]\s*|\s+)(오전|오후)?\s*(\d{1,2}):(\d{2})\s*까지\s*(?:결석)?보강(?=$|[\s.,，])/g,(_,period,hour,minute)=>{
+      ranges.push([null,candidates(hour,minute,period)]);
+      return ' ';
+    });
     const held=/\d+\s*분\s*\d+\s*초|\d+:\d+:\d+/.test(note)||/\d{1,2}\s*:\s*\d{2}|\d+\s*시(?!간)|시간\s*변경/.test(rest)
-      ||ranges.some(([a,b])=>!a.length||!b.length);
-    return {ranges,held};
+      ||ranges.some(([a,b])=>(a!==null&&!a.length)||!b.length);
+    return {ranges,held,todayOnly};
   }
   function applyTimeNotes(block){
     let selected=null;
     for(const [starts,ends] of block.timeRanges){
-      const possible=starts.flatMap(start=>ends.filter(end=>end>start&&start>=block.start-30&&end<=block.end+30).map(end=>[start,end]));
+      const possible=(starts||[block.start]).flatMap(start=>ends.filter(end=>end>start&&start>=block.start-30&&end<=block.end+30).map(end=>[start,end]));
       if(possible.length!==1||(selected&&(selected[0]!==possible[0][0]||selected[1]!==possible[0][1])))return false;
       selected=possible[0];
     }
     if(selected)[block.start,block.end]=selected;
     return true;
+  }
+  function cardTimeRange(startHour,endHour,note,status){
+    const parsed=readTimeNote(note,status);
+    const block={start:startHour*60,end:endHour*60,timeRanges:parsed.ranges};
+    if(parsed.held||!applyTimeNotes(block))return {start:startHour,end:endHour,todayOnly:false};
+    return {start:block.start/60,end:block.end/60,todayOnly:parsed.todayOnly};
   }
   function normalize(rows,studentId,date){
     const reasons=[],excluded=[],lessons=[];
@@ -56,7 +79,7 @@
       if(fields.some(k=>typeof r[k]!=='string'||!r[k].trim())){reasons.push('필수 수업 정보 누락');continue;}
       const start=time(r.start),end=time(r.end);
       if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start){reasons.push('수업 시각 확인 필요');continue;}
-      lessons.push({subject:r.subject.trim(),teacher:r.teacher.trim(),building:r.building.trim(),room:r.room.trim(),type:r.type.trim(),status:String(r.status||'').trim(),timeRanges:[...(r.timeRanges||[])],start,end,sourceIds:[r.sourceId]});
+      lessons.push({subject:r.subject.trim(),teacher:r.teacher.trim(),building:r.building.trim(),room:r.room.trim(),type:r.type.trim(),status:String(r.status||'').trim(),timeRanges:[...(r.timeRanges||[])],todayOnly:r.todayOnly===true,start,end,sourceIds:[r.sourceId]});
     }
     lessons.sort((a,b)=>a.start-b.start||a.end-b.end||JSON.stringify(a).localeCompare(JSON.stringify(b)));
     const merged=[];
@@ -65,7 +88,7 @@
       const same=last&&['subject','teacher','building','room','type','status'].every(k=>last[k]===l[k]);
       // Only adjacent repeated cells merge. Overlapping entries always require human review.
       if(last&&l.start<last.end)reasons.push('수업 시간 충돌');
-      if(same&&last.end===l.start){last.end=l.end;last.timeRanges.push(...l.timeRanges);last.sourceIds.push(...l.sourceIds);}else merged.push(l);
+      if(same&&last.end===l.start){last.end=l.end;last.todayOnly=last.todayOnly||l.todayOnly;last.timeRanges.push(...l.timeRanges);last.sourceIds.push(...l.sourceIds);}else merged.push(l);
     }
     for(const block of merged){
       if(!applyTimeNotes(block))reasons.push('시간 메모 확인 필요');
@@ -82,7 +105,7 @@
     const duration=[hours&&hours+'시간',rest&&rest+'분'].filter(Boolean).join(' ');
     const teacher=l.teacher?l.teacher.replace(/(?:\s*(?:선생님|T))+$/iu,'').trimEnd()+'T':'강사 확인 필요';
     return [
-      number+' '+[l.subject,['정규','보충'].includes(l.status)?l.status:''].filter(Boolean).join(' ')+' '+clock(l.start)+'–'+clock(l.end),
+      number+' '+[l.subject,lessonStatusLabel(l.status,l.todayOnly)].filter(Boolean).join(' ')+' '+clock(l.start)+'–'+clock(l.end),
       teacher+' · '+l.type+' '+duration,
       l.building+' '+l.room
     ].join('\n');
@@ -101,5 +124,5 @@
     return !!t&&t.templateId===templateId&&(t.channelId||t.pfId)===pfId&&t.name===templateName&&t.status==='APPROVED'&&t.content===content&&!t.isDeleted&&!t.isHidden;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,exclusion,readTimeNote,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,exclusion,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });
