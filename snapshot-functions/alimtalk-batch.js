@@ -153,7 +153,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(records.some(r=>!r||r.academyId!==a.academyId||r.date!==date||r.kind!==kinds[audience]||r.studentId==='__alimtalk_admin_test__'))fail('FORBIDDEN');
   const events=await Promise.all(records.map(async r=>{
    if(!outstanding.has(r.state)||!r.messageId)return null;
-   return provider.lookup({messageId:r.messageId,groupId:r.groupId,key:r.id},AbortSignal.timeout(8000));
+   return provider.lookup({messageId:r.messageId,groupId:r.groupId,key:r.id,smsFallback:r.smsFallback},AbortSignal.timeout(8000));
   }));
   await actor(session);
   await Promise.all(records.map((r,i)=>events[i]?services[audience].apply(r.id,events[i]):null));
@@ -163,7 +163,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const a=await actor(session);validate(input);await store.rate(a.uid,'batchHistory',now(),30);
   const rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);await actor(session);
   return {results:rows.filter(r=>r.studentId!=='__alimtalk_admin_test__').sort(newest).map(r=>({id:r.id,studentId:r.studentId,name:r.variables?.['#{학생명}']||'',createdAt:r.createdAt,
-   state:r.state,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
+   state:r.state,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
  }
  return {batchRoster:roster,batchPreview:prepare,batchSend:send,batchHistory:history,batchRefresh:refresh};
 }

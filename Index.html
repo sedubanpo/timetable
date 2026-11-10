@@ -2511,6 +2511,7 @@ function mount({host,api,context,refresh}){
    const chosen=new Set(),checks=[];
    const bulk=el('label',undefined,'bulk-pick'),all=el('input');all.type='checkbox';bulk.append(all,document.createTextNode(' 가능한 번호 전체 선택 ('+data.length+'건)'));host.append(bulk);
    const students=new Map();for(const item of data){if(!students.has(item.studentId))students.set(item.studentId,[]);students.get(item.studentId).push(item);}
+   host.append(note('알림톡 전달에 실패하면 같은 번호로 문자 대체 발송을 시도합니다.'));
    const list=el('details',undefined,'bulk-pick-list');
    list.append(el('summary','수신자별 선택 · 본문 보기 ('+data.length+'건)'));host.append(list);
    for(const items of students.values()){
@@ -2591,6 +2592,7 @@ function mount({host,api,context,refresh}){
    for(const r of results){const group=el('section',undefined,'bulk-review-row');
     const stamp=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(r.createdAt);
     group.append(el('strong',r.name+' · '+(root.TimetableAlimtalk.labels[r.state]||'결과 확인 필요')),note([r.relation,r.masked,stamp,r.batch?'일괄':'개별'].join(' · ')));
+    if(r.fallbackResult)group.append(note(({CHECKING:'문자 대체 결과 확인 중',DELIVERED:'대체 문자 수신 완료',FAILED:'대체 문자 발송 실패',NOT_SENT:'대체 문자 미발송'})[r.fallbackResult]+' · 알림톡 실패 '+r.ataErrorCode));
     if(r.errorCode)group.append(note('결과 코드: '+r.errorCode));
     if(r.text)group.append(body('보낸 본문',r.text));
     if(['REQUESTING','PROCESSING','ACCEPTED','UNKNOWN'].includes(r.state)){
@@ -2859,7 +2861,7 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
     function renderResults(rows){shell();host.append(el('h4','발송 결과'));if(!rows.length)host.append(el('p','알림톡 이력이 없습니다. 수동 전달 기록과는 별도입니다.'));
       for(const r of rows){const line=el('section');
         line.append(el('p',[r.date,r.relation,r.masked].filter(Boolean).join(' · ')));
-        const state=el('strong',(r.state==='DELIVERED'?'✓ ':'')+(R.labels[r.state]||'결과 확인 필요'));
+        const state=el('strong',(r.state==='DELIVERED'?'✓ ':'')+(({CHECKING:'문자 대체 결과 확인 중',DELIVERED:'대체 문자 수신 완료',FAILED:'대체 문자 발송 실패',NOT_SENT:'대체 문자 미발송'})[r.fallbackResult]||R.labels[r.state]||'결과 확인 필요'));
         state.className=r.state==='DELIVERED'?'delivery-success':'delivery-state';line.append(state);
         if(r.errorCode)line.append(el('p','오류 코드: '+r.errorCode));if(r.messageId)line.append(el('p','메시지 ID: '+r.messageId));if(r.groupId)line.append(el('p','그룹 ID: '+r.groupId));
         if(r.text){const details=el('details');details.append(el('summary','전송 내용 이력'),el('pre',r.text));line.append(details);}

@@ -77,12 +77,12 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   async function dispatch(session,a,date,row,recipient,prior,batchId=null,retryFailed=false){
       await auth(session);
       const id=deliveryId(a.academyId,row,date,recipient.phone,kind,prior,retryFailed);
-      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(batchId?{batchId}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
+      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,smsFallback:provider.smsFallback===true,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(batchId?{batchId}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
       const claim=await store.claim(id,record);
       if(!claim.created){return publicRecord(claim.record);}
       try{
         // One message per provider group: siblings sharing a number never suppress one another.
-        const r=await bounded(signal=>provider.sendOne({to:recipient.phone,type:'ATA',kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:row.variables,disableSms:true},customFields:{timetableKey:id}},signal),deadline);
+        const r=await bounded(signal=>provider.sendOne({to:recipient.phone,type:'ATA',kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:row.variables,disableSms:!record.smsFallback},customFields:{timetableKey:id}},signal),deadline);
         if(!r?.messageId||!r?.groupId)fail('UNKNOWN_RESULT');
         await apply(id,{...r,key:id});
       }catch(e){
@@ -93,7 +93,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   }
   async function results(session,input){const a=await auth(session);if(!rules.validDate(input.date)||!Array.isArray(input.studentIds)||input.studentIds.length>20||input.studentIds.some(id=>typeof id!=='string'||!id))fail('INVALID_REQUEST');await store.rate(a.uid,'results',now(),30);const records=(await store.history(a.academyId,input.date,input.studentIds)).filter(r=>(r.kind||'daily-lessons')===kind);for(let i=0;i<records.length;i++){const r=records[i];if(r.state==='REQUESTING'&&now()-r.createdAt>deadline)records[i]=await store.update(r.id,old=>old.state==='REQUESTING'?{...old,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN'}:old);}await auth(session);return {results:records.map(publicRecord)};}
   async function reconcile(session,id){const a=await auth(session);await store.rate(a.uid,'reconcile',now(),10);const old=await store.get(id);if(!old||old.academyId!==a.academyId||(old.kind||'daily-lessons')!==kind)fail('FORBIDDEN');
-    const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:id},signal),deadline);
+    const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:id,smsFallback:old.smsFallback},signal),deadline);
     if(!r||r.key!==id||!r.messageId||!r.groupId)return publicRecord(old); // Absence is not proof that a timeout was never sent.
     const result=await apply(id,r);await auth(session);return publicRecord(result);
   }
@@ -101,12 +101,23 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     if(!old||event.key!==id||(old.messageId&&old.messageId!==event.messageId)||(old.groupId&&old.groupId!==event.groupId))fail('RESULT_MISMATCH');
     const next=event.registrationFailed===true?'FAILED':status(event.statusCode),terminal=['DELIVERED','FAILED'];
     if(terminal.includes(old.state))return old; // duplicate and stale events cannot undo a final result
+    if(old.smsFallback && next==='FAILED' && !event.registrationFailed){
+      const result=event.fallbackResult;
+      const state=result==='NOT_SENT'||result==='FAILED'?'FAILED':result==='DELIVERED'?'DELIVERED':'PROCESSING';
+      return {...old,state,messageId:event.messageId,groupId:event.groupId,
+        fallbackResult:result||'CHECKING',ataErrorCode:String(event.statusCode),
+        errorCode:result==='NOT_SENT'?String(event.statusCode):null,updatedAt:now()};
+    }
+    if(old.fallbackResult==='CHECKING')return old;
     if(old.state==='PROCESSING'&&next==='ACCEPTED')return old;
     return {...old,state:next,messageId:event.messageId,groupId:event.groupId,errorCode:next==='FAILED'||next==='UNKNOWN'?String(event.statusCode):null,updatedAt:now()};
   });}
   async function webhook(header,events){if(!verifyWebhook(webhookSecret,header))fail('UNAUTHORIZED');if(!Array.isArray(events)||events.length>100)fail('INVALID_REQUEST');
     // Persist before acknowledging; failed storage returns non-2xx to permit provider retry.
-    for(const e of events){const id=e.customFields?.timetableKey;if(id===undefined)continue;if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');if(!await store.get(id))continue;await apply(id,{...e,key:id});}return {ok:true};}
+    for(const e of events){const id=e.customFields?.timetableKey;if(id===undefined)continue;if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');const old=await store.get(id);if(!old)continue;
+      // Replacement reports have their own ID. Reconcile their group before settling the original.
+      if(old.smsFallback && (e.replacement===true||['SMS','LMS'].includes(e.type)))continue;
+      await apply(id,{messageId:e.messageId,groupId:e.groupId,statusCode:e.statusCode,key:id});}return {ok:true};}
   return {preview,send,results,reconcile,webhook,dispatch,apply};
 }
 module.exports={createService,status,verifyWebhook,hash};

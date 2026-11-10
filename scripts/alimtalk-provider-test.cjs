@@ -12,3 +12,31 @@ test('test scope uses synthetic data and admin secret only; no real student redi
 test('specific failure codes retained; unknown provider codes are not success',()=>{const {status}=require('../snapshot-functions/alimtalk-service');assert.equal(status('3104'),'FAILED');assert.equal(status('1030'),'FAILED');assert.equal(status('3014'),'UNKNOWN');assert.equal(status('9999'),'UNKNOWN');});
 
 test('provider failures expose only fixed categories, never provider response secrets',async()=>{const original=console.warn,logs=[];console.warn=(...args)=>logs.push(args);try{for(const [status,errorCode,expected] of [[403,'SignatureDoesNotMatch','PROVIDER_SIGNATURE_MISMATCH'],[403,'RequestTimeTooSkewed','PROVIDER_CLOCK_SKEW'],[403,'InvalidAPIKey','PROVIDER_KEY_INVALID'],[403,'DuplicatedSignature','PROVIDER_SIGNATURE_REUSED'],[403,'unknown private value','PROVIDER_ACCESS_DENIED'],[429,null,'PROVIDER_RATE_LIMIT'],[500,null,'PROVIDER_UNAVAILABLE']]){const p=createProvider({apiKey:'synthetic',apiSecret:'synthetic',request:async()=>({ok:false,status,json:async()=>({errorCode,errorMessage:'private response'})})});await assert.rejects(p.getTemplate(R.templateId),e=>e.code===expected&&!e.message.includes('private'));}assert(!JSON.stringify(logs).includes('private'));}finally{console.warn=original;}});
+
+test('fallback outcome belongs to the original ATA group; reconciliation only reads',async()=>{
+ const calls=[];
+ const original={messageId:'m1',groupId:'g1',type:'ATA',customFields:{timetableKey:key},statusCode:'3104'};
+ let group={groupId:'g1',status:'SENDING'};
+ const p=createProvider({apiKey:'mock',apiSecret:'mock',request:async(url,options)=>{
+   calls.push(options.method);return {ok:true,json:async()=>url.includes('/list?')?{messageList:{m1:original}}:group};
+ }});
+ const id={messageId:'m1',groupId:'g1',key,smsFallback:true};
+ assert.equal((await p.lookup(id)).fallbackResult,undefined);
+ group={groupId:'g1',status:'COMPLETE',count:{sentPending:0,sentReplacement:1,sentSuccess:1,sentFailed:1}};
+ assert.equal((await p.lookup(id)).fallbackResult,'DELIVERED');
+ group.count.sentSuccess=0;group.count.sentFailed=2;assert.equal((await p.lookup(id)).fallbackResult,'FAILED');
+ group.count.sentReplacement=0;group.count.sentFailed=1;assert.equal((await p.lookup(id)).fallbackResult,'NOT_SENT');
+ group.groupId='other';await assert.rejects(p.lookup(id),{code:'RESULT_MISMATCH'});
+ original.statusCode='4000';assert.equal((await p.lookup(id)).statusCode,'4000');assert(calls.every(m=>m==='GET'));
+});
+
+test('late and duplicate ATA failure reports cannot reopen a completed SMS or allow a premature retry',async()=>{
+ const {createService}=require('../snapshot-functions/alimtalk-service'),f=fixture(),svc=createService(f.deps);
+ const id=key;
+ await f.deps.store.claim(id,{id,state:'ACCEPTED',groupId:'g1',messageId:'m1',smsFallback:true});
+ const event={key:id,messageId:'m1',groupId:'g1',statusCode:'3104'};
+ assert.equal((await svc.apply(id,event)).state,'PROCESSING');
+ const done=await svc.apply(id,{...event,fallbackResult:'DELIVERED'});
+ assert.equal(done.state,'DELIVERED');assert.equal(done.ataErrorCode,'3104');
+ assert.equal((await svc.apply(id,event)).fallbackResult,'DELIVERED');
+});

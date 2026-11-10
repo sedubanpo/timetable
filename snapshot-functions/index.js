@@ -4,7 +4,7 @@ const {getAuth}=require('firebase-admin/auth');
 const {getFirestore}=require('firebase-admin/firestore');
 const {onRequest}=require('firebase-functions/v2/https');
 const {onSchedule}=require('firebase-functions/v2/scheduler');
-const {defineSecret}=require('firebase-functions/params');
+const {defineSecret,defineString}=require('firebase-functions/params');
 const crypto=require('node:crypto');
 const core=require('./core');
 initializeApp();
@@ -139,13 +139,14 @@ exports.timetableSnapshotEveryTwoHours=onSchedule({schedule:'0 0,10-22/2 * * *',
 });
 
 // Alimtalk administration and preview only. All actual dispatch is server-disabled.
+const timetableSmsFrom=defineString('TIMETABLE_SMS_FROM',{description:'SOLAPI verified Banpo sender number for failed timetable notifications'});
 const timetableSolapiKey=defineSecret('TIMETABLE_SOLAPI_API_KEY');
 const timetableSolapiSecret=defineSecret('TIMETABLE_SOLAPI_API_SECRET');
 const timetableSolapiTestPhone=defineSecret('TIMETABLE_SOLAPI_TEST_PHONE');
 const timetableSolapiWebhook=defineSecret('TIMETABLE_SOLAPI_WEBHOOK_SECRET');
 exports.timetableAlimtalkApi=onRequest({region:'asia-northeast3',timeoutSeconds:30,memory:'256MiB',maxInstances:2,cors:false,secrets:[secret,timetableSolapiKey,timetableSolapiSecret,timetableSolapiTestPhone,timetableSolapiWebhook]},async(req,res)=>{
   try{
-    const handler=require('./alimtalk-runtime').createRuntime({db:getFirestore(),auth:getAuth(),sourceUrl:source,sourceSecret:secret.value(),apiKey:timetableSolapiKey.value(),apiSecret:timetableSolapiSecret.value(),testPhone:timetableSolapiTestPhone.value().trim(),webhookSecret:timetableSolapiWebhook.value(),enableTestSend:true,request:fetch});
+    const handler=require('./alimtalk-runtime').createRuntime({db:getFirestore(),auth:getAuth(),sourceUrl:source,sourceSecret:secret.value(),apiKey:timetableSolapiKey.value(),apiSecret:timetableSolapiSecret.value(),fallbackFrom:timetableSmsFrom.value(),testPhone:timetableSolapiTestPhone.value().trim(),webhookSecret:timetableSolapiWebhook.value(),enableTestSend:true,request:fetch});
     return await handler(req,res);
   }catch{res.status(503).json({code:'ALIMTALK_UNAVAILABLE'});}
 });

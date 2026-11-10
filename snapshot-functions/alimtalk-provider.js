@@ -2,7 +2,7 @@
 // Only this server-side transport can reach SOLAPI. No retries of dispatch requests.
 const crypto=require('node:crypto'),rules=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
-function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=false,verifiedRecipientSend=false}){
+function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=false,verifiedRecipientSend=false,fallbackFrom=''}){
  const testPhones=require('./alimtalk-test-recipients').testRecipients(testPhone).map(r=>r.phone);
  if(typeof request!=='function')fail('TRANSPORT_REQUIRED');
  async function call(path,method,body,signal){
@@ -22,18 +22,21 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
   if(!m?.messageId||!groupId||m.customFields?.timetableKey!==key)fail('RESULT_MISMATCH');
   return {messageId:m.messageId,groupId,key,statusCode:String(m.statusCode||''),registrationFailed:m.registrationFailed===true};
  }
+ if(verifiedRecipientSend && fallbackFrom && !/^0[0-9]{8,10}$/.test(fallbackFrom))fail('INVALID_FALLBACK_SENDER');
+ const smsFallback = verifiedRecipientSend && Boolean(fallbackFrom);
  return {
+  smsFallback,
   async getTemplate(id,signal){if(id!==rules.templateId)fail('TEMPLATE_MISMATCH');return call('/kakao/v2/templates/'+id,'GET',null,signal);},
   async sendOne(m,signal){
    if(!verifiedRecipientSend&&(!enableTestSend||!testPhones.length))fail('SENDING_DISABLED');
-   if((verifiedRecipientSend?!/^010\d{8}$/.test(m.to):!testPhones.includes(m.to))||m.type!=='ATA'||m.kakaoOptions?.pfId!==rules.pfId||m.kakaoOptions?.templateId!==rules.templateId||m.kakaoOptions?.disableSms!==true||!(/^[a-f0-9]{64}$/).test(m.customFields?.timetableKey||''))fail('TEST_RECIPIENT_REQUIRED');
-   const message={to:m.to,type:'ATA',country:'82',autoTypeDetect:false,kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:m.kakaoOptions.variables,disableSms:true,buttons:[{buttonType:'WL',buttonName:'수업 문의',linkMo:'https://pf.kakao.com/_KIZxin',linkPc:'https://pf.kakao.com/_KIZxin'}]},customFields:{timetableKey:m.customFields.timetableKey}};
+   if((verifiedRecipientSend?!/^010\d{8}$/.test(m.to):!testPhones.includes(m.to))||m.type!=='ATA'||m.kakaoOptions?.pfId!==rules.pfId||m.kakaoOptions?.templateId!==rules.templateId||m.kakaoOptions?.disableSms!==(!smsFallback)||!(/^[a-f0-9]{64}$/).test(m.customFields?.timetableKey||''))fail('TEST_RECIPIENT_REQUIRED');
+   const message={...(smsFallback?{from:fallbackFrom}:{}),to:m.to,type:'ATA',country:'82',autoTypeDetect:false,kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:m.kakaoOptions.variables,disableSms:!smsFallback,buttons:[{buttonType:'WL',buttonName:'수업 문의',linkMo:'https://pf.kakao.com/_KIZxin',linkPc:'https://pf.kakao.com/_KIZxin'}]},customFields:{timetableKey:m.customFields.timetableKey}};
    const r=await call('/messages/v4/send-many/detail','POST',{messages:[message],showMessageList:true,allowDuplicates:false},signal);
    const good=r.messageList||[],bad=r.failedMessageList||[];
    if(!Array.isArray(good)||!Array.isArray(bad)||good.length+bad.length!==1)fail('UNKNOWN_RESULT');
    return event(good[0]||{...bad[0],registrationFailed:true},r.groupInfo?.groupId,m.customFields.timetableKey);
   },
-  async lookup({messageId,groupId,key},signal){
+  async lookup({messageId,groupId,key,smsFallback:expectedFallback},signal){
    // No ID after timeout: do not scan unrelated account history or infer absence.
    if(!messageId)return null;
    if(!/^[A-Za-z0-9_-]{1,100}$/.test(messageId)||!groupId||!(/^[a-f0-9]{64}$/).test(key||''))fail('INVALID_RESULT');
@@ -42,7 +45,19 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
    if(!r.messageList||typeof r.messageList!=='object'||Array.isArray(r.messageList))fail('INVALID_RESULT');
    const rows=Object.values(r.messageList);if(!rows.length)return null;
    if(r.nextKey||rows.length!==1||rows[0].messageId!==messageId||rows[0].groupId!==groupId||rows[0].type!=='ATA'||rows[0].replacement===true)fail('RESULT_MISMATCH');
-   return event(rows[0],groupId,key);
+   const original=event(rows[0],groupId,key);
+   const {status}=require('./alimtalk-service');
+   if(!expectedFallback || status(original.statusCode)!=='FAILED')return original;
+   // Each dispatch owns a single-recipient group. Its final counts include the provider's replacement.
+   if(!/^[A-Za-z0-9_-]{1,100}$/.test(groupId))fail('INVALID_RESULT');
+   const group=await call('/messages/v4/groups/'+groupId,'GET',null,signal);
+   if(group.groupId!==groupId)fail('RESULT_MISMATCH');
+   const count=group.count;
+   if(group.status!=='COMPLETE'||!count||count.sentPending!==0)return original;
+   if(count.sentReplacement===1 && count.sentSuccess===1)return {...original,fallbackResult:'DELIVERED'};
+   if(count.sentReplacement===1 && count.sentSuccess===0 && count.sentFailed>=1)return {...original,fallbackResult:'FAILED'};
+   if(count.sentReplacement===0 && count.sentSuccess===0 && count.sentFailed===1)return {...original,fallbackResult:'NOT_SENT'};
+   return original;
   }
  };
 }

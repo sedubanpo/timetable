@@ -11,7 +11,7 @@ const {createService}=require('./alimtalk-service');
 const {createHandler}=require('./alimtalk-http');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 const templateProvider=options=>require('./alimtalk-provider').createProvider(options);
-function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,testPhone='',webhookSecret='',enableTestSend=false,now=Date.now}){
+function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,fallbackFrom='',testPhone='',webhookSecret='',enableTestSend=false,now=Date.now}){
  if(typeof request!=='function')fail('TRANSPORT_REQUIRED');
  const authorize=createAuthorizer({verifyIdToken:(t,r)=>auth.verifyIdToken(t,r),readAccount:firestoreAccountReader(db)});
  const rs=firestoreReviewStore(db),store=firestoreStore(db),resolveStudent=createStudentAdapter(firestoreStudentReader(db));
@@ -46,7 +46,7 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   const loadDay=withStudentDirectory({
    loadMappedDay:mapped,resolveStudent,readClearance:(actor,id,date)=>rs.clearance(actor.academyId,date,id),now,audience
   });
-  return createService({authorize,loadDay,store,provider:templateProvider({apiKey,apiSecret,request,verifiedRecipientSend:true}),webhookSecret,now,kind});
+  return createService({authorize,loadDay,store,provider:templateProvider({apiKey,apiSecret,request,verifiedRecipientSend:true,fallbackFrom}),webhookSecret,now,kind});
  }
  const delivery=deliveryFor('guardian','daily-lessons');
  const studentDelivery=deliveryFor('student','student-daily-lessons');
