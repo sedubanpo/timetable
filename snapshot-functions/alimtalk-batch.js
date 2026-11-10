@@ -83,7 +83,9 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
     seen.add(e.sourceName);rows.push({id:null,name:e.sourceName,state:'unsent',issue:src.linkIssues?.[e.sourceName]||'학생과 받는 번호 확인 필요',items:[],past:[]});
    }
   }
-  return rows.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  // Keep removed students in history/change review if a delivery was attempted.
+  const currentNames=new Set(src.entries.map(e=>e.sourceName));
+  return rows.filter(row=>only||currentNames.has(row.name)||row.past.length).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
  }
  const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,failed:!!r.failed});
  async function roster(session,input){

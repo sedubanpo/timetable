@@ -13,7 +13,10 @@ async function verifiedStudentDay({actor,date,id,signal,loadSource,resolveStuden
   const entries=source.entries.filter(e=>e.sourceName===student.name);
   if(!entries.length||entries.some(e=>!e.sourceSchool)||new Set(entries.map(e=>e.sourceSchool)).size!==1)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
   const directorySchool=directorySchoolKey(student.school,student.grade);
-  if(!directorySchool||entries[0].sourceSchool!==directorySchool)fail('STUDENT_SCHOOL_MISMATCH');
+  const alias=m.identityLink;
+  const confirmedAlias=alias?.name===student.name && alias.school===student.school && alias.grade===student.grade &&
+    alias.confirmedSourceSchool===entries[0].sourceSchool;
+  if(!directorySchool||(entries[0].sourceSchool!==directorySchool&&!confirmedAlias))fail('STUDENT_SCHOOL_MISMATCH');
   if(!Array.isArray(m.entries)||entries.length!==m.entries.length||entries.some(e=>!m.entries.some(x=>x.id===e.id&&x.fingerprint===e.fingerprint)||assignments[hash(e.id)]?.studentId!==student.id||assignments[hash(e.id)]?.revision!==m.revision||assignments[hash(e.id)]?.fingerprint!==e.fingerprint))fail('STUDENT_COVERAGE_INCOMPLETE');
   return {academyId:actor.academyId,date,complete:true,revision:source.revision,mappingRevision:m.revision,students:[{id:student.id,name:student.name,mappingVerified:true,mappingRevision:m.revision,lessons:entries.map(e=>({...e.lesson,studentId:student.id})),identityRevision:student.identityRevision}]};
 }

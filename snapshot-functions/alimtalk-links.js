@@ -22,8 +22,9 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
     }
     const student=await resolveStudent(selected);
     if(student.id!==selected){issues[name]='원장 대표 학생 변경 · 다시 확인 필요';continue;}
-    if(student.name!==name||!directorySchoolKey(student.school,student.grade)||entries.some(e=>e.sourceSchool!==directorySchoolKey(student.school,student.grade))){issues[name]='이름·학교·학년 불일치 · 원장 확인 필요';continue;}
     const proof=await store.rememberedMapping(actor.academyId,student.id);
+    const alias=proof?.date==='identity' && proof.studentId===student.id && proof.identityRevision===student.identityRevision && proof.verifiedBy ? proof.confirmedSourceSchool : null;
+    if(student.name!==name||!directorySchoolKey(student.school,student.grade)||entries.some(e=>e.sourceSchool!==directorySchoolKey(student.school,student.grade) && (!alias || e.sourceSchool!==alias))){issues[name]='이름·학교·학년 불일치 · 원장 확인 필요';continue;}
     if(!proof){issues[name]='처음 연결하는 학생 · 학생 확인 필요';continue;}
     if(proof.identityRevision!==student.identityRevision){issues[name]='원장 정보 변경 · 학생 연결 재확인 필요';continue;}
     plans.push({student,proof,entries});

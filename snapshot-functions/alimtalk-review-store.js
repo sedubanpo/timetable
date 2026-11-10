@@ -31,7 +31,11 @@ function firestoreReviewStore(db){
      const entries=p.entries.map(e=>({id:e.id,fingerprint:e.fingerprint}));
      const unchanged=old?.identityRevision===p.student.identityRevision&&old?.entries?.length===entries.length&&entries.every(e=>old.entries.some(x=>x.id===e.id&&x.fingerprint===e.fingerprint)&&assignments[hash(e.id)]?.studentId===p.student.id&&assignments[hash(e.id)]?.revision===old.revision);
      const value={academyId:actor.academyId,date:source.date,studentId:p.student.id,sourceRevision:source.revision,revision:require('node:crypto').randomUUID(),verifiedBy:proof.verifiedBy,verifiedAt:proof.verifiedAt,identityRevision:p.student.identityRevision,entries,sourceCapturedAt:source.capturedAt,syncedAt:at,syncedBy:actor.uid,reusedIdentity:true};
-     return {p,ref,linkRef,old,value,unchanged,link:linkSnap.data()};
+     if(proof.date==='identity' && proof.confirmedSourceSchool){
+       value.identityLink={name:p.student.name,school:p.student.school,grade:p.student.grade,confirmedSourceSchool:proof.confirmedSourceSchool};
+     }
+     const sameAlias=(old?.identityLink?.confirmedSourceSchool||null)===(value.identityLink?.confirmedSourceSchool||null);
+     return {p,ref,linkRef,old,value,unchanged:unchanged&&sameAlias,link:linkSnap.data()};
     }));
     for(const r of rows)if(!r.unchanged)for(const e of r.old?.entries||[]){if(assignments[hash(e.id)]?.studentId===r.value.studentId)delete assignments[hash(e.id)];}
     for(const r of rows)if(!r.unchanged)for(const e of r.value.entries){const k=hash(e.id);if(assignments[k]&&assignments[k].studentId!==r.value.studentId)fail('ENTRY_ALREADY_ASSIGNED');assignments[k]={studentId:r.value.studentId,fingerprint:e.fingerprint,revision:r.value.revision};}

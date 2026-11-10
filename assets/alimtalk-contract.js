@@ -26,7 +26,10 @@
   }
   // Retaker labels are academic fields. Do not search free-text notes for them.
   function isRetakerLabel(value){
-    return /^(?:고3@|재수(?:생|[12])?|교육청(?:[123](?:학년)?)?)$/.test(String(value||'').replace(/\s+/g,''));
+    return /^(?:고3@|재수(?:생|[12])?|삼수(?:생)?|교육청(?:[123](?:학년)?)?)$/.test(String(value||'').replace(/\s+/g,''));
+  }
+  function isHomeschoolLabel(label){
+    return /^홈스쿨(?:링)?[1-6]$/.test(String(label||''));
   }
   function directorySchoolKey(school,grade){
     const name=String(school||'').trim();
@@ -128,7 +131,7 @@
       }
       const fields=['subject','teacher','building','room','type','sourceId'];
       if(fields.some(k=>typeof r[k]!=='string'||!r[k].trim())){reasons.push('필수 수업 정보 누락');continue;}
-      const start=time(r.start),end=time(r.end);
+      const start=time(r.start),end=r.end==='24:00'?1440:time(r.end);
       if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start){reasons.push('수업 시각 확인 필요');continue;}
       lessons.push({subject:r.subject.trim(),teacher:r.teacher.trim(),building:r.building.trim(),room:r.room.trim(),type:r.type.trim(),status:scheduleStatus(r.status),timeHeld,timeRanges:[...(r.timeRanges||[])],todayOnly:r.todayOnly===true,start,end,sourceIds:[r.sourceId]});
     }
@@ -156,7 +159,7 @@
     const duration=[hours&&hours+'시간',rest&&rest+'분'].filter(Boolean).join(' ');
     const teacher=l.teacher?l.teacher.replace(/(?:\s*(?:선생님|T))+$/iu,'').trimEnd()+'T':'강사 확인 필요';
     return [
-      number+' '+[l.subject,lessonStatusLabel(l.status,l.todayOnly)].filter(Boolean).join(' ')+' '+clock(l.start)+'–'+clock(l.end),
+      number+' '+[l.subject,lessonStatusLabel(l.status,l.todayOnly)].filter(Boolean).join(' ')+' '+clock(l.start)+'–'+clock(l.end)+(l.end===1440?'(자정)':''),
       teacher+' · '+l.type+' '+duration,
       l.building+' '+l.room
     ].join('\n');
@@ -175,5 +178,5 @@
     return !!t&&t.templateId===templateId&&(t.channelId||t.pfId)===pfId&&t.name===templateName&&t.status==='APPROVED'&&t.content===content&&!t.isDeleted&&!t.isHidden;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,exclusion,isRetakerLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });

@@ -12,3 +12,22 @@ test('confirmed legacy identity survives new dates and class changes without dai
 test('directory contacts are refreshed per preview and never copied into the reusable identity',async()=>{const x=await setup();const s=await x.link(x.actor,x.source);const loadMappedDay=()=>verifiedStudentDay({actor:x.actor,date:s.date,id:'s1',allowUnchangedCells:true,loadSource:async()=>s,resolveStudent:x.resolveStudent,reviewStore:x.store});const loader=audience=>withStudentDirectory({loadMappedDay,resolveStudent:x.resolveStudent,readClearance:async()=>null,audience});const before=await loader('student')(x.actor,s.date,['s1']);x.student.recipients[1].phone='01000000003';const after=await loader('student')(x.actor,s.date,['s1']);assert.equal(after.students[0].recipients[0].phone,'01000000003');assert.notEqual(after.students[0].mappingRevision,before.students[0].mappingRevision);assert.equal((await loader('guardian')(x.actor,s.date,['s1'])).students[0].recipients[0].phone,'01000000001');assert(!JSON.stringify(await x.store.rememberedMapping('banpo','s1')).includes('010'));x.student.recipients[1]={id:'student',verified:false,reason:'번호 없음'};const no=await loader('student')(x.actor,s.date,['s1']);assert.equal(no.students[0].recipientIssue,'본인 번호 없음 · 학부모만 안내');});
 test('new, duplicate and changed identities stay held even if old date mapping exists',async()=>{for(const scenario of ['new','duplicate','school','identity','canonical']){const x=await setup();if(scenario==='new')x.db.data.clear();if(scenario==='duplicate')x.candidates(['s1','s2']);if(scenario==='school')x.source.entries[0].sourceSchool='다른중2';if(scenario==='identity')x.student.identityRevision='changed';if(scenario==='canonical')x.student.id='s2';const s=await x.link(x.actor,x.source);assert(s.linkIssues['가학생'],scenario);assert.deepEqual(s.linkedStudentIds,[]);assert.equal(await x.store.mapping('banpo',s.date,'s1'),null);}});
 test('stale source and conflicting cell ownership cannot overwrite a verified mapping',async()=>{const x=await setup();await x.link(x.actor,x.source);x.source.capturedAt=199;x.source.entries[0].fingerprint='stale';await assert.rejects(x.link(x.actor,x.source),{code:'SOURCE_CHANGED'});assert.equal((await x.store.mapping('banpo',x.source.date,'s1')).entries[0].fingerprint,'new-fp');const y=await setup();await y.store.saveMapping({academyId:'banpo',date:y.source.date,studentId:'s2',revision:'conflicting',entries:[{id:'new-cell',fingerprint:'x'}]},null);assert.match((await y.link(y.actor,y.source)).linkIssues['가학생'],/연결 불일치/);assert.equal((await y.store.dayAssignments('banpo',y.source.date))[hash('new-cell')].studentId,'s2');});
+
+test('operator-confirmed academic label is scoped to this identity and exact source label',async()=>{
+  const x=await setup();
+  const entry=x.source.entries[0];
+  entry.sourceSchool='홈스쿨2';
+  assert.ok((await x.link(x.actor,x.source)).linkIssues[x.student.name]);
+  const review=require('../snapshot-functions/alimtalk-review').createReviewService({
+    authorize:async()=>({...x.actor,role:'STAFF',active:true,canSendTimetable:true}),
+    loadSource:async()=>x.source, searchStudents:async()=>[{...x.student,status:'ACTIVE'}],
+    resolveStudent:x.resolveStudent, store:x.store
+  });
+  await review.saveMapping('',{date:x.source.date,studentId:x.student.id,sourceRevision:x.source.revision,
+    entryIds:[entry.id],confirmed:true,confirmSchoolAlias:true});
+  const src=await x.link(x.actor,x.source);
+  assert.deepEqual(src.linkIssues,{});
+  await verifiedStudentDay({actor:x.actor,date:src.date,id:x.student.id,loadSource:async()=>src,resolveStudent:x.resolveStudent,reviewStore:x.store});
+  entry.sourceSchool='홈스쿨3';
+  assert.ok((await x.link(x.actor,x.source)).linkIssues[x.student.name]);
+});
