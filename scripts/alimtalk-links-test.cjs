@@ -31,3 +31,12 @@ test('operator-confirmed academic label is scoped to this identity and exact sou
   entry.sourceSchool='홈스쿨3';
   assert.ok((await x.link(x.actor,x.source)).linkIssues[x.student.name]);
 });
+test('all-absence update refreshes an existing day only, and later reinstatement reuses the identity',async()=>{
+ const x=await setup(),e=x.source.entries[0];e.lesson.status='결석예고';await x.link(x.actor,x.source);
+ assert.equal(await x.store.mapping('banpo',x.source.date,x.student.id),null);
+ e.lesson.status='정규';await x.link(x.actor,x.source);
+ e.lesson.status='결석예고';e.fingerprint='absent';await x.link(x.actor,x.source);
+ assert.equal((await x.store.mapping('banpo',x.source.date,x.student.id)).entries[0].fingerprint,'absent');
+ e.lesson.status='정규';e.fingerprint='back';await x.link(x.actor,x.source);
+ assert.equal((await x.store.mapping('banpo',x.source.date,x.student.id)).entries[0].fingerprint,'back');
+});

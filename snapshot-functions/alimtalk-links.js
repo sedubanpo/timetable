@@ -9,10 +9,12 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
   const names=[...groups.keys()],plans=[],issues={};let next=0;
   await Promise.all(Array.from({length:Math.min(6,names.length)},async()=>{while(next<names.length){
    const name=names[next++],entries=groups.get(name);
-   if(entries.every(e=>exclusion(e.lesson)))continue;
+   const excludedOnly=entries.every(e=>exclusion(e.lesson));
    try{
     const candidates=await findCandidates(name);
     let selected=candidates[0];
+    // A cancelled day may still need its existing mapping refreshed; never create a new one for it.
+    if(excludedOnly && (candidates.length!==1 || !(await store.mapping(actor.academyId,source.date,selected))))continue;
     if(candidates.length!==1){
      // An explicit, unchanged mapping can resolve a same-name case for this date.
      const confirmed=[];

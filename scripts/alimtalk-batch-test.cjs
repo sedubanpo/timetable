@@ -127,3 +127,8 @@ test('authorized staff operate both audiences and histories; revoked access cann
   await assert.rejects(x.b.batchRefresh('',{...x.base,ids:[]}),{code:'FORBIDDEN'});
  }
 });
+test('a fully cancelled verified day has no initial recipient; earlier delivery remains visible to change review',async()=>{
+ const x=setup(1),prior=await x.preview();await x.send(prior);x.src.entries[0].lesson.status='결석예고';
+ const student=await x.preview({audience:'student'});assert.deepEqual(student.rows,[]);assert.deepEqual(student.items,[]);
+ const changes=await x.preview({mode:'changed'});assert.equal(changes.rows[0].state,'changed');assert.match(changes.rows[0].issue,/결석예고/);assert.equal(changes.items.length,0);
+});

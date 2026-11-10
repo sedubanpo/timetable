@@ -45,13 +45,16 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    // This draft is for classification/display only; never use it to authorize a recipient.
    const c=rules.compose({id,name,mappingVerified:true},date,entries.map(e=>({...e.lesson,studentId:id})));
    const version=hash([a.academyId,date,id,c.text]);
-   let verified,recipients=[];
+   let verified,recipients=[],excludedOnly=false;
    if(src.linkIssues?.[name])issue=src.linkIssues[name];
    if(!issue&&entries.length){
     try{
      const getStudent=async()=>({...student});
      const mapped=await verifiedStudentDay({actor:a,date,id,allowUnchangedCells:true,loadSource:async()=>src,resolveStudent:getStudent,
       reviewStore:{mapping:(...args)=>reviewStore.mapping(...args),dayAssignments:async()=>assign}});
+     excludedOnly=entries.every(e=>rules.exclusion(e.lesson));
+     if(excludedOnly){issue='안내 대상 수업 없음 · '+[...new Set(entries.map(e=>rules.exclusion(e.lesson)))].join(', ');}
+     else {
      const day=await withStudentDirectory({loadMappedDay:async()=>mapped,resolveStudent:getStudent,
       readClearance:(actor,sid,d)=>reviewStore.clearance(actor.academyId,d,sid),now,audience})(a,date,[id]);
      verified=day.students[0];
@@ -59,6 +62,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
      else if(c.reasons.length)issue=c.reasons.join(' · ');
      else if(!verified.recipients.length)issue=verified.recipientIssue||'이 발송 대상의 확인된 번호 없음';
      else recipients=verified.recipients.filter((r,i,all)=>r.verified&&all.findIndex(x=>x.phone===r.phone)===i);
+     }
     }catch(e){issue=reason(e.code);}
    }else if(!entries.length)issue='현재 시간표에 수업 없음 · 직접 확인';
    const items=recipients.map(r=>{
@@ -75,7 +79,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    const changed=items.some(t=>t.state==='changed')||(!items.length&&[...byPhone.values()].some(r=>r.version!==version));
    const state=changed?'changed':items.some(t=>t.state==='unsent')?'unsent':items.some(t=>t.state==='pending')?'pending':
     items.length?'sent':past.some(r=>outstanding.has(r.state))?'pending':received.length?'held':'unsent';
-   return {id,name,state,issue,text:c.text,comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
+   return {id,name,state,issue,excludedOnly,text:c.text,comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
   });
   if(!only){
    const seen=new Set(rows.map(r=>r.name));
@@ -85,7 +89,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   }
   // Keep removed students in history/change review if a delivery was attempted.
   const currentNames=new Set(src.entries.map(e=>e.sourceName));
-  return rows.filter(row=>only||currentNames.has(row.name)||row.past.length).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  return rows.filter(row=>only||(currentNames.has(row.name)&&!row.excludedOnly)||row.past.length).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
  }
  const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,failed:!!r.failed});
  async function roster(session,input){
