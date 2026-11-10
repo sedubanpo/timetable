@@ -132,3 +132,20 @@ test('a fully cancelled verified day has no initial recipient; earlier delivery 
  const student=await x.preview({audience:'student'});assert.deepEqual(student.rows,[]);assert.deepEqual(student.items,[]);
  const changes=await x.preview({mode:'changed'});assert.equal(changes.rows[0].state,'changed');assert.match(changes.rows[0].issue,/결석예고/);assert.equal(changes.items.length,0);
 });
+
+test('a confirmed SMS at the corrected number counts as delivered and retains the original failure',async()=>{
+ const x=setup(1), audience='student', input={...x.base,audience};
+ const plan=await x.preview({audience});
+ const id='id1', phone=x.people[id].recipients.find(r=>r.id==='student').phone;
+ const version=hash(['banpo',input.date,id,plan.items[0].text]);
+ const original={id:'original',academyId:'banpo',date:input.date,studentId:id,version,kind:'student-daily-lessons',phone:'01000009999',
+  state:'FAILED',errorCode:'3104',relation:'학생',createdAt:1};
+ x.f.records.set(original.id,original);
+ x.f.records.set('retry',{...original,id:'retry',phone,state:'DELIVERED',errorCode:null,channel:'LMS',originalDeliveryId:'original',createdAt:2,updatedAt:3});
+ const {results}=await x.b.batchHistory('',input);
+ assert.deepEqual(results.map(r=>[r.originalDeliveryId,r.masked.slice(-4),r.state]),[['original',phone.slice(-4),'DELIVERED'],[null,'9999','FAILED']]);
+ assert.equal(require('../assets/alimtalk-contract').historyLabel(results[0]),'문자 수신 완료');
+ assert.equal((await x.preview({audience})).items.length,0);
+ assert.equal((await x.b.batchHistory('',x.base)).results.length,0);
+ assert.equal(x.f.sent.length,0);
+});

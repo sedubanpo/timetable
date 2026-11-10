@@ -93,6 +93,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   }
   async function results(session,input){const a=await auth(session);if(!rules.validDate(input.date)||!Array.isArray(input.studentIds)||input.studentIds.length>20||input.studentIds.some(id=>typeof id!=='string'||!id))fail('INVALID_REQUEST');await store.rate(a.uid,'results',now(),30);const records=(await store.history(a.academyId,input.date,input.studentIds)).filter(r=>(r.kind||'daily-lessons')===kind);for(let i=0;i<records.length;i++){const r=records[i];if(r.state==='REQUESTING'&&now()-r.createdAt>deadline)records[i]=await store.update(r.id,old=>old.state==='REQUESTING'?{...old,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN'}:old);}await auth(session);return {results:records.map(publicRecord)};}
   async function reconcile(session,id){const a=await auth(session);await store.rate(a.uid,'reconcile',now(),10);const old=await store.get(id);if(!old||old.academyId!==a.academyId||(old.kind||'daily-lessons')!==kind)fail('FORBIDDEN');
+    if(['LMS','SMS'].includes(old.channel)&&['DELIVERED','FAILED'].includes(old.state))return publicRecord(old);
     const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:id,smsFallback:old.smsFallback},signal),deadline);
     if(!r||r.key!==id||!r.messageId||!r.groupId)return publicRecord(old); // Absence is not proof that a timeout was never sent.
     const result=await apply(id,r);await auth(session);return publicRecord(result);

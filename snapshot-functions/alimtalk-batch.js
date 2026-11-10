@@ -163,7 +163,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const a=await actor(session);validate(input);await store.rate(a.uid,'batchHistory',now(),30);
   const rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);await actor(session);
   return {results:rows.filter(r=>r.studentId!=='__alimtalk_admin_test__').sort(newest).map(r=>({id:r.id,studentId:r.studentId,name:r.variables?.['#{학생명}']||'',createdAt:r.createdAt,
-   state:r.state,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
+   state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
  }
  return {batchRoster:roster,batchPreview:prepare,batchSend:send,batchHistory:history,batchRefresh:refresh};
 }

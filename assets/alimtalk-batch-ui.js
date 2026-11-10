@@ -226,9 +226,20 @@ function mount({host,api,context,refresh}){
      }catch(e){if(current()){host.append(note(errorText(e)));update.disabled=false;}}
     });host.append(update);
    }
-   for(const r of results){const group=el('section',undefined,'bulk-review-row');
+   // Keep each follow-up beside its original, with the latest activity first.
+   const chains=new Map();
+   for(const row of results){
+    const key=row.originalDeliveryId||row.id;
+    if(!chains.has(key))chains.set(key,[]);
+    chains.get(key).push(row);
+   }
+   for(const r of Array.from(chains.values()).flat()){const group=el('section',undefined,'bulk-review-row');
     const stamp=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(r.createdAt);
-    group.append(el('strong',r.name+' · '+(root.TimetableAlimtalk.labels[r.state]||'결과 확인 필요')),note([r.relation,r.masked,stamp,r.batch?'일괄':'개별'].join(' · ')));
+    group.append(el('strong',r.name+' · '+root.TimetableAlimtalk.historyLabel(r)),note([r.relation,r.masked,stamp,r.originalDeliveryId?'문자 재발송':r.batch?'일괄 알림톡':'개별 알림톡'].join(' · ')));
+    if(r.originalDeliveryId&&r.updatedAt){
+     const time=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hourCycle:'h23',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(r.updatedAt);
+     group.append(note('솔라피 결과 확인 · '+time));
+    }
     if(r.fallbackResult)group.append(note(({CHECKING:'문자 대체 결과 확인 중',DELIVERED:'대체 문자 수신 완료',FAILED:'대체 문자 발송 실패',NOT_SENT:'대체 문자 미발송'})[r.fallbackResult]+' · 알림톡 실패 '+r.ataErrorCode));
     if(r.errorCode)group.append(note('결과 코드: '+r.errorCode));
     if(r.text)group.append(body('보낸 본문',r.text));
