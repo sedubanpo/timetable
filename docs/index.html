@@ -2336,6 +2336,29 @@
 #cardAlimtalkPanel .change-tag.add{background:#d8efe4;color:#205741}
 #cardAlimtalkPanel .change-tag.remove{background:#f9e2e2;color:#823b3d}
 #studentImageModal .bulk-names{line-height:1.8;word-break:keep-all;margin:.4em 0 0;color:#405569}
+
+#studentImageModal .bulk-send-footer{flex-wrap:wrap;z-index:1;box-shadow:0 -6px 12px -10px #24456366;padding:10px 4px}
+#studentImageModal .bulk-send-footer button{min-height:42px;margin:0}
+#studentImageModal .batch-journey{color:#193653;background:linear-gradient(150deg,#f1f6fc 0%,white 65%);border:1px solid #ccdae9;border-radius:16px;padding:clamp(16px,3vw,28px);font-variant-numeric:tabular-nums}
+#studentImageModal .batch-meta{font-size:13px;color:#506980;font-weight:650}
+#studentImageModal .batch-journey-head,#studentImageModal .batch-line,#studentImageModal .batch-totals{display:flex;align-items:center;gap:10px}
+#studentImageModal .batch-journey-head{margin:16px 0 24px}
+#studentImageModal .batch-journey-head h3{margin:0;color:#163954;font-size:22px;line-height:1.3}
+#studentImageModal .batch-orbit{width:20px;height:20px;box-sizing:border-box;border:3px solid #c4daef;border-top-color:#24649f;border-radius:50%;animation:timetableOrbit .95s linear infinite;flex:none}
+@keyframes timetableOrbit{to{transform:rotate(1turn)}}
+#studentImageModal .batch-line{justify-content:space-between;flex-wrap:wrap}
+#studentImageModal .batch-line span{font-size:13px;color:#526780}
+#studentImageModal .batch-track{height:8px;background:#dce6ee;border-radius:8px;overflow:hidden;margin:9px 0 12px}
+#studentImageModal .batch-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#316ba4,#368b92);transition:width .32s ease-out}
+#studentImageModal .batch-journey[data-state] .batch-orbit{animation:none;display:grid;place-items:center;border:0;border-radius:50%;background:#d7ede4;color:#19593e;font-weight:bold}
+#studentImageModal .batch-journey[data-state=done] .batch-orbit::after{content:'✓'}
+#studentImageModal .batch-journey[data-state=attention] .batch-orbit{background:#ffedca;color:#844b0c}
+#studentImageModal .batch-journey[data-state=attention] .batch-orbit::after{content:'!'}
+#studentImageModal .batch-totals{flex-wrap:wrap;margin:12px 0}
+#studentImageModal .batch-totals span{padding:4px 10px;background:#edf3f6;border-radius:12px;font-size:13px}
+#studentImageModal .batch-sr{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;margin:0}
+#studentImageModal [inert]{opacity:.65}
+@media(prefers-reduced-motion:reduce){#studentImageModal .batch-orbit{animation:none}#studentImageModal .batch-track span{transition:none}}
 </style>
 <script>
 (function(root){
@@ -2346,7 +2369,7 @@ const body=(title,text)=>{const d=el('details');d.append(el('summary',title),el(
 const audienceName=a=>a==='student'?'학생 본인':'학부모';
 const errorText=e=>({BATCH_CHANGED:'시간표, 번호 또는 발송 기록이 바뀌었습니다. 명단과 본문을 다시 확인하세요.',
  PREVIEW_EXPIRED:'검토 시간이 지났거나 대상이 바뀌었습니다. 다시 검토하세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 허브 로그인과 시간표·데스크 접근 권한을 확인해 주세요.',
- SOURCE_INCOMPLETE:'원본 시간표에 해석할 수 없는 수업이 있습니다.',RATE_LIMIT:'잠시 후 이력을 확인하고 다시 검토하세요.',
+ RESULT_UNCERTAIN:'서버에서 이번 묶음의 결과를 확정하지 못했습니다.',TIMEOUT:'서버 응답이 늦어 이번 묶음의 결과를 확인하지 못했습니다.',NETWORK_UNAVAILABLE:'네트워크 연결이 끊겼습니다.',SOURCE_INCOMPLETE:'원본 시간표에 해석할 수 없는 수업이 있습니다.',RATE_LIMIT:'잠시 후 이력을 확인하고 다시 검토하세요.',
  TEMPLATE_MISMATCH:'승인된 알림톡 양식을 확인할 수 없습니다.'}[e?.code]||'서버에서 확인하지 못했습니다. '+(e?.code||''));
 function readLessons(text){
  const match=/\[수업 안내[^\]\n]*\]\n([\s\S]*?)\n\n수업 일정에 관한/.exec((text||'').replace(/\r/g,''));
@@ -2434,11 +2457,22 @@ function renderChanges(host,p,who){
  }
 }
 function mount({host,api,context,refresh}){
- let seq=0;
+ let seq=0,sending=false;
+ const BATCH_SIZE=4;
+ // Only lock this modal. Session and date changes still invalidate outstanding requests.
+ function lock(){
+  const modal=host.closest('#studentImageModal');
+  const controls=Array.from(modal?.querySelectorAll('.card-modal-head button,.card-mode-tabs,.batch-bar,.student-list-panel,.card-actions')||[]).filter(n=>!n.inert);
+  for(const n of controls)n.inert=true;
+  const warn=e=>{e.preventDefault();e.returnValue='';};
+  root.addEventListener('beforeunload',warn);
+  return ()=>{for(const n of controls)n.inert=false;root.removeEventListener('beforeunload',warn);};
+ }
  const reset=()=>{seq++;};
  function view(){const generation=++seq,key=JSON.stringify(context());host.hidden=false;host.replaceChildren();return ()=>generation===seq&&key===JSON.stringify(context());}
  const note=(s)=>el('p',s,'bulk-note');
  async function review(mode){
+  if(sending)return;
   const current=view(),{date,audience}=context(),who=audienceName(audience);
   host.append(note('최신 시간표와 발송 기록을 확인하고 있습니다…'));
   try{
@@ -2477,43 +2511,68 @@ function mount({host,api,context,refresh}){
    const chosen=new Set(),checks=[];
    const bulk=el('label',undefined,'bulk-pick'),all=el('input');all.type='checkbox';bulk.append(all,document.createTextNode(' 가능한 번호 전체 선택 ('+data.length+'건)'));host.append(bulk);
    const students=new Map();for(const item of data){if(!students.has(item.studentId))students.set(item.studentId,[]);students.get(item.studentId).push(item);}
+   const list=el('details',undefined,'bulk-pick-list');
+   list.append(el('summary','수신자별 선택 · 본문 보기 ('+data.length+'건)'));host.append(list);
    for(const items of students.values()){
     const group=el('section',undefined,'bulk-review-row');group.append(el('strong',items[0].name));
     for(const item of items){const l=el('label'),i=el('input');i.type='checkbox';checks.push([i,item.ticket]);i.onchange=()=>{if(i.checked)chosen.add(item.ticket);else chosen.delete(item.ticket);sync();};
      l.append(i,document.createTextNode(' '+item.relation+' · '+item.masked+(item.retry?' · 실패 건 재시도':'')));group.append(l);
     }
-    group.append(body('보낼 본문 보기',items[0].text));host.append(group);
+    group.append(body('보낼 본문 보기',items[0].text));list.append(group);
    }
-   const foot=el('div',undefined,'bulk-confirm-footer'),count=el('strong'),verify=button('선택 내역 검토',confirm),title=mode==='changed'?'변경 알림톡':'시간표 알림톡';
-   foot.append(count,verify);host.append(foot);
+   const foot=el('div',undefined,'bulk-confirm-footer bulk-send-footer');
+   const ack=el('label',undefined,'bulk-pick'),ck=el('input');ck.type='checkbox';
+   ack.append(ck,document.createTextNode(' 수신자와 본문을 확인했습니다.'));
+   const send=button('',start);send.className='send-action';foot.append(ack,send);host.append(foot);
    all.onchange=()=>{for(const [i,t] of checks){i.checked=all.checked;if(i.checked)chosen.add(t);else chosen.delete(t);}sync();};
-   function sync(){count.textContent=chosen.size+'건 선택';verify.disabled=!chosen.size;all.checked=chosen.size===data.length;all.indeterminate=chosen.size>0&&chosen.size<data.length;}
-   sync();
-   function confirm(){
-    if(!current()||!chosen.size)return;
-    const selection=data.filter(x=>chosen.has(x.ticket));host.replaceChildren(el('h3','최종 발송 확인'),note(date+' · '+who+' · '+title));
-    for(const [id,items] of students){const picked=items.filter(x=>chosen.has(x.ticket));if(!picked.length)continue;
-     const block=el('section',undefined,'bulk-review-row');block.append(el('strong',items[0].name),note(picked.map(x=>x.relation+' '+x.masked).join(' / ')),body('발송 본문 확인',items[0].text));host.append(block);}
-    const ack=el('label',undefined,'bulk-pick'),ck=el('input');ck.type='checkbox';ack.append(ck,document.createTextNode(' 수신자와 발송 본문을 확인했습니다.'));
-    const send=button(who+' '+selection.length+'건 발송',async()=>{
-     if(send.disabled||!current()||!ck.checked)return;
-     send.disabled=true;ck.disabled=true;back.disabled=true;const progress=note('발송 요청 중…');progress.setAttribute('role','status');host.append(progress);
-     let done=0;const counts={};try{
-      for(let i=0;i<selection.length;i+=4){if(!current())return;
-       const part=selection.slice(i,i+4);const result=await api('batchSend',{date,audience,mode,previewId:p.previewId,confirmed:true,tickets:part.map(x=>x.ticket)});
-       if(!current())return;
-       for(const x of result.results){counts[x.state]=(counts[x.state]||0)+1;done++;}
-       progress.textContent=selection.length+'건 중 '+done+'건 처리';
-      }
-      if(current())progress.textContent=done+'건 처리 · '+Object.entries(counts).map(([s,n])=>(root.TimetableAlimtalk.labels[s]||s)+' '+n+'건').join(' / ');
-     }catch(e){if(current())progress.textContent=done+'건 처리 후 중단. '+errorText(e)+' 자동으로 재발송하지 않습니다. 전체 발송 이력을 확인하세요.';}
-     if(current()){host.append(button('전체 발송 이력 보기',history));refresh();}
-    });send.className='send-action';send.disabled=true;ck.onchange=()=>{send.disabled=!ck.checked;};
-    const back=button('대상 다시 고르기',()=>review(mode));host.append(ack,back,send);ack.scrollIntoView?.({block:'nearest'});
+   function sync(){ck.checked=false;ck.disabled=!chosen.size;all.checked=chosen.size===data.length;all.indeterminate=chosen.size>0&&!all.checked;update();}
+   function update(){send.textContent=who+' '+chosen.size+'건 '+(mode==='changed'?'변경 안내 발송':'발송');send.disabled=!chosen.size||!ck.checked||sending;}
+   ck.onchange=update;sync();
+   async function start(){
+    if(sending||send.disabled||!current()||!ck.checked||!chosen.size)return;
+    sending=true;send.disabled=true;const unlock=lock();
+    const selection=data.filter(x=>chosen.has(x.ticket)),total=selection.length,batches=Math.ceil(total/BATCH_SIZE);
+    const card=el('section',undefined,'batch-journey'),meta=el('span',date+'  /  '+who+'  /  '+(mode==='changed'?'변경 안내':'시간표 안내'),'batch-meta');
+    const title=el('h3','알림톡 발송 중'),icon=el('span',undefined,'batch-orbit');icon.setAttribute('aria-hidden','true');
+    const top=el('div',undefined,'batch-journey-head');top.append(icon,title);
+    const number=el('strong'),step=el('span'),line=el('div',undefined,'batch-line');line.append(number,step);
+    const track=el('div',undefined,'batch-track'),fill=el('span');track.append(fill);track.setAttribute('role','progressbar');
+    track.setAttribute('aria-label','발송 요청 처리');track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax',String(total));
+    const hint=note('최대 4건씩 자동으로 이어집니다. 이 화면을 열어 두세요.'),live=el('p',undefined,'batch-sr');live.setAttribute('role','status');
+    card.append(meta,top,line,track,hint,live);host.replaceChildren(card);card.tabIndex=-1;card.focus({preventScroll:true});card.scrollIntoView?.({block:'nearest'});
+    let done=0,offset=0;const counts=new Map();
+    function paint(batch){number.textContent=done+' / '+total+'건 처리';step.textContent=batch+' / '+batches+' 묶음';track.setAttribute('aria-valuenow',String(done));fill.style.width=(100*done/total)+'%';live.textContent=number.textContent+' · '+step.textContent;}
+    try{
+     for(offset=0;offset<total;offset+=BATCH_SIZE){
+      if(!current())return;
+      const part=selection.slice(offset,offset+BATCH_SIZE),batch=1+offset/BATCH_SIZE;paint(batch);
+      const result=await api('batchSend',{date,audience,mode,previewId:p.previewId,confirmed:true,tickets:part.map(x=>x.ticket)});
+      if(!current())return;
+      if(!Array.isArray(result?.results)||result.results.length!==part.length||!result.results.every(x=>x&&Object.hasOwn(root.TimetableAlimtalk.labels,x.state)))throw Object.assign(Error(),{code:'RESULT_UNCERTAIN'});
+      for(const x of result.results)counts.set(x.state,(counts.get(x.state)||0)+1);
+      done+=part.length;paint(batch);
+     }
+     card.dataset.state=counts.has('FAILED')||counts.has('UNKNOWN')?'attention':'done';title.textContent='발송 요청 처리 완료';
+     hint.textContent='수신 완료 여부는 발송 이력에서 확인하세요.';
+    }catch(e){
+     if(!current())return;
+     card.dataset.state='attention';title.textContent='발송을 멈췄습니다';
+     const thisBatch=Math.min(BATCH_SIZE,total-offset);
+     hint.textContent=errorText(e)+' 이후 '+Math.max(0,total-offset-thisBatch)+'건은 요청하지 않았습니다. 자동으로 재시도하지 않습니다.';
+     card.append(note('중단된 묶음 '+thisBatch+'건은 이력에서 먼저 확인하세요.'));
+    }finally{
+     sending=false;unlock();
+     if(current()){
+      if(counts.size){const chips=el('div',undefined,'batch-totals');for(const [state,n] of counts)chips.append(el('span',root.TimetableAlimtalk.labels[state]+' '+n+'건'));card.append(chips);}
+      live.textContent=title.textContent+' · '+number.textContent;
+      card.append(button('전체 발송 이력 보기',history));refresh();
+     }
+    }
    }
   }catch(e){if(current()){host.replaceChildren(note(errorText(e)),button('명단 다시 확인',()=>review(mode)));}}
  }
  async function history(){
+  if(sending)return;
   const current=view(),{date,audience}=context();
   host.append(note('발송 이력을 불러오는 중…'));
   try{
@@ -2539,7 +2598,7 @@ function mount({host,api,context,refresh}){
     host.append(group);}
   }catch(e){if(current())host.replaceChildren(note(errorText(e)),button('이력 다시 확인',history));}
  }
- return {review,history,reset,errorText};
+ return {review,history,reset,errorText,isSending:()=>sending};
 }
 root.TimetableBatchUI={mount,errorText,lessonChanges};
 })(globalThis);
@@ -7411,7 +7470,7 @@ window.SeduHubAdapter={
             attendancePendingManualRefreshId = 0;
           }
           syncLookupDimmingState();
-          if (isStudentImageModalOpen()) {
+          if (isStudentImageModalOpen() && !cardBulkUI?.isSending()) {
             var pendingSelection = studentImageRefreshPendingSelection || selectedStudentForImage || "";
             buildStudentImageMap();
             if(studentCardMode==='message'){resetCardAlimtalk();reloadCardRoster();}
