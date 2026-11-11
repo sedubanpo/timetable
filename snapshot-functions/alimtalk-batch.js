@@ -119,13 +119,13 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   await actor(session);
   if(tickets.length)await store.savePreview(previewId,{kind:'bulk',academyId:a.academyId,actor:a.uid,date,audience,mode,expires,
    tickets:Object.fromEntries(tickets.map(x=>[x.ticket,x.studentId]))});
-  return {date,audience,mode,previewId,expires,changes,rows:rows.map(summary),items:tickets.map(x=>({
+  return {date,audience,mode,batchSize:8,previewId,expires,changes,rows:rows.map(summary),items:tickets.map(x=>({
    ticket:x.ticket,studentId:x.studentId,name:x.name,relation:x.recipient.relation,masked:rules.mask(x.recipient.phone),previous:x.previous,text:x.text,retry:x.lastState==='FAILED'
   }))};
  }
  async function send(session,input){
   const start=Date.now(),a=await actor(session),{previewId,tickets}=input;
-  if(input.confirmed!==true||!Array.isArray(tickets)||!tickets.length||tickets.length>4||
+  if(input.confirmed!==true||!Array.isArray(tickets)||!tickets.length||tickets.length>8||
    tickets.some(t=>typeof t!=='string'||!/^[a-f0-9]{64}$/.test(t))||new Set(tickets).size!==tickets.length)fail('INVALID_REQUEST');
   const p=await store.preview(previewId);
   if(!p||p.kind!=='bulk'||p.academyId!==a.academyId||p.actor!==a.uid||p.expires<=now()||

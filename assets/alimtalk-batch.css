@@ -68,3 +68,12 @@
 #studentImageModal .batch-sr{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;margin:0}
 #studentImageModal [inert]{opacity:.65}
 @media(prefers-reduced-motion:reduce){#studentImageModal .batch-orbit{animation:none}#studentImageModal .batch-track span{transition:none}}
+#studentImageModal .roster-loading{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:#edf5ff;color:#214b78;box-shadow:0 2px 8px #173b5510;font-weight:650;min-height:48px;box-sizing:border-box}
+#studentImageModal #batchRosterStatus.roster-loading{justify-content:flex-start;gap:12px;color:#214b78}
+#studentImageModal .roster-loading .bulk-note{margin:0}
+#studentImageModal [data-card-audience][aria-busy=true]::after{content:'';display:inline-block;width:12px;height:12px;margin-left:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:timetableOrbit .95s linear infinite}
+#studentImageModal .roster-description{font-size:12px;line-height:1.5;margin:0 5px 9px;color:var(--ink)}
+#studentImageModal .roster-unsent{--paper:#edf5ff;--ink:#245179}
+#studentImageModal .roster-failed{--paper:#ffebeb;--ink:#833b43}
+#studentImageModal .roster-guardianOnly{--paper:#f3f1fa;--ink:#5e5377}
+@media(prefers-reduced-motion:reduce){#studentImageModal [data-card-audience][aria-busy=true]::after{animation:none}}

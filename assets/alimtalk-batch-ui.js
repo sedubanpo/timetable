@@ -95,7 +95,7 @@ function renderChanges(host,p,who){
 }
 function mount({host,api,context,refresh}){
  let seq=0,sending=false;
- const BATCH_SIZE=4;
+
  // Only lock this modal. Session and date changes still invalidate outstanding requests.
  function lock(){
   const modal=host.closest('#studentImageModal');
@@ -111,7 +111,7 @@ function mount({host,api,context,refresh}){
  async function review(mode){
   if(sending)return;
   const current=view(),{date,audience}=context(),who=audienceName(audience);
-  host.append(note('최신 시간표와 발송 기록을 확인하고 있습니다…'));
+  const loading=el('div',undefined,'roster-loading');loading.setAttribute('role','status');const spinner=el('span',undefined,'batch-orbit');spinner.setAttribute('aria-hidden','true');loading.append(spinner,note('최신 시간표와 발송 기록을 확인하고 있습니다…'));host.append(loading);
   try{
    const p=await api('batchPreview',{date,audience,mode});if(!current())return;
    host.replaceChildren(el('h3',who+' · '+(mode==='changed'?'변경 대상자 발송':'미발송 일괄 발송')),note(date+' 수업 안내 · 받을 번호를 선택하고 본문을 확인하세요.'));
@@ -141,6 +141,7 @@ function mount({host,api,context,refresh}){
     }
     return;
    }
+   const BATCH_SIZE=p.batchSize===8?8:4;
    const data=p.items,held=mode==='changed'?[]:p.rows.filter(r=>r.issue);
    if(mode==='unsent')host.append(el('p','전체 '+p.rows.length+'명 · 발송 가능 '+data.length+'건 · 확인 필요 '+held.length+'명','change-count'));
    if(held.length){const h=el('details');h.append(el('summary','확인이 필요한 학생 '+held.length+'명'));held.forEach(r=>h.append(note(r.name+' · '+r.issue)));host.append(h);}
@@ -176,7 +177,7 @@ function mount({host,api,context,refresh}){
     const number=el('strong'),step=el('span'),line=el('div',undefined,'batch-line');line.append(number,step);
     const track=el('div',undefined,'batch-track'),fill=el('span');track.append(fill);track.setAttribute('role','progressbar');
     track.setAttribute('aria-label','발송 요청 처리');track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax',String(total));
-    const hint=note('최대 4건씩 자동으로 이어집니다. 이 화면을 열어 두세요.'),live=el('p',undefined,'batch-sr');live.setAttribute('role','status');
+    const hint=note('선택한 번호로 순서대로 발송하고 있습니다. 이 화면을 열어 두세요.'),live=el('p',undefined,'batch-sr');live.setAttribute('role','status');
     card.append(meta,top,line,track,hint,live);host.replaceChildren(card);card.tabIndex=-1;card.focus({preventScroll:true});card.scrollIntoView?.({block:'nearest'});
     let done=0,offset=0;const counts=new Map();
     function paint(batch){number.textContent=done+' / '+total+'건 처리';step.textContent=batch+' / '+batches+' 묶음';track.setAttribute('aria-valuenow',String(done));fill.style.width=(100*done/total)+'%';live.textContent=number.textContent+' · '+step.textContent;}

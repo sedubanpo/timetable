@@ -56,7 +56,7 @@ test('only previously delivered changed numbers qualify; review invalidated by s
 });
 test('actor, ttl, recipient hash, template and chunk limits checked at commit',async()=>{
  for(const what of ['actor','expire','phone','template','limit','auth']){
-  const x=setup(5),p=await x.preview();
+  const x=setup(9),p=await x.preview();
   if(what==='actor')x.auth.uid='other';if(what==='expire')x.expire();if(what==='phone')x.people.id1.recipients[0].phone='01000000099';
   if(what==='template')x.f.template.status='PENDING';if(what==='auth')x.auth.active=false;
   await assert.rejects(x.send(p,what==='limit'?p.items:[p.items[0]]));assert.equal(x.f.sent.length,0);
@@ -65,7 +65,7 @@ test('actor, ttl, recipient hash, template and chunk limits checked at commit',a
 test('review covers a full day larger than a single chunk without suppressing siblings or resending completed chunks',async()=>{
  const x=setup(52),same=x.people.id1.recipients[0].phone;x.people.id2.recipients[0].phone=same;x.clear.id2.recipients.mother.phoneHash=contactHash(same);
  const p=await x.preview();assert.equal(p.items.length,52);
- for(let i=0;i<52;i+=4)await x.send(p,p.items.slice(i,i+4));
+ for(let i=0;i<52;i+=8)await x.send(p,p.items.slice(i,i+8));
  await assert.rejects(x.send(p,p.items.slice(0,4)),{code:'BATCH_CHANGED'});assert.equal(x.f.sent.length,52);assert.equal(x.f.sent.filter(m=>m.to===same).length,2);
 });
 
@@ -148,4 +148,12 @@ test('a confirmed SMS at the corrected number counts as delivered and retains th
  assert.equal((await x.preview({audience})).items.length,0);
  assert.equal((await x.b.batchHistory('',x.base)).results.length,0);
  assert.equal(x.f.sent.length,0);
+});
+
+test('eight sends run concurrently with durable claims; ninth is rejected before delivery',async()=>{
+ const x=setup(9),p=await x.preview();assert.equal(p.batchSize,8);
+ await assert.rejects(x.send(p),{code:'INVALID_REQUEST'});assert.equal(x.f.sent.length,0);
+ const results=await Promise.allSettled([x.send(p,p.items.slice(0,8)),x.send(p,p.items.slice(0,8))]);
+ assert(results.some(r=>r.status==='fulfilled'));assert.equal(x.f.sent.length,8);
+ await x.send(p,p.items.slice(8));assert.equal(x.f.sent.length,9);
 });

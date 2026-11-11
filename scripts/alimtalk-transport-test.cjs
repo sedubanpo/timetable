@@ -38,10 +38,49 @@ for(const file of ['Index.html','docs/index.html']){
  });
  test(file+': completed preview cannot be overwritten by an older roster response',async()=>{
   const text=fs.readFileSync(file,'utf8'),start=text.indexOf('function acceptCardRoster('),end=text.indexOf('function rosterStudentId()',start);
-  let resolve,renders=0;const scope={cardRosterRead:0,cardRosterRows:[],cardRosterError:'',cardRosterScope:'',studentCardMode:'message',rosterKey:()=> 'scope-a',isStudentImageModalOpen:()=>true,filterStudentImageList:()=>{renders++;},cardBatchContext:()=>({date:'2026-11-08',audience:'student'}),cardAlimtalkApi:()=>new Promise(r=>{resolve=r;}),TimetableBatchUI:{errorText:()=> '조회 실패'}};
+  let resolve,renders=0;const scope={cardRosterCache:new Map(),cardRosterCacheScope:'',cardRosterRead:0,cardRosterRows:[],cardRosterError:'',cardRosterScope:'',studentCardMode:'message',rosterKey:()=> 'scope-a',isStudentImageModalOpen:()=>true,filterStudentImageList:()=>{renders++;},cardBatchContext:()=>({date:'2026-11-08',audience:'student'}),cardAlimtalkApi:()=>new Promise(r=>{resolve=r;}),TimetableBatchUI:{errorText:()=> '조회 실패'}};
   vm.createContext(scope);vm.runInContext(text.slice(start,end),scope);
   const pending=scope.reloadCardRoster(),fresh=[{name:'확인학생',issue:''}];scope.acceptCardRoster(fresh,'scope-a');resolve({rows:[{name:'확인학생',issue:'처음 연결하는 학생 · 학생 확인 필요'}]});await pending;
   assert.equal(scope.cardRosterRows,fresh);assert.equal(renders,2);
   scope.rosterKey=()=> 'scope-b';scope.acceptCardRoster([{name:'이전 날짜'}],'scope-a');assert.equal(scope.cardRosterRows,fresh);
+ });
+}
+
+for(const file of ['Index.html','docs/index.html']){
+ function rosterFixture(){
+  let clock=1,calls=[];const ctx={session:'operator',date:'2026-11-12',audience:'guardian'};
+  const scope={Date:{now:()=>clock},Map,studentCardMode:'message',isStudentImageModalOpen:()=>true,attendanceDateKey:()=>ctx.date,currentSheetName:'11/12',cardAudience:'guardian',getScheduleSessionKey:()=>ctx.session,timetableLoginSequence:1,filterStudentImageList:()=>{},TimetableBatchUI:{errorText:e=>e.code},cardAlimtalkApi:(action,input)=>new Promise((resolve,reject)=>calls.push({action,input,resolve,reject}))};
+  vm.createContext(scope);const t=fs.readFileSync(file,'utf8'),a=t.indexOf('// Page adapter for the date-wide list.'),b=t.indexOf('function rosterStudentId()',a);vm.runInContext(t.slice(a,b),scope);
+  return {scope,ctx,calls,advance:()=>clock+=60001};
+ }
+ test(file+': switch reuses fresh audience rows and shares pending reads; TTL and explicit refresh invalidate',async()=>{
+  const f=rosterFixture(),s=f.scope;const g=s.reloadCardRoster({reuse:true});
+  s.cardAudience='student';const p=s.reloadCardRoster({reuse:true});
+  s.cardAudience='guardian';const back=s.reloadCardRoster({reuse:true});assert.equal(f.calls.length,2);
+  f.calls[1].resolve({rows:[{name:'학생'}]});await p;assert.equal(s.cardRosterRows,null);
+  f.calls[0].resolve({rows:[{name:'학부모'}]});await Promise.all([g,back]);assert.equal(s.cardRosterRows[0].name,'학부모');
+  s.cardAudience='student';await s.reloadCardRoster({reuse:true});assert.equal(f.calls.length,2);assert.equal(s.cardRosterRows[0].name,'학생');
+  f.advance();const expired=s.reloadCardRoster({reuse:true});assert.equal(f.calls.length,3);f.calls[2].resolve({rows:[]});await expired;
+  const force=s.reloadCardRoster();assert.equal(f.calls.length,4);f.calls[3].resolve({rows:[]});await force;
+  s.cardAudience='guardian';const again=s.reloadCardRoster({reuse:true});assert.equal(f.calls.length,5);f.calls[4].resolve({rows:[]});await again;
+ });
+ test(file+': login/date changes invalidate cache; rejected reads can retry; reasons have separate groups',async()=>{
+  const f=rosterFixture(),s=f.scope;let p=s.reloadCardRoster({reuse:true});f.calls[0].resolve({rows:[]});await p;
+  f.ctx.session='new';p=s.reloadCardRoster({reuse:true});assert.equal(f.calls.length,2);f.calls[1].reject({code:'NETWORK_UNAVAILABLE'});await p;assert.equal(s.cardRosterError,'NETWORK_UNAVAILABLE');
+  p=s.reloadCardRoster({reuse:true});f.calls[2].resolve({rows:[]});await p;
+  f.ctx.date='2026-11-13';p=s.reloadCardRoster({reuse:true});assert.equal(f.calls.length,4);f.calls[3].resolve({rows:[]});await p;
+  assert.equal(s.cardRosterGroup({state:'unsent',issue:'본인 번호 없음 · 학부모만 안내'}),'guardianOnly');
+  assert.equal(s.cardRosterGroup({state:'unsent',issue:'학생 연결 확인'}),'held');
+  assert.equal(s.cardRosterGroup({state:'unsent',failed:true}),'failed');
+  assert.equal(s.cardRosterGroup({state:'unsent'}),'unsent');
+ });
+ test(file+': roster transport survives audience switches but rejects changed date',async()=>{
+  for(const changeDate of [false,true]){const f=setup(file),ctx={session:'s',date:'2026-11-12',audience:'guardian'};
+   f.scope.cardBatchContext=()=>ctx;f.scope.rosterKey=()=>JSON.stringify(ctx);
+   f.user.getIdToken=async()=>{ctx.audience='student';if(changeDate)ctx.date='2026-11-13';return 'synthetic';};
+   if(changeDate)await assert.rejects(f.scope.cardAlimtalkApi('batchRoster',{},true),{code:'SESSION_CHANGED'});
+   else assert.equal((await f.scope.cardAlimtalkApi('batchRoster',{},true)).ok,true);
+   assert.equal(f.calls(),changeDate?0:1);
+  }
  });
 }
