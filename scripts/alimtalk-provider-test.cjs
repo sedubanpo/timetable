@@ -40,3 +40,34 @@ test('late and duplicate ATA failure reports cannot reopen a completed SMS or al
  assert.equal(done.state,'DELIVERED');assert.equal(done.ataErrorCode,'3104');
  assert.equal((await svc.apply(id,event)).fallbackResult,'DELIVERED');
 });
+
+test('missing receipt recovery scopes recipient/time and requires immutable key, original ATA and unique complete results',async()=>{
+ const createdAt=Date.parse('2026-11-11T11:08:30Z'),m={messageId:'m1',groupId:'g1',to:phone,type:'ATA',statusCode:'4000',dateCreated:new Date(createdAt).toISOString(),customFields:{timetableKey:key}};
+ const x=setup({messageList:{other:{...m,messageId:'other',customFields:{timetableKey:'b'.repeat(64)}},sms:{...m,messageId:'sms',type:'LMS',replacement:true},m1:m}});
+ const result=await x.provider.lookup({key,phone,createdAt});assert.equal(result.messageId,'m1');
+ const q=new URL(x.calls[0].url).searchParams;assert.equal(q.get('to'),phone);assert.equal(q.get('startDate'),new Date(createdAt-60000).toISOString());assert.equal(q.get('endDate'),new Date(createdAt+600000).toISOString());assert.equal(x.calls[0].options.method,'GET');
+ for(const bad of [{...m,to:'01000000002'},{...m,dateCreated:new Date(createdAt+900000).toISOString()}])await assert.rejects(setup({messageList:{bad}}).provider.lookup({key,phone,createdAt}),{code:'RESULT_MISMATCH'});
+ await assert.rejects(setup({messageList:{m1:m,m2:{...m,messageId:'m2'}}}).provider.lookup({key,phone,createdAt}),{code:'RECOVERY_AMBIGUOUS'});
+ await assert.rejects(setup({messageList:{m1:m},nextKey:'repeat'}).provider.lookup({key,phone,createdAt}),{code:'RECOVERY_SCAN_LIMIT'});
+ assert.equal(await setup({messageList:{}}).provider.lookup({key,phone,createdAt}),null);
+});
+test('missing group ID recovers only the known message and cannot attach another original',async()=>{
+ const createdAt=Date.now(),m={messageId:'m2',groupId:'g1',to:phone,type:'ATA',dateCreated:new Date(createdAt).toISOString(),customFields:{timetableKey:key}};
+ await assert.rejects(setup({messageList:{m2:m}}).provider.lookup({key,phone,createdAt,messageId:'m1'}),{code:'RESULT_MISMATCH'});
+});
+test('lost send response recovers receipt once without a second send and preserves source identity',async()=>{
+ const f=fixture(),{createService}=require('../snapshot-functions/alimtalk-service');let sends=0,lookups=0;
+ f.deps.provider.sendOne=async()=>{sends++;throw Object.assign(Error(),{code:'TIMEOUT'});};
+ f.deps.provider.lookup=async input=>{lookups++;assert.equal(input.phone,phone);assert(Number.isSafeInteger(input.createdAt));return {key:input.key,messageId:'recovered',groupId:'group',statusCode:'4000'};};
+ const svc=createService(f.deps),p=await svc.preview('',f.input),r=await svc.send('',{previewId:p.previewId});
+ assert.equal(sends,1);assert.equal(lookups,1);assert.equal(r.results[0].state,'DELIVERED');assert.equal(r.results[0].trackingMissing,false);assert.equal(r.results[0].requestErrorCode,'TIMEOUT');
+});
+test('empty recovery preserves UNKNOWN and blocks resending; later reconciliation links authoritative receipt',async()=>{
+ const f=fixture(),{createService}=require('../snapshot-functions/alimtalk-service');let sends=0;
+ f.deps.provider.sendOne=async()=>{sends++;throw Object.assign(Error(),{code:'TIMEOUT'});};
+ const svc=createService(f.deps),p=await svc.preview('',f.input),r=await svc.send('',{previewId:p.previewId});
+ assert.equal(r.results[0].state,'UNKNOWN');assert.equal(r.results[0].trackingIssue,'RECEIPT_NOT_FOUND');assert(r.results[0].lastResultCheckAt);
+ await assert.rejects(svc.send('',{previewId:p.previewId}),{code:'PREVIOUS_RESULT_UNCERTAIN'});assert.equal(sends,1);
+ f.deps.provider.lookup=async x=>({key:x.key,messageId:'m',groupId:'g',statusCode:'2000'});
+ const fixed=await svc.reconcile('',r.results[0].id);assert.equal(fixed.state,'ACCEPTED');assert.equal(fixed.trackingMissing,false);assert.equal(fixed.trackingIssue,null);assert.equal(sends,1);
+});

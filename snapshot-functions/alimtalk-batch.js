@@ -97,7 +97,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const currentNames=new Set(src.entries.map(e=>e.sourceName));
   return rows.filter(row=>only||(currentNames.has(row.name)&&!row.excludedOnly)||row.past.length).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
  }
- const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,failed:!!r.failed});
+ const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
  async function roster(session,input){
   const a=await reviewer(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
   const rows=await scan(a,input);await reviewer(session);return {rows:rows.map(summary)};
@@ -164,18 +164,26 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const records=await Promise.all([...new Set(ids)].map(id=>store.get(id)));
   if(records.some(r=>!r||r.academyId!==a.academyId||r.date!==date||r.kind!==kinds[audience]||r.studentId==='__alimtalk_admin_test__'))fail('FORBIDDEN');
   const events=await Promise.all(records.map(async r=>{
-   if(!outstanding.has(r.state)||!r.messageId)return null;
-   return provider.lookup({messageId:r.messageId,groupId:r.groupId,key:r.id,smsFallback:r.smsFallback},AbortSignal.timeout(8000));
+   if(!outstanding.has(r.state))return null;
+   return provider.lookup({messageId:r.messageId,groupId:r.groupId,key:r.id,phone:r.phone,createdAt:r.createdAt,smsFallback:r.smsFallback},AbortSignal.timeout(8000));
   }));
   await actor(session);
-  await Promise.all(records.map((r,i)=>events[i]?services[audience].apply(r.id,events[i]):null));
+  await Promise.all(records.map((r,i)=>{
+   if(events[i])return services[audience].apply(r.id,events[i]);
+   if(outstanding.has(r.state))return store.update(r.id,current=>({...current,lastResultCheckAt:now(),...(!current.messageId||!current.groupId?{trackingIssue:'RECEIPT_NOT_FOUND'}:{})}));
+  }));
   return {checked:records.length};
  }
  async function history(session,input){
   const a=await actor(session);validate(input);await store.rate(a.uid,'batchHistory',now(),30);
-  const rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);await actor(session);
-  return {results:rows.filter(r=>r.studentId!=='__alimtalk_admin_test__').sort(newest).map(r=>({id:r.id,studentId:r.studentId,name:r.variables?.['#{학생명}']||'',createdAt:r.createdAt,
-   state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
+  let rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);await actor(session);
+  // Repair missing receipts on history reads, at most five and no more than once a minute.
+  const missing=rows.filter(r=>r.studentId!=='__alimtalk_admin_test__'&&outstanding.has(r.state)&&(!r.messageId||!r.groupId)&&now()-(r.lastResultCheckAt||r.createdAt)>60000).slice(0,5);
+  let recoveryDeferred=false;
+  if(missing.length){try{await refresh(session,{...input,ids:missing.map(r=>r.id)});rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);}catch{recoveryDeferred=true;}}
+  await actor(session);
+  return {recoveryDeferred,recoveryChecked:missing.length,results:rows.filter(r=>r.studentId!=='__alimtalk_admin_test__').sort(newest).map(r=>({id:r.id,studentId:r.studentId,name:r.variables?.['#{학생명}']||'',createdAt:r.createdAt,
+   trackingMissing:!r.messageId||!r.groupId,trackingIssue:r.trackingIssue||null,lastResultCheckAt:r.lastResultCheckAt||null,state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
  }
  return {batchRoster:roster,batchPreview:prepare,batchSend:send,batchHistory:history,batchRefresh:refresh};
 }

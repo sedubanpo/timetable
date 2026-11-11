@@ -171,3 +171,13 @@ test('queue stops taking new recipients on deadline or unexpected dispatch failu
   await assert.rejects(x.send(p),{code:'RESULT_UNCERTAIN'});assert.equal(calls,8);
  }
 });
+
+test('history repairs missing receipts once per minute and batch refresh no longer skips ID-less records',async()=>{
+ const x=setup(1),id='d'.repeat(64);let reads=0;
+ const r={id,academyId:'banpo',date:x.base.date,kind:'daily-lessons',studentId:'id1',phone:x.people.id1.recipients[0].phone,relation:'모',createdAt:1,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN',messageId:null,groupId:null};
+ await x.f.deps.store.claim(id,r);x.f.deps.provider.lookup=async input=>{reads++;assert.equal(input.phone,r.phone);assert.equal(input.createdAt,1);return null;};
+ let h=await x.b.batchHistory('',x.base);assert.equal(reads,1);assert.equal(h.results[0].trackingIssue,'RECEIPT_NOT_FOUND');assert.equal(h.results[0].state,'UNKNOWN');
+ await x.b.batchHistory('',x.base);assert.equal(reads,1);
+ x.f.deps.provider.lookup=async input=>{reads++;return {key:input.key,messageId:'found',groupId:'group',statusCode:'4000'};};
+ await x.b.batchRefresh('',{...x.base,ids:[id]});h=await x.b.batchHistory('',x.base);assert.equal(reads,2);assert.equal(h.results[0].state,'DELIVERED');assert.equal(h.results[0].trackingMissing,false);assert.equal(x.f.sent.length,0);
+});

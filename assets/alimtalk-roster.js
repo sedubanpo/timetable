@@ -76,7 +76,7 @@ function drawAlimtalkRoster(list,keyword){
  const ready=cardRosterScope===rosterKey()&&Array.isArray(cardRosterRows),byName=new Map();
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
  const names=[...new Set([...Object.keys(studentImageScheduleMap),...byName.keys()].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
- const groups={changed:['변경 안내 필요','이전에 받은 안내와 달라진 일정'],unsent:['발송 대기','확인된 번호로 아직 안내를 보내지 않았습니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],pending:['결과 확인 중','접수되었으나 수신 결과가 확정되지 않았습니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
+ const groups={changed:['변경 안내 필요','이전에 받은 안내와 달라진 일정'],unsent:['발송 대기','확인된 번호로 아직 안내를 보내지 않았습니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],pending:['결과 확인 중','접수 여부 또는 최종 수신 결과를 확인해야 합니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
  if(!ready)groups.held=[cardRosterError?'조회 실패':'기록 확인 중',cardRosterError?'다시 확인을 눌러 조회해 주세요.':'서버 기록을 확인한 뒤 발송 상태를 표시합니다.'];
  const visible=names.filter(n=>!keyword||n.toLowerCase().includes(keyword));
  const sections=new Map();
@@ -97,7 +97,7 @@ function drawAlimtalkRoster(list,keyword){
   if(!sections.has(state))sections.set(state,[]);
   const b=make('button');b.type='button';b.className='recipient-student';b.dataset.studentName=name;b.setAttribute('aria-pressed',String(name===selectedStudentForImage));
   b.append(make('strong',name));
-  const sub=row?.issue||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='unsent'?'확인된 번호 · 발송 가능':'');
+  const sub=row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='unsent'?'확인된 번호 · 발송 가능':'');
   if(sub)b.append(make('small',sub));
   b.onclick=()=>{if(!studentImageScheduleMap[name]){openCardBulk('history');return;}selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();};
   const tile=make('div');tile.className='roster-student-card';tile.append(b);

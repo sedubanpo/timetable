@@ -53,7 +53,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     return {rows,fingerprint,date:input.date,templateVerified:rules.verifyTemplate(template)};
   }
   function publicPlan(p){return {...p,rows:p.rows.map(r=>({...r,recipients:r.recipients.map(({phone,...r})=>r)})),counts:{students:p.rows.filter(r=>!r.reasons.length).length,messages:p.rows.filter(r=>!r.reasons.length).reduce((n,r)=>n+r.recipients.length,0),numbers:new Set(p.rows.filter(r=>!r.reasons.length).flatMap(r=>r.recipients.map(x=>x.phone))).size}};}
-  function publicRecord(r){if(!r)return null;const {phone,variables,...rest}=r;return {...rest,masked:rules.mask(phone),label:rules.labels[r.state]};}
+  function publicRecord(r){if(!r)return null;const {phone,variables,...rest}=r;return {...rest,trackingMissing:!r.messageId||!r.groupId,masked:rules.mask(phone),label:rules.labels[r.state]};}
   async function preview(session,input){const a=await auth(session);await store.rate(a.uid,'preview',now(),30);const p=await plan(a,input);await auth(session);const id=crypto.randomUUID();await store.savePreview(id,{actor:a.uid,academyId:a.academyId,input,kind,plan:p,expires:now()+300000});await auth(session);return {...publicPlan(p),previewId:id};}
   async function send(session,{previewId,confirmChanges=false}){
     const a=await auth(session);await store.rate(a.uid,'send',now(),10);await store.rate('academy:'+a.academyId,'send',now(),30);
@@ -87,16 +87,25 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
         await apply(id,{...r,key:id});
       }catch(e){
         const rejected=['PROVIDER_REQUEST_REJECTED','PROVIDER_AUTH_REJECTED','PROVIDER_ACCESS_DENIED','PROVIDER_RATE_LIMIT','PROVIDER_KEY_INVALID','PROVIDER_SIGNATURE_MISMATCH'].includes(e.code);
-        await store.update(id,old=>(['DELIVERED','FAILED'].includes(old.state)?old:{...old,state:rejected?'FAILED':'UNKNOWN',errorCode:rejected?e.code:'RESULT_UNCERTAIN',updatedAt:now()}));
+        await store.update(id,old=>(['DELIVERED','FAILED'].includes(old.state)?old:{...old,state:rejected?'FAILED':'UNKNOWN',errorCode:rejected?e.code:'RESULT_UNCERTAIN',requestErrorCode:['TIMEOUT','UNKNOWN_RESULT','RESULT_MISMATCH','PROVIDER_UNAVAILABLE'].includes(e.code)?e.code:'REQUEST_INTERRUPTED',updatedAt:now()}));
+      }
+      const saved=await store.get(id);
+      // A response timeout never triggers a second send. Recover the receipt by read only.
+      if(saved.state==='UNKNOWN'&&(!saved.messageId||!saved.groupId)){
+        try{await lookupRecord(saved);}catch{}
       }
       return publicRecord(await store.get(id));
   }
   async function results(session,input){const a=await auth(session);if(!rules.validDate(input.date)||!Array.isArray(input.studentIds)||input.studentIds.length>20||input.studentIds.some(id=>typeof id!=='string'||!id))fail('INVALID_REQUEST');await store.rate(a.uid,'results',now(),30);const records=(await store.history(a.academyId,input.date,input.studentIds)).filter(r=>(r.kind||'daily-lessons')===kind);for(let i=0;i<records.length;i++){const r=records[i];if(r.state==='REQUESTING'&&now()-r.createdAt>deadline)records[i]=await store.update(r.id,old=>old.state==='REQUESTING'?{...old,state:'UNKNOWN',errorCode:'RESULT_UNCERTAIN'}:old);}await auth(session);return {results:records.map(publicRecord)};}
   async function reconcile(session,id){const a=await auth(session);await store.rate(a.uid,'reconcile',now(),10);const old=await store.get(id);if(!old||old.academyId!==a.academyId||(old.kind||'daily-lessons')!==kind)fail('FORBIDDEN');
     if(['LMS','SMS'].includes(old.channel)&&['DELIVERED','FAILED'].includes(old.state))return publicRecord(old);
-    const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:id,smsFallback:old.smsFallback},signal),deadline);
-    if(!r||r.key!==id||!r.messageId||!r.groupId)return publicRecord(old); // Absence is not proof that a timeout was never sent.
-    const result=await apply(id,r);await auth(session);return publicRecord(result);
+    const result=await lookupRecord(old);await auth(session);return publicRecord(result);
+  }
+  async function lookupRecord(old){
+    const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:old.id,phone:old.phone,createdAt:old.createdAt,smsFallback:old.smsFallback},signal),deadline);
+    if(r){if(r.key!==old.id||!r.messageId||!r.groupId)fail('RESULT_MISMATCH');return apply(old.id,r);}
+    // An empty provider search does not prove non-delivery; keep retries blocked.
+    return store.update(old.id,current=>({...current,lastResultCheckAt:now(),...(!current.messageId||!current.groupId?{trackingIssue:'RECEIPT_NOT_FOUND'}:{})}));
   }
   async function apply(id,event){return store.update(id,old=>{
     if(!old||event.key!==id||(old.messageId&&old.messageId!==event.messageId)||(old.groupId&&old.groupId!==event.groupId))fail('RESULT_MISMATCH');
@@ -105,13 +114,13 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     if(old.smsFallback && next==='FAILED' && !event.registrationFailed){
       const result=event.fallbackResult;
       const state=result==='NOT_SENT'||result==='FAILED'?'FAILED':result==='DELIVERED'?'DELIVERED':'PROCESSING';
-      return {...old,state,messageId:event.messageId,groupId:event.groupId,
+      return {...old,state,messageId:event.messageId,groupId:event.groupId,lastResultCheckAt:now(),trackingIssue:null,
         fallbackResult:result||'CHECKING',ataErrorCode:String(event.statusCode),
         errorCode:result==='NOT_SENT'?String(event.statusCode):null,updatedAt:now()};
     }
     if(old.fallbackResult==='CHECKING')return old;
     if(old.state==='PROCESSING'&&next==='ACCEPTED')return old;
-    return {...old,state:next,messageId:event.messageId,groupId:event.groupId,errorCode:next==='FAILED'||next==='UNKNOWN'?String(event.statusCode):null,updatedAt:now()};
+    return {...old,state:next,messageId:event.messageId,groupId:event.groupId,lastResultCheckAt:now(),trackingIssue:null,errorCode:next==='FAILED'||next==='UNKNOWN'?String(event.statusCode):null,updatedAt:now()};
   });}
   async function webhook(header,events){if(!verifyWebhook(webhookSecret,header))fail('UNAUTHORIZED');if(!Array.isArray(events)||events.length>100)fail('INVALID_REQUEST');
     // Persist before acknowledging; failed storage returns non-2xx to permit provider retry.

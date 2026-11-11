@@ -245,9 +245,11 @@ function mount({host,api,context,refresh}){
   host.append(loading(audienceName(audience)+' 발송 이력을 불러오고 있습니다…'));
   try{
    const response=await api('batchHistory',{date,audience});if(!current())return;
+   if(response.recoveryChecked)refresh();
    const results=target?response.results.filter(r=>r.studentId===target.studentId):response.results;
    host.replaceChildren(el('h3',(target?target.name+' · ':'')+audienceName(audience)+' · '+(target?'발송 이력':'전체 발송 이력')),note(date+' 수업 안내 · 최근 요청 순'));
    studentBack(target);
+   if(response.recoveryDeferred)host.append(note('접수 기록 자동 확인이 지연됐습니다. 결과 갱신으로 다시 확인해 주세요.'));
    if(!results.length){host.append(note('이 수업일에 해당 대상으로 발송한 안내 기록이 없습니다.'));return;}
    let refreshing=false;
    const pending=results.filter(r=>['REQUESTING','ACCEPTED','PROCESSING','UNKNOWN'].includes(r.state));
@@ -297,10 +299,14 @@ function mount({host,api,context,refresh}){
      group.append(note('솔라피 결과 확인 · '+time));
     }
     if(r.fallbackResult)group.append(note(({CHECKING:'문자 대체 결과 확인 중',DELIVERED:'대체 문자 수신 완료',FAILED:'대체 문자 발송 실패',NOT_SENT:'대체 문자 미발송'})[r.fallbackResult]+' · 알림톡 실패 '+r.ataErrorCode));
+    if(r.trackingMissing){
+     group.append(note(r.trackingIssue==='RECEIPT_NOT_FOUND'?'솔라피에서 이 요청과 일치하는 접수 기록을 찾지 못했습니다. 접수 여부가 미확정이므로 자동 재발송하지 않습니다.':'발송 응답에서 접수번호를 확보하지 못했습니다. 번호·요청 시각·발송 식별자로 접수 기록을 다시 확인합니다.'));
+    }
+    if(r.lastResultCheckAt)group.append(note('최근 결과 조회 · '+new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(r.lastResultCheckAt)));
     if(r.errorCode)group.append(note('결과 코드: '+r.errorCode));
     if(r.text)group.append(body('보낸 본문',r.text));
     if(['REQUESTING','PROCESSING','ACCEPTED','UNKNOWN'].includes(r.state)){
-     const check=button('수신 결과 조회',async()=>{if(refreshing)return;refreshing=true;check.disabled=true;check.textContent='수신 결과 확인 중…';try{await api(audience==='student'?'studentReconcile':'reconcile',{id:r.id});if(current()){await showHistory();refresh();}}catch(e){if(current()){group.append(note(errorText(e)));check.disabled=false;check.textContent='수신 결과 다시 조회';}}finally{refreshing=false;}});group.append(check);}
+     const check=button(r.trackingMissing?'접수 기록 다시 찾기':'수신 결과 조회',async()=>{if(refreshing)return;refreshing=true;check.disabled=true;check.textContent='수신 결과 확인 중…';try{await api(audience==='student'?'studentReconcile':'reconcile',{id:r.id});if(current()){await showHistory();refresh();}}catch(e){if(current()){group.append(note(errorText(e)));check.disabled=false;check.textContent='수신 결과 다시 조회';}}finally{refreshing=false;}});group.append(check);}
     chain.append(group);}
    }
   }catch(e){if(current())host.replaceChildren(note(errorText(e)),button('이력 다시 확인',showHistory));}

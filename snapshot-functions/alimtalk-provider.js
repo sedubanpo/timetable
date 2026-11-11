@@ -36,16 +36,43 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
    if(!Array.isArray(good)||!Array.isArray(bad)||good.length+bad.length!==1)fail('UNKNOWN_RESULT');
    return event(good[0]||{...bad[0],registrationFailed:true},r.groupInfo?.groupId,m.customFields.timetableKey);
   },
-  async lookup({messageId,groupId,key,smsFallback:expectedFallback},signal){
-   // No ID after timeout: do not scan unrelated account history or infer absence.
-   if(!messageId)return null;
-   if(!/^[A-Za-z0-9_-]{1,100}$/.test(messageId)||!groupId||!(/^[a-f0-9]{64}$/).test(key||''))fail('INVALID_RESULT');
-   const q=new URLSearchParams({criteria:'messageId',cond:'eq',value:messageId,limit:'2'});
-   const r=await call('/messages/v4/list?'+q,'GET',null,signal);
-   if(!r.messageList||typeof r.messageList!=='object'||Array.isArray(r.messageList))fail('INVALID_RESULT');
-   const rows=Object.values(r.messageList);if(!rows.length)return null;
-   if(r.nextKey||rows.length!==1||rows[0].messageId!==messageId||rows[0].groupId!==groupId||rows[0].type!=='ATA'||rows[0].replacement===true)fail('RESULT_MISMATCH');
-   const original=event(rows[0],groupId,key);
+  async lookup({messageId,groupId,key,phone,createdAt,smsFallback:expectedFallback},signal){
+   if(!(/^[a-f0-9]{64}$/).test(key||''))fail('INVALID_RESULT');
+   let matched;
+   if(!messageId||!groupId){
+    // A bounded recipient/time query is only a candidate search. The immutable key must match.
+    if(!/^010\d{8}$/.test(phone||'')||!Number.isSafeInteger(createdAt)||createdAt<=0)return null;
+    const start=createdAt-60000,end=createdAt+600000,matches=[],seen=new Set();let cursor;
+    for(let page=0;page<3;page++){
+     const q=new URLSearchParams({to:phone,startDate:new Date(start).toISOString(),endDate:new Date(end).toISOString(),limit:'100',...(cursor?{startKey:cursor}:{})});
+     const result=await call('/messages/v4/list?'+q,'GET',null,signal);
+     if(!result.messageList||typeof result.messageList!=='object'||Array.isArray(result.messageList))fail('INVALID_RESULT');
+     for(const m of Object.values(result.messageList)){
+      if(m.customFields?.timetableKey!==key||m.replacement===true||m.type!=='ATA')continue;
+      const time=Date.parse(m.dateCreated);
+      if(m.to!==phone||!Number.isFinite(time)||time<start||time>end||
+       (messageId&&m.messageId!==messageId)||(groupId&&m.groupId!==groupId)||
+       !/^[A-Za-z0-9_-]{1,100}$/.test(m.messageId||'')||!/^[A-Za-z0-9_-]{1,100}$/.test(m.groupId||''))fail('RESULT_MISMATCH');
+      if(!matches.some(x=>x.messageId===m.messageId))matches.push(m);
+     }
+     if(!result.nextKey){cursor=null;break;}
+     if(typeof result.nextKey!=='string'||seen.has(result.nextKey))fail('RECOVERY_SCAN_LIMIT');
+     cursor=result.nextKey;seen.add(cursor);
+    }
+    if(cursor)fail('RECOVERY_SCAN_LIMIT');
+    if(matches.length>1)fail('RECOVERY_AMBIGUOUS');
+    if(!matches.length)return null;
+    matched=matches[0];messageId=matched.messageId;groupId=matched.groupId;
+   }else{
+    if(!/^[A-Za-z0-9_-]{1,100}$/.test(messageId)||!/^[A-Za-z0-9_-]{1,100}$/.test(groupId))fail('INVALID_RESULT');
+    const q=new URLSearchParams({criteria:'messageId',cond:'eq',value:messageId,limit:'2'});
+    const r=await call('/messages/v4/list?'+q,'GET',null,signal);
+    if(!r.messageList||typeof r.messageList!=='object'||Array.isArray(r.messageList))fail('INVALID_RESULT');
+    const rows=Object.values(r.messageList);if(!rows.length)return null;
+    if(r.nextKey||rows.length!==1||rows[0].messageId!==messageId||rows[0].groupId!==groupId||rows[0].type!=='ATA'||rows[0].replacement===true)fail('RESULT_MISMATCH');
+    matched=rows[0];
+   }
+   const original=event(matched,groupId,key);
    const {status}=require('./alimtalk-service');
    if(!expectedFallback || status(original.statusCode)!=='FAILED')return original;
    // Each dispatch owns a single-recipient group. Its final counts include the provider's replacement.

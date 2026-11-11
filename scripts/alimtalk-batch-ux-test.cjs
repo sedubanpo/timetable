@@ -74,3 +74,8 @@ test('scoped preview with no eligible tickets never offers send and retains scop
  const s=setup(async action=>action==='batchPreview'?{...preview,items:[],rows:[{studentId:'s',state:'sent'}]}:{results:[]});
  try{await s.ui.review('unsent',{studentId:'s',name:'가상학생'});assert(!s.host.querySelector('.send-action'));await s.find('이 학생 발송 이력 보기').onclick();assert.match(s.host.querySelector('h3').textContent,/가상학생/);}finally{s.dom.window.close();}
 });
+
+test('history distinguishes missing receipt from confirmed acceptance and provides recovery action without send',async()=>{
+ const s=setup(async()=>({results:[{id:'missing',studentId:'s',name:'가상학생',state:'UNKNOWN',createdAt:1,lastResultCheckAt:1000,trackingMissing:true,trackingIssue:'RECEIPT_NOT_FOUND',errorCode:'RESULT_UNCERTAIN'}]}));
+ try{await s.ui.history({studentId:'s',name:'가상학생'});assert.match(s.host.textContent,/일치하는 접수 기록을 찾지 못했습니다/);assert.match(s.host.textContent,/최근 결과 조회/);assert(s.find('접수 기록 다시 찾기'));assert(!s.find('재발송할 번호·본문 확인'));}finally{s.dom.window.close();}
+});
