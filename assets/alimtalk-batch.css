@@ -48,7 +48,7 @@
 
 #studentImageModal .bulk-send-footer{flex-wrap:wrap;z-index:1;box-shadow:0 -6px 12px -10px #24456366;padding:10px 4px}
 #studentImageModal .bulk-send-footer button{min-height:42px;margin:0}
-#studentImageModal .batch-journey{color:#193653;background:linear-gradient(150deg,#f1f6fc 0%,white 65%);border:1px solid #ccdae9;border-radius:16px;padding:clamp(16px,3vw,28px);font-variant-numeric:tabular-nums}
+#studentImageModal .batch-journey{color:#193653;background:#f5f8fc;border:1px solid #ccdae9;border-radius:16px;padding:clamp(16px,3vw,28px);font-variant-numeric:tabular-nums}
 #studentImageModal .batch-meta{font-size:13px;color:#506980;font-weight:650}
 #studentImageModal .batch-journey-head,#studentImageModal .batch-line,#studentImageModal .batch-totals{display:flex;align-items:center;gap:10px}
 #studentImageModal .batch-journey-head{margin:16px 0 24px}
@@ -58,7 +58,7 @@
 #studentImageModal .batch-line{justify-content:space-between;flex-wrap:wrap}
 #studentImageModal .batch-line span{font-size:13px;color:#526780}
 #studentImageModal .batch-track{height:8px;background:#dce6ee;border-radius:8px;overflow:hidden;margin:9px 0 12px}
-#studentImageModal .batch-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#316ba4,#368b92);transition:width .32s ease-out}
+#studentImageModal .batch-track span{display:block;height:100%;border-radius:inherit;background:#316ba4;transition:width .32s ease-out}
 #studentImageModal .batch-journey[data-state] .batch-orbit{animation:none;display:grid;place-items:center;border:0;border-radius:50%;background:#d7ede4;color:#19593e;font-weight:bold}
 #studentImageModal .batch-journey[data-state=done] .batch-orbit::after{content:'✓'}
 #studentImageModal .batch-journey[data-state=attention] .batch-orbit{background:#ffedca;color:#844b0c}
@@ -77,3 +77,26 @@
 #studentImageModal .roster-failed{--paper:#ffebeb;--ink:#833b43}
 #studentImageModal .roster-guardianOnly{--paper:#f3f1fa;--ink:#5e5377}
 @media(prefers-reduced-motion:reduce){#studentImageModal [data-card-audience][aria-busy=true]::after{animation:none}}
+#studentImageModal .bulk-selection{flex-basis:100%;color:#193e5b;font-size:14px}
+#studentImageModal .bulk-guidance{font-size:13px;color:#526477;flex:1 1 180px}
+#studentImageModal .bulk-holds{margin:8px 0;padding:0 12px;background:#f4f6f9;border-left:3px solid #b7c7d7}
+#studentImageModal .batch-active{font-weight:650;margin:16px 0 6px;line-height:1.6}
+#studentImageModal .batch-elapsed{color:#536778;font-size:13px}
+#studentImageModal .batch-journey[data-state=submitted] .batch-orbit{background:#e0eaf6;color:#265c89}
+#studentImageModal .batch-journey[data-state=submitted] .batch-orbit::after{content:'→'}
+#studentImageModal .history-filters{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+#studentImageModal .history-filters button{min-height:40px;margin:0;border:1px solid #c6d2df;background:white;color:#24415c;border-radius:7px;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
+#studentImageModal .history-filters button[aria-pressed=true]{background:#183e62;color:white;border-color:#183e62}
+#studentImageModal .history-chain-title{display:block;margin-top:18px;color:#245940}
+#studentImageModal .history-chain[data-result=attention] .history-chain-title{color:#833b43}
+#studentImageModal .history-chain .bulk-note{overflow-wrap:anywhere}
+#studentImageModal .history-chain[hidden]{display:none}
+@media(max-width:560px){#studentImageModal .bulk-send-footer{gap:4px;padding:8px 0}#studentImageModal .bulk-send-footer .bulk-pick{font-size:13px}#studentImageModal .bulk-send-footer .send-action{width:100%}#studentImageModal .batch-journey-head h3{font-size:20px}}
+#studentImageModal[data-card-mode=message] #cardAlimtalkPanel:has(.batch-journey){padding:0;border:0;background:transparent}
+@media(max-width:560px){
+ #studentImageModal:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) .student-list-panel{display:none}
+ #studentImageModal:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) .student-dashboard-layout{overflow:hidden}
+ #studentImageModal:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) .student-preview-panel{flex:1;min-height:0;overflow:hidden}
+ #studentImageModal:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) .card-workarea{flex:1;overflow:auto}
+ #studentImageModal .bulk-send-footer{position:static}
+}
