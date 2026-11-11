@@ -3,6 +3,25 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),{createPr
 global.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
 const key='a'.repeat(64),phone='01000000001';
 const message={to:phone,type:'ATA',kakaoOptions:{pfId:R.pfId,templateId:R.templateId,variables:{},disableSms:true},customFields:{timetableKey:key}};
+test('explicit LMS replacement preserves times and inquiry URL without changing ATA or recipient',async()=>{
+ const calls=[];
+ const p=createProvider({apiKey:'mock',apiSecret:'mock',verifiedRecipientSend:true,fallbackFrom:'0212345678',request:async(url,options)=>{
+   calls.push({url,options});return {ok:true,json:async()=>({groupInfo:{groupId:'g'},messageList:[{messageId:'m',statusCode:'2000',customFields:{timetableKey:key}}]})};
+ }});
+ for(const [start,end] of [['17:00','20:00'],['17:00','19:00'],['19:00','22:00'],['16:30','18:30']]){
+   const variables={'#{학생명}':'가상학생','#{수업일}':'2026-11-12','#{등원시각}':start,'#{수업목록}':`① 수학 정규 ${start}–${end}\n가상T · 개별 2시간\n2관 3강의실\n\n② 영어 오늘만 23:00–24:00(자정)\n다른T · 1:1 1시간\n본관 4강의실`};
+   const before=structuredClone(variables);
+   await p.sendOne({...message,kakaoOptions:{...message.kakaoOptions,variables,disableSms:false},replacements:[{to:'01000000009',text:'untrusted'}]});
+   const body=JSON.parse(calls.at(-1).options.body),ata=body.messages[0],lms=ata.replacements[0];
+   assert.equal(body.messages.length,1);assert.equal(body.allowDuplicates,false);assert.equal(ata.type,'ATA');assert.equal(ata.replacements.length,1);
+   assert.equal(lms.to,phone);assert.equal(lms.from,'0212345678');assert.equal(lms.type,'LMS');assert.equal(lms.country,'82');
+   assert(lms.text.includes(`1. 수학 정규 ${start} ~ ${end}`));assert(lms.text.includes('2. 영어 오늘만 23:00 ~ 24:00(자정)'));
+   assert(lms.text.includes('가상T / 개별 2시간\n2관 3강의실'));assert(lms.text.includes('등원 시각: '+start));
+   assert(lms.text.includes('수업 일정 변경 문의:\nhttps://pf.kakao.com/_KIZxin/chat'));
+   assert(!/버튼|[–—]|#\{|untrusted/.test(lms.text));assert(!ata.text);assert.deepEqual(ata.kakaoOptions.variables,before);assert.deepEqual(variables,before);
+ }
+ assert.equal(calls.length,4);assert(calls.every(c=>c.url.endsWith('/send-many/detail')));
+});
 function setup(data){const calls=[];const provider=createProvider({apiKey:'mock',apiSecret:'mock',testPhone:phone,enableTestSend:true,request:async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>data};}});return {provider,calls};}
 test('single-message group, exact test destination, SMS off, no extra payload fields',async()=>{const x=setup({groupInfo:{groupId:'g1'},messageList:[{messageId:'m1',statusCode:'2000',customFields:{timetableKey:key}}],failedMessageList:[]});const r=await x.provider.sendOne({...message,replacements:[{to:'01000000002'}]});assert.equal(r.statusCode,'2000');const body=JSON.parse(x.calls[0].options.body);assert.equal(body.messages.length,1);assert.equal(body.messages[0].kakaoOptions.disableSms,true);assert(!body.messages[0].replacements);assert.equal(x.calls[0].options.redirect,'error');await assert.rejects(x.provider.sendOne({...message,to:'01000000002'}),{code:'TEST_RECIPIENT_REQUIRED'});assert.equal(x.calls.length,1);});
 test('explicit registration failure retains provider code instead of acceptance',async()=>{const x=setup({groupInfo:{groupId:'g1'},failedMessageList:[{messageId:'m1',statusCode:'3040',customFields:{timetableKey:key}}]});assert.equal((await x.provider.sendOne(message)).registrationFailed,true);});

@@ -1,6 +1,6 @@
 'use strict';
 // Only this server-side transport can reach SOLAPI. No retries of dispatch requests.
-const crypto=require('node:crypto'),rules=require('./alimtalk-contract');
+const crypto=require('node:crypto'),rules=require('./alimtalk-contract'),{fallbackText}=require('./alimtalk-fallback');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=false,verifiedRecipientSend=false,fallbackFrom=''}){
  const testPhones=require('./alimtalk-test-recipients').testRecipients(testPhone).map(r=>r.phone);
@@ -31,6 +31,9 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
    if(!verifiedRecipientSend&&(!enableTestSend||!testPhones.length))fail('SENDING_DISABLED');
    if((verifiedRecipientSend?!/^010\d{8}$/.test(m.to):!testPhones.includes(m.to))||m.type!=='ATA'||m.kakaoOptions?.pfId!==rules.pfId||m.kakaoOptions?.templateId!==rules.templateId||m.kakaoOptions?.disableSms!==(!smsFallback)||!(/^[a-f0-9]{64}$/).test(m.customFields?.timetableKey||''))fail('TEST_RECIPIENT_REQUIRED');
    const message={...(smsFallback?{from:fallbackFrom}:{}),to:m.to,type:'ATA',country:'82',autoTypeDetect:false,kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:m.kakaoOptions.variables,disableSms:!smsFallback,buttons:[{buttonType:'WL',buttonName:'수업 문의',linkMo:'https://pf.kakao.com/_KIZxin',linkPc:'https://pf.kakao.com/_KIZxin'}]},customFields:{timetableKey:m.customFields.timetableKey}};
+   // Provider-managed replacement only: same recipient, one LMS if ATA fails.
+   // Never accept caller-supplied replacement recipients or content.
+   if(smsFallback)message.replacements=[{to:m.to,from:fallbackFrom,type:'LMS',country:'82',subject:'반포 에스학원 수업 일정 안내',text:fallbackText(m.kakaoOptions.variables)}];
    const r=await call('/messages/v4/send-many/detail','POST',{messages:[message],showMessageList:true,allowDuplicates:false},signal);
    const good=r.messageList||[],bad=r.failedMessageList||[];
    if(!Array.isArray(good)||!Array.isArray(bad)||good.length+bad.length!==1)fail('UNKNOWN_RESULT');
