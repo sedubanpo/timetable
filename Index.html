@@ -2712,7 +2712,7 @@ function mount({host,api,context,refresh}){
   host.append(loading(audienceName(audience)+' 발송 이력을 불러오고 있습니다…'));
   try{
    const response=await api('batchHistory',{date,audience});if(!current())return;
-   if(response.recoveryChecked)refresh(target?{studentIds:[target.studentId],background:true}:{background:true});
+   if(target||response.recoveryChecked)refresh(target?{studentIds:[target.studentId],background:true}:{background:true});
    const results=target?response.results.filter(r=>r.studentId===target.studentId):response.results;
    host.replaceChildren(el('h3',(target?target.name+' · ':'')+audienceName(audience)+' · '+(target?'발송 이력':'전체 발송 이력')),note(date+' 수업 안내 · 최근 요청 순'));
    studentBack(target);

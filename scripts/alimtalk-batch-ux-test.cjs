@@ -2,11 +2,11 @@
 // Entirely synthetic: no transport or production messages.
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const {JSDOM}=require(process.env.ALIMTALK_JSDOM_PATH||'/tmp/timetable-alimtalk-test-tools/node_modules/jsdom');
-function setup(api){
+function setup(api,refresh=()=>{}){
  const dom=new JSDOM('<main id="studentImageModal"><div class="batch-bar"><button>대상 전환</button></div><aside></aside></main>',{runScripts:'outside-only'}),w=dom.window,host=w.document.querySelector('aside');
  w.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
  for(const f of ['alimtalk-contract.js','alimtalk-batch-ui.js'])w.eval(fs.readFileSync('assets/'+f,'utf8'));
- const ui=w.TimetableBatchUI.mount({host,api,context:()=>({date:'2026-11-12',audience:'student'}),refresh:()=>{}});
+ const ui=w.TimetableBatchUI.mount({host,api,context:()=>({date:'2026-11-12',audience:'student'}),refresh});
  const find=text=>[...host.querySelectorAll('button')].find(b=>b.textContent===text);
  return {dom,w,host,ui,find};
 }
@@ -120,4 +120,11 @@ test('failed receipt recovery never reaches a new dispatch',async()=>{
  const calls=[],row={id:'missing',studentId:'s',name:'가상학생',state:'UNKNOWN',createdAt:1,trackingMissing:true,trackingIssue:'RECEIPT_NOT_FOUND'};
  const s=setup(async(action)=>{calls.push(action);if(action==='batchHistory')return {results:[row]};throw Object.assign(Error(),{code:'RECEIPT_FOUND'});});
  try{await s.ui.history({studentId:'s',name:'가상학생'});await s.find('솔라피 미접수 확인 후 신규 발송').onclick();s.host.querySelector('input').click();await s.find('미접수 확인하고 이 학생에게 신규 발송').onclick();assert.deepEqual(calls,['batchHistory','batchReleaseUnreceived']);assert.match(s.host.textContent,/새 메시지는 발송하지 않았습니다/);}finally{s.dom.window.close();}
+});
+
+
+test('opening delivered student history refreshes that card even without missing-receipt recovery',async()=>{
+ const updates=[];
+ const s=setup(async()=>({results:[{id:'done',studentId:'s',name:'가상학생',state:'DELIVERED',createdAt:1}]}),input=>updates.push(input));
+ try{await s.ui.history({studentId:'s',name:'가상학생'});assert(s.find('수신 완료 1건'));assert.equal(updates.length,1);assert.deepEqual(Array.from(updates[0].studentIds),['s']);assert.equal(updates[0].background,true);}finally{s.dom.window.close();}
 });
