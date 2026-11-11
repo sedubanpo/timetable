@@ -123,19 +123,26 @@ function mount({host,api,context,refresh}){
    items.forEach(r=>details.append(note(r.name+' · '+r.issue)));host.append(details);
   }
  }
- async function review(mode){
+ function studentBack(target){
+  if(target)host.prepend(button('← 학생 목록',()=>{reset();host.hidden=true;delete host.dataset.bulk;}));
+ }
+ async function review(mode,target=null){
   if(sending)return;
-  const current=view(),{date,audience}=context(),who=audienceName(audience);
+  const current=view(),{date,audience}=context(),who=audienceName(audience),showHistory=()=>history(target),reviewAgain=()=>review(mode,target);
   host.append(loading('최신 시간표와 발송 기록을 확인하고 있습니다…'));
   try{
-   const p=await api('batchPreview',{date,audience,mode});if(!current())return;
-   host.replaceChildren(el('h3',who+' · '+(mode==='changed'?'변경 대상자 발송':'발송 대기 명단')),note(date+' 수업 안내 · 받을 번호를 선택하고 본문을 확인하세요.'));
-   if(mode==='changed'){
+   const response=await api('batchPreview',{date,audience,mode});if(!current())return;
+   // Filter by stable student ID, never by display name; send only these server-issued tickets.
+   const p=target?{...response,items:response.items.filter(r=>r.studentId===target.studentId),rows:response.rows.filter(r=>r.studentId===target.studentId),changes:(response.changes||[]).filter(r=>r.studentId===target.studentId),eligibleStudents:(response.eligibleStudents||[]).filter(r=>r.studentId===target.studentId)}:response;
+   host.replaceChildren(el('h3',(target?target.name+' · ':'')+who+' · '+(mode==='changed'?'변경 대상자 발송':target?'발송 확인':'발송 대기 명단')),note(date+' 수업 안내 · 받을 번호를 선택하고 본문을 확인하세요.'));
+   studentBack(target);
+   if(target&&p.readOnly){host.append(note('조회 전용 권한입니다. 발송 권한이 있는 실무자 계정으로 확인해 주세요.'));return;}
+   if(mode==='changed'&&!target){
     renderChanges(host,p,who);
     if(p.readOnly||!p.items.length)return;
     host.append(el('h4','변경 안내를 받을 번호 선택'));
    }
-   if(mode==='unsent'&&p.readOnly){
+   if(p.readOnly){
     const head=el('div',undefined,'change-overview');
     head.append(el('h3',who+' 일괄 발송 미리보기'),el('span',date+' · 조회 전용'));
     const eligible=p.eligibleStudents,held=p.rows.filter(r=>r.issue);
@@ -152,19 +159,21 @@ function mount({host,api,context,refresh}){
    const data=p.items,held=mode==='changed'?[]:p.rows.filter(r=>r.issue);
    if(mode==='unsent')host.append(el('p','전체 '+p.rows.length+'명 · 발송 가능 '+data.length+'건 · 제외 '+held.length+'명','change-count'));
    holds(held);
-   if(!data.length){host.append(note(mode==='changed'?'이전에 받은 안내와 내용이 다르고, 받는 번호까지 확인된 대상이 없습니다.':'현재 발송할 수 있는 대기 번호가 없습니다. 수신 결과는 전체 발송 이력에서 확인하세요.'));host.append(button('전체 발송 이력 보기',history));return;}
+   if(!data.length){host.append(note(mode==='changed'?'이전에 받은 안내와 내용이 다르고, 받는 번호까지 확인된 대상이 없습니다.':'현재 발송할 수 있는 대기 번호가 없습니다. 수신 결과는 전체 발송 이력에서 확인하세요.'));host.append(button(target?'이 학생 발송 이력 보기':'전체 발송 이력 보기',showHistory));return;}
    const chosen=new Set(),checks=[];
-   const bulk=el('label',undefined,'bulk-pick'),all=el('input');all.type='checkbox';bulk.append(all,document.createTextNode(' 가능한 번호 전체 선택 ('+data.length+'건)'));host.append(bulk);
+   const bulk=el('label',undefined,'bulk-pick'),all=el('input');all.type='checkbox';bulk.append(all,document.createTextNode(' 가능한 번호 전체 선택 ('+data.length+'건)'));if(!target)host.append(bulk);
    const students=new Map();for(const item of data){if(!students.has(item.studentId))students.set(item.studentId,[]);students.get(item.studentId).push(item);}
    host.append(note('알림톡 전달에 실패하면 같은 번호로 문자 대체 발송을 시도합니다.'));
    const list=el('details',undefined,'bulk-pick-list');
+   if(target)list.open=true;
    list.append(el('summary','수신자별 선택 · 본문 보기 ('+data.length+'건)'));host.append(list);
    for(const items of students.values()){
     const group=el('section',undefined,'bulk-review-row');group.append(el('strong',items[0].name));
     for(const item of items){const l=el('label'),i=el('input');i.type='checkbox';checks.push([i,item.ticket]);i.onchange=()=>{if(i.checked)chosen.add(item.ticket);else chosen.delete(item.ticket);sync();};
      l.append(i,document.createTextNode(' '+item.relation+' · '+item.masked+(item.retry?' · 실패 건 재시도':'')));group.append(l);
     }
-    group.append(body('보낼 본문 보기',items[0].text));list.append(group);
+    const content=body('보낼 본문 보기',items[0].text);if(target)content.open=true;group.append(content);
+    if(mode==='changed'&&target)group.append(body('이전에 받은 본문',items[0].previous||'이전 본문 기록 없음'));list.append(group);
    }
    const foot=el('div',undefined,'bulk-confirm-footer bulk-send-footer');
    const ack=el('label',undefined,'bulk-pick'),ck=el('input');ck.type='checkbox';
@@ -175,7 +184,9 @@ function mount({host,api,context,refresh}){
    all.onchange=()=>{for(const [i,t] of checks){i.checked=all.checked;if(i.checked)chosen.add(t);else chosen.delete(t);}sync();};
    function sync(){ck.checked=false;ck.disabled=!chosen.size;all.checked=chosen.size===data.length;all.indeterminate=chosen.size>0&&!all.checked;update();}
    function update(){selected.textContent=date+' · '+who+' · '+chosen.size+'건 선택';guidance.textContent=!chosen.size?'받을 번호를 선택하세요.':!ck.checked?'수신자와 본문 확인 후 체크해 주세요.':'선택한 번호로만 발송합니다.';send.textContent=who+' '+chosen.size+'건 '+(mode==='changed'?'변경 안내 발송':'발송');send.disabled=!chosen.size||!ck.checked||sending;}
-   ck.onchange=update;sync();
+   ck.onchange=update;
+   if(target)for(const [i,t] of checks){i.checked=true;chosen.add(t);}
+   sync();
    async function start(){
     if(sending||send.disabled||!current()||!ck.checked||!chosen.size)return;
     sending=true;send.disabled=true;const unlock=lock();
@@ -215,36 +226,42 @@ function mount({host,api,context,refresh}){
      active.textContent='확인된 처리 '+done+'건 · 전체 '+total+'건';
      const notStarted=['BATCH_CHANGED','PREVIEW_EXPIRED','TEMPLATE_MISMATCH','RATE_LIMIT'].includes(e?.code);
      hint.textContent=errorText(e)+(notStarted?' 남은 '+(total-offset)+'건은 발송하지 않았습니다.':' 이후 '+Math.max(0,total-offset-thisBatch)+'건은 요청하지 않았습니다. 자동으로 재시도하지 않습니다.');
-     if(notStarted)card.append(button('남은 대상 다시 확인',()=>review(mode)));
+     if(notStarted)card.append(button('남은 대상 다시 확인',reviewAgain));
      else card.append(note('중단된 묶음 '+thisBatch+'건은 접수되었을 수 있습니다. 중복 발송을 막기 위해 이력에서 먼저 확인하세요.'));
     }finally{
      root.clearInterval(timer);tick();sending=false;unlock();
      if(current()){
       if(counts.size){const chips=el('div',undefined,'batch-totals');for(const [state,n] of counts)chips.append(el('span',root.TimetableAlimtalk.labels[state]+' '+n+'건'));card.append(chips);}
       live.textContent=title.textContent+' · '+number.textContent;
-      const results=button('전체 발송 이력 보기',history);results.className='send-action';card.append(results);refresh();
+      const results=button(target?'이 학생 발송 이력 보기':'전체 발송 이력 보기',showHistory);results.className='send-action';card.append(results);refresh();
      }
     }
    }
-  }catch(e){if(current()){host.replaceChildren(note(errorText(e)),button('명단 다시 확인',()=>review(mode)));}}
+  }catch(e){if(current()){host.replaceChildren(note(errorText(e)),button('명단 다시 확인',reviewAgain));}}
  }
- async function history(){
+ async function history(target=null){
   if(sending)return;
-  const current=view(),{date,audience}=context();
+  const current=view(),{date,audience}=context(),showHistory=()=>history(target);
   host.append(loading(audienceName(audience)+' 발송 이력을 불러오고 있습니다…'));
   try{
-   const {results}=await api('batchHistory',{date,audience});if(!current())return;
-   host.replaceChildren(el('h3',audienceName(audience)+' · 전체 발송 이력'),note(date+' 수업 안내 · 최근 요청 순'));
+   const response=await api('batchHistory',{date,audience});if(!current())return;
+   const results=target?response.results.filter(r=>r.studentId===target.studentId):response.results;
+   host.replaceChildren(el('h3',(target?target.name+' · ':'')+audienceName(audience)+' · '+(target?'발송 이력':'전체 발송 이력')),note(date+' 수업 안내 · 최근 요청 순'));
+   studentBack(target);
    if(!results.length){host.append(note('이 수업일에 해당 대상으로 발송한 안내 기록이 없습니다.'));return;}
    let refreshing=false;
    const pending=results.filter(r=>['REQUESTING','ACCEPTED','PROCESSING','UNKNOWN'].includes(r.state));
+   if(target){
+    if(pending.length)host.append(note('아직 수신 결과가 확정되지 않았습니다. 결과를 갱신한 뒤 실패가 확인되면 재발송할 수 있습니다.'));
+    else if(results.some(r=>r.state==='FAILED'))host.append(button('재발송할 번호·본문 확인',()=>review('unsent',target)));
+   }
    if(pending.length){
     let progress;
     const update=button('미확정 '+pending.length+'건 결과 갱신',async()=>{
      if(refreshing)return;refreshing=true;update.disabled=true;
      progress?.remove();progress=loading('수신 결과 확인 중 · 0 / '+pending.length+'건');update.after(progress);
      try{for(let i=0;i<pending.length;i+=5){if(!current())return;await api('batchRefresh',{date,audience,ids:pending.slice(i,i+5).map(r=>r.id)});if(!current())return;progress.querySelector('p').textContent='수신 결과 확인 중 · '+Math.min(i+5,pending.length)+' / '+pending.length+'건';}
-      if(current()){await history();refresh();}
+      if(current()){await showHistory();refresh();}
      }catch(e){if(current()){progress.replaceChildren(note(errorText(e)+' 결과 갱신을 다시 눌러 주세요.'));update.disabled=false;}}finally{refreshing=false;}
     });host.append(update);
    }
@@ -283,10 +300,10 @@ function mount({host,api,context,refresh}){
     if(r.errorCode)group.append(note('결과 코드: '+r.errorCode));
     if(r.text)group.append(body('보낸 본문',r.text));
     if(['REQUESTING','PROCESSING','ACCEPTED','UNKNOWN'].includes(r.state)){
-     const check=button('수신 결과 조회',async()=>{if(refreshing)return;refreshing=true;check.disabled=true;check.textContent='수신 결과 확인 중…';try{await api(audience==='student'?'studentReconcile':'reconcile',{id:r.id});if(current()){await history();refresh();}}catch(e){if(current()){group.append(note(errorText(e)));check.disabled=false;check.textContent='수신 결과 다시 조회';}}finally{refreshing=false;}});group.append(check);}
+     const check=button('수신 결과 조회',async()=>{if(refreshing)return;refreshing=true;check.disabled=true;check.textContent='수신 결과 확인 중…';try{await api(audience==='student'?'studentReconcile':'reconcile',{id:r.id});if(current()){await showHistory();refresh();}}catch(e){if(current()){group.append(note(errorText(e)));check.disabled=false;check.textContent='수신 결과 다시 조회';}}finally{refreshing=false;}});group.append(check);}
     chain.append(group);}
    }
-  }catch(e){if(current())host.replaceChildren(note(errorText(e)),button('이력 다시 확인',history));}
+  }catch(e){if(current())host.replaceChildren(note(errorText(e)),button('이력 다시 확인',showHistory));}
  }
  return {review,history,reset,errorText,isSending:()=>sending};
 }

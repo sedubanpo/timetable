@@ -100,3 +100,11 @@
  #studentImageModal:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) .card-workarea{flex:1;overflow:auto}
  #studentImageModal .bulk-send-footer{position:static}
 }
+
+/* Name selection and the delivery shortcut are separate, keyboard-accessible controls. */
+#studentImageModal .roster-student-card{display:flex;align-items:center;gap:4px;min-width:0;border-radius:8px;background:rgba(255,255,255,.64)}
+#studentImageModal .roster-student-card .recipient-student{flex:1;min-width:0;width:auto;background:transparent;overflow-wrap:anywhere}
+#studentImageModal .roster-student-card .roster-student-action{flex:none;margin-right:6px;padding:6px 8px;min-height:36px;border:1px solid #b4c9dd;background:white;color:#194b78;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+#studentImageModal .roster-student-action:hover{background:#eaf2ff;border-color:#326c9d}
+#studentImageModal .roster-student-card button:focus-visible{outline:2px solid #285ca3;outline-offset:2px}
+#studentImageModal .roster-pending .roster-tiles,#studentImageModal .roster-failed .roster-tiles,#studentImageModal .roster-unsent .roster-tiles,#studentImageModal .roster-changed .roster-tiles{grid-template-columns:1fr}

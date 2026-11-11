@@ -56,6 +56,22 @@ function openCardBulk(mode){
  if(mode==='history')cardBulkUI.history();else cardBulkUI.review(mode);
  host.scrollIntoView({block:'nearest'});
 }
+// Open a fresh server-reviewed plan for exactly one student and the current audience.
+function openCardRosterAction(name,state){
+ if(cardBulkUI?.isSending()||cardRosterScope!==rosterKey())return;
+ const rows=(cardRosterRows||[]).filter(r=>r.name===name);
+ if(rows.length!==1||!rows[0].studentId||cardRosterGroup(rows[0])!==state)return;
+ selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();
+ const target={studentId:rows[0].studentId,name};
+ resetCardAlimtalk();
+ const host=document.getElementById('cardAlimtalkPanel');
+ if(!cardBulkUI)cardBulkUI=TimetableBatchUI.mount({host,api:cardAlimtalkApi,context:cardBatchContext,refresh:reloadCardRoster});
+ host.hidden=false;host.dataset.bulk='true';host.dataset.bulkMode='student';
+ document.querySelector('#studentImageModal .student-preview-panel-title').textContent=name+' · '+currentSheetName;
+ document.querySelector('#studentImageModal .student-preview-panel-sub').textContent=(cardAudience==='student'?'학생 본인':'학부모')+' · '+(state==='pending'?'기존 발송의 수신 결과를 먼저 확인하세요.':'받는 번호와 본문을 확인한 뒤 발송하세요.');
+ if(state==='pending')cardBulkUI.history(target);else cardBulkUI.review(state==='changed'?'changed':'unsent',target);
+ host.tabIndex=-1;host.focus({preventScroll:true});host.scrollIntoView({block:'nearest'});
+}
 function drawAlimtalkRoster(list,keyword){
  const ready=cardRosterScope===rosterKey()&&Array.isArray(cardRosterRows),byName=new Map();
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
@@ -84,7 +100,15 @@ function drawAlimtalkRoster(list,keyword){
   const sub=row?.issue||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='unsent'?'확인된 번호 · 발송 가능':'');
   if(sub)b.append(make('small',sub));
   b.onclick=()=>{if(!studentImageScheduleMap[name]){openCardBulk('history');return;}selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();};
-  sections.get(state).push(b);
+  const tile=make('div');tile.className='roster-student-card';tile.append(b);
+  const actionLabel={unsent:'발송',failed:'재발송',changed:'변경 발송',pending:'결과 확인'}[state];
+  if(ready&&row?.studentId&&studentImageScheduleMap[name]&&actionLabel){
+   const action=make('button',actionLabel);action.type='button';action.className='roster-student-action';
+   action.setAttribute('aria-label',name+' '+(cardAudience==='student'?'학생 본인':'학부모')+' '+actionLabel);
+   action.title=state==='pending'?'수신 결과를 조회합니다. 확인 전에는 재발송하지 않습니다.':'받는 번호와 본문 확인 후 발송합니다.';
+   action.onclick=()=>openCardRosterAction(name,state);tile.append(action);
+  }
+  sections.get(state).push(tile);
  }
  for(const [state,[title,description]] of Object.entries(groups)){
   const rows=sections.get(state)||[];if(!rows.length)continue;

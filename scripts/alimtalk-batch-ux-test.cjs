@@ -52,3 +52,25 @@ test('bulk history refresh shows progress, deduplicates clicks, and never calls 
  try{await s.ui.history();const b=s.find('미확정 6건 결과 갱신'),pending=b.onclick();await b.onclick();assert.match(s.host.querySelector('.roster-loading').textContent,/0 \/ 6건/);finish();await new Promise(r=>setImmediate(r));assert.match(s.host.querySelector('.roster-loading').textContent,/5 \/ 6건/);finish();await pending;assert.deepEqual(calls,['batchHistory','batchRefresh','batchRefresh','batchHistory']);}
  finally{s.dom.window.close();}
 });
+
+test('student shortcut selects only that stable ID; opens full body and requires confirmation before retry',async()=>{
+ const calls=[],p={...preview,items:[{...preview.items[0],retry:true},{...preview.items[0],studentId:'other',ticket:'other-ticket',name:'다른학생'}],rows:[{studentId:'s',name:'가상학생'},{studentId:'other',name:'다른학생'}]};
+ const s=setup(async(action,input)=>{calls.push({action,input});if(action==='batchPreview')return p;if(action==='batchSend')return {results:[{state:'ACCEPTED'}]};throw Error(action);});
+ try{await s.ui.review('unsent',{studentId:'s',name:'가상학생'});
+ assert(!s.host.textContent.includes('다른학생'));assert.equal(s.host.querySelectorAll('.bulk-review-row input').length,1);assert(s.host.querySelector('.bulk-review-row input').checked);
+ assert(s.host.querySelector('.bulk-review-row details').open);assert(s.host.querySelector('.send-action').disabled);assert.match(s.host.textContent,/실패 건 재시도/);assert.equal(calls.length,1);
+ s.host.querySelector('.bulk-send-footer input').click();await s.host.querySelector('.send-action').onclick();
+ assert.equal(calls.length,2);assert.deepEqual(Array.from(calls[1].input.tickets),['synthetic']);assert.equal(calls[1].input.audience,'student');assert.equal(calls[1].input.confirmed,true);
+ }finally{s.dom.window.close();}
+});
+test('pending shortcut refreshes only the selected student and exposes retry only after confirmed failure',async()=>{
+ const calls=[];let state='UNKNOWN';const row={studentId:'s',name:'가상학생',id:'one',relation:'학생',masked:'가상 번호',createdAt:1};
+ const s=setup(async(action,input)=>{calls.push({action,input});if(action==='batchHistory')return {results:[{...row,state},{...row,id:'other',studentId:'other',name:'다른학생',state:'UNKNOWN'}]};if(action==='batchRefresh'){state='FAILED';return {}; }throw Error(action);});
+ try{await s.ui.history({studentId:'s',name:'가상학생'});assert(!s.host.textContent.includes('다른학생'));assert(!s.find('재발송할 번호·본문 확인'));assert(!s.host.querySelector('.send-action'));
+ await s.find('미확정 1건 결과 갱신').onclick();assert(s.find('재발송할 번호·본문 확인'));assert(!s.host.textContent.includes('다른학생'));assert.deepEqual(Array.from(calls[1].input.ids),['one']);assert(calls.every(c=>!c.action.includes('Send')));
+ }finally{s.dom.window.close();}
+});
+test('scoped preview with no eligible tickets never offers send and retains scope when opening history',async()=>{
+ const s=setup(async action=>action==='batchPreview'?{...preview,items:[],rows:[{studentId:'s',state:'sent'}]}:{results:[]});
+ try{await s.ui.review('unsent',{studentId:'s',name:'가상학생'});assert(!s.host.querySelector('.send-action'));await s.find('이 학생 발송 이력 보기').onclick();assert.match(s.host.querySelector('h3').textContent,/가상학생/);}finally{s.dom.window.close();}
+});
