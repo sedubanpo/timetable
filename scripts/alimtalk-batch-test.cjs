@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {fixture}=require('./alimtalk-fixture.cjs'),{createBatch}=require('../snapshot-functions/alimtalk-batch');
 const {createService,hash}=require('../snapshot-functions/alimtalk-service');
 const {contactHash}=require('../snapshot-functions/alimtalk-students');
-function setup(count=3){
+function setup(count=3,options={}){
  const f=fixture(),{day,deps}=f,date=day.date,people={},maps={},clear={},assign={},src={date,academyId:'banpo',revision:'v1',complete:true,entries:[]};
  let clock=100000,auth={...f.actor};
  const now=()=>++clock;deps.now=now;deps.authorize=async()=>({...auth});
@@ -20,7 +20,7 @@ function setup(count=3){
  const store=deps.store;store.dayHistory=async(a,d,k)=>[...f.records.values()].filter(r=>r.date===d&&r.academyId===a&&r.kind===k).map(r=>structuredClone(r));
  const provider=deps.provider;let code=()=> '4000';provider.sendOne=async m=>{f.sent.push(structuredClone(m));const n=f.sent.length;return {messageId:'m'+n,groupId:'g'+n,statusCode:code(m,n)};};
  const services={student:createService({...deps,kind:'student-daily-lessons'}),guardian:createService(deps)};
- const b=createBatch({...deps,store,provider,now,services,loadSource:async()=>src,resolveStudent:async id=>people[id],
+ const b=createBatch({...deps,store,provider,now,services,...options,loadSource:async()=>src,resolveStudent:async id=>people[id],
  reviewStore:{mapping:async(a,d,id)=>maps[id],dayAssignments:async()=>assign,clearance:async(a,d,id)=>clear[id]}});
  const base={date,audience:'guardian',mode:'unsent'};
  const preview=(args={})=>b.batchPreview('',{...base,...args});
@@ -56,7 +56,7 @@ test('only previously delivered changed numbers qualify; review invalidated by s
 });
 test('actor, ttl, recipient hash, template and chunk limits checked at commit',async()=>{
  for(const what of ['actor','expire','phone','template','limit','auth']){
-  const x=setup(9),p=await x.preview();
+  const x=setup(41),p=await x.preview();
   if(what==='actor')x.auth.uid='other';if(what==='expire')x.expire();if(what==='phone')x.people.id1.recipients[0].phone='01000000099';
   if(what==='template')x.f.template.status='PENDING';if(what==='auth')x.auth.active=false;
   await assert.rejects(x.send(p,what==='limit'?p.items:[p.items[0]]));assert.equal(x.f.sent.length,0);
@@ -65,7 +65,7 @@ test('actor, ttl, recipient hash, template and chunk limits checked at commit',a
 test('review covers a full day larger than a single chunk without suppressing siblings or resending completed chunks',async()=>{
  const x=setup(52),same=x.people.id1.recipients[0].phone;x.people.id2.recipients[0].phone=same;x.clear.id2.recipients.mother.phoneHash=contactHash(same);
  const p=await x.preview();assert.equal(p.items.length,52);
- for(let i=0;i<52;i+=8)await x.send(p,p.items.slice(i,i+8));
+ for(let i=0;i<52;i+=40)await x.send(p,p.items.slice(i,i+40));
  await assert.rejects(x.send(p,p.items.slice(0,4)),{code:'BATCH_CHANGED'});assert.equal(x.f.sent.length,52);assert.equal(x.f.sent.filter(m=>m.to===same).length,2);
 });
 
@@ -150,10 +150,24 @@ test('a confirmed SMS at the corrected number counts as delivered and retains th
  assert.equal(x.f.sent.length,0);
 });
 
-test('eight sends run concurrently with durable claims; ninth is rejected before delivery',async()=>{
- const x=setup(9),p=await x.preview();assert.equal(p.batchSize,8);
+test('forty-recipient request preserves atomic claims, bounded reads and eight-worker concurrency',async()=>{
+ const x=setup(41),p=await x.preview();assert.equal(p.batchSize,40);
  await assert.rejects(x.send(p),{code:'INVALID_REQUEST'});assert.equal(x.f.sent.length,0);
- const results=await Promise.allSettled([x.send(p,p.items.slice(0,8)),x.send(p,p.items.slice(0,8))]);
- assert(results.some(r=>r.status==='fulfilled'));assert.equal(x.f.sent.length,8);
- await x.send(p,p.items.slice(8));assert.equal(x.f.sent.length,9);
+ const history=x.f.deps.store.history,reads=[];x.f.deps.store.history=async(a,d,ids)=>{reads.push(ids.length);assert(ids.length<=10);return history(a,d,ids);};
+ const sendOne=x.f.deps.provider.sendOne;let active=0,peak=0;
+ x.f.deps.provider.sendOne=async(...args)=>{active++;peak=Math.max(peak,active);await new Promise(r=>setImmediate(r));try{return await sendOne(...args);}finally{active--;}};
+ await x.send(p,p.items.slice(0,40));assert.equal(x.f.sent.length,40);assert.equal(peak,8);assert.deepEqual(reads,[10,10,10,10]);
+ await assert.rejects(x.send(p,p.items.slice(0,40)),{code:'BATCH_CHANGED'});assert.equal(x.f.sent.length,40);
+ await Promise.allSettled([x.send(p,p.items.slice(40)),x.send(p,p.items.slice(40))]);assert.equal(x.f.sent.length,41);
+});
+test('changed last recipient rejects the entire forty-person plan before dispatch',async()=>{
+ const x=setup(40),p=await x.preview();x.people.id40.recipients[0].phone='01000009999';
+ await assert.rejects(x.send(p),{code:'BATCH_CHANGED'});assert.equal(x.f.sent.length,0);
+});
+test('queue stops taking new recipients on deadline or unexpected dispatch failure',async()=>{
+ for(const failure of ['deadline','error']){
+  let elapsed=0,calls=0;const x=setup(40,{wallNow:()=>elapsed}),p=await x.preview();
+  x.services.guardian.dispatch=async()=>{calls++;await new Promise(r=>setImmediate(r));if(failure==='error')throw Error('offline failure');elapsed=81000;return {id:'fake',state:'ACCEPTED'};};
+  await assert.rejects(x.send(p),{code:'RESULT_UNCERTAIN'});assert.equal(calls,8);
+ }
 });

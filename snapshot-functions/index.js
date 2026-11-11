@@ -144,7 +144,7 @@ const timetableSolapiKey=defineSecret('TIMETABLE_SOLAPI_API_KEY');
 const timetableSolapiSecret=defineSecret('TIMETABLE_SOLAPI_API_SECRET');
 const timetableSolapiTestPhone=defineSecret('TIMETABLE_SOLAPI_TEST_PHONE');
 const timetableSolapiWebhook=defineSecret('TIMETABLE_SOLAPI_WEBHOOK_SECRET');
-exports.timetableAlimtalkApi=onRequest({region:'asia-northeast3',timeoutSeconds:30,memory:'256MiB',maxInstances:2,cors:false,secrets:[secret,timetableSolapiKey,timetableSolapiSecret,timetableSolapiTestPhone,timetableSolapiWebhook]},async(req,res)=>{
+exports.timetableAlimtalkApi=onRequest({region:'asia-northeast3',timeoutSeconds:120,memory:'256MiB',maxInstances:2,cors:false,secrets:[secret,timetableSolapiKey,timetableSolapiSecret,timetableSolapiTestPhone,timetableSolapiWebhook]},async(req,res)=>{
   try{
     const handler=require('./alimtalk-runtime').createRuntime({db:getFirestore(),auth:getAuth(),sourceUrl:source,sourceSecret:secret.value(),apiKey:timetableSolapiKey.value(),apiSecret:timetableSolapiSecret.value(),fallbackFrom:timetableSmsFrom.value(),testPhone:timetableSolapiTestPhone.value().trim(),webhookSecret:timetableSolapiWebhook.value(),enableTestSend:true,request:fetch});
     return await handler(req,res);

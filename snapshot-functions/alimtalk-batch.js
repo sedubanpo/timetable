@@ -14,12 +14,12 @@ const reason=c=>({
  STUDENT_COVERAGE_INCOMPLETE:'변경된 수업 다시 연결',STUDENT_IDENTITY_REVIEW_REQUIRED:'이름·학교 확인 필요',
  STUDENT_SCHOOL_MISMATCH:'학교·학년 확인 필요',CANONICAL_RECONFIRM_REQUIRED:'학생 원장 다시 확인'
 }[c]||'학생·연락처 확인 필요');
-async function pooled(items,fn){
+async function pooled(items,fn,concurrency=6){
  const result=new Array(items.length);let next=0;
- await Promise.all(Array.from({length:Math.min(6,items.length)},async()=>{while(next<items.length){const i=next++;result[i]=await fn(items[i]);}}));
+ await Promise.all(Array.from({length:Math.min(concurrency,items.length)},async()=>{while(next<items.length){const i=next++;result[i]=await fn(items[i]);}}));
  return result;
 }
-function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,provider,services,now=Date.now}){
+function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,provider,services,now=Date.now,wallNow=Date.now}){
  async function actor(session){const a=await authorize(session);if(!a?.uid||!['ADMIN','STAFF','DESK'].includes(a.role)||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
  async function reviewer(session){
   const a=await authorize(session,{reviewBatch:true});
@@ -27,10 +27,16 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   return a;
  }
  function validate({date,audience}){if(!rules.validDate(date)||typeof audience!=='string'||!Object.hasOwn(kinds,audience))fail('INVALID_REQUEST');}
+ async function selectedHistory(a,date,ids){
+  // Keep Firestore 'in' queries below their operand limit for a forty-recipient batch.
+  const chunks=[];for(let i=0;i<ids.length;i+=10)chunks.push(ids.slice(i,i+10));
+  const rows=(await Promise.all(chunks.map(part=>store.history(a.academyId,date,part)))).flat();
+  if(rows.length>200)fail('HISTORY_LIMIT');return rows;
+ }
  async function scan(a,{date,audience},only){
   const kind=kinds[audience];
   const [src,hist]=await Promise.all([loadSource(a,date),
-   only?store.history(a.academyId,date,only):store.dayHistory(a.academyId,date,kind)]);
+   only?selectedHistory(a,date,only):store.dayHistory(a.academyId,date,kind)]);
   if(!src.complete||!src.revision||src.date!==date||src.academyId!==a.academyId||src.entries.length>5000)fail('SOURCE_INCOMPLETE');
   const assign=await reviewStore.dayAssignments(a.academyId,date);
   const history=hist.filter(r=>r.studentId!=='__alimtalk_admin_test__'&&(r.kind||'daily-lessons')===kind).sort(newest);
@@ -119,13 +125,13 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   await actor(session);
   if(tickets.length)await store.savePreview(previewId,{kind:'bulk',academyId:a.academyId,actor:a.uid,date,audience,mode,expires,
    tickets:Object.fromEntries(tickets.map(x=>[x.ticket,x.studentId]))});
-  return {date,audience,mode,batchSize:8,previewId,expires,changes,rows:rows.map(summary),items:tickets.map(x=>({
+  return {date,audience,mode,batchSize:40,previewId,expires,changes,rows:rows.map(summary),items:tickets.map(x=>({
    ticket:x.ticket,studentId:x.studentId,name:x.name,relation:x.recipient.relation,masked:rules.mask(x.recipient.phone),previous:x.previous,text:x.text,retry:x.lastState==='FAILED'
   }))};
  }
  async function send(session,input){
-  const start=Date.now(),a=await actor(session),{previewId,tickets}=input;
-  if(input.confirmed!==true||!Array.isArray(tickets)||!tickets.length||tickets.length>8||
+  const start=wallNow(),a=await actor(session),{previewId,tickets}=input;
+  if(input.confirmed!==true||!Array.isArray(tickets)||!tickets.length||tickets.length>40||
    tickets.some(t=>typeof t!=='string'||!/^[a-f0-9]{64}$/.test(t))||new Set(tickets).size!==tickets.length)fail('INVALID_REQUEST');
   const p=await store.preview(previewId);
   if(!p||p.kind!=='bulk'||p.academyId!==a.academyId||p.actor!==a.uid||p.expires<=now()||
@@ -137,11 +143,17 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const fresh=rows.flatMap(r=>r.items.filter(x=>x.state===p.mode));
   const selected=tickets.map(t=>fresh.find(x=>x.ticket===t));
   if(selected.some(x=>!x))fail('BATCH_CHANGED');
-  if(Date.now()-start>14000||p.expires<=now())fail('PREVIEW_EXPIRED');
-  const settled=await Promise.allSettled(selected.map(async x=>{
-   const r=await services[p.audience].dispatch(session,a,p.date,x,x.recipient,rows.find(r=>r.id===x.studentId).past,previewId,true);
-   return {id:r.id,studentId:x.studentId,relation:r.relation,masked:r.masked,state:r.state,errorCode:r.errorCode};
-  }));
+  if(wallNow()-start>30000||p.expires<=now())fail('PREVIEW_EXPIRED');
+  let stopped=false;
+  const settled=await pooled(selected,async x=>{
+   try{
+    // Stop taking new work on an unexpected error or before the HTTP deadline.
+    // Already claimed deliveries remain in durable history and are never replayed here.
+    if(stopped||wallNow()-start>80000||p.expires<=now())fail('RESULT_UNCERTAIN');
+    const r=await services[p.audience].dispatch(session,a,p.date,x,x.recipient,rows.find(r=>r.id===x.studentId).past,previewId,true);
+    return {status:'fulfilled',value:{id:r.id,studentId:x.studentId,relation:r.relation,masked:r.masked,state:r.state,errorCode:r.errorCode}};
+   }catch(e){stopped=true;return {status:'rejected'};}
+  },8);
   if(settled.some(x=>x.status==='rejected'))fail('RESULT_UNCERTAIN');
   return {results:settled.map(x=>x.value)};
  }

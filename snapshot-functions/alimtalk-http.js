@@ -28,7 +28,7 @@ function createHandler({review,delivery,allowedOrigins,allowSend=false,batch,stu
   // Mutation timeout is explicitly uncertain; clients must reconcile, never auto-replay.
   // Deployment remains gated on durable recovery UI and hosting deadline validation.
   let timer;
-  try{const result=await Promise.race([routes[action](session,input),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),action.startsWith('batch')?25000:deadline);})]);return res.json(['preview','studentPreview','testPreview','realTestPreview'].includes(action)?{...result,sendEnabled:['preview','studentPreview'].includes(action)?allowSend:allowTestSend}:result);}
+  try{const result=await Promise.race([routes[action](session,input),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),action==='batchSend'?105000:action.startsWith('batch')?25000:deadline);})]);return res.json(['preview','studentPreview','testPreview','realTestPreview'].includes(action)?{...result,sendEnabled:['preview','studentPreview'].includes(action)?allowSend:allowTestSend}:result);}
   catch(e){const mutation=['saveMapping','saveClearance','send','studentSend','testSend','realTestSend','batchSend'].includes(action);if(e.code==='TIMEOUT'&&mutation)return res.status(504).json({code:'RESULT_UNCERTAIN',retry:false});const code=typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'REQUEST_FAILED';return res.status(code==='FORBIDDEN'?403:code==='TIMEOUT'?504:409).json({code});}
   finally{clearTimeout(timer);}
  };

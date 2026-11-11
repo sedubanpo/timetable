@@ -141,7 +141,7 @@ function mount({host,api,context,refresh}){
     }
     return;
    }
-   const BATCH_SIZE=p.batchSize===8?8:4;
+   const BATCH_SIZE=[8,40].includes(p.batchSize)?p.batchSize:4;
    const data=p.items,held=mode==='changed'?[]:p.rows.filter(r=>r.issue);
    if(mode==='unsent')host.append(el('p','전체 '+p.rows.length+'명 · 발송 가능 '+data.length+'건 · 확인 필요 '+held.length+'명','change-count'));
    if(held.length){const h=el('details');h.append(el('summary','확인이 필요한 학생 '+held.length+'명'));held.forEach(r=>h.append(note(r.name+' · '+r.issue)));host.append(h);}

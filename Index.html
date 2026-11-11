@@ -2513,7 +2513,7 @@ function mount({host,api,context,refresh}){
     }
     return;
    }
-   const BATCH_SIZE=p.batchSize===8?8:4;
+   const BATCH_SIZE=[8,40].includes(p.batchSize)?p.batchSize:4;
    const data=p.items,held=mode==='changed'?[]:p.rows.filter(r=>r.issue);
    if(mode==='unsent')host.append(el('p','전체 '+p.rows.length+'명 · 발송 가능 '+data.length+'건 · 확인 필요 '+held.length+'명','change-count'));
    if(held.length){const h=el('details');h.append(el('summary','확인이 필요한 학생 '+held.length+'명'));held.forEach(r=>h.append(note(r.name+' · '+r.issue)));host.append(h);}
@@ -8479,7 +8479,7 @@ function drawAlimtalkRoster(list,keyword){
           if(rosterScope===rosterKey()&&(['saveMapping','send','studentSend','saveClearance','reconcile','studentReconcile'].includes(action)||(action==='reviewState'&&result.mappingRevision)))void reloadCardRoster();
           return result;
         })();
-        try{return await Promise.race([work,new Promise(function(_,reject){timer=setTimeout(function(){expired=true;controller.abort();reject(failure('TIMEOUT'));},action.startsWith('batch')?28000:10000);})]);}
+        try{return await Promise.race([work,new Promise(function(_,reject){timer=setTimeout(function(){expired=true;controller.abort();reject(failure('TIMEOUT'));},action==='batchSend'?110000:action.startsWith('batch')?28000:10000);})]);}
         catch(e){if(expired)throw failure('TIMEOUT');if(e&&typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code))throw e;throw failure(stage==='auth'?'AUTH_CONNECTION_FAILED':stage==='token'?'TOKEN_UNAVAILABLE':stage==='network'?'NETWORK_UNAVAILABLE':'INVALID_RESPONSE');}
         finally{clearTimeout(timer);}
       }
