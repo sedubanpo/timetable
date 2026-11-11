@@ -181,3 +181,15 @@ test('history repairs missing receipts once per minute and batch refresh no long
  x.f.deps.provider.lookup=async input=>{reads++;return {key:input.key,messageId:'found',groupId:'group',statusCode:'4000'};};
  await x.b.batchRefresh('',{...x.base,ids:[id]});h=await x.b.batchHistory('',x.base);assert.equal(reads,2);assert.equal(h.results[0].state,'DELIVERED');assert.equal(h.results[0].trackingMissing,false);assert.equal(x.f.sent.length,0);
 });
+
+test('scoped preparation and roster only resolve the requested student; foreign tickets and uncertain recipients remain blocked',async()=>{
+ const x=setup(3),p=await x.preview({audience:'student',studentIds:['id2']});
+ assert.deepEqual(p.rows.map(r=>r.studentId),['id2']);assert.deepEqual(p.items.map(r=>r.studentId),['id2']);
+ const other=await x.preview({audience:'student',studentIds:['id3']});
+ await assert.rejects(x.send(p,other.items),{code:'PREVIEW_EXPIRED'});assert.equal(x.f.sent.length,0);
+ x.code(()=> '3014');await x.send(p);
+ assert.equal((await x.preview({audience:'student',studentIds:['id2']})).items.length,0);
+ const roster=await x.b.batchRoster('',{...x.base,audience:'student',studentIds:['id2']});
+ assert.deepEqual(roster.rows.map(r=>[r.studentId,r.state]),[['id2','pending']]);assert.equal(x.f.sent.length,1);
+ for(const studentIds of [[],['id1','id1'],[''],[null],Array(21).fill('id1')])await assert.rejects(x.preview({studentIds}),{code:'INVALID_REQUEST'});
+});

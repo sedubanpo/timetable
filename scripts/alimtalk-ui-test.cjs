@@ -30,3 +30,20 @@ test('roster shortcuts are sibling controls, scoped to audience and status; ambi
  const retry=list.querySelector('.roster-failed .roster-student-action');assert.equal(retry.getAttribute('aria-label'),'실패 학부모 재발송');retry.click();assert.deepEqual(calls,[['실패','failed']]);
  assert.equal(list.querySelector('.roster-pending .roster-student-action').textContent,'결과 확인');dom.window.close();
 });
+
+test('targeted roster refresh keeps other students usable, preserves scroll and ignores late results after audience change',async()=>{
+ const dom=new JSDOM('<main id="studentImageModal"><div id="batchRosterStatus"></div><div id="list"></div></main>',{runScripts:'outside-only'}),w=dom.window;
+ Object.assign(w,{studentCardMode:'message',cardAudience:'student',currentSheetName:'11/12',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'operator',timetableLoginSequence:1,studentImageScheduleMap:{가학생:[],나학생:[]},selectedStudentForImage:'가학생',refreshStudentImageListSelectionState:()=>{},isStudentImageModalOpen:()=>true});
+ w.eval(fs.readFileSync('assets/alimtalk-roster.js','utf8'));const list=w.document.getElementById('list');
+ w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'가학생',studentId:'a',state:'unsent'},{name:'나학생',studentId:'b',state:'unsent'}];w.filterStudentImageList=()=>w.drawAlimtalkRoster(list,'');w.filterStudentImageList();list.scrollTop=123;
+ const calls=[];let finish;w.cardAlimtalkApi=(action,input)=>{calls.push({action,input});return new Promise(r=>finish=r);};
+ try{
+ const first=w.reloadCardRoster({studentIds:['a'],submitted:true,background:true});
+ assert.equal(w.cardRosterRows[0].state,'pending');assert.equal(list.getAttribute('aria-busy'),'false');assert.equal(list.scrollTop,123);
+ assert.equal(list.querySelector('.roster-unsent .roster-student-action').getAttribute('aria-label'),'나학생 학생 본인 발송');
+ finish({rows:[{name:'가학생',studentId:'a',state:'sent'}]});await first;
+ assert.deepEqual(Array.from(w.cardRosterRows,r=>r.state),['sent','unsent']);assert.deepEqual(Array.from(calls[0].input.studentIds),['a']);
+ const late=w.reloadCardRoster({studentIds:['a'],background:true});w.cardAudience='guardian';w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'가학생',studentId:'a',state:'unsent'}];
+ finish({rows:[{name:'가학생',studentId:'a',state:'sent'}]});await late;assert.equal(w.cardRosterRows[0].state,'unsent');
+ }finally{dom.window.close();}
+});

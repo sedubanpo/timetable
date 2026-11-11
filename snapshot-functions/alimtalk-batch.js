@@ -26,7 +26,10 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(!a?.uid||a.active!==true||a.academyId!=='banpo'||!['ADMIN','STAFF','DESK'].includes(a.role))fail('FORBIDDEN');
   return a;
  }
- function validate({date,audience}){if(!rules.validDate(date)||typeof audience!=='string'||!Object.hasOwn(kinds,audience))fail('INVALID_REQUEST');}
+ function validate({date,audience,studentIds}){
+  if(!rules.validDate(date)||typeof audience!=='string'||!Object.hasOwn(kinds,audience))fail('INVALID_REQUEST');
+  if(studentIds!==undefined&&(!Array.isArray(studentIds)||!studentIds.length||studentIds.length>20||studentIds.some(id=>typeof id!=='string'||!id||id.length>150)||new Set(studentIds).size!==studentIds.length))fail('INVALID_REQUEST');
+ }
  async function selectedHistory(a,date,ids){
   // Keep Firestore 'in' queries below their operand limit for a forty-recipient batch.
   const chunks=[];for(let i=0;i<ids.length;i+=10)chunks.push(ids.slice(i,i+10));
@@ -100,14 +103,14 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
  const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
  async function roster(session,input){
   const a=await reviewer(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
-  const rows=await scan(a,input);await reviewer(session);return {rows:rows.map(summary)};
+  const rows=await scan(a,input,input.studentIds);await reviewer(session);return {rows:rows.map(summary)};
  }
  async function prepare(session,input){
   const {date,audience,mode}=input;
   const a=await reviewer(session);validate(input);
   if(!['unsent','changed'].includes(mode))fail('INVALID_REQUEST');
   await store.rate(a.uid,'batchPreview',now(),15);
-  const rows=await scan(a,input);
+  const rows=await scan(a,input,input.studentIds);
   const changes=mode==='changed'?rows.filter(r=>r.comparisons?.length).map(r=>({
    name:r.name,studentId:r.id,current:r.text,issue:r.issue,comparisons:r.comparisons
   })):[];

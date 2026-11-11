@@ -79,3 +79,30 @@ test('history distinguishes missing receipt from confirmed acceptance and provid
  const s=setup(async()=>({results:[{id:'missing',studentId:'s',name:'가상학생',state:'UNKNOWN',createdAt:1,lastResultCheckAt:1000,trackingMissing:true,trackingIssue:'RECEIPT_NOT_FOUND',errorCode:'RESULT_UNCERTAIN'}]}));
  try{await s.ui.history({studentId:'s',name:'가상학생'});assert.match(s.host.textContent,/일치하는 접수 기록을 찾지 못했습니다/);assert.match(s.host.textContent,/최근 결과 조회/);assert(s.find('접수 기록 다시 찾기'));assert(!s.find('재발송할 번호·본문 확인'));}finally{s.dom.window.close();}
 });
+
+test('one-click sends only fresh target tickets once and releases UI without waiting for roster refresh',async()=>{
+ const calls=[];let resolvePreview;
+ const s=setup(async(action,input)=>{calls.push({action,input});if(action==='batchPreview')return new Promise(r=>resolvePreview=r);return {results:[{studentId:'s',state:'ACCEPTED'}]};});
+ try{
+ const send=s.ui.quickSend('unsent',{studentId:'s',name:'가상학생'});
+ assert(s.ui.isSending());await s.ui.quickSend('unsent',{studentId:'s',name:'가상학생'});assert.equal(calls.length,1);
+ resolvePreview({...preview,items:[...preview.items,{...preview.items[0],studentId:'other',ticket:'other'}]});await send;
+ assert.deepEqual(calls.map(r=>r.action),['batchPreview','batchSend']);assert.deepEqual(Array.from(calls[0].input.studentIds),['s']);
+ assert.deepEqual(Array.from(calls[1].input.tickets),['synthetic']);assert(calls[1].input.confirmed);
+ assert(!s.ui.isSending());assert(!s.w.document.querySelector('.batch-bar').inert);assert.equal(s.host.querySelectorAll('input').length,0);
+ assert.match(s.host.textContent,/다음 학생에게 이어서 발송/);assert(!s.host.textContent.includes('수신 완료'));
+ }finally{s.dom.window.close();}
+});
+test('one-click never sends held, pending, read-only or stale plans and never replays a timeout',async()=>{
+ for(const outcome of ['pending','held','readonly','stale','timeout']){
+ const calls=[];let finish;
+ const s=setup(async(action)=>{calls.push(action);if(action==='batchPreview'){
+  if(outcome==='stale')return new Promise(r=>finish=r);
+  return {...preview,readOnly:outcome==='readonly',items:['pending','held'].includes(outcome)?[]:preview.items};
+ }throw Object.assign(Error(),{code:'TIMEOUT'});});
+ try{const op=s.ui.quickSend('unsent',{studentId:'s',name:'가상학생'});if(outcome==='stale'){s.ui.reset();finish(preview);}await op;
+ assert.deepEqual(calls,outcome==='timeout'?['batchPreview','batchSend']:['batchPreview']);assert(!s.ui.isSending());
+ if(outcome==='timeout')assert.match(s.host.textContent,/자동으로 다시 보내지 않습니다/);
+ }finally{s.dom.window.close();}
+ }
+});
