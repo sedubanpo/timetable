@@ -7,6 +7,7 @@ const audienceName=a=>a==='student'?'학생 본인':'학부모';
 const errorText=e=>({BATCH_CHANGED:'시간표, 번호 또는 발송 기록이 바뀌었습니다. 명단과 본문을 다시 확인하세요.',
  PREVIEW_EXPIRED:'검토 시간이 지났거나 대상이 바뀌었습니다. 다시 검토하세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 허브 로그인과 시간표·데스크 접근 권한을 확인해 주세요.',
  RESULT_UNCERTAIN:'서버에서 이번 묶음의 결과를 확정하지 못했습니다.',TIMEOUT:'서버 응답이 늦어 이번 묶음의 결과를 확인하지 못했습니다.',NETWORK_UNAVAILABLE:'네트워크 연결이 끊겼습니다.',SOURCE_INCOMPLETE:'원본 시간표에 해석할 수 없는 수업이 있습니다.',RATE_LIMIT:'잠시 후 이력을 확인하고 다시 검토하세요.',
+ RECEIPT_FOUND:'기존 접수 기록이 확인되거나 상태가 바뀌었습니다. 발송 이력을 갱신해 주세요.',RECEIPT_REVIEW_REQUIRED:'접수 미확정 기록만 미접수 확인 처리할 수 있습니다.',RECEIPT_REVIEW_TOO_EARLY:'최초 요청 후 10분 동안은 접수 기록을 다시 확인해 주세요.',
  TEMPLATE_MISMATCH:'승인된 알림톡 양식을 확인할 수 없습니다.'}[e?.code]||'서버에서 확인하지 못했습니다. '+(e?.code||''));
 function readLessons(text){
  const match=/\[수업 안내[^\]\n]*\]\n([\s\S]*?)\n\n수업 일정에 관한/.exec((text||'').replace(/\r/g,''));
@@ -277,6 +278,28 @@ function mount({host,api,context,refresh}){
    }
   }catch(e){if(current()){host.replaceChildren(note(errorText(e)),button('명단 다시 확인',reviewAgain));}}
  }
+ async function recoverUnreceived(record,target){
+  if(sending)return;
+  const current=view(),{date,audience}=context();
+  host.append(el('h3',record.name+' · 미접수 확인 후 신규 발송'),note(date+' · '+audienceName(audience)+' · '+record.masked),
+   note('솔라피 발송 내역에서 이 수신번호와 최초 요청 시각의 메시지가 없는지 확인한 경우에만 진행하세요. 조회 오류만으로 미접수라고 판단하면 중복 수신될 수 있습니다.'),body('기존 요청 본문',record.text||''));
+  const label=el('label',undefined,'bulk-pick'),ack=el('input');ack.type='checkbox';
+  label.append(ack,document.createTextNode(' 솔라피 발송 내역에서 해당 요청이 없는 것을 확인했습니다.'));
+  const send=button('미접수 확인하고 이 학생에게 신규 발송',async()=>{
+   if(sending||!ack.checked||!current())return;
+   sending=true;const unlock=lock();send.disabled=true;ack.disabled=true;
+   const progress=loading('기존 접수 기록을 마지막으로 확인하고 있습니다…');host.append(progress);
+   let released=false;
+   try{await api('batchReleaseUnreceived',{date,audience,id:record.id,studentId:record.studentId,confirmedNotReceived:true});released=true;}
+   catch(e){if(current()){progress.replaceChildren(note(errorText(e)),note('새 메시지는 발송하지 않았습니다. 발송 이력에서 현재 상태를 확인하세요.'));}}
+   finally{sending=false;unlock();}
+   if(current()){
+    if(released)await quickSend('unsent',target);
+    else host.append(button('발송 이력 확인',()=>history(target)));
+   }
+  });send.disabled=true;ack.onchange=()=>{send.disabled=!ack.checked;};
+  host.append(label,send,button('취소 · 발송 이력으로',()=>history(target)));
+ }
  async function history(target=null){
   if(sending)return;
   const current=view(),{date,audience}=context(),showHistory=()=>history(target);
@@ -293,7 +316,7 @@ function mount({host,api,context,refresh}){
    const pending=results.filter(r=>['REQUESTING','ACCEPTED','PROCESSING','UNKNOWN'].includes(r.state));
    if(target){
     if(pending.length)host.append(note(pending.some(r=>r.trackingMissing)?'이전 요청의 접수 여부를 확인하지 못했습니다. 조회 버튼은 기존 기록만 찾으며 새 메시지를 보내지 않습니다.':'아직 수신 결과가 확정되지 않았습니다. 결과를 갱신한 뒤 실패가 확인되면 재발송할 수 있습니다.'));
-    else if(results.some(r=>r.state==='FAILED'))host.append(button('재발송할 번호·본문 확인',()=>review('unsent',target)));
+    else if(results.some(r=>['FAILED','NOT_ACCEPTED'].includes(r.state))&&!results.some(r=>r.state==='DELIVERED'))host.append(button('실패·미접수 건 재발송',()=>quickSend('unsent',target)));
    }
    if(pending.length){
     let progress;
@@ -306,13 +329,14 @@ function mount({host,api,context,refresh}){
     });host.append(update);
    }
    // Keep each follow-up beside its original, with the latest activity first.
-   const chains=new Map();
+   const chains=new Map(),byId=new Map(results.map(r=>[r.id,r]));
+   const rootId=row=>{let r=row;const seen=new Set();while((r.retryOf||r.originalDeliveryId)&&!seen.has(r.id)){seen.add(r.id);const id=r.retryOf||r.originalDeliveryId;if(!byId.has(id))return id;r=byId.get(id);}return r.id;};
    for(const row of results){
-    const key=row.originalDeliveryId||row.id;
+    const key=rootId(row);
     if(!chains.has(key))chains.set(key,[]);
     chains.get(key).push(row);
    }
-   const category=rows=>rows.some(r=>r.state==='DELIVERED')?'delivered':rows.some(r=>['FAILED','UNKNOWN'].includes(r.state))?'attention':'pending';
+   const category=rows=>rows.some(r=>r.state==='DELIVERED')?'delivered':rows.some(r=>['FAILED','UNKNOWN','NOT_ACCEPTED'].includes(r.state))?'attention':'pending';
    const groups=Array.from(chains.values());
    const filters=el('div',undefined,'history-filters');filters.setAttribute('role','group');filters.setAttribute('aria-label','발송 결과 필터');
    const list=el('div'),announcement=el('p',undefined,'bulk-note');announcement.setAttribute('role','status');
@@ -325,19 +349,20 @@ function mount({host,api,context,refresh}){
      announcement.textContent=n?label+' '+n+'건 표시':'해당하는 안내가 없습니다.';
     });filter.setAttribute('aria-pressed',String(key==='all'));buttons.push([filter,key]);filters.append(filter);
    }
-   host.append(note('발송 기록 기준입니다. 연결된 문자 재발송은 원래 기록과 묶고, 수신 완료되면 이전 실패는 참고 이력으로 남깁니다.'),filters,announcement,list);
+   host.append(note('발송 기록 기준입니다. 재발송은 원래 기록과 묶고, 수신 완료되면 이전 실패는 참고 이력으로 남깁니다.'),filters,announcement,list);
    for(const rows of groups){
     const chain=el('div',undefined,'history-chain'),kind=category(rows);chain.dataset.result=kind;entries.push([chain,kind]);list.append(chain);
     if(rows.length>1){const latest=rows.find(r=>r.state==='DELIVERED')||rows[0];chain.append(el('strong',latest.name+' · '+(kind==='delivered'?'재발송 수신 완료':'재발송 결과 확인'),'history-chain-title'));}
     for(const r of rows){const group=el('section',undefined,'bulk-review-row');
     const stamp=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(r.createdAt);
-    group.append(el('strong',r.name+' · '+root.TimetableAlimtalk.historyLabel(r)),note([r.relation,r.masked,stamp,r.originalDeliveryId?'문자 재발송':r.batch?'일괄 알림톡':'개별 알림톡'].join(' · ')));
+    group.append(el('strong',r.name+' · '+root.TimetableAlimtalk.historyLabel(r)),note([r.relation,r.masked,stamp,r.retryOf?'알림톡 재발송':r.originalDeliveryId?'문자 재발송':r.batch?'일괄 알림톡':'개별 알림톡'].join(' · ')));
     if(r.originalDeliveryId&&r.updatedAt){
      const time=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hourCycle:'h23',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(r.updatedAt);
      group.append(note('솔라피 결과 확인 · '+time));
     }
     if(r.fallbackResult)group.append(note(({CHECKING:'문자 대체 결과 확인 중',DELIVERED:'대체 문자 수신 완료',FAILED:'대체 문자 발송 실패',NOT_SENT:'대체 문자 미발송'})[r.fallbackResult]+' · 알림톡 실패 '+r.ataErrorCode));
-    if(r.trackingMissing){
+    if(r.recoveryResolution)group.append(note('담당자 미접수 확인 · '+new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'}).format(r.recoveryResolution.confirmedAt)+' · 기존 기록을 보존하고 신규 발송을 허용했습니다.'));
+    if(r.trackingMissing&&r.state==='UNKNOWN'){
      group.append(note(r.trackingIssue==='RECEIPT_NOT_FOUND'?'솔라피에서 이 요청과 일치하는 접수 기록을 찾지 못했습니다. 연락처 등록 문제가 아니라, 최초 요청의 접수 여부가 확인되지 않은 상태입니다. 조회를 반복해도 기록이 없으면 이 상태가 유지됩니다.':'발송 응답에서 접수번호를 확보하지 못했습니다. 번호·요청 시각·발송 식별자로 접수 기록을 다시 확인합니다.'));
     }
     if(r.lastResultCheckAt)group.append(note('최근 결과 조회 · '+new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(r.lastResultCheckAt)));
@@ -345,6 +370,10 @@ function mount({host,api,context,refresh}){
     if(r.text)group.append(body('보낸 본문',r.text));
     if(['REQUESTING','PROCESSING','ACCEPTED','UNKNOWN'].includes(r.state)){
      const check=button(r.trackingMissing?'접수 기록 다시 찾기':'수신 결과 조회',async()=>{if(refreshing)return;refreshing=true;check.disabled=true;check.textContent='수신 결과 확인 중…';try{await api(audience==='student'?'studentReconcile':'reconcile',{id:r.id});if(current()){await showHistory();refresh(target?{studentIds:[target.studentId],background:true}:{background:true});}}catch(e){if(current()){group.append(note(errorText(e)));check.disabled=false;check.textContent='수신 결과 다시 조회';}}finally{refreshing=false;}});group.append(check);}
+    if(r.state==='UNKNOWN'&&r.trackingMissing&&r.trackingIssue==='RECEIPT_NOT_FOUND'&&Date.now()-r.createdAt>=600000){
+     const scoped={studentId:r.studentId,name:r.name};
+     group.append(button('솔라피 미접수 확인 후 신규 발송',()=>recoverUnreceived(r,scoped)));
+    }
     chain.append(group);}
    }
   }catch(e){if(current())host.replaceChildren(note(errorText(e)),button('이력 다시 확인',showHistory));}

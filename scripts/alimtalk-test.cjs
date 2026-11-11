@@ -24,3 +24,12 @@ test('authorization rechecked on send/results; wrong academy and teacher denied'
 test('different/stale/unapproved template blocks; no partial source accepted',async()=>{for(const field of ['templateId','channelId','name','status','content']){const f=setup();f.template[field]='wrong';assert((await f.service.preview('',f.input)).rows[0].reasons.length);}const f=setup();f.day.complete=false;await assert.rejects(f.service.preview('',f.input),{code:'SOURCE_NOT_VERIFIED'});});
 test('rate limit and expired preview',async()=>{const f=setup();for(let i=0;i<30;i++)await f.service.preview('',f.input);await assert.rejects(f.service.preview('',f.input),{code:'RATE_LIMIT'});const x=fixture();let now=1000;x.deps.now=()=>now;const s=createService(x.deps),p=await s.preview('',x.input);now+=300001;await assert.rejects(s.send('',{previewId:p.previewId}),{code:'PREVIEW_EXPIRED'});});
 test('embedded sources and server copy match; UI integration never infers IDs',()=>{const contract=fs.readFileSync('assets/alimtalk-contract.js','utf8'),ui=fs.readFileSync('assets/alimtalk-ui.js','utf8');assert.equal(fs.readFileSync('snapshot-functions/alimtalk-contract.js','utf8'),contract);for(const file of ['Index.html','docs/index.html']){const html=fs.readFileSync(file,'utf8');assert(html.includes(contract));assert(html.includes(ui));assert(html.includes('TimetableAlimtalk.exclusion({status:parsed.status})'));assert(html.includes('cardAlimtalkSelections[cardAlimtalkKey()]||null'));assert(html.includes('api:cardAlimtalkApi'));assert(html.includes('TimetableAlimtalkReviewUI.mount'));assert(!html.includes('ALIMTALK_NOT_CONFIGURED')); }});
+
+test('provider receipt survives a transient result-store failure without a second send',async()=>{
+ const f=setup(),original=f.deps.store.update;let calls=0;
+ f.deps.store.update=(id,fn)=>{if(++calls===1)throw Error('temporary write failure');return original(id,fn);};
+ const p=await f.service.preview('',f.input),r=await f.service.send('',{previewId:p.previewId});
+ assert.equal(f.sent.length,1);assert.equal(r.results[0].messageId,'mock-message-1');assert.equal(r.results[0].groupId,'mock-group-1');assert.equal(r.results[0].requestErrorCode,'RECEIPT_SAVE_INTERRUPTED');
+ f.deps.provider.lookup=async({key,messageId,groupId})=>({key,messageId,groupId,statusCode:'4000'});
+ assert.equal((await f.service.reconcile('',r.results[0].id)).state,'DELIVERED');assert.equal(f.sent.length,1);
+});

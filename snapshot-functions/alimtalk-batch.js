@@ -160,6 +160,29 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(settled.some(x=>x.status==='rejected'))fail('RESULT_UNCERTAIN');
   return {results:settled.map(x=>x.value)};
  }
+ // This resolves an operator-verified missing receipt; it never sends or erases the attempt.
+ async function releaseUnreceived(session,input){
+  const a=await actor(session);validate(input);
+  const {id,studentId,date,audience}=input;
+  if(input.confirmedNotReceived!==true||typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||typeof studentId!=='string'||!studentId)fail('INVALID_REQUEST');
+  await store.rate(a.uid,'releaseUnreceived',now(),10);
+  const old=await store.get(id);
+  if(!old||old.academyId!==a.academyId||old.date!==date||old.kind!==kinds[audience]||old.studentId!==studentId||studentId==='__alimtalk_admin_test__')fail('FORBIDDEN');
+  if(old.state==='NOT_ACCEPTED'&&old.recoveryResolution)return {resolved:true,id};
+  if(old.state!=='UNKNOWN'||old.messageId||old.groupId||old.trackingIssue!=='RECEIPT_NOT_FOUND')fail('RECEIPT_REVIEW_REQUIRED');
+  if(now()-old.createdAt<600000)fail('RECEIPT_REVIEW_TOO_EARLY');
+  // An operator must first inspect the provider console. An empty API result alone is insufficient.
+  const event=await provider.lookup({key:old.id,phone:old.phone,createdAt:old.createdAt,smsFallback:old.smsFallback},AbortSignal.timeout(8000));
+  if(event){await services[audience].apply(old.id,event);fail('RECEIPT_FOUND');}
+  await actor(session);
+  await store.update(id,current=>{
+   if(current.state==='NOT_ACCEPTED'&&current.recoveryResolution)return current;
+   if(current.state!=='UNKNOWN'||current.messageId||current.groupId)fail('RECEIPT_FOUND');
+   return {...current,state:'NOT_ACCEPTED',updatedAt:now(),lastResultCheckAt:now(),
+    recoveryResolution:{previousState:current.state,previousErrorCode:current.errorCode||null,confirmedBy:a.uid,confirmedAt:now(),basis:'PROVIDER_CONSOLE_NO_RECEIPT'},errorCode:null};
+  });
+  return {resolved:true,id};
+ }
  async function refresh(session,input){
   const a=await actor(session);validate(input);const {ids,date,audience}=input;
   if(!Array.isArray(ids)||!ids.length||ids.length>5||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)))fail('INVALID_REQUEST');
@@ -186,8 +209,8 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(missing.length){try{await refresh(session,{...input,ids:missing.map(r=>r.id)});rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);}catch{recoveryDeferred=true;}}
   await actor(session);
   return {recoveryDeferred,recoveryChecked:missing.length,results:rows.filter(r=>r.studentId!=='__alimtalk_admin_test__').sort(newest).map(r=>({id:r.id,studentId:r.studentId,name:r.variables?.['#{학생명}']||'',createdAt:r.createdAt,
-   trackingMissing:!r.messageId||!r.groupId,trackingIssue:r.trackingIssue||null,lastResultCheckAt:r.lastResultCheckAt||null,state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
+   trackingMissing:!r.messageId||!r.groupId,trackingIssue:r.trackingIssue||null,lastResultCheckAt:r.lastResultCheckAt||null,state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,retryOf:r.retryOf||null,recoveryResolution:r.recoveryResolution||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
  }
- return {batchRoster:roster,batchPreview:prepare,batchSend:send,batchHistory:history,batchRefresh:refresh};
+ return {batchRoster:roster,batchPreview:prepare,batchSend:send,batchHistory:history,batchRefresh:refresh,batchReleaseUnreceived:releaseUnreceived};
 }
 module.exports={createBatch};

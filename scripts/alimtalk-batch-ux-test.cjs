@@ -66,8 +66,8 @@ test('student shortcut selects only that stable ID; opens full body and requires
 test('pending shortcut refreshes only the selected student and exposes retry only after confirmed failure',async()=>{
  const calls=[];let state='UNKNOWN';const row={studentId:'s',name:'가상학생',id:'one',relation:'학생',masked:'가상 번호',createdAt:1};
  const s=setup(async(action,input)=>{calls.push({action,input});if(action==='batchHistory')return {results:[{...row,state},{...row,id:'other',studentId:'other',name:'다른학생',state:'UNKNOWN'}]};if(action==='batchRefresh'){state='FAILED';return {}; }throw Error(action);});
- try{await s.ui.history({studentId:'s',name:'가상학생'});assert(!s.host.textContent.includes('다른학생'));assert(!s.find('재발송할 번호·본문 확인'));assert(!s.host.querySelector('.send-action'));
- await s.find('미확정 1건 결과 갱신').onclick();assert(s.find('재발송할 번호·본문 확인'));assert(!s.host.textContent.includes('다른학생'));assert.deepEqual(Array.from(calls[1].input.ids),['one']);assert(calls.every(c=>!c.action.includes('Send')));
+ try{await s.ui.history({studentId:'s',name:'가상학생'});assert(!s.host.textContent.includes('다른학생'));assert(!s.find('실패·미접수 건 재발송'));assert(!s.host.querySelector('.send-action'));
+ await s.find('미확정 1건 결과 갱신').onclick();assert(s.find('실패·미접수 건 재발송'));assert(!s.host.textContent.includes('다른학생'));assert.deepEqual(Array.from(calls[1].input.ids),['one']);assert(calls.every(c=>!c.action.includes('Send')));
  }finally{s.dom.window.close();}
 });
 test('scoped preview with no eligible tickets never offers send and retains scope when opening history',async()=>{
@@ -77,7 +77,7 @@ test('scoped preview with no eligible tickets never offers send and retains scop
 
 test('history distinguishes missing receipt from confirmed acceptance and provides recovery action without send',async()=>{
  const s=setup(async()=>({results:[{id:'missing',studentId:'s',name:'가상학생',state:'UNKNOWN',createdAt:1,lastResultCheckAt:1000,trackingMissing:true,trackingIssue:'RECEIPT_NOT_FOUND',errorCode:'RESULT_UNCERTAIN'}]}));
- try{await s.ui.history({studentId:'s',name:'가상학생'});assert.match(s.host.textContent,/일치하는 접수 기록을 찾지 못했습니다/);assert.match(s.host.textContent,/최근 결과 조회/);assert(s.find('접수 기록 다시 찾기'));assert(!s.find('재발송할 번호·본문 확인'));}finally{s.dom.window.close();}
+ try{await s.ui.history({studentId:'s',name:'가상학생'});assert.match(s.host.textContent,/일치하는 접수 기록을 찾지 못했습니다/);assert.match(s.host.textContent,/최근 결과 조회/);assert(s.find('접수 기록 다시 찾기'));assert(!s.find('실패·미접수 건 재발송'));}finally{s.dom.window.close();}
 });
 
 test('one-click sends only fresh target tickets once and releases UI without waiting for roster refresh',async()=>{
@@ -105,4 +105,19 @@ test('one-click never sends held, pending, read-only or stale plans and never re
  if(outcome==='timeout')assert.match(s.host.textContent,/자동으로 다시 보내지 않습니다/);
  }finally{s.dom.window.close();}
  }
+});
+
+test('missing receipt recovery requires operator acknowledgement and sends only the selected student once',async()=>{
+ const calls=[],row={id:'missing',studentId:'s',name:'가상학생',masked:'가상번호',state:'UNKNOWN',createdAt:1,trackingMissing:true,trackingIssue:'RECEIPT_NOT_FOUND'};
+ const s=setup(async(action,input)=>{calls.push({action,input});if(action==='batchHistory')return {results:[row]};if(action==='batchReleaseUnreceived')return {resolved:true};if(action==='batchPreview')return preview;if(action==='batchSend')return {results:[{studentId:'s',state:'ACCEPTED'}]};throw Error(action);});
+ try{await s.ui.history({studentId:'s',name:'가상학생'});await s.find('솔라피 미접수 확인 후 신규 발송').onclick();
+ const send=s.find('미접수 확인하고 이 학생에게 신규 발송');assert(send.disabled);await send.onclick();assert.equal(calls.length,1);
+ s.host.querySelector('input[type=checkbox]').click();assert(!send.disabled);await send.onclick();
+ assert.deepEqual(calls.map(c=>c.action),['batchHistory','batchReleaseUnreceived','batchPreview','batchSend']);assert.equal(calls[1].input.id,'missing');assert.equal(calls[1].input.studentId,'s');assert(calls[1].input.confirmedNotReceived);assert.equal(calls[3].input.tickets.length,1);
+ }finally{s.dom.window.close();}
+});
+test('failed receipt recovery never reaches a new dispatch',async()=>{
+ const calls=[],row={id:'missing',studentId:'s',name:'가상학생',state:'UNKNOWN',createdAt:1,trackingMissing:true,trackingIssue:'RECEIPT_NOT_FOUND'};
+ const s=setup(async(action)=>{calls.push(action);if(action==='batchHistory')return {results:[row]};throw Object.assign(Error(),{code:'RECEIPT_FOUND'});});
+ try{await s.ui.history({studentId:'s',name:'가상학생'});await s.find('솔라피 미접수 확인 후 신규 발송').onclick();s.host.querySelector('input').click();await s.find('미접수 확인하고 이 학생에게 신규 발송').onclick();assert.deepEqual(calls,['batchHistory','batchReleaseUnreceived']);assert.match(s.host.textContent,/새 메시지는 발송하지 않았습니다/);}finally{s.dom.window.close();}
 });

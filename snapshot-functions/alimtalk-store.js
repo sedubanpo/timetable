@@ -9,6 +9,12 @@ function firestoreStore(db){
     async preview(id){if(typeof id!=='string'||!/^[a-f0-9-]{36}$/.test(id))return null;return (await previews.doc(id).get()).data()||null;},
     async get(id){if(!/^[a-f0-9]{64}$/.test(id))return null;return (await records.doc(id).get()).data()||null;},
     async claim(id,value){return db.runTransaction(async tx=>{const ref=records.doc(id),snap=await tx.get(ref);if(snap.exists)return {created:false,record:snap.data()};tx.create(ref,value);return {created:true,record:value};});},
+    async claimRetry(id,value,parentId,expectedState){return db.runTransaction(async tx=>{
+      const ref=records.doc(id),parent=records.doc(parentId),snap=await tx.get(ref),prior=await tx.get(parent);
+      if(snap.exists)return {created:false,record:snap.data()};
+      if(!prior.exists||prior.data().state!==expectedState)throw Object.assign(Error('RECEIPT_FOUND'),{code:'RECEIPT_FOUND'});
+      tx.create(ref,value);return {created:true,record:value};
+    });},
     async update(id,fn){return db.runTransaction(async tx=>{const ref=records.doc(id),snap=await tx.get(ref);const value=fn(snap.data()||null);tx.set(ref,value);return value;});},
     async history(academyId,date,studentIds){
       // Bounded query; overflow is explicit, never silently a complete history.

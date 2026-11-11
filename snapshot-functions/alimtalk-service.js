@@ -10,7 +10,7 @@ function deliveryId(academy,row,date,phone,kind,history,retryFailed){
   const records=history.filter(r=>r.studentId===row.studentId&&r.phone===phone&&(r.kind||'daily-lessons')===kind)
     .sort((a,b)=>b.createdAt-a.createdAt||b.id.localeCompare(a.id));
   const latest=records[0];
-  if(latest?.version===row.version&&!(retryFailed&&latest.state==='FAILED'))return latest.id;
+  if(latest?.version===row.version&&!(retryFailed&&['FAILED','NOT_ACCEPTED'].includes(latest.state)))return latest.id;
   // A → B → A is a new notification; a reviewed retry also retains the original failed attempt.
   return hash(records.some(r=>r.version===row.version)?[...base,latest.id]:base);
 }
@@ -76,18 +76,26 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   // Internal only: both single and batch paths must verify the server plan before claiming.
   async function dispatch(session,a,date,row,recipient,prior,batchId=null,retryFailed=false){
       await auth(session);
+      const previous=prior.filter(r=>r.studentId===row.studentId&&r.phone===recipient.phone&&(r.kind||'daily-lessons')===kind).sort((a,b)=>b.createdAt-a.createdAt||b.id.localeCompare(a.id))[0];
+      if(previous?.state==='NOT_ACCEPTED'){
+        const checked=await lookupRecord(previous);
+        if(checked.state!=='NOT_ACCEPTED')fail('RECEIPT_FOUND');
+      }
       const id=deliveryId(a.academyId,row,date,recipient.phone,kind,prior,retryFailed);
-      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,smsFallback:provider.smsFallback===true,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(batchId?{batchId}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
-      const claim=await store.claim(id,record);
+      const retryOf=retryFailed&&['FAILED','NOT_ACCEPTED'].includes(previous?.state)?previous.id:null;
+      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,smsFallback:provider.smsFallback===true,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(batchId?{batchId}:{}),...(retryOf?{retryOf}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
+      const claim=retryOf&&store.claimRetry?await store.claimRetry(id,record,retryOf,previous.state):await store.claim(id,record);
       if(!claim.created){return publicRecord(claim.record);}
+      let receipt;
       try{
         // One message per provider group: siblings sharing a number never suppress one another.
         const r=await bounded(signal=>provider.sendOne({to:recipient.phone,type:'ATA',kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:row.variables,disableSms:!record.smsFallback},customFields:{timetableKey:id}},signal),deadline);
         if(!r?.messageId||!r?.groupId)fail('UNKNOWN_RESULT');
+        receipt=r;
         await apply(id,{...r,key:id});
       }catch(e){
         const rejected=['PROVIDER_REQUEST_REJECTED','PROVIDER_AUTH_REJECTED','PROVIDER_ACCESS_DENIED','PROVIDER_RATE_LIMIT','PROVIDER_KEY_INVALID','PROVIDER_SIGNATURE_MISMATCH'].includes(e.code);
-        await store.update(id,old=>(['DELIVERED','FAILED'].includes(old.state)?old:{...old,state:rejected?'FAILED':'UNKNOWN',errorCode:rejected?e.code:'RESULT_UNCERTAIN',requestErrorCode:['TIMEOUT','UNKNOWN_RESULT','RESULT_MISMATCH','PROVIDER_UNAVAILABLE'].includes(e.code)?e.code:'REQUEST_INTERRUPTED',updatedAt:now()}));
+        await store.update(id,old=>(['DELIVERED','FAILED'].includes(old.state)?old:{...old,...(receipt?{messageId:receipt.messageId,groupId:receipt.groupId}:{}),state:rejected?'FAILED':'UNKNOWN',errorCode:rejected?e.code:'RESULT_UNCERTAIN',requestErrorCode:receipt?'RECEIPT_SAVE_INTERRUPTED':rejected?e.code:['TIMEOUT','UNKNOWN_RESULT','RESULT_MISMATCH','PROVIDER_UNAVAILABLE'].includes(e.code)?e.code:'REQUEST_INTERRUPTED',updatedAt:now()}));
       }
       const saved=await store.get(id);
       // A response timeout never triggers a second send. Recover the receipt by read only.

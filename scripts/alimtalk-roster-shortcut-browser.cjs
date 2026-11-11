@@ -31,6 +31,9 @@ for(const [label,width,height] of [['desktop',1440,1000],['mobile',390,844]]){
  await page.getByRole('button',{name:'미확정 1건 결과 갱신'}).waitFor();assert.equal(await page.locator('#cardAlimtalkPanel .send-action').count(),0);
  await page.screenshot({path:'/tmp/timetable-ux-review/'+label+'-shortcut-pending.png'});
  assert.deepEqual(await page.evaluate(()=>calls),['batchPreview','batchSend','batchRoster','batchHistory']);
+ await page.getByRole('button',{name:'솔라피 미접수 확인 후 신규 발송',exact:true}).click();
+ assert(!(await page.getByRole('button',{name:'미접수 확인하고 이 학생에게 신규 발송',exact:true}).isEnabled()));
+ await page.screenshot({path:'/tmp/timetable-ux-review/'+label+'-receipt-recovery.png'});
  const overflow=await page.locator('#cardAlimtalkPanel').evaluate(n=>n.scrollWidth-n.clientWidth);assert(overflow<=1,String(overflow));
  console.log(label,'one-click synthetic send, unlocked next card and missing-receipt display verified (network blocked)');await page.close();
 }

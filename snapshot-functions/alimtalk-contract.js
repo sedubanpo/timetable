@@ -6,7 +6,7 @@
   const templateName='반포관 등원 안내 알림톡';
   // Exact text observed in the SOLAPI template API on 2026-11-06. Recheck server-side before send.
   const content="[에스학원 수업 일정 안내]\n#{학생명} 학생의 수업 안내드립니다.\n\n▶ 수업일: #{수업일}\n▶ 등원 시각: #{등원시각}\n\n[수업 안내: 과목·시간·강사·관·강의실]\n#{수업목록}\n\n수업 일정에 관한 변경 문의는 아래 ‘수업 문의’ 버튼을 이용해 주세요 💬\n\n전과목, 소수 정예 수업\n 💫 반포 에스학원";
-  const labels={REQUESTING:'요청 중',ACCEPTED:'접수',PROCESSING:'처리 중',DELIVERED:'수신 완료',FAILED:'실패',UNKNOWN:'결과 확인 필요'};
+  const labels={REQUESTING:'요청 중',ACCEPTED:'접수',PROCESSING:'처리 중',DELIVERED:'수신 완료',FAILED:'실패',NOT_ACCEPTED:'미접수 확인',UNKNOWN:'결과 확인 필요'};
   function exclusion(row){
     if(row.generated===true||row.isBreak===true)return '자동 생성 공강';
     const s=String(row.status||'').trim();

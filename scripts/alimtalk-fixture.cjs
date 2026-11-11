@@ -6,6 +6,7 @@ function fixture(){
   const atomic=fn=>{const p=chain.then(fn);chain=p.catch(()=>{});return p;};
   const store={savePreview:async(id,p)=>previews.set(id,clone(p)),preview:async id=>clone(previews.get(id)),get:async id=>clone(records.get(id)),
     claim:(id,r)=>atomic(()=>{if(records.has(id))return {created:false,record:clone(records.get(id))};records.set(id,clone(r));return {created:true,record:clone(r)};}),
+    claimRetry:(id,r,parentId,state)=>atomic(()=>{if(records.has(id))return {created:false,record:clone(records.get(id))};if(records.get(parentId)?.state!==state)throw Object.assign(Error('RECEIPT_FOUND'),{code:'RECEIPT_FOUND'});records.set(id,clone(r));return {created:true,record:clone(r)};}),
     update:(id,fn)=>atomic(()=>{const r=fn(clone(records.get(id)));records.set(id,clone(r));return clone(r);}),
     history:async(a,d,ids)=>[...records.values()].filter(r=>r.academyId===a&&r.date===d&&ids.includes(r.studentId)).map(clone),
     rate:async(uid,action,now,limit)=>atomic(()=>{const key=uid+action,old=rates.get(key),n=old&&old.until>now?old.count:0;if(n>=limit)throw Object.assign(Error('RATE_LIMIT'),{code:'RATE_LIMIT'});rates.set(key,{count:n+1,until:now+60000});})};

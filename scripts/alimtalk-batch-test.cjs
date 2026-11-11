@@ -193,3 +193,38 @@ test('scoped preparation and roster only resolve the requested student; foreign 
  assert.deepEqual(roster.rows.map(r=>[r.studentId,r.state]),[['id2','pending']]);assert.equal(x.f.sent.length,1);
  for(const studentIds of [[],['id1','id1'],[''],[null],Array(21).fill('id1')])await assert.rejects(x.preview({studentIds}),{code:'INVALID_REQUEST'});
 });
+
+test('operator-confirmed missing receipt preserves the original and permits exactly one scoped new attempt',async()=>{
+ const x=setup(2);x.f.deps.provider.sendOne=async m=>{x.f.sent.push(m);throw Object.assign(Error(),{code:'TIMEOUT'});};
+ const p=await x.preview({audience:'student',studentIds:['id1']});const sent=await x.send(p),id=sent.results[0].id;
+ const input={date:x.base.date,audience:'student',studentId:'id1',id,confirmedNotReceived:true};
+ assert.equal((await x.preview({audience:'student',studentIds:['id1']})).items.length,0);
+ await assert.rejects(x.b.batchReleaseUnreceived('',input),{code:'RECEIPT_REVIEW_TOO_EARLY'});x.expire();
+ for(const bad of [{confirmedNotReceived:false},{audience:'guardian'},{studentId:'id2'}])await assert.rejects(x.b.batchReleaseUnreceived('',{...input,...bad}));
+ const original=structuredClone(x.f.records.get(id));
+ await Promise.all([x.b.batchReleaseUnreceived('',input),x.b.batchReleaseUnreceived('',input)]);
+ const resolved=x.f.records.get(id);assert.equal(resolved.state,'NOT_ACCEPTED');assert.equal(resolved.text,original.text);assert.equal(resolved.recoveryResolution.previousErrorCode,'RESULT_UNCERTAIN');assert.equal(resolved.recoveryResolution.confirmedBy,x.auth.uid);
+ assert.equal(x.f.sent.length,1);
+ x.f.deps.provider.sendOne=async m=>{x.f.sent.push(m);return {messageId:'retry-message',groupId:'retry-group',statusCode:'4000'};};
+ const next=await x.preview({audience:'student',studentIds:['id1']});assert.equal(next.items.length,1);
+ await Promise.allSettled([x.send(next),x.send(next)]);assert.equal(x.f.sent.length,2);
+ const history=await x.b.batchHistory('',input);assert.equal(history.results.length,2);assert(history.results.some(r=>r.retryOf===id&&r.state==='DELIVERED'));assert(history.results.some(r=>r.id===id&&r.state==='NOT_ACCEPTED'));
+ assert.equal((await x.preview({audience:'student',studentIds:['id1']})).items.length,0);
+});
+test('missing receipt release fails closed on recovered receipts, lookup error or revoked authorization',async()=>{
+ for(const mode of ['found','error','auth']){
+  const x=setup(1);x.f.deps.provider.sendOne=async()=>{throw Object.assign(Error(),{code:'TIMEOUT'});};
+  const result=await x.send(await x.preview());const id=result.results[0].id;x.expire();
+  x.f.deps.provider.lookup=async({key})=>{if(mode==='error')throw Error('provider offline');if(mode==='auth'){x.auth.active=false;return null;}return {key,messageId:'recovered',groupId:'group',statusCode:'4000'};};
+  await assert.rejects(x.b.batchReleaseUnreceived('',{...x.base,id,studentId:'id1',confirmedNotReceived:true}));
+  assert.equal(x.f.records.get(id).state,mode==='found'?'DELIVERED':'UNKNOWN');assert.equal(x.f.sent.length,0);
+ }
+});
+test('a late provider receipt after operator resolution blocks the prepared resend',async()=>{
+ const x=setup(1);x.f.deps.provider.sendOne=async()=>{throw Object.assign(Error(),{code:'TIMEOUT'});};
+ const r=await x.send(await x.preview()),id=r.results[0].id;x.expire();
+ await x.b.batchReleaseUnreceived('',{...x.base,id,studentId:'id1',confirmedNotReceived:true});
+ const p=await x.preview();
+ x.f.deps.provider.lookup=async({key})=>({key,messageId:'late',groupId:'late-group',statusCode:'4000'});
+ await assert.rejects(x.send(p));assert.equal(x.f.records.get(id).state,'DELIVERED');assert.equal(x.f.sent.length,0);
+});
