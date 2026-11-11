@@ -37,7 +37,10 @@ function firestoreReviewStore(db){
      const sameAlias=(old?.identityLink?.confirmedSourceSchool||null)===(value.identityLink?.confirmedSourceSchool||null);
      return {p,ref,linkRef,old,value,unchanged:unchanged&&sameAlias,link:linkSnap.data()};
     }));
-    for(const r of rows)if(!r.unchanged)for(const e of r.old?.entries||[]){if(assignments[hash(e.id)]?.studentId===r.value.studentId)delete assignments[hash(e.id)];}
+    for(const r of rows)if(!r.unchanged)for(const e of r.old?.entries||[]){
+     const k=hash(e.id),owner=assignments[k];
+     if(owner?.studentId===r.value.studentId&&owner.revision===r.old.revision&&owner.fingerprint===e.fingerprint)delete assignments[k];
+    }
     for(const r of rows)if(!r.unchanged)for(const e of r.value.entries){const k=hash(e.id);if(assignments[k]&&assignments[k].studentId!==r.value.studentId)fail('ENTRY_ALREADY_ASSIGNED');assignments[k]={studentId:r.value.studentId,fingerprint:e.fingerprint,revision:r.value.revision};}
     const next={academyId:actor.academyId,date:source.date,assignments};bounded(next);
     for(const r of rows){

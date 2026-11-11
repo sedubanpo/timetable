@@ -8,9 +8,9 @@ for(const [label,width,height] of [['desktop',1440,1000],['mobile',390,844]]){
  for(const f of ['alimtalk-contract.js','alimtalk-batch-ui.js','alimtalk-roster.js'])await page.addScriptTag({path:'assets/'+f});
  await page.evaluate(()=>{
  document.querySelectorAll('style').forEach(n=>document.head.append(n));const modal=document.getElementById('studentImageModal');document.body.replaceChildren(modal);document.body.className='';modal.style.display='flex';modal.dataset.cardMode='message';document.querySelectorAll('[data-card-channel=image]').forEach(n=>n.hidden=true);
- Object.assign(window,{studentCardMode:'message',cardAudience:'student',currentSheetName:'11/12(목)',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'offline',timetableLoginSequence:1,studentImageScheduleMap:{검증대기:[],검증실패:[],검증미확정:[],검증완료:[]},selectedStudentForImage:'검증실패',isStudentImageModalOpen:()=>true,
+ Object.assign(window,{studentCardMode:'message',cardAudience:'student',currentSheetName:'11/12(목)',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'offline',timetableLoginSequence:1,studentImageScheduleMap:{검증대기:[],검증실패:[],검증미확정:[],검증완료:[],검증변경:[]},selectedStudentForImage:'검증실패',isStudentImageModalOpen:()=>true,
  refreshStudentImageListSelectionState:()=>{},selectStudentImageItem:(n)=>{selectedStudentForImage=n;},resetCardAlimtalk:()=>{cardBulkUI?.reset();},filterStudentImageList:()=>drawAlimtalkRoster(document.getElementById('studentImageList'),'')});
- cardRosterScope=rosterKey();cardRosterRows=[{name:'검증대기',studentId:'wait',state:'unsent'},{name:'검증실패',studentId:'failed',state:'unsent',failed:true},{name:'검증미확정',studentId:'pending',state:'pending',trackingMissing:true},{name:'검증완료',studentId:'done',state:'sent'}];
+ cardRosterScope=rosterKey();cardRosterRows=[{name:'검증대기',studentId:'wait',state:'unsent'},{name:'검증실패',studentId:'failed',state:'unsent',failed:true},{name:'검증미확정',studentId:'pending',state:'pending',trackingMissing:true},{name:'검증완료',studentId:'done',state:'sent'},{name:'검증변경',studentId:'change',state:'changed'}];
  document.querySelectorAll('[data-card-audience]').forEach(n=>n.setAttribute('aria-pressed',String(n.dataset.cardAudience==='student')));document.getElementById('batchInitial').textContent='학생 일괄 발송';
  window.calls=[];window.cardAlimtalkApi=async(action,input)=>{
  calls.push(action);if(action==='batchPreview')return {date:'2026-11-12',rows:cardRosterRows,items:[{studentId:'failed',name:'검증실패',ticket:'fake',relation:'학생',masked:'010-****-0000',retry:true,text:'[가상 수업 안내]\n검증실패 학생\n11/12(목) 수학 17:00–19:00\n검증용 본문입니다.'}],previewId:'fake',batchSize:40};
@@ -30,7 +30,7 @@ for(const [label,width,height] of [['desktop',1440,1000],['mobile',390,844]]){
  await page.getByRole('button',{name:'검증미확정 학생 본인 접수 확인',exact:true}).click();
  await page.getByRole('button',{name:'미확정 1건 결과 갱신'}).waitFor();assert.equal(await page.locator('#cardAlimtalkPanel .send-action').count(),0);
  await page.screenshot({path:'/tmp/timetable-ux-review/'+label+'-shortcut-pending.png'});
- assert.deepEqual(await page.evaluate(()=>calls),['batchPreview','batchSend','batchRoster','batchHistory']);
+ assert.deepEqual(await page.evaluate(()=>calls),['batchPreview','batchSend','batchRoster','batchHistory','batchRoster']);
  await page.getByRole('button',{name:'솔라피 미접수 확인 후 신규 발송',exact:true}).click();
  assert(!(await page.getByRole('button',{name:'미접수 확인하고 이 학생에게 신규 발송',exact:true}).isEnabled()));
  await page.screenshot({path:'/tmp/timetable-ux-review/'+label+'-receipt-recovery.png'});

@@ -11,7 +11,7 @@ async function setup(){const db=memoryDb(),store=firestoreReviewStore(db),actor=
 test('confirmed legacy identity survives new dates and class changes without daily confirmation',async()=>{const x=await setup();const s=await x.link(x.actor,x.source);assert.deepEqual(s.linkIssues,{});assert.deepEqual(s.linkedStudentIds,['s1']);const proof=await x.store.rememberedMapping('banpo','s1');assert.equal(proof.date,'identity');assert.equal(proof.verifiedBy,'staff');const m=await x.store.mapping('banpo',s.date,'s1');assert(m.reusedIdentity);assert.equal(m.entries[0].id,'new-cell');const day=await verifiedStudentDay({actor:x.actor,date:s.date,id:'s1',allowUnchangedCells:true,loadSource:async()=>s,resolveStudent:x.resolveStudent,reviewStore:x.store});assert.equal(day.students[0].mappingVerified,true);const size=x.db.data.size;await Promise.all([x.link(x.actor,x.source),x.link(x.actor,x.source)]);assert.equal(x.db.data.size,size);x.source.entries[0].fingerprint='changed-time';x.source.capturedAt=201;await x.link(x.actor,x.source);assert.equal((await x.store.mapping('banpo',s.date,'s1')).entries[0].fingerprint,'changed-time');assert.equal((await x.store.rememberedMapping('banpo','s1')).revision,'human-proof');});
 test('directory contacts are refreshed per preview and never copied into the reusable identity',async()=>{const x=await setup();const s=await x.link(x.actor,x.source);const loadMappedDay=()=>verifiedStudentDay({actor:x.actor,date:s.date,id:'s1',allowUnchangedCells:true,loadSource:async()=>s,resolveStudent:x.resolveStudent,reviewStore:x.store});const loader=audience=>withStudentDirectory({loadMappedDay,resolveStudent:x.resolveStudent,readClearance:async()=>null,audience});const before=await loader('student')(x.actor,s.date,['s1']);x.student.recipients[1].phone='01000000003';const after=await loader('student')(x.actor,s.date,['s1']);assert.equal(after.students[0].recipients[0].phone,'01000000003');assert.notEqual(after.students[0].mappingRevision,before.students[0].mappingRevision);assert.equal((await loader('guardian')(x.actor,s.date,['s1'])).students[0].recipients[0].phone,'01000000001');assert(!JSON.stringify(await x.store.rememberedMapping('banpo','s1')).includes('010'));x.student.recipients[1]={id:'student',verified:false,reason:'번호 없음'};const no=await loader('student')(x.actor,s.date,['s1']);assert.equal(no.students[0].recipientIssue,'본인 번호 없음 · 학부모만 안내');});
 test('new, duplicate and changed identities stay held even if old date mapping exists',async()=>{for(const scenario of ['new','duplicate','school','identity','canonical']){const x=await setup();if(scenario==='new')x.db.data.clear();if(scenario==='duplicate')x.candidates(['s1','s2']);if(scenario==='school')x.source.entries[0].sourceSchool='다른중2';if(scenario==='identity')x.student.identityRevision='changed';if(scenario==='canonical')x.student.id='s2';const s=await x.link(x.actor,x.source);assert(s.linkIssues['가학생'],scenario);assert.deepEqual(s.linkedStudentIds,[]);assert.equal(await x.store.mapping('banpo',s.date,'s1'),null);}});
-test('stale source and conflicting cell ownership cannot overwrite a verified mapping',async()=>{const x=await setup();await x.link(x.actor,x.source);x.source.capturedAt=199;x.source.entries[0].fingerprint='stale';await assert.rejects(x.link(x.actor,x.source),{code:'SOURCE_CHANGED'});assert.equal((await x.store.mapping('banpo',x.source.date,'s1')).entries[0].fingerprint,'new-fp');const y=await setup();await y.store.saveMapping({academyId:'banpo',date:y.source.date,studentId:'s2',revision:'conflicting',entries:[{id:'new-cell',fingerprint:'x'}]},null);assert.match((await y.link(y.actor,y.source)).linkIssues['가학생'],/연결 불일치/);assert.equal((await y.store.dayAssignments('banpo',y.source.date))[hash('new-cell')].studentId,'s2');});
+test('stale source and conflicting cell ownership cannot overwrite a verified mapping',async()=>{const x=await setup();await x.link(x.actor,x.source);x.source.capturedAt=199;x.source.entries[0].fingerprint='stale';await assert.rejects(x.link(x.actor,x.source),{code:'SOURCE_CHANGED'});assert.equal((await x.store.mapping('banpo',x.source.date,'s1')).entries[0].fingerprint,'new-fp');const y=await setup();await y.store.saveMapping({academyId:'banpo',date:y.source.date,studentId:'s2',revision:'conflicting',entries:[{id:'new-cell',fingerprint:'x'}]},null);assert.match((await y.link(y.actor,y.source)).linkIssues['가학생'],/학생 연결 확인 필요/);assert.equal((await y.store.dayAssignments('banpo',y.source.date))[hash('new-cell')].studentId,'s2');});
 
 test('operator-confirmed academic label is scoped to this identity and exact source label',async()=>{
   const x=await setup();
@@ -39,4 +39,42 @@ test('all-absence update refreshes an existing day only, and later reinstatement
  assert.equal((await x.store.mapping('banpo',x.source.date,x.student.id)).entries[0].fingerprint,'absent');
  e.lesson.status='정규';e.fingerprint='back';await x.link(x.actor,x.source);
  assert.equal((await x.store.mapping('banpo',x.source.date,x.student.id)).entries[0].fingerprint,'back');
+});
+
+async function movedStudents(){
+ const db=memoryDb(),store=firestoreReviewStore(db),actor={uid:'staff',academyId:'banpo'},date='2026-11-12';
+ const students=['a','b','c'].map((id,i)=>({id,name:['가학생','나학생','다학생'][i],school:'가상중',grade:'2',identityRevision:'identity-'+id}));
+ for(const [i,s] of students.entries())await store.saveMapping({academyId:'banpo',date,studentId:s.id,revision:'old-'+s.id,verifiedBy:'staff',verifiedAt:100,identityRevision:s.identityRevision,sourceRevision:'old',sourceCapturedAt:100,entries:[{id:'cell-'+i,fingerprint:'old-fp-'+s.id}]},null);
+ const source={academyId:'banpo',date,complete:true,revision:'new',capturedAt:200,entries:students.map((s,i)=>({id:'cell-'+(i+1),fingerprint:'new-fp-'+s.id,sourceName:s.name,sourceSchool:'가상중2',lesson:{status:'정규'}}))};
+ const resolveStudent=async id=>students.find(s=>s.id===id);
+ const link=createLinkResolver({store,resolveStudent,findCandidates:async name=>students.filter(s=>s.name===name).map(s=>s.id),now:()=>200});
+ return {db,store,actor,source,students,resolveStudent,link};
+}
+test('room moves release vacated positions atomically across verified students and keep all current lessons',async()=>{
+ const x=await movedStudents(),src=await x.link(x.actor,x.source);
+ assert.deepEqual(src.linkIssues,{});assert.equal(src.linkedStudentIds.length,3);
+ const assignments=await x.store.dayAssignments('banpo',src.date);assert.equal(assignments[hash('cell-0')],undefined);
+ for(const s of x.students){const day=await verifiedStudentDay({actor:x.actor,date:src.date,id:s.id,allowUnchangedCells:true,loadSource:async()=>src,resolveStudent:x.resolveStudent,reviewStore:x.store});assert.equal(day.students[0].lessons.length,1);}
+ // Idempotent reads and older source revisions cannot reverse the move.
+ await x.link(x.actor,x.source);
+ await assert.rejects(x.link(x.actor,{...x.source,capturedAt:150}),{code:'SOURCE_CHANGED'});
+});
+test('a broken identity in a relocation chain keeps dependent students held without stealing positions',async()=>{
+ const x=await movedStudents();x.students[2].identityRevision='changed';
+ const src=await x.link(x.actor,x.source);assert.equal(src.linkedStudentIds.length,0);assert.equal(Object.keys(src.linkIssues).length,3);
+ const assignments=await x.store.dayAssignments('banpo',src.date);assert.equal(assignments[hash('cell-1')].studentId,'b');assert.equal(assignments[hash('cell-2')].studentId,'c');
+});
+test('same-fingerprint ownership conflict is not treated as a room move',async()=>{
+ const x=await movedStudents();x.source.entries[0].fingerprint='old-fp-b';
+ const src=await x.link(x.actor,x.source);assert(src.linkIssues['가학생']);assert(!src.linkedStudentIds.includes('a'));
+});
+test('transaction rechecks ownership revision before releasing a vacated position',async()=>{
+ const x=await movedStudents();
+ const real=x.store.synchronizeMappings;x.store.synchronizeMappings=async(...args)=>{
+  const key='timetableStudentMappingDays/'+hash(['banpo',x.source.date,'day']);
+  const day=x.db.data.get(key);day.assignments[hash('cell-1')].revision='concurrent-manual-review';
+  return real(...args);
+ };
+ await assert.rejects(x.link(x.actor,x.source),{code:'ENTRY_ALREADY_ASSIGNED'});
+ assert.equal((await x.store.mapping('banpo',x.source.date,'a')).revision,'old-a');
 });

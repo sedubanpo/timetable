@@ -128,3 +128,9 @@ test('opening delivered student history refreshes that card even without missing
  const s=setup(async()=>({results:[{id:'done',studentId:'s',name:'가상학생',state:'DELIVERED',createdAt:1}]}),input=>updates.push(input));
  try{await s.ui.history({studentId:'s',name:'가상학생'});assert(s.find('수신 완료 1건'));assert.equal(updates.length,1);assert.deepEqual(Array.from(updates[0].studentIds),['s']);assert.equal(updates[0].background,true);}finally{s.dom.window.close();}
 });
+
+test('changed schedule shortcut sends one fresh target plan for the current audience without extra checkboxes',async()=>{
+ const calls=[];
+ const s=setup(async(action,input)=>{calls.push({action,input});if(action==='batchPreview')return {...preview,items:[...preview.items,{...preview.items[0],studentId:'other',ticket:'not-selected'}]};if(action==='batchSend')return {results:[{state:'ACCEPTED'}]};throw Error(action);});
+ try{await s.ui.quickSend('changed',{studentId:'s',name:'가상학생'});assert.deepEqual(calls.map(c=>c.action),['batchPreview','batchSend']);for(const c of calls){assert.equal(c.input.mode,'changed');assert.equal(c.input.audience,'student');}assert.deepEqual(Array.from(calls[1].input.tickets),['synthetic']);assert.equal(s.host.querySelectorAll('input').length,0);}finally{s.dom.window.close();}
+});

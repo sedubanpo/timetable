@@ -2300,6 +2300,7 @@
 #studentImageModal #batchRosterStatus{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:8px;color:#536778;font-size:13px}
 #studentImageModal .roster-group{padding:7px;background:var(--paper);border-bottom:1px solid white}
 #studentImageModal .roster-changed{--paper:#fff4c8;--ink:#74530b}
+#studentImageModal .recipient-student .roster-change-label{display:block;width:fit-content;max-width:100%;margin-top:5px;padding:3px 6px;border-radius:5px;background:#ffeb9c;color:#6b4900;font-weight:700;font-size:11px;line-height:1.5}
 #studentImageModal .roster-unsent{--paper:#ffebeb;--ink:#833b43}
 #studentImageModal .roster-sent{--paper:#e2f5e9;--ink:#235940}
 #studentImageModal .roster-pending,#studentImageModal .roster-held{--paper:#edf1f6;--ink:#42556c}
@@ -8649,7 +8650,7 @@ function drawAlimtalkRoster(list,keyword){
  const ready=cardRosterScope===rosterKey()&&Array.isArray(cardRosterRows),byName=new Map();
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
  const names=[...new Set([...Object.keys(studentImageScheduleMap),...byName.keys()].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
- const groups={changed:['변경 안내 필요','이전에 받은 안내와 달라진 일정'],unsent:['발송 대기','발송 버튼을 누르면 확인된 번호로 바로 전송됩니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],unconfirmed:['접수 확인 필요','최초 발송의 접수 기록을 찾지 못했습니다. 결과 조회가 필요합니다.'],pending:['결과 확인 중','최종 수신 결과를 확인하고 있습니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
+ const groups={changed:['시간표 변경 · 안내 필요','이전에 받은 안내와 현재 시간표가 다릅니다. 변경 발송을 누르면 최신 시간표를 바로 보냅니다.'],unsent:['발송 대기','발송 버튼을 누르면 확인된 번호로 바로 전송됩니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],unconfirmed:['접수 확인 필요','최초 발송의 접수 기록을 찾지 못했습니다. 결과 조회가 필요합니다.'],pending:['결과 확인 중','최종 수신 결과를 확인하고 있습니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
  if(!ready)groups.held=[cardRosterError?'조회 실패':'기록 확인 중',cardRosterError?'다시 확인을 눌러 조회해 주세요.':'서버 기록을 확인한 뒤 발송 상태를 표시합니다.'];
  const visible=names.filter(n=>!keyword||n.toLowerCase().includes(keyword));
  const sections=new Map(),scrollTop=list.scrollTop;
@@ -8670,8 +8671,8 @@ function drawAlimtalkRoster(list,keyword){
   if(!sections.has(state))sections.set(state,[]);
   const b=make('button');b.type='button';b.className='recipient-student';b.dataset.studentName=name;b.setAttribute('aria-pressed',String(name===selectedStudentForImage));
   b.append(make('strong',name));
-  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='unsent'?'확인된 번호 · 발송 가능':'');
-  if(sub)b.append(make('small',sub));
+  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?'아직 안내하지 않은 시간표 · 발송 가능':'');
+  if(sub){const label=make('small',sub);if(state==='changed')label.className='roster-change-label';b.append(label);}
   b.onclick=()=>{if(!studentImageScheduleMap[name]){openCardBulk('history');return;}selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();};
   const tile=make('div');tile.className='roster-student-card';tile.append(b);
   const actionLabel={unsent:'발송',failed:'재발송',changed:'변경 발송',pending:'결과 확인',unconfirmed:'접수 확인'}[state];

@@ -22,13 +22,13 @@ test('roster shows a visible loader on the active audience and separates deliver
 
 test('roster shortcuts are sibling controls, scoped to audience and status; ambiguous IDs and holds cannot send',()=>{
  const dom=new JSDOM('<main id="studentImageModal"><div id="batchRosterStatus"></div><div id="list"></div></main>',{runScripts:'outside-only'}),w=dom.window;
- Object.assign(w,{studentCardMode:'message',cardAudience:'guardian',currentSheetName:'11/12',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'operator',timetableLoginSequence:1,studentImageScheduleMap:{대기:[],실패:[],확인:[],완료:[],동명:[],제외:[]},selectedStudentForImage:'실패',refreshStudentImageListSelectionState:()=>{}});
+ Object.assign(w,{studentCardMode:'message',cardAudience:'guardian',currentSheetName:'11/12',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'operator',timetableLoginSequence:1,studentImageScheduleMap:{대기:[],실패:[],확인:[],완료:[],동명:[],제외:[],변경:[]},selectedStudentForImage:'실패',refreshStudentImageListSelectionState:()=>{}});
  w.eval(fs.readFileSync('assets/alimtalk-roster.js','utf8'));const list=w.document.getElementById('list');
- w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'대기',studentId:'a',state:'unsent'},{name:'실패',studentId:'b',state:'unsent',failed:true},{name:'확인',studentId:'c',state:'pending'},{name:'완료',studentId:'d',state:'sent'},{name:'동명',studentId:'e',state:'unsent'},{name:'동명',studentId:'f',state:'unsent'},{name:'제외',studentId:'g',state:'unsent',issue:'본인 번호 없음'}];
+ w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'대기',studentId:'a',state:'unsent'},{name:'실패',studentId:'b',state:'unsent',failed:true},{name:'확인',studentId:'c',state:'pending'},{name:'완료',studentId:'d',state:'sent'},{name:'동명',studentId:'e',state:'unsent'},{name:'동명',studentId:'f',state:'unsent'},{name:'제외',studentId:'g',state:'unsent',issue:'본인 번호 없음'},{name:'변경',studentId:'h',state:'changed'}];
  const calls=[];w.openCardRosterAction=(...args)=>calls.push(args);w.drawAlimtalkRoster(list,'');
- assert.equal(list.querySelectorAll('.roster-student-action').length,3);assert.equal(list.querySelectorAll('button button').length,0);
+ assert.equal(list.querySelectorAll('.roster-student-action').length,4);assert.equal(list.querySelectorAll('button button').length,0);
  const retry=list.querySelector('.roster-failed .roster-student-action');assert.equal(retry.getAttribute('aria-label'),'실패 학부모 재발송');retry.click();assert.deepEqual(calls,[['실패','failed']]);
- assert.equal(list.querySelector('.roster-pending .roster-student-action').textContent,'결과 확인');dom.window.close();
+ assert.equal(list.querySelector('.roster-pending .roster-student-action').textContent,'결과 확인');assert.equal(list.querySelector('.roster-change-label').textContent,'시간표 변경 · 새 안내 필요');const changed=list.querySelector('.roster-changed .roster-student-action');assert.equal(changed.textContent,'변경 발송');changed.click();assert.deepEqual(calls.at(-1),['변경','changed']);dom.window.close();
 });
 
 test('targeted roster refresh keeps other students usable, preserves scroll and ignores late results after audience change',async()=>{

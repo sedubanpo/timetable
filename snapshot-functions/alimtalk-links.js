@@ -33,7 +33,25 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
    }catch(e){issues[name]=e.code==='IDENTITY_MAPPING_LIMIT'?'동명이인·원장 연결 확인 필요':'원장·기존 학생 연결 조회 확인 필요';}
   }}));
   const assigned=await store.dayAssignments(actor.academyId,source.date);
-  const safe=plans.filter(p=>{if(p.entries.some(e=>assigned[hash(e.id)]&&assigned[hash(e.id)].studentId!==p.student.id)){issues[p.student.name]='기존 수업 연결 불일치 · 학생 확인 필요';return false;}return true;});
+  // Cell IDs describe positions, not people. A room move or reordered cell can reuse
+  // another verified student's old position. Release only through that student's
+  // verified replacement plan, in the same transaction as all new assignments.
+  let safe=[...plans],removed;
+  do{
+   removed=false;
+   const byId=new Map(safe.map(p=>[p.student.id,p]));
+   safe=safe.filter(p=>{
+    const conflict=p.entries.some(e=>{
+     const old=assigned[hash(e.id)];
+     if(!old||old.studentId===p.student.id)return false;
+     const owner=byId.get(old.studentId);
+     return !owner||old.fingerprint===e.fingerprint||owner.entries.some(x=>x.id===e.id);
+    });
+    if(conflict){issues[p.student.name]='시간표 위치 변경 · 학생 연결 확인 필요';removed=true;}
+    return !conflict;
+   });
+  }while(removed);
+
   if(safe.length)await store.synchronizeMappings(actor,source,safe,now());
   return {...source,linkIssues:issues,linkedStudentIds:safe.map(p=>p.student.id)};
  };
