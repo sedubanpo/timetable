@@ -3,6 +3,21 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),{parseSna
 global.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
 const now=Date.parse('2026-11-07T03:00:00Z');
 function fixture(){const grid={},owners={};for(let h=8;h<=23;h++){grid[h]=[[]];owners[h]=[[]];}grid[16]=[['1:1 수학 가상T','가학생 가상중2 정규']];return {schema:1,date:'2026-11-07',sheet:'11/7(토)',capturedAt:now,data:{headers:['2관 3강의실'],version:'v1',grid},owners,rooms:{rooms:['2관 3강의실'],rows:[]}};}
+test('dated half-hour notes survive raw sheet import and appear in the message',()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+ const rows=[['','1강의실','','','']];
+ for(const hour of [15,16]){
+  rows.push([hour+':00','개별 사탐 검증T','','',''],['','가학생','가상고3','오늘만','11/7(토) 하루만 15:30-17:30']);
+ }
+ const gas={SpreadsheetApp:{getActiveSpreadsheet:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>rows})})})},
+  CacheService:{getScriptCache:()=>({put(){}})}};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../Code.gs'),'utf8'),gas);
+ gas.scheduleContentRevision_=()=>'fixture';
+ const s=fixture();s.data=JSON.parse(JSON.stringify(gas.getFixedGridData(s.sheet,true)));
+ const lessons=parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'}));
+ const body=require('../snapshot-functions/alimtalk-contract').compose({id:'s',name:'가학생',mappingVerified:true},s.date,lessons);
+ assert.deepEqual(body.reasons,[]);assert.match(body.text,/사탐 오늘만 15:30–17:30/);
+});
 test('actual string grid produces explicit source references and exact room metadata',()=>{const s=parseSnapshot(fixture(),now);assert(s.complete);assert.equal(s.entries[0].lesson.building,'2관');assert.equal(s.entries[0].lesson.room,'3강의실');assert.equal(s.entries[0].lesson.type,'1:1');assert.equal(s.entries[0].lesson.teacher,'가상');});
 test('unsupported room/student strings held; missing headers not guessed',()=>{const x=fixture();x.data.headers=['unknown'];assert(parseSnapshot(x,now).complete);assert.deepEqual(parseSnapshot(x,now).entries[0].lesson.reviewReasons,['강의실 표기 확인 필요']);const y=fixture();y.data.grid[16][0]=['공지사항'];assert(!parseSnapshot(y,now).complete);const z=fixture();z.data.grid[16][0]=['가학생 가상중2 정규'];assert.equal(parseSnapshot(z,now).entries[0].lesson.teacher,'');});
 test('cancelled source remains mapped with exclusion status; generated gaps not invented',()=>{const x=fixture();x.data.grid[16][0][1]='가학생 가상중2 당일취소';const s=parseSnapshot(x,now);assert.equal(s.entries.length,1);assert.equal(s.entries[0].lesson.status,'당일취소');});

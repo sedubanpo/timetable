@@ -1332,7 +1332,7 @@ function scheduleRevisionCacheKey_(sheetName) {
 }
 
 function scheduleContentRevision_(values) {
-  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(values), Utilities.Charset.UTF_8);
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, "grid-v66\n" + JSON.stringify(values), Utilities.Charset.UTF_8);
   return "content-v1-" + bytes.map(function(value) {
     return ("0" + ((value + 256) % 256).toString(16)).slice(-2);
   }).join("");
@@ -1382,7 +1382,7 @@ function parseScheduleStartHour_(timeText) {
 function getFixedGridData(sheetName, forceRefresh) {
   try {
     var cache = CacheService.getScriptCache();
-    var cacheKey = "SHEET_DATA_V65_" + sheetName;
+    var cacheKey = "SHEET_DATA_V66_" + sheetName;
     var snapshot = null;
 
     if (!forceRefresh) {
@@ -1449,6 +1449,7 @@ function getFixedGridData(sheetName, forceRefresh) {
     var skipKeywords = ["개학시간표","개학","필드","주말","질문","클리닉","휴식","직전"];
     var moveNoticePattern = /(시간|반|자리|교실)\s*이동|이동\s*(예정|완료|요청)/;
     var datePattern = /\d+\/\d+/; 
+    var lessonClock = /\d{1,2}\s*:\s*\d{2}|\d{1,2}\s*시(?!간)/;
 
     for (var i = headerRowIndex + 1; i < values.length; i++) {
       var row = values[i];
@@ -1471,7 +1472,8 @@ function getFixedGridData(sheetName, forceRefresh) {
             if (!isHolidayCol) {
                if (datePattern.test(val)) {
                  var hasImportant = /(결석|지각|보강|보충|병결|당일취소|휴강|확인|확정|첫수업|신규|오늘만|특강|직보|자습|등원|분|지각예정)/.test(val);
-                 if (!hasImportant) continue;
+                 // A student's dated time note must reach the lesson parser, including ambiguous times for review.
+                 if (!hasImportant && !(parts.length && lessonClock.test(val))) continue;
                }
                if (skipKeywords.some(function(k) { 
                  return val.includes(k) 
