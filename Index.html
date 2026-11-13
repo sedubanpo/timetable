@@ -2459,6 +2459,33 @@
  #studentImageModal .roster-group .roster-heading{padding:2px 6px}
  #studentImageModal[data-card-mode=message] .student-preview-panel{flex:none}
 }
+
+#studentImageModal[data-card-mode=message] #cardDeliveryWorkspace{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);grid-template-rows:minmax(0,1fr);overflow:hidden}
+#studentImageModal[data-card-mode=message] .student-list-panel{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);align-content:start;align-items:center;min-height:0;overflow:hidden;border-right:1px solid #d3dee7;border-bottom:0}
+#studentImageModal[data-card-mode=message] #batchRosterStatus{grid-column:1/-1;justify-self:start}
+#studentImageModal[data-card-mode=message] #studentImageList{align-self:stretch;overflow:auto;overscroll-behavior:contain}
+#studentImageModal[data-card-mode=message] .roster-group{grid-template-columns:minmax(0,1fr);gap:5px;padding:8px 0}
+#studentImageModal[data-card-mode=message] .student-preview-panel{min-height:0;overflow:hidden}
+#studentImageModal[data-card-mode=message] .card-workarea{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:clamp(8px,1.2vw,18px)}
+#studentImageModal[data-card-mode=message] #cardEditorSidebar{width:100%;max-width:none}
+#studentImageModal .roster-wait-reason{flex:0 0 100%;margin:0 0 2px;color:#76392c;font-size:12px;line-height:1.5}
+#studentImageModal .roster-versions mark{color:inherit;background:#fff0ce}
+#studentImageModal .roster-versions section+section mark{background:#dbf3e8}
+#studentImageModal .roster-versions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px}
+#studentImageModal .roster-versions section{min-width:0;background:white;border:1px solid #ced9e2;border-radius:8px;overflow:hidden}
+#studentImageModal .roster-versions h3{margin:0;padding:9px 12px;background:#eaf0f4;color:#33485b;font-size:14px}
+#studentImageModal .roster-versions section+section h3{background:#e2f1eb;color:#225342}
+#studentImageModal .roster-versions pre{padding:12px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px;line-height:1.65}
+#studentImageModal[data-card-mode=image] #rosterComparison,#studentImageModal #rosterComparison[hidden],#studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel:not([hidden])) #rosterComparison,#studentImageModal #cardEditorSidebar:has(#rosterComparison:not([hidden])) #cardMessageReference{display:none}
+@media(max-width:560px){
+ #studentImageModal[data-card-mode=message]:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) #cardDeliveryWorkspace{grid-template-rows:minmax(0,1fr)}
+}
+@media(max-width:720px){
+ #studentImageModal[data-card-mode=message] #cardDeliveryWorkspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,35%) minmax(0,1fr)}
+ #studentImageModal[data-card-mode=message] .student-list-panel{max-height:none;border-right:0;border-bottom:1px solid #d3dee7}
+ #studentImageModal .roster-versions{gap:4px}
+ #studentImageModal .roster-versions :is(h3,pre){padding:7px}
+}
 </style>
 <script>
 (function(root){
@@ -3251,7 +3278,7 @@ root.TimetableAlimtalkReviewUI={mount};
         <input id="studentImageSearch" type="search" placeholder="학생 이름 검색" aria-label="학생 이름 검색" oninput="filterStudentImageList()">
         <div id="batchRosterStatus" data-card-channel="message" role="status"></div><div class="card-state-filter"><button data-card-filter="all" onclick="setStudentCardFilter('all')">전체</button><button data-card-filter="wait" onclick="setStudentCardFilter('wait')">미발송</button><button data-card-filter="done" onclick="setStudentCardFilter('done')">완료</button></div><div id="studentImageList" class="student-list"></div></div>
         <div class="student-preview-panel"><div class="student-preview-panel-head"><div><div class="student-preview-panel-title">시간표 카드 미리보기</div><div class="student-preview-panel-sub">학부모님께 전달될 이미지입니다.</div><div id="rosterDetail" data-card-channel="message"></div></div></div>
-        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><section data-card-channel="message" class="recipient-setup"><div class="recipient-actions"><button type="button" onclick="openCardAlimtalkReview()">학생·받는 번호 확인</button><button class="primary" type="button" onclick="openCardAlimtalk(false)">수신자 선택 · 본문 확인</button><button type="button" onclick="openCardAlimtalk(true)">발송 결과</button></div></section><section id="cardMessageReference" hidden><h3 class="card-reference-title">예상 발송 문구</h3><p class="card-reference-note">현재 시간표 기준입니다. 발송 전 최신 본문을 다시 확인합니다.</p><pre id="cardMessageReferenceBody" class="card-reference-body"></pre></section><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
+        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><section id="rosterComparison" aria-label="시간표 변경 전후" hidden></section><section data-card-channel="message" class="recipient-setup"><div class="recipient-actions"><button type="button" onclick="openCardAlimtalkReview()">학생·받는 번호 확인</button><button class="primary" type="button" onclick="openCardAlimtalk(false)">수신자 선택 · 본문 확인</button><button type="button" onclick="openCardAlimtalk(true)">발송 결과</button></div></section><section id="cardMessageReference" hidden><h3 class="card-reference-title">예상 발송 문구</h3><p class="card-reference-note">현재 시간표 기준입니다. 발송 전 최신 본문을 다시 확인합니다.</p><pre id="cardMessageReferenceBody" class="card-reference-body"></pre></section><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
         <div class="card-actions"><button class="primary" data-card-channel="image" onclick="copyLiveStudentCard()">이미지 복사</button><button data-card-channel="image" onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" data-card-channel="image" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button data-card-channel="image" onclick="nextUnsentStudentCard()">다음 미발송</button><details class="card-test-tools" data-card-channel="message"><summary>관리자 테스트</summary><button onclick="openCardAlimtalkTest()">가상 일정 테스트</button><button onclick="openCardAlimtalkRealTest()">실제 일정 관리자 테스트</button></details><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
       </div></div>
     <div id="absenceNoticeModal">
@@ -8716,6 +8743,41 @@ function rosterCategory(row){
  if(['held','unsent','failed'].includes(state)&&!row?.issue?.startsWith('안내 대상 수업 없음'))return 'unsent';
  return '';
 }
+// Use the delivered body, not a reconstruction of a former timetable.
+function renderRosterComparison(row){
+ const host=document.getElementById('rosterComparison');
+ if(!host)return;
+ host.replaceChildren();host.hidden=row?.state!=='changed';
+ if(host.hidden)return;
+ const el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
+ const histories=new Map(),who=cardAudience==='student'?'학생 본인':'학부모';
+ for(const record of row.comparisons||[]){
+  if(!histories.has(record.previous))histories.set(record.previous,new Set());
+  histories.get(record.previous).add(record.relation||who);
+ }
+ if(!histories.size)histories.set('',new Set([who]));
+ for(const [before,relations] of histories){
+  const grid=el('div','');grid.className='roster-versions';
+  const current=row.current||'';
+  const schedule=text=>{
+   const match=/▶ 등원 시각:[^\n]*\n+\[수업 안내[^\]]*\]\n([\s\S]*?)\n\n수업 일정에 관한/.exec(text);
+   return match?match[0].split('\n')[0]+'\n\n'+(match[1].trim()||'안내할 수업 없음'):text;
+  };
+  let left=schedule(before),right=schedule(current);
+  if(left===right&&before!==current){left=before;right=current;}
+  if(row.issue?.startsWith('안내 대상 수업 없음')||row.issue?.startsWith('현재 시간표에 수업 없음'))right=row.issue;
+  for(const [heading,body] of [['변경 전 · '+[...relations].join('·')+' 수신본',left||'이전 본문 기록 없음'],['변경 후 · 현재 시간표',right||row.issue||'현재 본문 기록 없음']]){
+   const pane=el('section',''),pre=el('pre','');
+   const other=new Set((grid.childElementCount?left:right).split('\n'));
+   body.split('\n').forEach((line,index)=>{
+    if(index)pre.append('\n');
+    pre.append(line&&!other.has(line)?el('mark',line):document.createTextNode(line));
+   });
+   pane.append(el('h3',heading),pre);grid.append(pane);
+  }
+  host.append(grid);
+ }
+}
 function drawAlimtalkRoster(list,keyword){
  const ready=cardRosterScope===rosterKey()&&Array.isArray(cardRosterRows),byName=new Map();
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
@@ -8737,6 +8799,7 @@ function drawAlimtalkRoster(list,keyword){
  function showDetail(name){
   if(!detail)return;
   const entry=details.get(name);
+  renderRosterComparison(entry?.row);
   detail.replaceChildren();
   if(entry){
    const caption=make('span',entry.caption);
@@ -8761,21 +8824,13 @@ function drawAlimtalkRoster(list,keyword){
   if(!sections.has(group))sections.set(group,[]);
   const b=make('button');b.type='button';b.className='recipient-student';b.dataset.studentName=name;b.setAttribute('aria-pressed',String(name===selectedStudentForImage));
   b.append(make('strong',name));
-  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?'발송 대기 · 발송 가능':state==='sent'?'수신 완료':'');
+  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?(row.waitReason||'현재 수신 번호로 수신 완료된 기록 없음'):state==='sent'?'수신 완료':'');
   const caption=sub||groups[group][0],controls=[];
   b.title=caption;
-  details.set(name,{caption,controls});
+  details.set(name,{caption,controls,row});
   b.onclick=()=>{if(!studentImageScheduleMap[name]&&row?.state!=='changed'){openCardBulk('history');return;}
    selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();showDetail(name);};
   const tile=make('div');tile.className='roster-student-card';tile.append(b);
-  if(row?.state==='changed'&&row.studentId){
-   const compare=make('button','변경 비교');compare.type='button';compare.className='roster-compare';
-   compare.setAttribute('aria-label',name+' 변경 전후 비교');
-   compare.onclick=()=>{if(studentImageScheduleMap[name])selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();resetCardAlimtalk();const host=document.getElementById('cardAlimtalkPanel');
-    if(!cardBulkUI)cardBulkUI=TimetableBatchUI.mount({host,api:cardAlimtalkApi,context:cardBatchContext,refresh:reloadCardRoster});
-    host.dataset.bulk='true';host.dataset.bulkMode='compare';cardBulkUI.compare({studentId:row.studentId,name});host.scrollIntoView({block:'nearest'});
-   };controls.push(compare);
-  }
   const actionLabel={unsent:'발송',failed:'재발송',changed:'변경 발송',pending:'결과 확인',unconfirmed:'접수 확인'}[state];
   if(ready&&row?.studentId&&studentImageScheduleMap[name]&&actionLabel){
    const action=make('button',actionLabel);action.type='button';action.className='roster-student-action';
@@ -8792,7 +8847,17 @@ function drawAlimtalkRoster(list,keyword){
  for(const [state,[title,description]] of Object.entries(groups)){
   const rows=sections.get(state)||[];if(!rows.length)continue;
   const g=make('section'),h=make('div'),grid=make('div');g.className='roster-group roster-'+state;h.className='roster-heading';h.title=description;
-  h.append(make('strong',title),make('span',rows.length+'명'));grid.className='roster-tiles';grid.append(...rows);const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
+  h.append(make('strong',title),make('span',rows.length+'명'));grid.className='roster-tiles';
+  if(state==='unsent'){
+   const reasons=new Map();
+   for(const tile of rows){
+    const reason=tile.firstChild.title;
+    if(!reasons.has(reason)){const label=make('p','대기 사유: '+reason);label.className='roster-wait-reason';reasons.set(reason,[label]);}
+    reasons.get(reason).push(tile);
+   }
+   for(const items of reasons.values())grid.append(...items);
+  }else grid.append(...rows);
+  const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
  }
  if(!visible.length)list.append(make('p',keyword?'검색 결과가 없습니다.':ready?'해당 상태의 학생이 없습니다.':'발송 상태를 확인하고 있습니다.'));
  const selectable=visible.filter(n=>Object.hasOwn(studentImageScheduleMap,n)||byName.get(n)?.state==='changed');

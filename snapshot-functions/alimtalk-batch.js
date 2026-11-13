@@ -107,7 +107,17 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const currentNames=new Set(src.entries.map(e=>e.sourceName));
   return rows.filter(row=>only||(currentNames.has(row.name)&&!row.excludedOnly)||row.past.length).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
  }
- const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
+ function waitReason(row){
+  const waiting=row.items.filter(item=>item.state==='unsent');
+  if(waiting.some(item=>item.lastState==='NOT_ACCEPTED'))return '이전 요청이 미접수로 확인됨';
+  if(waiting.some(item=>item.lastState==='FAILED'))return '이전 발송 실패 · 수신 완료 기록 없음';
+  if(!row.past.length)return '이 수업일의 발송 기록 없음';
+  if(row.items.some(item=>item.state==='sent'))return '일부 수신자만 수신 완료';
+  return '현재 수신 번호로 수신 완료된 기록 없음';
+ }
+ const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,
+  ...(r.state==='unsent'&&!r.issue?{waitReason:waitReason(r)}:{}),
+  ...(r.state==='changed'?{current:r.text,comparisons:r.comparisons}:{}),failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
  async function roster(session,input){
   const a=await reviewer(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
   const rows=await scan(a,input,input.studentIds);await reviewer(session);return {rows:rows.map(summary)};

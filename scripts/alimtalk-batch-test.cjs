@@ -83,6 +83,9 @@ test('staff review compares the last delivery even when contact is held, and nev
  assert.equal(p.readOnly,true);assert.deepEqual(p.items,[]);assert(!p.previewId);
  assert.equal(p.changes.length,1);assert.match(p.changes[0].issue,/번호/);
  assert.match(p.changes[0].current,/18:00/);assert.match(p.changes[0].comparisons[0].previous,/17:00/);
+ const {rows}=await x.b.batchRoster('',x.base);
+ assert.equal(rows[0].current,p.changes[0].current);assert.deepEqual(rows[0].comparisons,p.changes[0].comparisons);
+ assert(!JSON.stringify(rows).includes('0100000'));
  assert(!JSON.stringify(p).includes('0100000'));
  assert.deepEqual((await x.preview({mode:'changed',audience:'student'})).changes,[]);
  assert.deepEqual((await x.preview()).eligibleStudents,[]);await assert.rejects(x.send(p),{code:'FORBIDDEN'});

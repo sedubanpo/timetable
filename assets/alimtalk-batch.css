@@ -164,3 +164,30 @@
  #studentImageModal .roster-group .roster-heading{padding:2px 6px}
  #studentImageModal[data-card-mode=message] .student-preview-panel{flex:none}
 }
+
+#studentImageModal[data-card-mode=message] #cardDeliveryWorkspace{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);grid-template-rows:minmax(0,1fr);overflow:hidden}
+#studentImageModal[data-card-mode=message] .student-list-panel{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);align-content:start;align-items:center;min-height:0;overflow:hidden;border-right:1px solid #d3dee7;border-bottom:0}
+#studentImageModal[data-card-mode=message] #batchRosterStatus{grid-column:1/-1;justify-self:start}
+#studentImageModal[data-card-mode=message] #studentImageList{align-self:stretch;overflow:auto;overscroll-behavior:contain}
+#studentImageModal[data-card-mode=message] .roster-group{grid-template-columns:minmax(0,1fr);gap:5px;padding:8px 0}
+#studentImageModal[data-card-mode=message] .student-preview-panel{min-height:0;overflow:hidden}
+#studentImageModal[data-card-mode=message] .card-workarea{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:clamp(8px,1.2vw,18px)}
+#studentImageModal[data-card-mode=message] #cardEditorSidebar{width:100%;max-width:none}
+#studentImageModal .roster-wait-reason{flex:0 0 100%;margin:0 0 2px;color:#76392c;font-size:12px;line-height:1.5}
+#studentImageModal .roster-versions mark{color:inherit;background:#fff0ce}
+#studentImageModal .roster-versions section+section mark{background:#dbf3e8}
+#studentImageModal .roster-versions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px}
+#studentImageModal .roster-versions section{min-width:0;background:white;border:1px solid #ced9e2;border-radius:8px;overflow:hidden}
+#studentImageModal .roster-versions h3{margin:0;padding:9px 12px;background:#eaf0f4;color:#33485b;font-size:14px}
+#studentImageModal .roster-versions section+section h3{background:#e2f1eb;color:#225342}
+#studentImageModal .roster-versions pre{padding:12px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px;line-height:1.65}
+#studentImageModal[data-card-mode=image] #rosterComparison,#studentImageModal #rosterComparison[hidden],#studentImageModal #cardEditorSidebar:has(#cardAlimtalkPanel:not([hidden])) #rosterComparison,#studentImageModal #cardEditorSidebar:has(#rosterComparison:not([hidden])) #cardMessageReference{display:none}
+@media(max-width:560px){
+ #studentImageModal[data-card-mode=message]:has(#cardAlimtalkPanel[data-bulk=true]:not([hidden])) #cardDeliveryWorkspace{grid-template-rows:minmax(0,1fr)}
+}
+@media(max-width:720px){
+ #studentImageModal[data-card-mode=message] #cardDeliveryWorkspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,35%) minmax(0,1fr)}
+ #studentImageModal[data-card-mode=message] .student-list-panel{max-height:none;border-right:0;border-bottom:1px solid #d3dee7}
+ #studentImageModal .roster-versions{gap:4px}
+ #studentImageModal .roster-versions :is(h3,pre){padding:7px}
+}

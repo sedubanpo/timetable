@@ -115,6 +115,41 @@ function rosterCategory(row){
  if(['held','unsent','failed'].includes(state)&&!row?.issue?.startsWith('안내 대상 수업 없음'))return 'unsent';
  return '';
 }
+// Use the delivered body, not a reconstruction of a former timetable.
+function renderRosterComparison(row){
+ const host=document.getElementById('rosterComparison');
+ if(!host)return;
+ host.replaceChildren();host.hidden=row?.state!=='changed';
+ if(host.hidden)return;
+ const el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
+ const histories=new Map(),who=cardAudience==='student'?'학생 본인':'학부모';
+ for(const record of row.comparisons||[]){
+  if(!histories.has(record.previous))histories.set(record.previous,new Set());
+  histories.get(record.previous).add(record.relation||who);
+ }
+ if(!histories.size)histories.set('',new Set([who]));
+ for(const [before,relations] of histories){
+  const grid=el('div','');grid.className='roster-versions';
+  const current=row.current||'';
+  const schedule=text=>{
+   const match=/▶ 등원 시각:[^\n]*\n+\[수업 안내[^\]]*\]\n([\s\S]*?)\n\n수업 일정에 관한/.exec(text);
+   return match?match[0].split('\n')[0]+'\n\n'+(match[1].trim()||'안내할 수업 없음'):text;
+  };
+  let left=schedule(before),right=schedule(current);
+  if(left===right&&before!==current){left=before;right=current;}
+  if(row.issue?.startsWith('안내 대상 수업 없음')||row.issue?.startsWith('현재 시간표에 수업 없음'))right=row.issue;
+  for(const [heading,body] of [['변경 전 · '+[...relations].join('·')+' 수신본',left||'이전 본문 기록 없음'],['변경 후 · 현재 시간표',right||row.issue||'현재 본문 기록 없음']]){
+   const pane=el('section',''),pre=el('pre','');
+   const other=new Set((grid.childElementCount?left:right).split('\n'));
+   body.split('\n').forEach((line,index)=>{
+    if(index)pre.append('\n');
+    pre.append(line&&!other.has(line)?el('mark',line):document.createTextNode(line));
+   });
+   pane.append(el('h3',heading),pre);grid.append(pane);
+  }
+  host.append(grid);
+ }
+}
 function drawAlimtalkRoster(list,keyword){
  const ready=cardRosterScope===rosterKey()&&Array.isArray(cardRosterRows),byName=new Map();
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
@@ -136,6 +171,7 @@ function drawAlimtalkRoster(list,keyword){
  function showDetail(name){
   if(!detail)return;
   const entry=details.get(name);
+  renderRosterComparison(entry?.row);
   detail.replaceChildren();
   if(entry){
    const caption=make('span',entry.caption);
@@ -160,21 +196,13 @@ function drawAlimtalkRoster(list,keyword){
   if(!sections.has(group))sections.set(group,[]);
   const b=make('button');b.type='button';b.className='recipient-student';b.dataset.studentName=name;b.setAttribute('aria-pressed',String(name===selectedStudentForImage));
   b.append(make('strong',name));
-  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?'발송 대기 · 발송 가능':state==='sent'?'수신 완료':'');
+  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?(row.waitReason||'현재 수신 번호로 수신 완료된 기록 없음'):state==='sent'?'수신 완료':'');
   const caption=sub||groups[group][0],controls=[];
   b.title=caption;
-  details.set(name,{caption,controls});
+  details.set(name,{caption,controls,row});
   b.onclick=()=>{if(!studentImageScheduleMap[name]&&row?.state!=='changed'){openCardBulk('history');return;}
    selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();showDetail(name);};
   const tile=make('div');tile.className='roster-student-card';tile.append(b);
-  if(row?.state==='changed'&&row.studentId){
-   const compare=make('button','변경 비교');compare.type='button';compare.className='roster-compare';
-   compare.setAttribute('aria-label',name+' 변경 전후 비교');
-   compare.onclick=()=>{if(studentImageScheduleMap[name])selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();resetCardAlimtalk();const host=document.getElementById('cardAlimtalkPanel');
-    if(!cardBulkUI)cardBulkUI=TimetableBatchUI.mount({host,api:cardAlimtalkApi,context:cardBatchContext,refresh:reloadCardRoster});
-    host.dataset.bulk='true';host.dataset.bulkMode='compare';cardBulkUI.compare({studentId:row.studentId,name});host.scrollIntoView({block:'nearest'});
-   };controls.push(compare);
-  }
   const actionLabel={unsent:'발송',failed:'재발송',changed:'변경 발송',pending:'결과 확인',unconfirmed:'접수 확인'}[state];
   if(ready&&row?.studentId&&studentImageScheduleMap[name]&&actionLabel){
    const action=make('button',actionLabel);action.type='button';action.className='roster-student-action';
@@ -191,7 +219,17 @@ function drawAlimtalkRoster(list,keyword){
  for(const [state,[title,description]] of Object.entries(groups)){
   const rows=sections.get(state)||[];if(!rows.length)continue;
   const g=make('section'),h=make('div'),grid=make('div');g.className='roster-group roster-'+state;h.className='roster-heading';h.title=description;
-  h.append(make('strong',title),make('span',rows.length+'명'));grid.className='roster-tiles';grid.append(...rows);const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
+  h.append(make('strong',title),make('span',rows.length+'명'));grid.className='roster-tiles';
+  if(state==='unsent'){
+   const reasons=new Map();
+   for(const tile of rows){
+    const reason=tile.firstChild.title;
+    if(!reasons.has(reason)){const label=make('p','대기 사유: '+reason);label.className='roster-wait-reason';reasons.set(reason,[label]);}
+    reasons.get(reason).push(tile);
+   }
+   for(const items of reasons.values())grid.append(...items);
+  }else grid.append(...rows);
+  const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
  }
  if(!visible.length)list.append(make('p',keyword?'검색 결과가 없습니다.':ready?'해당 상태의 학생이 없습니다.':'발송 상태를 확인하고 있습니다.'));
  const selectable=visible.filter(n=>Object.hasOwn(studentImageScheduleMap,n)||byName.get(n)?.state==='changed');
