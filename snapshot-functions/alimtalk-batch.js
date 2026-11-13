@@ -68,8 +68,8 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
       readClearance:(actor,sid,d)=>reviewStore.clearance(actor.academyId,d,sid),now,audience})(a,date,[id]);
      verified=day.students[0];
      if(verified.holdReasons?.length)issue=reason(verified.holdReasons[0]);
-     else if(c.reasons.length)issue=c.reasons.join(' · ');
      else if(!verified.recipients.length)issue=verified.recipientIssue||'이 발송 대상의 확인된 번호 없음';
+     else if(c.reasons.length)issue=c.reasons.join(' · ');
      else recipients=verified.recipients.filter((r,i,all)=>r.verified&&all.findIndex(x=>x.phone===r.phone)===i);
      }
     }catch(e){issue=reason(e.code);}

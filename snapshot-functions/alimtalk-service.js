@@ -42,7 +42,8 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
         c.reasons.push(reason==='CONTACT_CLEARANCE_REQUIRED'?'받는 번호·연락 가능 여부 확인 필요':'학생 원장·대표 ID·연락처 연결 재확인 필요');
       }
       if(!rules.verifyTemplate(template))c.reasons.push('템플릿 승인·본문·변수 재확인 필요');
-      if(!Array.isArray(target.recipientIds)||!target.recipientIds.length)c.reasons.push('수신자를 직접 선택해 주세요');
+      if(!(s.recipients||[]).length && !(s.holdReasons||[]).length)c.reasons.push(s.recipientIssue||'이 발송 대상의 확인된 번호 없음');
+      else if(!Array.isArray(target.recipientIds)||!target.recipientIds.length)c.reasons.push('수신자를 직접 선택해 주세요');
       for(const id of new Set(target.recipientIds||[])){
         const candidates=(s.recipients||[]).filter(r=>r.id===id);
         const r=candidates[0];

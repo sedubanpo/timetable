@@ -3197,11 +3197,15 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
   const R=root.TimetableAlimtalk;
   function mount({host,api,context,deadline=10000}){
     let preview=null,selection=[],generation=0,busy=false,requestContext='';
+    // Only the note acknowledgement is shared between audiences. Recipient selection is never shared.
+    const checkedNotes=new Map();
+    const memoScope=(ctx)=>JSON.stringify([ctx.session,ctx.date,ctx.studentId]);
+    const memoContent=row=>JSON.stringify([row.memoReview.notes,row.text]);
     function current(g){if(g!==generation)return false;if(requestContext!==JSON.stringify(context())){reset();shell();host.append(el('p','학생·날짜·로그인 상태가 변경됐습니다. 다시 미리보기해 주세요.'));return false;}return true;}
     const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
     const button=(text,fn)=>{const b=el('button',text);b.type='button';b.onclick=fn;return b;};
     function reset(){generation++;preview=null;selection=[];busy=false;host.replaceChildren();}
-    function shell(){host.replaceChildren();host.append(el('h3','알림톡 안내'));const note=el('p','수동 전달 표시와 알림톡 결과는 별도로 관리됩니다. 수신자를 선택한 뒤 전체 본문을 확인해 주세요.');host.append(note);}
+    function shell(){host.replaceChildren();host.append(el('h3','알림톡 안내'));const note=el('p','받는 번호와 수업 시각을 확인해 주세요.');host.append(note);}
     function error(e){const messages={TIMEOUT:'요청 시간이 초과되었습니다. 재발송 전에 발송 결과를 확인하세요.',AUTH_CONNECTION_FAILED:'로그인 연결을 불러오지 못했습니다.',TOKEN_UNAVAILABLE:'로그인 인증을 확인하지 못했습니다. 로그인 상태를 확인해 주세요.',NETWORK_UNAVAILABLE:'알림톡 서버에 연결하지 못했습니다. 네트워크 또는 브라우저 차단을 확인하세요.',INVALID_RESPONSE:'서버 응답을 해석하지 못했습니다.',UNAUTHORIZED:'허브 로그인 상태를 확인해 주세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 시간표·데스크 접근 권한을 확인해 주세요.',SESSION_CHANGED:'학생·날짜·로그인 상태가 변경됐습니다.'};const code=e&&typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'UI_ERROR';const p=el('p','확인을 완료하지 못했습니다. '+(messages[code]||'확인 코드: '+code));p.setAttribute('role','alert');host.append(p,button('미리보기 다시 확인',()=>load()),button('발송 결과 확인',()=>showResults()));}
     async function run(fn){
       if(busy)return;
@@ -3228,11 +3232,11 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
       if(!p.rows?.length){host.append(el('p','확인할 학생이 없습니다.'));return;}
       for(const row of p.rows){
         const section=el('section');section.append(el('h4',(row.name||'학생 ID 미확인')+' · '+(row.date||p.date||'')));
-        const receivers=el('fieldset');receivers.append(el('legend','수신자 직접 선택'));
+        const receivers=el('fieldset');receivers.append(el('legend','받는 번호'));
         for(const r of row.choices||[]){const label=el('label');const check=el('input');check.type='checkbox';check.checked=(selection.find(t=>t.studentId===row.studentId)?.recipientIds||[]).includes(r.id);
-          check.onchange=()=>{host.querySelector('.alimtalk-confirm')?.remove();preview=null;let target=selection.find(t=>t.studentId===row.studentId);if(!target){target={studentId:row.studentId,recipientIds:[]};selection.push(target);}target.recipientIds=check.checked?[...new Set([...target.recipientIds,r.id])]:target.recipientIds.filter(id=>id!==r.id);send.disabled=true;send.dataset.locked='true';};
+          check.onchange=()=>{host.querySelector('.alimtalk-confirm')?.remove();preview=null;let target=selection.find(t=>t.studentId===row.studentId);if(!target){target={studentId:row.studentId,recipientIds:[]};selection.push(target);}target.recipientIds=check.checked?[...new Set([...target.recipientIds,r.id])]:target.recipientIds.filter(id=>id!==r.id);locked(send);void load();};
           label.append(check,document.createTextNode(' '+r.relation+' · '+r.masked));receivers.append(label);}
-        if(!row.choices?.length)receivers.append(el('p','학생 ID로 연결된 수신자 확인이 필요합니다. 자동 선택하지 않습니다.'));
+        if(!row.choices?.length)receivers.append(el('p','이 대상에게 보낼 수 있는 번호가 없습니다. 학생 원장의 연락처와 이 수업일의 수신자 설정을 확인해 주세요.'));
         section.append(receivers);
         for(const r of row.reasons||[])section.append(el('p','보류 · '+r));
         if(row.memoReview){
@@ -3242,8 +3246,10 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
           check.onchange=()=>{
             const target=selection.find(t=>t.studentId===row.studentId);
             if(!target)return;
-            if(check.checked)target.reviewedMemo=row.memoReview.key;else delete target.reviewedMemo;
-            preview=null;host.querySelector('.alimtalk-confirm')?.remove();locked(send);
+            const scope=memoScope(context());
+            if(check.checked){target.reviewedMemo=row.memoReview.key;checkedNotes.set(scope,memoContent(row));}
+            else {delete target.reviewedMemo;checkedNotes.delete(scope);}
+            preview=null;host.querySelector('.alimtalk-confirm')?.remove();locked(send);void load();
           };
           label.append(check,document.createTextNode(' 비고와 아래 수업 시각을 대조했습니다. 이 학생에게 표시된 시간표로 안내합니다.'));
           memo.append(label);section.append(memo);
@@ -3253,15 +3259,30 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
         host.append(section);
       }
       const c=p.counts||{students:0,messages:0,numbers:0};host.append(el('p','학생 '+c.students+'명 · 메시지 '+c.messages+'건 · 수신번호 '+c.numbers+'개'));
-      host.append(button('선택한 번호로 본문 확인',()=>load()));
       const send=button(p.testMode?'관리자 번호로 테스트 발송':(context().audience==='student'?'학생 본인에게 발송':'학부모에게 발송'),()=>confirmSend(false));send.className='send-action';
       if(p.sendEnabled===false)host.append(el('p','실제 발송은 아직 비활성화되어 있습니다. 관리자 테스트 번호 지정 후 활성화합니다.'));
       if(p.sendEnabled===false||!p.previewId||!c.messages||p.rows.some(r=>r.reasons.length))locked(send);
       host.append(send,button('발송 결과',()=>showResults()));
     }
-    async function load(){return run(async g=>{const ctx=context();if(!ctx.studentId){selection=[];draw({date:ctx.date,rows:[{name:ctx.name,date:ctx.date,reasons:['현재 시간표는 이름 기반입니다. 원본 셀과 학생 ID를 확인한 매핑이 필요합니다.','서버·연락처 연결 전에는 발송할 수 없습니다.'],excluded:[],choices:[],recipients:[]} ]});return;}
-      if(!selection.length||selection[0].studentId!==ctx.studentId)selection=[{studentId:ctx.studentId,recipientIds:[]}];
-      const p=await api('preview',{date:ctx.date,targets:selection});if(current(g))draw(p);
+    async function load(){return run(async(g,renewDeadline)=>{const ctx=context();preview=null;shell();host.append(el('p','받는 번호와 수업 일정을 확인하고 있습니다…'));if(!ctx.studentId){selection=[];draw({date:ctx.date,rows:[{name:ctx.name,date:ctx.date,reasons:['현재 시간표는 이름 기반입니다. 원본 셀과 학생 ID를 확인한 매핑이 필요합니다.','서버·연락처 연결 전에는 발송할 수 없습니다.'],excluded:[],choices:[],recipients:[]} ]});return;}
+      const initial=!selection.length||selection[0].studentId!==ctx.studentId;
+      if(initial)selection=[{studentId:ctx.studentId,recipientIds:[]}];
+      const read=()=>api('preview',{date:ctx.date,targets:selection.map(t=>({...t,recipientIds:[...t.recipientIds]}))});
+      let p=await read();
+      if(!current(g))return;
+      const row=p.rows?.length===1?p.rows[0]:null;
+      if(!p.testMode&&row?.studentId===ctx.studentId&&['student','guardian'].includes(ctx.audience)){
+        const target=selection[0],only=row.choices?.length===1?row.choices[0]:null;
+        let again=false;
+        if(initial&&only&&(ctx.audience==='student'?only.id==='student':['mother','father'].includes(only.id))){
+          target.recipientIds=[only.id];again=true;
+        }
+        if(row.memoReview&&!row.memoReview.confirmed&&checkedNotes.get(memoScope(ctx))===memoContent(row)){
+          target.reviewedMemo=row.memoReview.key;again=true;
+        }
+        if(again){renewDeadline();p=await read();if(!current(g))return;}
+      }
+      draw(p);
     });}
     function confirmSend(confirmChanges){
       if(!preview)return;const p=preview,c=p.counts;const box=el('div');box.className='alimtalk-confirm';box.setAttribute('role','group');box.setAttribute('aria-label','알림톡 발송 확인');

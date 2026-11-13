@@ -231,3 +231,14 @@ test('a late provider receipt after operator resolution blocks the prepared rese
  x.f.deps.provider.lookup=async({key})=>({key,messageId:'late',groupId:'late-group',statusCode:'4000'});
  await assert.rejects(x.send(p));assert.equal(x.f.records.get(id).state,'DELIVERED');assert.equal(x.f.sent.length,0);
 });
+
+test('missing student number takes precedence over time memo; guardian remains a separate review',async()=>{
+ const x=setup(1),date='2026-11-14';
+ x.maps.id1.date=x.src.date=date;x.clear.id1=null;
+ Object.assign(x.people.id1.recipients[2],{verified:false,phone:'',reason:'번호 없음'});
+ Object.assign(x.src.entries[0].lesson,{date,timeNoteText:'기존 11-14시 수업이나, 10-13시 구성',reviewReasons:['시간 메모 확인 필요']});
+ const roster=audience=>x.b.batchRoster('',{date,audience});
+ assert.equal((await roster('student')).rows[0].issue,'본인 번호 없음 · 학부모만 안내');
+ assert.equal((await roster('guardian')).rows[0].issue,'시간 메모 확인 필요');
+ assert.equal(x.f.sent.length,0);
+});

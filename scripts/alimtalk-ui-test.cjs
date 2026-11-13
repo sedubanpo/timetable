@@ -73,3 +73,25 @@ test('individual history resolves a fallback on open and retains other receipts 
   assert.match(host.textContent,/대체 문자 수신 완료/);assert.match(host.textContent,/문자 대체 결과 확인 중/);assert.match(host.textContent,/조회가 지연/);
  }finally{dom.window.close();}
 });
+
+test('one eligible number and a checked timetable need no extra preview click; reuse only unchanged notes and body across audiences',async()=>{
+ const {dom,w,host}=setup(),ctx={date:sample.date,studentId:'s1',session:'desk',audience:'guardian'};
+ let body='10:00–13:00 / 16:00–19:00',available=true;
+ const calls=[],ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api:async(action,{targets:[t]})=>{
+  calls.push(action);assert.equal(action,'preview');
+  const id=ctx.audience==='student'?'student':'mother',key=ctx.audience+body;
+  const confirmed=t.reviewedMemo===key,ready=available&&confirmed&&t.recipientIds.join()===id;
+  return {previewId:'p',counts:{students:+ready,messages:+ready,numbers:+ready},rows:[{studentId:'s1',text:body,
+   choices:available?[{id,relation:id,masked:'***'}]:[],reasons:ready?[]:['보류'],memoReview:{key,confirmed,notes:['확인할 비고']}}]};
+ }});
+ try{
+  await ui.load();assert(host.querySelector('input').checked);assert(host.querySelector('.send-action').disabled);
+  host.querySelectorAll('input')[1].click();await new Promise(r=>setTimeout(r,0));
+  assert(!host.querySelector('.send-action').disabled);
+  ui.reset();ctx.audience='student';await ui.load();
+  assert(!host.querySelector('.send-action').disabled);assert(host.querySelectorAll('input')[1].checked);
+  ui.reset();body+=' 수정';await ui.load();assert(host.querySelector('.send-action').disabled);
+  ui.reset();available=false;await ui.load();assert(host.querySelector('.send-action').disabled);
+  assert(!calls.includes('send'));
+ }finally{dom.window.close();}
+});
