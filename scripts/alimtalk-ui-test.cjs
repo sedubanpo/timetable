@@ -10,29 +10,35 @@ test('double preview click shares one UI operation and disabled send remains loc
 test('incomplete source shows actionable holds without exposing selectable partial entries',async()=>{const {dom,w,host}=setup();const calls=[];const ui=w.TimetableAlimtalkReviewUI.mount({host,context:()=>({date:sample.date}),api:async action=>{calls.push(action);return {date:sample.date,complete:false,entries:[{label:'must not show'}],issues:['ROOM_UNRECOGNIZED','PARTIAL_TIME_REVIEW_REQUIRED']};}});await ui.open();assert(host.textContent.includes('강의실로 해석할 수 없는'));assert(host.textContent.includes('실제 수업 시각'));assert(!host.textContent.includes('must not show'));assert.equal(host.querySelectorAll('input').length,0);assert.deepEqual(calls,['inspect']);assert(host.querySelector('[role=alert]'));dom.window.close();});
 
 test('roster shows a visible loader on the active audience and separates delivery holds',()=>{
- const dom=new JSDOM('<main id="studentImageModal"><button data-card-audience="guardian">학부모 발송</button><button data-card-audience="student">학생 발송</button><div id="batchRosterStatus" role="status"></div><div id="list"></div></main>',{runScripts:'outside-only'}),w=dom.window;
+ const dom=new JSDOM('<main id="studentImageModal"><button data-card-audience="guardian">학부모 발송</button><button data-card-audience="student">학생 발송</button><div id="batchRosterStatus" role="status"></div><div id="list"></div><div id="rosterDetail"></div></main>',{runScripts:'outside-only'}),w=dom.window;
  Object.assign(w,{studentCardMode:'message',cardAudience:'student',currentSheetName:'11/12',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'operator',timetableLoginSequence:1,studentImageScheduleMap:{가학생:[],나학생:[],다학생:[],라학생:[]},selectedStudentForImage:'가학생',refreshStudentImageListSelectionState:()=>{}});
  w.eval(fs.readFileSync('assets/alimtalk-roster.js','utf8'));const list=w.document.getElementById('list');
  w.drawAlimtalkRoster(list,'');assert.equal(list.getAttribute('aria-busy'),'true');assert(w.document.querySelector('#batchRosterStatus .batch-orbit'));assert.equal(w.document.querySelector('[data-card-audience=student]').getAttribute('aria-busy'),'true');assert.match(list.textContent,/기록 확인 중/);
  w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'가학생',state:'unsent'},{name:'나학생',state:'unsent',issue:'본인 번호 없음 · 학부모만 안내'},{name:'다학생',state:'unsent',issue:'학생 연결 확인 필요'},{name:'라학생',state:'unsent',failed:true}];
  w.drawAlimtalkRoster(list,'');assert.equal(list.getAttribute('aria-busy'),'false');assert(!w.document.querySelector('#batchRosterStatus .batch-orbit'));
  for(const [group,name] of [['unsent','가학생'],['guardianOnly','나학생'],['held','다학생'],['failed','라학생']])assert.equal(list.querySelector('.roster-'+group+' button strong').textContent,name);
- assert.match(list.querySelector('.roster-unsent').textContent,/발송 가능/);dom.window.close();
+ assert.match(list.querySelector('.roster-unsent button').title,/발송 가능/);dom.window.close();
 });
 
 test('roster shortcuts are sibling controls, scoped to audience and status; ambiguous IDs and holds cannot send',()=>{
- const dom=new JSDOM('<main id="studentImageModal"><div id="batchRosterStatus"></div><div id="list"></div></main>',{runScripts:'outside-only'}),w=dom.window;
+ const dom=new JSDOM('<main id="studentImageModal"><div id="batchRosterStatus"></div><div id="list"></div><div id="rosterDetail"></div></main>',{runScripts:'outside-only'}),w=dom.window;
  Object.assign(w,{studentCardMode:'message',cardAudience:'guardian',currentSheetName:'11/12',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'operator',timetableLoginSequence:1,studentImageScheduleMap:{대기:[],실패:[],확인:[],완료:[],동명:[],제외:[],변경:[]},selectedStudentForImage:'실패',refreshStudentImageListSelectionState:()=>{}});
  w.eval(fs.readFileSync('assets/alimtalk-roster.js','utf8'));const list=w.document.getElementById('list');
  w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'대기',studentId:'a',state:'unsent'},{name:'실패',studentId:'b',state:'unsent',failed:true},{name:'확인',studentId:'c',state:'pending'},{name:'완료',studentId:'d',state:'sent'},{name:'동명',studentId:'e',state:'unsent'},{name:'동명',studentId:'f',state:'unsent'},{name:'제외',studentId:'g',state:'unsent',issue:'본인 번호 없음'},{name:'변경',studentId:'h',state:'changed'}];
  const calls=[];w.openCardRosterAction=(...args)=>calls.push(args);w.drawAlimtalkRoster(list,'');
- assert.equal(list.querySelectorAll('.roster-student-action').length,4);assert.equal(list.querySelectorAll('button button').length,0);
- const retry=list.querySelector('.roster-failed .roster-student-action');assert.equal(retry.getAttribute('aria-label'),'실패 학부모 재발송');retry.click();assert.deepEqual(calls,[['실패','failed']]);
- assert.equal(list.querySelector('.roster-pending .roster-student-action').textContent,'결과 확인');assert.equal(list.querySelector('.roster-change-label').textContent,'시간표 변경 · 새 안내 필요');const changed=list.querySelector('.roster-changed .roster-student-action');assert.equal(changed.textContent,'변경 발송');changed.click();assert.deepEqual(calls.at(-1),['변경','changed']);dom.window.close();
+ const detail=w.document.getElementById('rosterDetail'),pick=name=>list.querySelector('[data-student-name="'+name+'"]').click();
+ w.selectStudentImageItem=name=>{w.selectedStudentForImage=name;};
+ assert.equal(list.querySelectorAll('.roster-student-action').length,0);
+ assert.equal(detail.querySelector('button').getAttribute('aria-label'),'실패 학부모 재발송');detail.querySelector('button').click();
+ assert.deepEqual(calls,[['실패','failed']]);
+ pick('변경');assert.match(detail.textContent,/변경 비교/);detail.querySelector('.roster-student-action').click();
+ assert.deepEqual(calls.at(-1),['변경','changed']);
+ for(const name of ['동명','제외','완료']){pick(name);assert.equal(detail.querySelectorAll('button').length,0);}
+ dom.window.close();
 });
 
 test('targeted roster refresh keeps other students usable, preserves scroll and ignores late results after audience change',async()=>{
- const dom=new JSDOM('<main id="studentImageModal"><div id="batchRosterStatus"></div><div id="list"></div></main>',{runScripts:'outside-only'}),w=dom.window;
+ const dom=new JSDOM('<main id="studentImageModal"><div id="batchRosterStatus"></div><div id="list"></div><div id="rosterDetail"></div></main>',{runScripts:'outside-only'}),w=dom.window;
  Object.assign(w,{studentCardMode:'message',cardAudience:'student',currentSheetName:'11/12',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'operator',timetableLoginSequence:1,studentImageScheduleMap:{가학생:[],나학생:[]},selectedStudentForImage:'가학생',refreshStudentImageListSelectionState:()=>{},isStudentImageModalOpen:()=>true});
  w.eval(fs.readFileSync('assets/alimtalk-roster.js','utf8'));const list=w.document.getElementById('list');
  w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'가학생',studentId:'a',state:'unsent'},{name:'나학생',studentId:'b',state:'unsent'}];w.filterStudentImageList=()=>w.drawAlimtalkRoster(list,'');w.filterStudentImageList();list.scrollTop=123;
@@ -40,7 +46,9 @@ test('targeted roster refresh keeps other students usable, preserves scroll and 
  try{
  const first=w.reloadCardRoster({studentIds:['a'],submitted:true,background:true});
  assert.equal(w.cardRosterRows[0].state,'pending');assert.equal(list.getAttribute('aria-busy'),'false');assert.equal(list.scrollTop,123);
- assert.equal(list.querySelector('.roster-unsent .roster-student-action').getAttribute('aria-label'),'나학생 학생 본인 발송');
+ w.selectStudentImageItem=name=>{w.selectedStudentForImage=name;};
+ list.querySelector('[data-student-name="나학생"]').click();
+ assert.equal(w.document.querySelector('#rosterDetail .roster-student-action').getAttribute('aria-label'),'나학생 학생 본인 발송');
  finish({rows:[{name:'가학생',studentId:'a',state:'sent'}]});await first;
  assert.deepEqual(Array.from(w.cardRosterRows,r=>r.state),['sent','unsent']);assert.deepEqual(Array.from(calls[0].input.studentIds),['a']);
  const late=w.reloadCardRoster({studentIds:['a'],background:true});w.cardAudience='guardian';w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'가학생',studentId:'a',state:'unsent'}];

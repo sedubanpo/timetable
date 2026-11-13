@@ -131,3 +131,36 @@
  #studentImageModal[data-card-mode=message] .student-preview-panel{flex:none}
  #studentImageModal .card-modal-head .modal-title{font-size:18px}
 }
+
+#studentImageModal .card-modal-head{display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+#studentImageModal .card-modal-head .modal-title{font-size:clamp(16px,1.55vw,23px);white-space:nowrap}
+#studentImageModal .card-modal-head .card-mode-tabs{display:inline-flex;gap:2px;margin:0;padding:2px;border:0;background:#eff3f7;border-radius:8px}
+#studentImageModal .card-modal-head [data-card-tab]{padding:5px 10px;min-height:34px;border:0;border-radius:6px;font-size:14px}
+#studentImageModal .card-modal-head [aria-selected=true]{background:white;color:#164579;box-shadow:0 1px 3px #152c4626}
+#studentImageModal #cardSheetDate{margin-left:auto}
+#studentImageModal[data-card-mode=message] #studentImageList{display:block;overflow:visible;border:0;background:white;border-radius:0}
+#studentImageModal[data-card-mode=message] .roster-group{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:start;gap:10px;border:0;border-top:1px solid #e2e8ee;border-radius:0;padding:6px 0;background:transparent}
+#studentImageModal .roster-group .roster-heading{justify-content:start;gap:5px;font-size:13px;padding:6px;color:var(--ink);border-left:3px solid var(--ink)}
+#studentImageModal .roster-group .roster-heading strong{font-size:inherit}
+#studentImageModal .roster-group .roster-heading span{white-space:nowrap}
+#studentImageModal[data-card-mode=message] .roster-group .roster-tiles{display:flex;flex-wrap:wrap;gap:4px}
+#studentImageModal[data-card-mode=message] .roster-student-card{min-width:0;background:none;border-radius:4px}
+#studentImageModal[data-card-mode=message] .roster-student-card .recipient-student{display:block;padding:4px 8px;min-height:28px;line-height:18px;font-size:13px;border:1px solid transparent;border-radius:5px;background:var(--paper);color:var(--ink);white-space:nowrap}
+#studentImageModal .recipient-student strong{font:inherit;font-weight:600}
+#studentImageModal[data-card-mode=message] .roster-student-card .recipient-student[aria-pressed=true]{color:white;background:#193f62;border-color:#193f62;box-shadow:none}
+#studentImageModal #rosterDetail{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px;color:#465e73}
+#rosterDetail button{background:white;border:1px solid #b7c9d9;border-radius:6px;padding:6px 12px;color:#164977;font:inherit;cursor:pointer}
+#studentImageModal[data-card-mode=image] #rosterDetail{display:none}
+#studentImageModal[data-card-mode=message] .student-preview-panel-head{padding:10px 14px}
+#studentImageModal[data-card-mode=message] .student-preview-panel-head>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+#studentImageModal[data-card-mode=message] .student-preview-panel-sub:has(+ #rosterDetail:not(:empty)){display:none}
+#studentImageModal[data-card-mode=message] .student-list-panel{max-height:none;border-bottom:1px solid #d3dee7}
+#studentImageModal[data-card-mode=message] .student-preview-panel{flex:1 0 180px}
+@media(max-width:680px){
+ #studentImageModal .card-modal-head{gap:5px}
+ #studentImageModal .card-modal-head [data-card-tab]{font-size:12px;padding:4px 5px;gap:3px}
+ #studentImageModal .card-modal-head [data-card-tab] svg{width:15px;height:15px;padding:0}
+ #studentImageModal[data-card-mode=message] .roster-group{grid-template-columns:1fr;gap:2px}
+ #studentImageModal .roster-group .roster-heading{padding:2px 6px}
+ #studentImageModal[data-card-mode=message] .student-preview-panel{flex:none}
+}

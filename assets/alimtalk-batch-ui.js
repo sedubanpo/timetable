@@ -100,7 +100,7 @@ function mount({host,api,context,refresh}){
  // Only lock this modal. Session and date changes still invalidate outstanding requests.
  function lock(){
   const modal=host.closest('#studentImageModal');
-  const controls=Array.from(modal?.querySelectorAll('.card-modal-head,.card-mode-tabs,.batch-bar,.student-list-panel,.card-actions')||[]).filter(n=>!n.inert);
+  const controls=Array.from(modal?.querySelectorAll('.card-modal-head,.card-mode-tabs,.batch-bar,.student-list-panel,#rosterDetail,.card-actions')||[]).filter(n=>!n.inert);
   for(const n of controls)n.inert=true;
   const warn=e=>{e.preventDefault();e.returnValue='';};
   root.addEventListener('beforeunload',warn);

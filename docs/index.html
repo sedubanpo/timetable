@@ -2426,6 +2426,39 @@
  #studentImageModal[data-card-mode=message] .student-preview-panel{flex:none}
  #studentImageModal .card-modal-head .modal-title{font-size:18px}
 }
+
+#studentImageModal .card-modal-head{display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+#studentImageModal .card-modal-head .modal-title{font-size:clamp(16px,1.55vw,23px);white-space:nowrap}
+#studentImageModal .card-modal-head .card-mode-tabs{display:inline-flex;gap:2px;margin:0;padding:2px;border:0;background:#eff3f7;border-radius:8px}
+#studentImageModal .card-modal-head [data-card-tab]{padding:5px 10px;min-height:34px;border:0;border-radius:6px;font-size:14px}
+#studentImageModal .card-modal-head [aria-selected=true]{background:white;color:#164579;box-shadow:0 1px 3px #152c4626}
+#studentImageModal #cardSheetDate{margin-left:auto}
+#studentImageModal[data-card-mode=message] #studentImageList{display:block;overflow:visible;border:0;background:white;border-radius:0}
+#studentImageModal[data-card-mode=message] .roster-group{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:start;gap:10px;border:0;border-top:1px solid #e2e8ee;border-radius:0;padding:6px 0;background:transparent}
+#studentImageModal .roster-group .roster-heading{justify-content:start;gap:5px;font-size:13px;padding:6px;color:var(--ink);border-left:3px solid var(--ink)}
+#studentImageModal .roster-group .roster-heading strong{font-size:inherit}
+#studentImageModal .roster-group .roster-heading span{white-space:nowrap}
+#studentImageModal[data-card-mode=message] .roster-group .roster-tiles{display:flex;flex-wrap:wrap;gap:4px}
+#studentImageModal[data-card-mode=message] .roster-student-card{min-width:0;background:none;border-radius:4px}
+#studentImageModal[data-card-mode=message] .roster-student-card .recipient-student{display:block;padding:4px 8px;min-height:28px;line-height:18px;font-size:13px;border:1px solid transparent;border-radius:5px;background:var(--paper);color:var(--ink);white-space:nowrap}
+#studentImageModal .recipient-student strong{font:inherit;font-weight:600}
+#studentImageModal[data-card-mode=message] .roster-student-card .recipient-student[aria-pressed=true]{color:white;background:#193f62;border-color:#193f62;box-shadow:none}
+#studentImageModal #rosterDetail{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px;color:#465e73}
+#rosterDetail button{background:white;border:1px solid #b7c9d9;border-radius:6px;padding:6px 12px;color:#164977;font:inherit;cursor:pointer}
+#studentImageModal[data-card-mode=image] #rosterDetail{display:none}
+#studentImageModal[data-card-mode=message] .student-preview-panel-head{padding:10px 14px}
+#studentImageModal[data-card-mode=message] .student-preview-panel-head>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+#studentImageModal[data-card-mode=message] .student-preview-panel-sub:has(+ #rosterDetail:not(:empty)){display:none}
+#studentImageModal[data-card-mode=message] .student-list-panel{max-height:none;border-bottom:1px solid #d3dee7}
+#studentImageModal[data-card-mode=message] .student-preview-panel{flex:1 0 180px}
+@media(max-width:680px){
+ #studentImageModal .card-modal-head{gap:5px}
+ #studentImageModal .card-modal-head [data-card-tab]{font-size:12px;padding:4px 5px;gap:3px}
+ #studentImageModal .card-modal-head [data-card-tab] svg{width:15px;height:15px;padding:0}
+ #studentImageModal[data-card-mode=message] .roster-group{grid-template-columns:1fr;gap:2px}
+ #studentImageModal .roster-group .roster-heading{padding:2px 6px}
+ #studentImageModal[data-card-mode=message] .student-preview-panel{flex:none}
+}
 </style>
 <script>
 (function(root){
@@ -2530,7 +2563,7 @@ function mount({host,api,context,refresh}){
  // Only lock this modal. Session and date changes still invalidate outstanding requests.
  function lock(){
   const modal=host.closest('#studentImageModal');
-  const controls=Array.from(modal?.querySelectorAll('.card-modal-head,.card-mode-tabs,.batch-bar,.student-list-panel,.card-actions')||[]).filter(n=>!n.inert);
+  const controls=Array.from(modal?.querySelectorAll('.card-modal-head,.card-mode-tabs,.batch-bar,.student-list-panel,#rosterDetail,.card-actions')||[]).filter(n=>!n.inert);
   for(const n of controls)n.inert=true;
   const warn=e=>{e.preventDefault();e.returnValue='';};
   root.addEventListener('beforeunload',warn);
@@ -3211,15 +3244,14 @@ root.TimetableAlimtalkReviewUI={mount};
       </div>
     </div>
       <div id="studentImageModal" data-card-mode="message"><div class="modal-box student-img-box">
-        <div class="card-modal-head"><div class="modal-title">시간표 카드 생성</div><select id="cardSheetDate" aria-label="시간표 카드 수업일" onchange="changeCardSheet(this.value)"></select><button id="studentImageRefreshBtn" onclick="refreshStudentImageDashboard()">새로고침</button></div>
-        <div class="card-mode-tabs" role="tablist" aria-label="시간표 전달 방식" onkeydown="handleCardModeKey(event)"><button id="cardMessageTab" role="tab" data-card-tab="message" aria-selected="true" aria-controls="cardDeliveryWorkspace" onclick="setStudentCardMode('message')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-6 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h6"/></svg>시간표 알림톡</button><button id="cardImageTab" role="tab" data-card-tab="image" aria-selected="false" aria-controls="cardDeliveryWorkspace" tabindex="-1" onclick="setStudentCardMode('image')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 4-6 5 7"/></svg>시간표 이미지</button></div>
+        <div class="card-modal-head"><div class="modal-title">시간표 카드 생성</div><div class="card-mode-tabs" role="tablist" aria-label="시간표 전달 방식" onkeydown="handleCardModeKey(event)"><button id="cardMessageTab" role="tab" data-card-tab="message" aria-selected="true" aria-controls="cardDeliveryWorkspace" onclick="setStudentCardMode('message')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-6 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h6"/></svg>시간표 알림톡</button><button id="cardImageTab" role="tab" data-card-tab="image" aria-selected="false" aria-controls="cardDeliveryWorkspace" tabindex="-1" onclick="setStudentCardMode('image')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 4-6 5 7"/></svg>시간표 이미지</button></div><select id="cardSheetDate" aria-label="시간표 카드 수업일" onchange="changeCardSheet(this.value)"></select><button id="studentImageRefreshBtn" onclick="refreshStudentImageDashboard()">새로고침</button></div>
         <div id="studentCardStatusNotice" role="status" aria-live="polite" hidden></div>
         <div class="batch-bar" data-card-channel="message"><div class="recipient-switch" role="group" aria-label="발송 대상"><button type="button" data-card-audience="guardian" aria-pressed="true" onclick="setCardAudience('guardian')">학부모 발송</button><button type="button" data-card-audience="student" aria-pressed="false" onclick="setCardAudience('student')">학생 본인 발송</button></div><div class="roster-filters" role="group" aria-label="발송 상태"><button type="button" data-roster-filter="all">전체</button><button type="button" data-roster-filter="changed">변경 대상</button><button type="button" data-roster-filter="unsent">미발송</button><button type="button" data-roster-filter="sent">발송완료</button></div><div class="batch-actions"><button id="batchInitial" type="button" onclick="openCardBulk('unsent')">학부모 일괄 발송</button><button id="batchChanges" type="button" onclick="openCardBulk('changed')">변경 대상자 알림톡</button><button type="button" onclick="openCardBulk('history')">전체 발송 이력</button></div></div>
         <div id="cardDeliveryWorkspace" role="tabpanel" aria-labelledby="cardMessageTab" class="student-dashboard-layout"><div class="student-list-panel"><div class="student-list-panel-title">발송 대상</div>
         <input id="studentImageSearch" type="search" placeholder="학생 이름 검색" aria-label="학생 이름 검색" oninput="filterStudentImageList()">
         <div id="batchRosterStatus" data-card-channel="message" role="status"></div><div class="card-state-filter"><button data-card-filter="all" onclick="setStudentCardFilter('all')">전체</button><button data-card-filter="wait" onclick="setStudentCardFilter('wait')">미발송</button><button data-card-filter="done" onclick="setStudentCardFilter('done')">완료</button></div><div id="studentImageList" class="student-list"></div></div>
-        <div class="student-preview-panel"><div class="student-preview-panel-head"><div><div class="student-preview-panel-title">시간표 카드 미리보기</div><div class="student-preview-panel-sub">학부모님께 전달될 이미지입니다.</div></div></div>
-        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><section data-card-channel="message" class="recipient-setup"><h3>한 학생에게 보내기</h3><p>한 번 확인한 학생은 다음 날짜에도 자동으로 연결하고 원장의 최신 번호를 가져옵니다. 학생 본인 번호가 없으면 학부모에게만 안내합니다.</p><div class="recipient-actions"><button type="button" onclick="openCardAlimtalkReview()">학생·받는 번호 확인</button><button class="primary" type="button" onclick="openCardAlimtalk(false)">수신자 선택 · 본문 확인</button><button type="button" onclick="openCardAlimtalk(true)">발송 결과</button></div></section><section id="cardMessageReference" hidden><h3 class="card-reference-title">예상 발송 문구</h3><p class="card-reference-note">현재 시간표 기준입니다. 발송 전 최신 본문을 다시 확인합니다.</p><pre id="cardMessageReferenceBody" class="card-reference-body"></pre></section><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
+        <div class="student-preview-panel"><div class="student-preview-panel-head"><div><div class="student-preview-panel-title">시간표 카드 미리보기</div><div class="student-preview-panel-sub">학부모님께 전달될 이미지입니다.</div><div id="rosterDetail" data-card-channel="message"></div></div></div>
+        <div class="card-workarea"><div id="studentImagePreview"></div><aside id="cardEditorSidebar"><section data-card-channel="message" class="recipient-setup"><div class="recipient-actions"><button type="button" onclick="openCardAlimtalkReview()">학생·받는 번호 확인</button><button class="primary" type="button" onclick="openCardAlimtalk(false)">수신자 선택 · 본문 확인</button><button type="button" onclick="openCardAlimtalk(true)">발송 결과</button></div></section><section id="cardMessageReference" hidden><h3 class="card-reference-title">예상 발송 문구</h3><p class="card-reference-note">현재 시간표 기준입니다. 발송 전 최신 본문을 다시 확인합니다.</p><pre id="cardMessageReferenceBody" class="card-reference-body"></pre></section><label class="card-hide-note"><input id="studentImageHideNoteToggle" type="checkbox" checked onchange="toggleStudentCardHideNote()"> 비고 숨김</label><div id="cardNoteEditorSlot"></div><div id="studentCardDeliveryEditor"></div><div id="annexGuidePanel"></div><div id="cardAlimtalkPanel" class="alimtalk-panel" hidden></div></aside></div></div></div>
         <div class="card-actions"><button class="primary" data-card-channel="image" onclick="copyLiveStudentCard()">이미지 복사</button><button data-card-channel="image" onclick="downloadLiveStudentCard()">PNG 저장</button><button id="studentCardSentToggleBtn" data-card-channel="image" onclick="toggleSelectedStudentCardSent()">발송 상태 변경</button><button data-card-channel="image" onclick="nextUnsentStudentCard()">다음 미발송</button><details class="card-test-tools" data-card-channel="message"><summary>관리자 테스트</summary><button onclick="openCardAlimtalkTest()">가상 일정 테스트</button><button onclick="openCardAlimtalkRealTest()">실제 일정 관리자 테스트</button></details><button class="close-card" onclick="closeStudentImageModal()">닫기</button></div>
       </div></div>
     <div id="absenceNoticeModal">
@@ -8706,7 +8738,7 @@ function drawAlimtalkRoster(list,keyword){
  const ready=cardRosterScope===rosterKey()&&Array.isArray(cardRosterRows),byName=new Map();
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
  const names=[...new Set([...Object.keys(studentImageScheduleMap),...byName.keys()].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
- const groups={changed:['시간표 변경 · 안내 필요','이전에 받은 안내와 현재 시간표가 다릅니다. 변경 발송을 누르면 최신 시간표를 바로 보냅니다.'],unsent:['발송 대기','발송 버튼을 누르면 확인된 번호로 바로 전송됩니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],unconfirmed:['접수 확인 필요','최초 발송의 접수 기록을 찾지 못했습니다. 결과 조회가 필요합니다.'],pending:['결과 확인 중','최종 수신 결과를 확인하고 있습니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
+ const groups={changed:['시간표 변경','이전에 받은 안내와 현재 시간표가 다릅니다. 변경 발송을 누르면 최신 시간표를 바로 보냅니다.'],unsent:['발송 대기','발송 버튼을 누르면 확인된 번호로 바로 전송됩니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],unconfirmed:['접수 확인 필요','최초 발송의 접수 기록을 찾지 못했습니다. 결과 조회가 필요합니다.'],pending:['결과 확인 중','최종 수신 결과를 확인하고 있습니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
  if(!ready)groups.held=[cardRosterError?'조회 실패':'기록 확인 중',cardRosterError?'다시 확인을 눌러 조회해 주세요.':'서버 기록을 확인한 뒤 발송 상태를 표시합니다.'];
  const counts={all:names.length,changed:0,unsent:0,sent:0};
  if(ready)for(const name of names){const category=rosterCategory(byName.get(name));if(category)counts[category]++;}
@@ -8718,7 +8750,17 @@ function drawAlimtalkRoster(list,keyword){
   b.onclick=()=>{rosterFilter=key;resetCardAlimtalk();list.scrollLeft=0;filterStudentImageList();};
  }
  const visible=names.filter(n=>(rosterFilter==='all'||(ready&&rosterCategory(byName.get(n))===rosterFilter))&&(!keyword||n.toLowerCase().includes(keyword)));
- const sections=new Map(),scrollLeft=list.scrollLeft;
+ const sections=new Map(),details=new Map();
+ const detail=document.getElementById('rosterDetail');
+ function showDetail(name){
+  if(!detail)return;
+  const entry=details.get(name);
+  detail.replaceChildren();
+  if(entry){
+   const caption=make('span',entry.caption);
+   detail.append(caption,...entry.controls);
+  }
+ }
  list.replaceChildren();
  const make=(tag,s)=>{const n=document.createElement(tag);if(s!==undefined)n.textContent=s;return n;};
  const msg=document.getElementById('batchRosterStatus');msg.replaceChildren();
@@ -8733,12 +8775,16 @@ function drawAlimtalkRoster(list,keyword){
  }else{msg.textContent=(cardAudience==='student'?'학생 본인':'학부모')+' 기준 · 변경 대상 '+counts.changed+'명 · 미발송 '+counts.unsent+'명';}
  for(const name of visible){
   const row=byName.get(name),state=cardRosterGroup(row);
-  if(!sections.has(state))sections.set(state,[]);
+  const group=row?.state==='changed'?'changed':state;
+  if(!sections.has(group))sections.set(group,[]);
   const b=make('button');b.type='button';b.className='recipient-student';b.dataset.studentName=name;b.setAttribute('aria-pressed',String(name===selectedStudentForImage));
   b.append(make('strong',name));
   const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?'발송 대기 · 발송 가능':state==='sent'?'수신 완료':'');
-  if(sub){const label=make('small',sub);if(state==='changed')label.className='roster-change-label';b.append(label);}
-  b.onclick=()=>{if(!studentImageScheduleMap[name]){openCardBulk('history');return;}selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();};
+  const caption=sub||groups[group][0],controls=[];
+  b.title=caption;
+  details.set(name,{caption,controls});
+  b.onclick=()=>{if(!studentImageScheduleMap[name]&&row?.state!=='changed'){openCardBulk('history');return;}
+   selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();showDetail(name);};
   const tile=make('div');tile.className='roster-student-card';tile.append(b);
   if(row?.state==='changed'&&row.studentId){
    const compare=make('button','변경 비교');compare.type='button';compare.className='roster-compare';
@@ -8746,7 +8792,7 @@ function drawAlimtalkRoster(list,keyword){
    compare.onclick=()=>{if(studentImageScheduleMap[name])selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();resetCardAlimtalk();const host=document.getElementById('cardAlimtalkPanel');
     if(!cardBulkUI)cardBulkUI=TimetableBatchUI.mount({host,api:cardAlimtalkApi,context:cardBatchContext,refresh:reloadCardRoster});
     host.dataset.bulk='true';host.dataset.bulkMode='compare';cardBulkUI.compare({studentId:row.studentId,name});host.scrollIntoView({block:'nearest'});
-   };tile.append(compare);
+   };controls.push(compare);
   }
   const actionLabel={unsent:'발송',failed:'재발송',changed:'변경 발송',pending:'결과 확인',unconfirmed:'접수 확인'}[state];
   if(ready&&row?.studentId&&studentImageScheduleMap[name]&&actionLabel){
@@ -8757,9 +8803,9 @@ function drawAlimtalkRoster(list,keyword){
     if(cardBulkUI?.isSending())return;
     action.disabled=true;action.setAttribute('aria-busy','true');action.textContent=['pending','unconfirmed'].includes(state)?'조회 중':'발송 중';
     try{await openCardRosterAction(name,state);}finally{action.disabled=false;action.removeAttribute('aria-busy');action.textContent=actionLabel;}
-   };tile.append(action);
+   };controls.push(action);
   }
-  sections.get(state).push(tile);
+  sections.get(group).push(tile);
  }
  for(const [state,[title,description]] of Object.entries(groups)){
   const rows=sections.get(state)||[];if(!rows.length)continue;
@@ -8767,12 +8813,12 @@ function drawAlimtalkRoster(list,keyword){
   h.append(make('strong',title),make('span',rows.length+'명'));grid.className='roster-tiles';grid.append(...rows);const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
  }
  if(!visible.length)list.append(make('p',keyword?'검색 결과가 없습니다.':ready?'해당 상태의 학생이 없습니다.':'발송 상태를 확인하고 있습니다.'));
- const selectable=visible.filter(n=>Object.hasOwn(studentImageScheduleMap,n));
+ const selectable=visible.filter(n=>Object.hasOwn(studentImageScheduleMap,n)||byName.get(n)?.state==='changed');
  if(!selectable.includes(selectedStudentForImage)){
   if(selectable.length)selectStudentImageItem(selectable[0],{skipListRender:true});
   else if(selectedStudentForImage){selectedStudentForImage='';resetCardAlimtalk();renderCardMessageReference();}
  }
- refreshStudentImageListSelectionState();list.scrollLeft=scrollLeft;
+ refreshStudentImageListSelectionState();showDetail(selectedStudentForImage);
 }
 
       var cardAlimtalkTest=null,cardAlimtalkRealTest=null;

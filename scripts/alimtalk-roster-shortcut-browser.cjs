@@ -25,8 +25,10 @@ for(const [label,width,height] of [['desktop',1440,1000],['mobile',390,844]]){
  assert.equal(await page.locator('#cardAlimtalkPanel input').count(),0);
  await page.screenshot({path:'/tmp/timetable-ux-review/'+label+'-shortcut-review.png'});
  await page.getByRole('button',{name:'← 학생 목록',exact:true}).click();
+ await page.locator('[data-student-name="검증대기"]').click();
  assert(await page.getByRole('button',{name:'검증대기 학생 본인 발송',exact:true}).isEnabled());
 
+ await page.locator('[data-student-name="검증미확정"]').click();
  await page.getByRole('button',{name:'검증미확정 학생 본인 접수 확인',exact:true}).click();
  await page.getByRole('button',{name:'미확정 1건 결과 갱신'}).waitFor();assert.equal(await page.locator('#cardAlimtalkPanel .send-action').count(),0);
  await page.screenshot({path:'/tmp/timetable-ux-review/'+label+'-shortcut-pending.png'});
