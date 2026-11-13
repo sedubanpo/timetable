@@ -55,3 +55,21 @@ test('targeted roster refresh keeps other students usable, preserves scroll and 
  finish({rows:[{name:'가학생',studentId:'a',state:'sent'}]});await late;assert.equal(w.cardRosterRows[0].state,'unsent');
  }finally{dom.window.close();}
 });
+
+test('individual history resolves a fallback on open and retains other receipts when a lookup fails',async()=>{
+ const {dom,w,host}=setup(),calls=[];
+ const checking={state:'PROCESSING',fallbackResult:'CHECKING'};
+ const rows=[{id:'pending',...checking},{id:'ready',...checking},{id:'ordinary',state:'DELIVERED'}];
+ const ui=w.TimetableAlimtalkUI.mount({host,context:()=>({studentId:'s',date:sample.date}),api:async(action,input)=>{
+  calls.push([action,input.id]);
+  if(action==='results')return {results:rows.map(r=>({...r}))};
+  assert.equal(action,'reconcile');
+  if(input.id==='pending')throw Error('offline');
+  return {id:input.id,state:'DELIVERED',fallbackResult:'DELIVERED'};
+ }});
+ try{
+  await ui.showResults();
+  assert.deepEqual(calls,[['results',undefined],['reconcile','pending'],['reconcile','ready']]);
+  assert.match(host.textContent,/대체 문자 수신 완료/);assert.match(host.textContent,/문자 대체 결과 확인 중/);assert.match(host.textContent,/조회가 지연/);
+ }finally{dom.window.close();}
+});

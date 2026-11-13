@@ -9,7 +9,25 @@
     function reset(){generation++;preview=null;selection=[];busy=false;host.replaceChildren();}
     function shell(){host.replaceChildren();host.append(el('h3','알림톡 안내'));const note=el('p','수동 전달 표시와 알림톡 결과는 별도로 관리됩니다. 수신자를 선택한 뒤 전체 본문을 확인해 주세요.');host.append(note);}
     function error(e){const messages={TIMEOUT:'요청 시간이 초과되었습니다. 재발송 전에 발송 결과를 확인하세요.',AUTH_CONNECTION_FAILED:'로그인 연결을 불러오지 못했습니다.',TOKEN_UNAVAILABLE:'로그인 인증을 확인하지 못했습니다. 로그인 상태를 확인해 주세요.',NETWORK_UNAVAILABLE:'알림톡 서버에 연결하지 못했습니다. 네트워크 또는 브라우저 차단을 확인하세요.',INVALID_RESPONSE:'서버 응답을 해석하지 못했습니다.',UNAUTHORIZED:'허브 로그인 상태를 확인해 주세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 시간표·데스크 접근 권한을 확인해 주세요.',SESSION_CHANGED:'학생·날짜·로그인 상태가 변경됐습니다.'};const code=e&&typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'UI_ERROR';const p=el('p','확인을 완료하지 못했습니다. '+(messages[code]||'확인 코드: '+code));p.setAttribute('role','alert');host.append(p,button('미리보기 다시 확인',()=>load()),button('발송 결과 확인',()=>showResults()));}
-    async function run(fn){if(busy)return;busy=true;const g=++generation;requestContext=JSON.stringify(context());host.querySelectorAll('button').forEach(b=>b.disabled=true);let timer;try{await Promise.race([fn(g),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),deadline);})]);}catch(e){if(current(g))error(e);}finally{clearTimeout(timer);if(current(g)){generation++;busy=false;host.querySelectorAll('button').forEach(b=>{if(!b.dataset.locked)b.disabled=false;});}}}
+    async function run(fn){
+      if(busy)return;
+      busy=true;const g=++generation;requestContext=JSON.stringify(context());
+      host.querySelectorAll('button').forEach(b=>b.disabled=true);
+      let timer,renewDeadline;
+      const timeout=new Promise((_,reject)=>{
+        renewDeadline=()=>{
+          clearTimeout(timer);
+          timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),deadline);
+        };
+        renewDeadline();
+      });
+      try{await Promise.race([fn(g,renewDeadline),timeout]);}
+      catch(e){if(current(g))error(e);}
+      finally{
+        clearTimeout(timer);
+        if(current(g)){generation++;busy=false;host.querySelectorAll('button').forEach(b=>{if(!b.dataset.locked)b.disabled=false;});}
+      }
+    }
     function locked(b){b.disabled=true;b.dataset.locked='true';return b;}
     function draw(p){
       shell();preview=p;if(p.testMode)host.append(el('p','관리자 테스트 전용 · '+(p.realScheduleTest?'실제 학생 일정':'가상 학생 일정')+' · '+p.testRecipient+' · 실제 학부모에게는 발송하지 않습니다.'));
@@ -76,7 +94,25 @@
         host.append(line);}
       host.append(button('알림톡 미리보기',()=>load()));
     }
-    async function showResults(){return run(async g=>{const ctx=context();if(!ctx.studentId){shell();host.append(el('p','학생 ID 연결 전에는 알림톡 이력을 조회할 수 없습니다.'));return;}const r=await api('results',{date:ctx.date,studentIds:[ctx.studentId]});if(current(g))renderResults(r.results);});}
+    async function showResults(){
+      return run(async(g,renewDeadline)=>{
+        const ctx=context();
+        if(!ctx.studentId){shell();host.append(el('p','학생 ID 연결 전에는 알림톡 이력을 조회할 수 없습니다.'));return;}
+        const {results}=await api('results',{date:ctx.date,studentIds:[ctx.studentId]});
+        if(!current(g))return;
+        renderResults(results);
+        let deferred=false;
+        for(const [index,row] of results.entries()){
+          if(row.fallbackResult!=='CHECKING'||!['REQUESTING','UNKNOWN','ACCEPTED','PROCESSING'].includes(row.state))continue;
+          renewDeadline();
+          try{results[index]=await api('reconcile',{id:row.id});}
+          catch{deferred=true;}
+          if(!current(g))return;
+          renderResults(results);
+        }
+        if(deferred)host.append(el('p','대체 문자 결과 조회가 지연됐습니다. 잠시 후 다시 확인해 주세요.'));
+      });
+    }
     return {load,showResults,reset};
   }
   root.TimetableAlimtalkUI={mount};

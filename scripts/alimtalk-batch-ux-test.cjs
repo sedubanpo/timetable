@@ -170,3 +170,29 @@ test('changed schedule shortcut sends one fresh target plan for the current audi
  const s=setup(async(action,input)=>{calls.push({action,input});if(action==='batchPreview')return {...preview,items:[...preview.items,{...preview.items[0],studentId:'other',ticket:'not-selected'}]};if(action==='batchSend')return {results:[{state:'ACCEPTED'}]};throw Error(action);});
  try{await s.ui.quickSend('changed',{studentId:'s',name:'가상학생'});assert.deepEqual(calls.map(c=>c.action),['batchPreview','batchSend']);for(const c of calls){assert.equal(c.input.mode,'changed');assert.equal(c.input.audience,'student');}assert.deepEqual(Array.from(calls[1].input.tickets),['synthetic']);assert.equal(s.host.querySelectorAll('input').length,0);}finally{s.dom.window.close();}
 });
+
+test('opening history reconciles only pending fallback receipts in groups of five and reloads once',async()=>{
+ for(const audience of ['guardian','student']){
+  const row={name:'가상학생',studentId:'s',state:'PROCESSING',createdAt:1,ataErrorCode:'3104'};
+  const results=Array.from({length:6},(_,i)=>({...row,id:String(i),fallbackResult:'CHECKING'}));
+  results.push({...row,id:'other-ata'},{...row,id:'already-done',state:'DELIVERED',fallbackResult:'DELIVERED'});
+  const calls=[];
+  const s=setup(async(action,input)=>{
+   assert.equal(input.audience,audience);
+   if(action==='batchHistory'){calls.push('history');return {results:results.map(r=>({...r}))};}
+   assert.equal(action,'batchRefresh');calls.push(Array.from(input.ids));
+   for(const id of input.ids){
+    if(id==='0')continue; // Provider still has no final SMS report.
+    Object.assign(results.find(r=>r.id===id),{state:'DELIVERED',fallbackResult:'DELIVERED'});
+   }
+   return {checked:input.ids.length};
+  },()=>{},audience);
+  try{
+   await s.ui.history();
+   assert.deepEqual(calls,['history',['0','1','2','3','4'],['5'],'history']);
+   assert.equal((s.host.textContent.match(/대체 문자 수신 완료/g)||[]).length,6);
+   assert(s.host.textContent.includes('문자 대체 결과 확인 중'));
+   assert(s.find('결과 대기 2건'));
+  }finally{s.dom.window.close();}
+ }
+});
