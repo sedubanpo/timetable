@@ -8633,6 +8633,10 @@ root.TimetableAlimtalkReviewUI={mount};
           title.textContent=selectedStudentForImage ? selectedStudentForImage+' · '+currentSheetName : '알림톡 발송 준비';
         }
         if(!selectedStudentForImage){out.textContent='학생을 선택하면 예상 문구가 표시됩니다.';return;}
+        if(studentCardMode==='message'&&(cardRosterScope!==rosterKey()||!Array.isArray(cardRosterRows))){
+          out.textContent=cardRosterError?'발송 문구를 확인하지 못했습니다. 목록을 다시 확인해 주세요.':'선택한 수신 대상의 발송 문구를 확인하고 있습니다.';
+          return;
+        }
         var matching=cardRosterScope===rosterKey()?(cardRosterRows||[]).filter(r=>r.name===selectedStudentForImage):[];
         if(matching.length===1&&matching[0].policyPreview){out.textContent=matching[0].policyPreview;return;}
         var rows=buildStudentCardViewModel(selectedStudentForImage).timelineRows.filter(function(r){return !r.isBreak;}),clock=function(h){return String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round((h%1)*60)).padStart(2,'0');};
