@@ -100,7 +100,7 @@ function mount({host,api,context,refresh}){
  // Only lock this modal. Session and date changes still invalidate outstanding requests.
  function lock(){
   const modal=host.closest('#studentImageModal');
-  const controls=Array.from(modal?.querySelectorAll('.card-modal-head button,.card-mode-tabs,.batch-bar,.student-list-panel,.card-actions')||[]).filter(n=>!n.inert);
+  const controls=Array.from(modal?.querySelectorAll('.card-modal-head,.card-mode-tabs,.batch-bar,.student-list-panel,.card-actions')||[]).filter(n=>!n.inert);
   for(const n of controls)n.inert=true;
   const warn=e=>{e.preventDefault();e.returnValue='';};
   root.addEventListener('beforeunload',warn);
@@ -165,9 +165,9 @@ function mount({host,api,context,refresh}){
    }
   }
  }
- async function review(mode,target=null){
+ async function review(mode,target=null,compareOnly=false){
   if(sending)return;
-  const current=view(),{date,audience}=context(),who=audienceName(audience),showHistory=()=>history(target),reviewAgain=()=>review(mode,target);
+  const current=view(),{date,audience}=context(),who=audienceName(audience),showHistory=()=>history(target),reviewAgain=()=>review(mode,target,compareOnly);
   host.append(loading('최신 시간표와 발송 기록을 확인하고 있습니다…'));
   try{
    const response=await api('batchPreview',{date,audience,mode,...(target?{studentIds:[target.studentId]}:{})});if(!current())return;
@@ -175,6 +175,7 @@ function mount({host,api,context,refresh}){
    const p=target?{...response,items:response.items.filter(r=>r.studentId===target.studentId),rows:response.rows.filter(r=>r.studentId===target.studentId),changes:(response.changes||[]).filter(r=>r.studentId===target.studentId),eligibleStudents:(response.eligibleStudents||[]).filter(r=>r.studentId===target.studentId)}:response;
    host.replaceChildren(el('h3',(target?target.name+' · ':'')+who+' · '+(mode==='changed'?'변경 대상자 발송':target?'발송 확인':'발송 대기 명단')),note(date+' 수업 안내 · 받을 번호를 선택하고 본문을 확인하세요.'));
    studentBack(target);
+   if(compareOnly){renderChanges(host,p,who);studentBack(target);return;}
    if(target&&p.readOnly){host.append(note('조회 전용 권한입니다. 발송 권한이 있는 실무자 계정으로 확인해 주세요.'));return;}
    if(mode==='changed'&&!target){
     renderChanges(host,p,who);
@@ -305,7 +306,7 @@ function mount({host,api,context,refresh}){
   const current=view(),{date,audience}=context(),showHistory=()=>history(target);
   host.append(loading(audienceName(audience)+' 발송 이력을 불러오고 있습니다…'));
   try{
-   const response=await api('batchHistory',{date,audience});if(!current())return;
+   const response=await api('batchHistory',{date,audience,...(target?{studentIds:[target.studentId]}:{})});if(!current())return;
    if(target||response.recoveryChecked)refresh(target?{studentIds:[target.studentId],background:true}:{background:true});
    const results=target?response.results.filter(r=>r.studentId===target.studentId):response.results;
    host.replaceChildren(el('h3',(target?target.name+' · ':'')+audienceName(audience)+' · '+(target?'발송 이력':'전체 발송 이력')),note(date+' 수업 안내 · 최근 요청 순'));
@@ -367,6 +368,11 @@ function mount({host,api,context,refresh}){
     }
     if(r.lastResultCheckAt)group.append(note('최근 결과 조회 · '+new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(r.lastResultCheckAt)));
     if(r.errorCode)group.append(note('결과 코드: '+r.errorCode));
+    for(const event of r.scheduleChanges||[]){
+     const revision=el('details'),when=new Date(event.capturedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+     revision.append(el('summary',when+' · 일정 변경'),body('변경 전',event.previous),body('변경 후',event.current));group.append(revision);
+    }
+    if(!target&&r.hasScheduleChanges)group.append(button('일정 변경 이력',()=>history({studentId:r.studentId,name:r.name})));
     if(r.text)group.append(body('보낸 본문',r.text));
     if(['REQUESTING','PROCESSING','ACCEPTED','UNKNOWN'].includes(r.state)){
      const check=button(r.trackingMissing?'접수 기록 다시 찾기':'수신 결과 조회',async()=>{if(refreshing)return;refreshing=true;check.disabled=true;check.textContent='수신 결과 확인 중…';try{await api(audience==='student'?'studentReconcile':'reconcile',{id:r.id});if(current()){await showHistory();refresh(target?{studentIds:[target.studentId],background:true}:{background:true});}}catch(e){if(current()){group.append(note(errorText(e)));check.disabled=false;check.textContent='수신 결과 다시 조회';}}finally{refreshing=false;}});group.append(check);}
@@ -378,7 +384,7 @@ function mount({host,api,context,refresh}){
    }
   }catch(e){if(current())host.replaceChildren(note(errorText(e)),button('이력 다시 확인',showHistory));}
  }
- return {review,quickSend,history,reset,errorText,isSending:()=>sending};
+ return {review,compare:target=>review('changed',target,true),quickSend,history,reset,errorText,isSending:()=>sending};
 }
 root.TimetableBatchUI={mount,errorText,lessonChanges};
 })(globalThis);

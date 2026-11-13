@@ -106,14 +106,32 @@ function openCardRosterAction(name,state){
  host.tabIndex=-1;host.focus({preventScroll:true});host.scrollIntoView({block:'nearest'});
  return task;
 }
+var rosterFilter='all';
+const rosterFilters={all:'전체',changed:'변경 대상',unsent:'미발송',sent:'발송완료'};
+function rosterCategory(row){
+ if(row?.state==='changed')return 'changed';
+ const state=cardRosterGroup(row);
+ if(state==='sent')return 'sent';
+ if(['held','unsent','failed'].includes(state)&&!row?.issue?.startsWith('안내 대상 수업 없음'))return 'unsent';
+ return '';
+}
 function drawAlimtalkRoster(list,keyword){
  const ready=cardRosterScope===rosterKey()&&Array.isArray(cardRosterRows),byName=new Map();
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
  const names=[...new Set([...Object.keys(studentImageScheduleMap),...byName.keys()].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
  const groups={changed:['시간표 변경 · 안내 필요','이전에 받은 안내와 현재 시간표가 다릅니다. 변경 발송을 누르면 최신 시간표를 바로 보냅니다.'],unsent:['발송 대기','발송 버튼을 누르면 확인된 번호로 바로 전송됩니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],unconfirmed:['접수 확인 필요','최초 발송의 접수 기록을 찾지 못했습니다. 결과 조회가 필요합니다.'],pending:['결과 확인 중','최종 수신 결과를 확인하고 있습니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
  if(!ready)groups.held=[cardRosterError?'조회 실패':'기록 확인 중',cardRosterError?'다시 확인을 눌러 조회해 주세요.':'서버 기록을 확인한 뒤 발송 상태를 표시합니다.'];
- const visible=names.filter(n=>!keyword||n.toLowerCase().includes(keyword));
- const sections=new Map(),scrollTop=list.scrollTop;
+ const counts={all:names.length,changed:0,unsent:0,sent:0};
+ if(ready)for(const name of names){const category=rosterCategory(byName.get(name));if(category)counts[category]++;}
+ for(const b of document.querySelectorAll('[data-roster-filter]')){
+  const key=b.dataset.rosterFilter;
+  b.textContent=rosterFilters[key]+' '+(ready||key==='all'?counts[key]:'…');
+  b.disabled=!ready&&key!=='all';
+  b.setAttribute('aria-pressed',String(key===rosterFilter));
+  b.onclick=()=>{rosterFilter=key;resetCardAlimtalk();list.scrollLeft=0;filterStudentImageList();};
+ }
+ const visible=names.filter(n=>(rosterFilter==='all'||(ready&&rosterCategory(byName.get(n))===rosterFilter))&&(!keyword||n.toLowerCase().includes(keyword)));
+ const sections=new Map(),scrollLeft=list.scrollLeft;
  list.replaceChildren();
  const make=(tag,s)=>{const n=document.createElement(tag);if(s!==undefined)n.textContent=s;return n;};
  const msg=document.getElementById('batchRosterStatus');msg.replaceChildren();
@@ -125,16 +143,24 @@ function drawAlimtalkRoster(list,keyword){
  if(!ready){
   msg.append(make('span',cardRosterError||((cardAudience==='student'?'학생':'학부모')+' 발송 기록 확인 중…')));
   if(cardRosterError){const retry=make('button','다시 확인');retry.type='button';retry.onclick=()=>reloadCardRoster();msg.append(retry);}
- }else{msg.textContent=(cardAudience==='student'?'학생 본인':'학부모')+' 기준 · '+names.length+'명';}
+ }else{msg.textContent=(cardAudience==='student'?'학생 본인':'학부모')+' 기준 · 변경 대상 '+counts.changed+'명 · 미발송 '+counts.unsent+'명';}
  for(const name of visible){
   const row=byName.get(name),state=cardRosterGroup(row);
   if(!sections.has(state))sections.set(state,[]);
   const b=make('button');b.type='button';b.className='recipient-student';b.dataset.studentName=name;b.setAttribute('aria-pressed',String(name===selectedStudentForImage));
   b.append(make('strong',name));
-  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?'아직 안내하지 않은 시간표 · 발송 가능':'');
+  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?'발송 대기 · 발송 가능':state==='sent'?'수신 완료':'');
   if(sub){const label=make('small',sub);if(state==='changed')label.className='roster-change-label';b.append(label);}
   b.onclick=()=>{if(!studentImageScheduleMap[name]){openCardBulk('history');return;}selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();};
   const tile=make('div');tile.className='roster-student-card';tile.append(b);
+  if(row?.state==='changed'&&row.studentId){
+   const compare=make('button','변경 비교');compare.type='button';compare.className='roster-compare';
+   compare.setAttribute('aria-label',name+' 변경 전후 비교');
+   compare.onclick=()=>{if(studentImageScheduleMap[name])selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();resetCardAlimtalk();const host=document.getElementById('cardAlimtalkPanel');
+    if(!cardBulkUI)cardBulkUI=TimetableBatchUI.mount({host,api:cardAlimtalkApi,context:cardBatchContext,refresh:reloadCardRoster});
+    host.dataset.bulk='true';host.dataset.bulkMode='compare';cardBulkUI.compare({studentId:row.studentId,name});host.scrollIntoView({block:'nearest'});
+   };tile.append(compare);
+  }
   const actionLabel={unsent:'발송',failed:'재발송',changed:'변경 발송',pending:'결과 확인',unconfirmed:'접수 확인'}[state];
   if(ready&&row?.studentId&&studentImageScheduleMap[name]&&actionLabel){
    const action=make('button',actionLabel);action.type='button';action.className='roster-student-action';
@@ -153,11 +179,11 @@ function drawAlimtalkRoster(list,keyword){
   const g=make('section'),h=make('div'),grid=make('div');g.className='roster-group roster-'+state;h.className='roster-heading';h.title=description;
   h.append(make('strong',title),make('span',rows.length+'명'));grid.className='roster-tiles';grid.append(...rows);const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
  }
- if(!visible.length)list.append(make('p','검색 결과가 없습니다.'));
+ if(!visible.length)list.append(make('p',keyword?'검색 결과가 없습니다.':ready?'해당 상태의 학생이 없습니다.':'발송 상태를 확인하고 있습니다.'));
  const selectable=visible.filter(n=>Object.hasOwn(studentImageScheduleMap,n));
  if(!selectable.includes(selectedStudentForImage)){
   if(selectable.length)selectStudentImageItem(selectable[0],{skipListRender:true});
   else if(selectedStudentForImage){selectedStudentForImage='';resetCardAlimtalk();renderCardMessageReference();}
  }
- refreshStudentImageListSelectionState();list.scrollTop=scrollTop;
+ refreshStudentImageListSelectionState();list.scrollLeft=scrollLeft;
 }

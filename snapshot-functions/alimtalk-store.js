@@ -5,6 +5,22 @@ function firestoreStore(db){
   const records=db.collection('timetableAlimtalkDeliveries');
   const previews=db.collection('timetableAlimtalkPreviews');
   return {
+    async observeSchedule(record,current,capturedAt){
+      const ref=records.doc(record.id);
+      await db.runTransaction(async tx=>{
+        const data=(await tx.get(ref)).data();
+        if(!data||data.state!=='DELIVERED'||(data.scheduleObservedAt||0)>=capturedAt)return;
+        const previous=data.lastObservedSchedule??data.text;
+        if(previous!==current){
+          tx.set(ref.collection('scheduleChanges').doc(String(capturedAt)),{previous,current,capturedAt});
+        }
+        tx.update(ref,{scheduleObservedAt:capturedAt,lastObservedSchedule:current});
+      });
+    },
+    async recentChanges(id){
+      const result=await records.doc(id).collection('scheduleChanges').orderBy('capturedAt','desc').limit(20).get();
+      return result.docs.map(doc=>doc.data());
+    },
     async savePreview(id,value){await previews.doc(id).create(value);},
     async preview(id){if(typeof id!=='string'||!/^[a-f0-9-]{36}$/.test(id))return null;return (await previews.doc(id).get()).data()||null;},
     async get(id){if(!/^[a-f0-9]{64}$/.test(id))return null;return (await records.doc(id).get()).data()||null;},

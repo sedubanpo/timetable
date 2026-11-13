@@ -84,6 +84,13 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    });
    // A removed/replaced number is not evidence that the new number has received anything.
    const byPhone=new Map();for(const r of received)if(!byPhone.has(r.phone))byPhone.set(r.phone,r);
+   // A successful delivery is the durable baseline. Preserve each subsequently observed
+   // revision against that receipt, including reversions before a new notice is sent.
+   for(const record of byPhone.values()){
+    if(src.capturedAt && (record.lastObservedSchedule??record.text)!==c.text){
+     await store.observeSchedule(record,c.text,src.capturedAt);
+    }
+   }
    const comparisons=[...byPhone.values()].filter(r=>r.version!==version).map(r=>({previous:r.text||'',relation:r.relation,receivedAt:r.createdAt}));
    const changed=items.some(t=>t.state==='changed')||(!items.length&&[...byPhone.values()].some(r=>r.version!==version));
    const state=changed?'changed':items.some(t=>t.state==='unsent')?'unsent':items.some(t=>t.state==='pending')?'pending':
@@ -208,8 +215,13 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   let recoveryDeferred=false;
   if(missing.length){try{await refresh(session,{...input,ids:missing.map(r=>r.id)});rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);}catch{recoveryDeferred=true;}}
   await actor(session);
+  const events=new Map();
+  if(input.studentIds){
+   rows=rows.filter(r=>input.studentIds.includes(r.studentId));
+   await pooled(rows.filter(r=>r.scheduleObservedAt),async r=>events.set(r.id,await store.recentChanges(r.id)));
+  }
   return {recoveryDeferred,recoveryChecked:missing.length,results:rows.filter(r=>r.studentId!=='__alimtalk_admin_test__').sort(newest).map(r=>({id:r.id,studentId:r.studentId,name:r.variables?.['#{학생명}']||'',createdAt:r.createdAt,
-   trackingMissing:!r.messageId||!r.groupId,trackingIssue:r.trackingIssue||null,lastResultCheckAt:r.lastResultCheckAt||null,state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,retryOf:r.retryOf||null,recoveryResolution:r.recoveryResolution||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,batch:!!r.batchId}))};
+   trackingMissing:!r.messageId||!r.groupId,trackingIssue:r.trackingIssue||null,lastResultCheckAt:r.lastResultCheckAt||null,state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,retryOf:r.retryOf||null,recoveryResolution:r.recoveryResolution||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,hasScheduleChanges:!!r.scheduleObservedAt,scheduleChanges:events.get(r.id),batch:!!r.batchId}))};
  }
  return {batchRoster:roster,batchPreview:prepare,batchSend:send,batchHistory:history,batchRefresh:refresh,batchReleaseUnreceived:releaseUnreceived};
 }

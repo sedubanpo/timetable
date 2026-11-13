@@ -108,3 +108,26 @@
 #studentImageModal .roster-student-action:hover{background:#eaf2ff;border-color:#326c9d}
 #studentImageModal .roster-student-card button:focus-visible{outline:2px solid #285ca3;outline-offset:2px}
 #studentImageModal .roster-pending .roster-tiles,#studentImageModal .roster-failed .roster-tiles,#studentImageModal .roster-unsent .roster-tiles,#studentImageModal .roster-changed .roster-tiles{grid-template-columns:1fr}
+
+#cardSheetDate{min-height:40px;max-width:37%;padding:4px 8px;border:1px solid #bac8d9;border-radius:7px;background:white;color:#183755;font:inherit}
+#studentImageModal .roster-filters{display:flex;flex-wrap:wrap;gap:4px;margin-right:auto}
+#studentImageModal .roster-filters button[aria-pressed=true]{border-color:#244c72;background:#dfebf7;color:#163954;box-shadow:inset 0 -2px #244c72}
+#studentImageModal .roster-filters button[data-roster-filter=changed]{color:#79510b}
+#studentImageModal .roster-filters button[data-roster-filter=unsent]{color:#983639}
+#studentImageModal[data-card-mode=message] #cardDeliveryWorkspace{display:flex;flex-direction:column;min-width:0;overflow:auto}
+#studentImageModal[data-card-mode=message] .student-list-panel{flex:none;width:auto;max-height:none;min-width:0;display:grid;grid-template-columns:auto minmax(9em,15em) 1fr;align-items:center;gap:8px;padding:10px 14px}
+#studentImageModal[data-card-mode=message] #studentImageSearch{margin:0;padding:7px}
+#studentImageModal[data-card-mode=message] #batchRosterStatus{justify-self:end;margin:0}
+#studentImageModal[data-card-mode=message] #studentImageList{grid-column:1/-1;display:flex;align-items:stretch;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;max-height:none;max-width:100%;min-height:0;scrollbar-width:thin}
+#studentImageModal[data-card-mode=message] .roster-group{flex:none;border-radius:8px}
+#studentImageModal[data-card-mode=message] .roster-tiles{display:flex;gap:5px}
+#studentImageModal[data-card-mode=message] .roster-student-card{min-width:100px;max-width:290px}
+#studentImageModal[data-card-mode=message] .roster-description{display:none}
+#studentImageModal[data-card-mode=message] .roster-unsent{--paper:#fff0ec;--ink:#87332a}
+#studentImageModal[data-card-mode=message] .student-preview-panel{flex:1 1 auto;min-height:150px}
+@media(max-width:650px){
+ #studentImageModal[data-card-mode=message] .student-list-panel{grid-template-columns:auto 1fr}
+ #studentImageModal[data-card-mode=message] #batchRosterStatus{grid-column:1/-1;justify-self:start}
+ #studentImageModal[data-card-mode=message] .student-preview-panel{flex:none}
+ #studentImageModal .card-modal-head .modal-title{font-size:18px}
+}
