@@ -18,6 +18,14 @@
 #studentImageModal .roster-tiles button:hover{background:white}
 #studentImageModal .roster-tiles button[aria-pressed=true]{background:white;border-color:#326c9d;box-shadow:inset 3px 0 #326c9d}
 #studentImageModal .roster-tiles small{display:block;color:#58616c;font-size:12px;font-weight:450;margin-top:2px}
+#studentImageModal .batch-student-picker{padding:12px;border:1px solid #d5dfea;border-radius:8px}
+#studentImageModal .batch-student-picker h4{margin:0}
+#studentImageModal .batch-student-picker input[type=search]{box-sizing:border-box;width:100%;margin:6px 0;padding:7px 10px;font:inherit;border:1px solid #bdcbd9;border-radius:6px}
+#studentImageModal .batch-student-names{display:flex;flex-wrap:wrap;gap:5px}
+#studentImageModal .batch-student-names label{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 7px;margin:0;border:1px solid #cbd5df;border-radius:6px;cursor:pointer}
+#studentImageModal .batch-student-names label:has(:checked),#studentImageModal .batch-student-names label:has(:indeterminate){background:#e5f0fc;border-color:#82a5c8;color:#153f63}
+#studentImageModal .batch-student-names label[hidden]{display:none}
+#studentImageModal .bulk-manifest ul{padding-inline-start:22px}
 #studentImageModal .bulk-review-row{margin:10px 0;padding:12px;border:1px solid #d5dfea;border-radius:8px}
 #studentImageModal .bulk-review-row label,#studentImageModal .bulk-pick{display:flex;align-items:center;gap:6px;min-height:40px;margin:0}
 #studentImageModal .bulk-review-row summary,#studentImageModal .alimtalk-panel details>summary{padding:7px 0;color:#214b78;cursor:pointer;font-weight:650}

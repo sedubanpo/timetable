@@ -2,11 +2,11 @@
 // Entirely synthetic: no transport or production messages.
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const {JSDOM}=require(process.env.ALIMTALK_JSDOM_PATH||'/tmp/timetable-alimtalk-test-tools/node_modules/jsdom');
-function setup(api,refresh=()=>{}){
+function setup(api,refresh=()=>{},audience='student'){
  const dom=new JSDOM('<main id="studentImageModal"><div class="batch-bar"><button>대상 전환</button></div><aside></aside></main>',{runScripts:'outside-only'}),w=dom.window,host=w.document.querySelector('aside');
  w.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
  for(const f of ['alimtalk-contract.js','alimtalk-batch-ui.js'])w.eval(fs.readFileSync('assets/'+f,'utf8'));
- const ui=w.TimetableBatchUI.mount({host,api,context:()=>({date:'2026-11-12',audience:'student'}),refresh});
+ const ui=w.TimetableBatchUI.mount({host,api,context:()=>({date:'2026-11-12',audience}),refresh});
  const find=text=>[...host.querySelectorAll('button')].find(b=>b.textContent===text);
  return {dom,w,host,ui,find};
 }
@@ -20,6 +20,42 @@ test('preparation separates parent-only students from repairable holds and reset
  assert(send.disabled);all.click();ack.click();assert(!send.disabled);all.click();assert(send.disabled);assert(!ack.checked);
  }finally{s.dom.window.close();}
 });
+for(const audience of ['guardian','student']){
+ test(audience+' batch includes only chosen students and contacts across filters',async()=>{
+  const items=['A','B','C'].flatMap(id=>(audience==='guardian'?['모','부']:['학생']).map(relation=>({
+   studentId:id,name:'학생'+id,masked:'가상번호',relation,ticket:id+relation,text:'가상 본문'
+  })));
+  const calls=[];
+  const s=setup(async(action,input)=>{
+   if(action==='batchPreview')return {...preview,items};
+   assert.equal(action,'batchSend');calls.push(input);
+   return {results:input.tickets.map(()=>({state:'ACCEPTED'}))};
+  },()=>{},audience);
+  try{
+   await s.ui.review('unsent');
+   const picker=s.host.querySelector('.batch-student-picker');
+   const byName=name=>[...picker.querySelectorAll('.batch-student-names label')].find(label=>label.textContent===name);
+   const ack=s.host.querySelector('.bulk-send-footer input');
+   picker.querySelector('.bulk-pick input').click();ack.click();
+   const search=picker.querySelector('[type=search]');search.value='학생B';search.dispatchEvent(new s.w.Event('input'));
+   byName('학생B').querySelector('input').click();
+   assert(!ack.checked);assert(s.host.querySelector('.send-action').disabled);
+   search.value='';search.dispatchEvent(new s.w.Event('input'));
+   s.find('제외 1명').click();assert(!byName('학생B').hidden);assert(byName('학생A').hidden);
+   s.find('포함 2명').click();assert(byName('학생B').hidden);
+   if(audience==='guardian'){
+    s.host.querySelector('.bulk-review-row input').click();
+    assert(byName('학생A').querySelector('input').indeterminate);
+   }
+   const expected=items.filter(item=>item.studentId!=='B'&&item.ticket!=='A모');
+   const manifest=s.host.querySelector('.bulk-manifest');assert.equal(manifest.querySelectorAll('li').length,2);
+   assert(!manifest.textContent.includes('학생B'));assert.equal(calls.length,0);
+   ack.click();await s.host.querySelector('.send-action').onclick();
+   assert.equal(calls.length,1);assert.equal(calls[0].audience,audience);
+   assert.deepEqual(Array.from(calls[0].tickets),expected.map(item=>item.ticket));
+  }finally{s.dom.window.close();}
+ });
+}
 test('accepted messages stay explicitly unconfirmed; active range, elapsed time and modal lock are visible',async()=>{
  let finish;const s=setup(async action=>action==='batchPreview'?preview:new Promise(r=>finish=r));
  try{const operation=start(s);await new Promise(r=>setImmediate(r));assert(s.ui.isSending());

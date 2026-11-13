@@ -2312,6 +2312,14 @@
 #studentImageModal .roster-tiles button:hover{background:white}
 #studentImageModal .roster-tiles button[aria-pressed=true]{background:white;border-color:#326c9d;box-shadow:inset 3px 0 #326c9d}
 #studentImageModal .roster-tiles small{display:block;color:#58616c;font-size:12px;font-weight:450;margin-top:2px}
+#studentImageModal .batch-student-picker{padding:12px;border:1px solid #d5dfea;border-radius:8px}
+#studentImageModal .batch-student-picker h4{margin:0}
+#studentImageModal .batch-student-picker input[type=search]{box-sizing:border-box;width:100%;margin:6px 0;padding:7px 10px;font:inherit;border:1px solid #bdcbd9;border-radius:6px}
+#studentImageModal .batch-student-names{display:flex;flex-wrap:wrap;gap:5px}
+#studentImageModal .batch-student-names label{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 7px;margin:0;border:1px solid #cbd5df;border-radius:6px;cursor:pointer}
+#studentImageModal .batch-student-names label:has(:checked),#studentImageModal .batch-student-names label:has(:indeterminate){background:#e5f0fc;border-color:#82a5c8;color:#153f63}
+#studentImageModal .batch-student-names label[hidden]{display:none}
+#studentImageModal .bulk-manifest ul{padding-inline-start:22px}
 #studentImageModal .bulk-review-row{margin:10px 0;padding:12px;border:1px solid #d5dfea;border-radius:8px}
 #studentImageModal .bulk-review-row label,#studentImageModal .bulk-pick{display:flex;align-items:center;gap:6px;min-height:40px;margin:0}
 #studentImageModal .bulk-review-row summary,#studentImageModal .alimtalk-panel details>summary{padding:7px 0;color:#214b78;cursor:pointer;font-weight:650}
@@ -2693,15 +2701,60 @@ function mount({host,api,context,refresh}){
    holds(held);
    if(!data.length){host.append(note(mode==='changed'?'이전에 받은 안내와 내용이 다르고, 받는 번호까지 확인된 대상이 없습니다.':'현재 발송할 수 있는 대기 번호가 없습니다. 수신 결과는 전체 발송 이력에서 확인하세요.'));host.append(button(target?'이 학생 발송 이력 보기':'전체 발송 이력 보기',showHistory));return;}
    const chosen=new Set(),checks=[];
-   const bulk=el('label',undefined,'bulk-pick'),all=el('input');all.type='checkbox';bulk.append(all,document.createTextNode(' 가능한 번호 전체 선택 ('+data.length+'건)'));if(!target)host.append(bulk);
+   const bulk=el('label',undefined,'bulk-pick'),all=el('input');all.type='checkbox';bulk.append(all,document.createTextNode(' 가능한 번호 전체 선택 ('+data.length+'건)'));
    const students=new Map();for(const item of data){if(!students.has(item.studentId))students.set(item.studentId,[]);students.get(item.studentId).push(item);}
+   const studentPicks=[],filterButtons=[];
+   let listFilter='all';
+   const search=el('input'),empty=note('조건에 맞는 학생이 없습니다.');
+   if(!target){
+    const picker=el('section',undefined,'batch-student-picker');
+    const heading=el('h4','일괄 발송 대상 선택');
+    const filters=el('div',undefined,'history-filters');
+    filters.setAttribute('role','group');filters.setAttribute('aria-label','학생 선택 상태');
+    for(const [key,label] of [['all','전체'],['included','포함'],['excluded','제외']]){
+     const b=button(label,()=>{listFilter=key;paintPicker();});
+     filterButtons.push({key,label,b});filters.append(b);
+    }
+    search.type='search';search.placeholder='학생 이름 검색';search.setAttribute('aria-label','일괄 발송 대상 이름 검색');search.oninput=paintPicker;
+    const names=el('div',undefined,'batch-student-names');
+    for(const items of students.values()){
+     const label=el('label'),check=el('input');check.type='checkbox';
+     label.append(check,document.createTextNode(items[0].name));names.append(label);
+     studentPicks.push({label,check,items});
+     check.onchange=()=>{
+      for(const item of items)setChosen(item.ticket,check.checked);
+      sync();
+     };
+    }
+    picker.append(heading,note('전체 선택 후 제외할 학생의 체크를 해제하거나, 보낼 학생만 선택하세요.'),bulk,filters,search,names,empty);
+    host.append(picker);
+   }
+   function setChosen(ticket,included){
+    if(included)chosen.add(ticket);else chosen.delete(ticket);
+   }
+   function paintPicker(){
+    if(target)return;
+    const counts={all:students.size,included:0,excluded:0};
+    let visible=0;
+    for(const {label,check,items} of studentPicks){
+     const n=items.filter(item=>chosen.has(item.ticket)).length,key=n?'included':'excluded';
+     counts[key]++;
+     check.checked=n===items.length;check.indeterminate=n>0&&!check.checked;
+     label.hidden=(listFilter!=='all'&&listFilter!==key)||!items[0].name.includes(search.value.trim());
+     if(!label.hidden)visible++;
+    }
+    for(const {key,label,b} of filterButtons){
+     b.textContent=label+' '+counts[key]+'명';b.setAttribute('aria-pressed',String(key===listFilter));
+    }
+    empty.hidden=visible>0;
+   }
    host.append(note('알림톡 전달에 실패하면 같은 번호로 문자 대체 발송을 시도합니다.'));
    const list=el('details',undefined,'bulk-pick-list');
    if(target)list.open=true;
    list.append(el('summary','수신자별 선택 · 본문 보기 ('+data.length+'건)'));host.append(list);
    for(const items of students.values()){
     const group=el('section',undefined,'bulk-review-row');group.append(el('strong',items[0].name));
-    for(const item of items){const l=el('label'),i=el('input');i.type='checkbox';checks.push([i,item.ticket]);i.onchange=()=>{if(i.checked)chosen.add(item.ticket);else chosen.delete(item.ticket);sync();};
+    for(const item of items){const l=el('label'),i=el('input');i.type='checkbox';checks.push([i,item.ticket]);i.onchange=()=>{setChosen(item.ticket,i.checked);sync();};
      l.append(i,document.createTextNode(' '+item.relation+' · '+item.masked+(item.retry?' · 실패 건 재시도':'')));group.append(l);
     }
     const content=body('보낼 본문 보기',items[0].text);if(target)content.open=true;group.append(content);
@@ -2713,8 +2766,25 @@ function mount({host,api,context,refresh}){
    const selected=el('strong',undefined,'bulk-selection'),guidance=el('span',undefined,'bulk-guidance');
    const send=button('',start);send.className='send-action';
    foot.append(selected,ack,guidance,send);host.append(foot);
-   all.onchange=()=>{for(const [i,t] of checks){i.checked=all.checked;if(i.checked)chosen.add(t);else chosen.delete(t);}sync();};
-   function sync(){ck.checked=false;ck.disabled=!chosen.size;all.checked=chosen.size===data.length;all.indeterminate=chosen.size>0&&!all.checked;update();}
+   const manifest=el('details',undefined,'bulk-manifest'),manifestTitle=el('summary'),manifestList=el('ul');
+   if(!target){manifest.append(manifestTitle,manifestList);host.insertBefore(manifest,foot);}
+   all.onchange=()=>{for(const item of data)setChosen(item.ticket,all.checked);sync();};
+   function sync(){
+    ck.checked=false;ck.disabled=!chosen.size;
+    all.checked=chosen.size===data.length;all.indeterminate=chosen.size>0&&!all.checked;
+    for(const [check,ticket] of checks)check.checked=chosen.has(ticket);
+    if(!target){
+     paintPicker();
+     manifestList.replaceChildren();
+     for(const items of students.values()){
+      const recipients=items.filter(item=>chosen.has(item.ticket));
+      if(recipients.length)manifestList.append(el('li',items[0].name+' · '+recipients.map(item=>item.relation+' '+item.masked).join(' / ')));
+     }
+     manifest.hidden=!chosen.size;
+     manifestTitle.textContent='최종 발송 명단 · '+manifestList.childElementCount+'명 · '+chosen.size+'건';
+    }
+    update();
+   }
    function update(){selected.textContent=date+' · '+who+' · '+chosen.size+'건 선택';guidance.textContent=!chosen.size?'받을 번호를 선택하세요.':!ck.checked?'수신자와 본문 확인 후 체크해 주세요.':'선택한 번호로만 발송합니다.';send.textContent=who+' '+chosen.size+'건 '+(mode==='changed'?'변경 안내 발송':'발송');send.disabled=!chosen.size||!ck.checked||sending;}
    ck.onchange=update;
    if(target)for(const [i,t] of checks){i.checked=true;chosen.add(t);}
