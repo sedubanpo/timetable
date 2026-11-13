@@ -3238,7 +3238,10 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
           label.append(check,document.createTextNode(' '+r.relation+' · '+r.masked));receivers.append(label);}
         if(!row.choices?.length)receivers.append(el('p','이 대상에게 보낼 수 있는 번호가 없습니다. 학생 원장의 연락처와 이 수업일의 수신자 설정을 확인해 주세요.'));
         section.append(receivers);
-        for(const r of row.reasons||[])section.append(el('p','보류 · '+r));
+        for(const r of row.reasons||[]){
+          if(!row.choices?.length&&!row.memoReview&&r==='시간 메모 확인 필요')continue;
+          section.append(el('p','보류 · '+r));
+        }
         if(row.memoReview){
           const memo=el('fieldset');memo.append(el('legend','시간표 원본 비고'));
           for(const text of row.memoReview.notes)memo.append(el('p',text));
