@@ -109,6 +109,13 @@
     if(selected)[block.start,block.end]=selected;
     return true;
   }
+  const saturdayChoiceLabel='오전 10시 또는 11시 시작(학생 선택)';
+  // This marker describes the note, not authorization to ignore a time hold.
+  function isSaturdayChoiceNote(note,date){
+    if(!validDate(date)||new Date(date+'T00:00:00Z').getUTCDay()!==6)return false;
+    const scoped=timeNoteForDate(note,date);
+    return /^\s*(?:(?:확정|지각)[\s,，;]*)*(?:오전\s*)?10(?:시|:00)\s*또는\s*(?:오전\s*)?11(?:시|:00)\s*시작(?:\s*\(학생\s*선택\))?\s*[.]?\s*$/.test(scoped);
+  }
   function cardTimeRange(startHour,endHour,note,status){
     const parsed=readTimeNote(note,status);
     const block={start:startHour*60,end:endHour*60,timeRanges:parsed.ranges};
@@ -165,10 +172,23 @@
     ].join('\n');
   }
   function compose(student,date,rows){
-    const result=normalize(rows,student.id,date);
+    let result=normalize(rows,student.id,date);
+    const first=result.lessons[0];
+    const flexible=student.timetableSaturdayArrivalChoice===true&&student.mappingVerified===true&&validDate(date)
+      &&new Date(date+'T00:00:00Z').getUTCDay()===6&&first&&[600,660].includes(first.start)&&first.end>660;
+    if(flexible){
+      const ids=new Set(first.sourceIds);
+      result=normalize(rows.map(r=>r.saturdayChoiceNote&&ids.has(r.sourceId)
+        ?{...r,reviewReasons:r.reviewReasons.filter(reason=>reason!=='시간 메모 확인 필요')}:r),student.id,date);
+    }
     if(!student.name||student.mappingVerified!==true)result.reasons.push('학생 ID 매핑 미확인');
-    const variables={'#{학생명}':student.name||'','#{수업일}':date,'#{등원시각}':result.lessons.length?clock(result.lessons[0].start):'',
-      '#{수업목록}':result.lessons.map(formatLesson).join('\n\n')};
+    const variables={'#{학생명}':student.name||'','#{수업일}':date,'#{등원시각}':flexible?saturdayChoiceLabel:result.lessons.length?clock(result.lessons[0].start):'',
+      '#{수업목록}':result.lessons.map((l,i)=>{
+        const line=formatLesson(l,i);
+        if(!flexible||i!==0)return line;
+        return line.replace(clock(l.start)+'–'+clock(l.end),'10:00 또는 11:00 시작 · '+clock(l.end)+' 종료')
+          .replace(/( · [^\n]+) \d+(?:시간|분)(?: \d+분)?\n/,'$1\n');
+      }).join('\n\n')};
     const text=content.replace(/#\{[^}]+\}/g,key=>variables[key]);
     if(text.length>1000)result.reasons.push('본문 1,000자 제한 초과');
     if(/#\{[^}]+\}/.test(text))result.reasons.push('치환되지 않은 변수 또는 입력 확인 필요');
@@ -183,5 +203,5 @@
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });

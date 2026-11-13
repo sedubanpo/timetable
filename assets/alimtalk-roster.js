@@ -171,6 +171,7 @@ function drawAlimtalkRoster(list,keyword){
  function showDetail(name){
   if(!detail)return;
   const entry=details.get(name);
+  if(document.getElementById('cardMessageReferenceBody'))renderCardMessageReference();
   renderRosterComparison(entry?.row);
   detail.replaceChildren();
   if(entry){

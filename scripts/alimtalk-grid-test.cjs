@@ -102,3 +102,16 @@ test('standalone self study heading is not a student and does not block the date
  }
  const s=fixture();s.data.grid[15]=[['자기주도 확인필요']];assert.equal(parseSnapshot(s,now).complete,false);
 });
+
+test('Saturday choice uses the verified student policy and clears only the matching first lesson note',()=>{
+ const R=require('../snapshot-functions/alimtalk-contract'),s=fixture(),student={id:'s',name:'가학생',mappingVerified:true,timetableSaturdayArrivalChoice:true};
+ for(let h=10;h<13;h++)s.data.grid[h]=[['개별 수학 가상T','가학생 가상중2 정규 11/7(토) 확정, 오전 10시 또는 11시 시작']];
+ const compose=(st=student)=>R.compose(st,s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
+ let c=compose();assert.deepEqual(c.reasons,[]);assert.equal(c.variables['#{등원시각}'],'오전 10시 또는 11시 시작(학생 선택)');
+ assert.match(c.text,/10:00 또는 11:00 시작 · 13:00 종료/);assert(!c.text.includes('개별 3시간'));assert.match(c.text,/16:00–17:00/);
+ c=compose({...student,timetableSaturdayArrivalChoice:false});assert.deepEqual(c.reasons,['시간 메모 확인 필요']);assert.match(c.text,/개별 3시간/);
+ s.data.grid[10][0][1]+=' 12:30 조퇴';assert(compose().reasons.includes('시간 메모 확인 필요'));
+ s.data.grid[10][0][1]='가학생 가상중2 정규';s.data.grid[16][0][1]+=' 16:30 등원';assert(compose().reasons.includes('시간 메모 확인 필요'));
+ const rows=[{studentId:'s',date:'2026-11-06',sourceId:'fri',subject:'수학',teacher:'가상',building:'본관',room:'1강의실',type:'개별',status:'정규',start:'10:00',end:'13:00',reviewReasons:['시간 메모 확인 필요']}];
+ c=R.compose(student,rows[0].date,rows);assert.deepEqual(c.reasons,['시간 메모 확인 필요']);assert.equal(c.variables['#{등원시각}'],'10:00');
+});

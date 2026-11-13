@@ -52,7 +52,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    catch(e){issue=reason(e.code);}
    const entries=src.entries.filter(e=>e.sourceName===name);
    // This draft is for classification/display only; never use it to authorize a recipient.
-   const c=rules.compose({id,name,mappingVerified:true},date,entries.map(e=>({...e.lesson,studentId:id})));
+   const c=rules.compose({id,name,mappingVerified:true,timetableSaturdayArrivalChoice:student?.timetableSaturdayArrivalChoice===true},date,entries.map(e=>({...e.lesson,studentId:id})));
    const version=hash([a.academyId,date,id,c.text]);
    let verified,recipients=[],excludedOnly=false;
    if(src.linkIssues?.[name])issue=src.linkIssues[name];
@@ -95,7 +95,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    const changed=items.some(t=>t.state==='changed')||(!items.length&&[...byPhone.values()].some(r=>r.version!==version));
    const state=changed?'changed':items.some(t=>t.state==='unsent')?'unsent':items.some(t=>t.state==='pending')?'pending':
     items.length?'sent':past.some(r=>outstanding.has(r.state))?'pending':received.length?'held':'unsent';
-   return {id,name,state,issue,excludedOnly,text:c.text,comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
+   return {id,name,state,issue,excludedOnly,text:c.text,policyPreview:student?.timetableSaturdayArrivalChoice===true&&!src.linkIssues?.[name],comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
   });
   if(!only){
    const seen=new Set(rows.map(r=>r.name));
@@ -117,6 +117,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
  }
  const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,
   ...(r.state==='unsent'&&!r.issue?{waitReason:waitReason(r)}:{}),
+  ...(r.policyPreview?{policyPreview:r.text}:{}),
   ...(r.state==='changed'?{current:r.text,comparisons:r.comparisons}:{}),failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
  async function roster(session,input){
   const a=await reviewer(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
