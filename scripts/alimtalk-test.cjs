@@ -33,3 +33,34 @@ test('provider receipt survives a transient result-store failure without a secon
  f.deps.provider.lookup=async({key,messageId,groupId})=>({key,messageId,groupId,statusCode:'4000'});
  assert.equal((await f.service.reconcile('',r.results[0].id)).state,'DELIVERED');assert.equal(f.sent.length,1);
 });
+
+test('staff may acknowledge the reviewed time memo for one individual preview and only its current schedule',async()=>{
+ const {parseSnapshot}=require('../snapshot-functions/alimtalk-grid'),f=fixture();
+ const date='2026-11-14',note='11/14(토) 하루만 기존 11-14시 수업이나, 10-13시 구성';
+ const grid={},owners={};
+ for(let h=8;h<=23;h++){grid[h]=[[]];owners[h]=[[]];}
+ for(const h of [10,11,12,16,17,18])grid[h]=[['개별 사탐 검증T','가학생 가상중2 신규생'+(h<13?' '+note:'')]];
+ const now=Date.parse(date+'T00:00:00Z');
+ const src=parseSnapshot({schema:1,date,sheet:'11/14(토)',capturedAt:now,data:{headers:['6강의실'],version:'v1',grid},owners,rooms:{rooms:['6강의실'],rows:[]}},now);
+ f.student.lessons=src.entries.map(e=>({...e.lesson,studentId:f.student.id}));
+ f.day.date=date;f.input.date=date;
+ const parent=createService(f.deps),student=createService({...f.deps,kind:'student-daily-lessons'});
+ let priorKey;
+ for(const service of [parent,student]){
+  const held=await service.preview('',f.input),row=held.rows[0];
+  assert.deepEqual(row.reasons,['시간 메모 확인 필요']);assert.deepEqual(row.memoReview.notes,[note]);
+  assert.match(row.text,/10:00–13:00/);assert.match(row.text,/16:00–19:00/);assert(!row.text.includes('기존'));
+  await assert.rejects(service.send('',{previewId:held.previewId}),{code:'HELD'});
+  if(priorKey)assert.notEqual(priorKey,row.memoReview.key);
+  priorKey=row.memoReview.key;f.input.targets[0].reviewedMemo=priorKey;
+  const approved=await service.preview('',f.input);assert.equal(approved.counts.messages,1);
+  f.student.lessons[0].timeNoteText+=' 수정';
+  assert.equal((await service.send('',{previewId:approved.previewId})).changed,true);
+  f.student.lessons[0].timeNoteText=note;f.student.lessons[0].room='';
+  assert((await service.preview('',f.input)).rows[0].reasons.includes('필수 수업 정보 누락'));
+  f.student.lessons[0].room='6강의실';
+ }
+ assert.equal(f.sent.length,0);
+ const result=await student.send('',{previewId:(await student.preview('',f.input)).previewId});
+ assert.equal(result.results[0].reviewedTimeMemo,priorKey);assert.equal(f.sent.length,1);
+});

@@ -34,7 +34,7 @@ function parseSnapshot(snapshot,now=Date.now()){
     if(timeNote.held)reviewReasons.push('시간 메모 확인 필요');
    }
    const id=hash([snapshot.sheet,snapshot.date,hour,col,index]),fingerprint=hash(['source-parser-v2',raw,headers,roomText]);
-   const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:tokens.find(t=>subject.test(t))||'',type:tokens.find(t=>classType.test(t))||'',teacher:header?tokens.at(-1).slice(0,-1):'',building:room?(room[1]||'본관'):'',room:room?room[2]:'',status,todayOnly:timeNote.todayOnly,timeRanges:timeNote.ranges,...(timeNote.held&&isSaturdayChoiceNote(note,snapshot.date)?{saturdayChoiceNote:true}:{}),reviewReasons};
+   const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:tokens.find(t=>subject.test(t))||'',type:tokens.find(t=>classType.test(t))||'',teacher:header?tokens.at(-1).slice(0,-1):'',building:room?(room[1]||'본관'):'',room:room?room[2]:'',status,...(timeNote.held||timeNote.ranges.length?{timeNoteText:note}:{}),todayOnly:timeNote.todayOnly,timeRanges:timeNote.ranges,...(timeNote.held&&isSaturdayChoiceNote(note,snapshot.date)?{saturdayChoiceNote:true}:{}),reviewReasons};
    // Missing teacher/subject/type remains a student's hold reason in compose.
    entries.push({id,fingerprint,sourceName:name,sourceSchool:school||'',label:name+' · '+(school||'학교·학년 미기재'),summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
   }

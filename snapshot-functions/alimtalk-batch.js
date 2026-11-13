@@ -2,7 +2,7 @@
 // A roster is a read. Only a reviewed, actor-bound ticket can cross the delivery boundary.
 const {randomUUID}=require('node:crypto');
 const rules=require('./alimtalk-contract');
-const {hash}=require('./alimtalk-service');
+const {hash,timeMemoReview}=require('./alimtalk-service');
 const {verifiedStudentDay}=require('./alimtalk-verified-day');
 const {withStudentDirectory}=require('./alimtalk-students');
 const fail=code=>{throw Object.assign(Error(code),{code});};
@@ -95,6 +95,14 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    const changed=items.some(t=>t.state==='changed')||(!items.length&&[...byPhone.values()].some(r=>r.version!==version));
    const state=changed?'changed':items.some(t=>t.state==='unsent')?'unsent':items.some(t=>t.state==='pending')?'pending':
     items.length?'sent':past.some(r=>outstanding.has(r.state))?'pending':received.length?'held':'unsent';
+   // Recognize individually reviewed receipts without granting bulk tickets for a memo hold.
+   if(issue==='시간 메모 확인 필요'&&verified?.recipients.length){
+    const records=verified.recipients.map(r=>past.find(p=>p.phone===r.phone&&r.verified));
+    const reviewed=records.every(p=>p?.reviewedTimeMemo&&p.version===version&&
+     p.reviewedTimeMemo===timeMemoReview({...a,uid:p.actor},kind,date,verified,verified.mappingRevision,c.text)?.key);
+    if(reviewed&&records.every(p=>p.state==='DELIVERED'))return {id,name,state:'sent',issue:'',items:[],past,comparisons};
+    if(reviewed&&records.every(p=>outstanding.has(p.state)||p.state==='DELIVERED'))return {id,name,state:'pending',issue:'',items:[],past,comparisons};
+   }
    return {id,name,state,issue,excludedOnly,text:c.text,policyPreview:student?.timetableSaturdayArrivalChoice===true&&!src.linkIssues?.[name],comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
   });
   if(!only){

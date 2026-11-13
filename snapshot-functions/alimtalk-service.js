@@ -19,6 +19,11 @@ function verifyWebhook(secret,header){
   if(typeof secret!=='string'||!secret||typeof header!=='string'||!/^[a-f0-9]{40}$/.test(header))return false;
   return crypto.timingSafeEqual(Buffer.from(crypto.createHash('sha1').update(secret).digest('hex')),Buffer.from(header));
 }
+function timeMemoReview(actor,kind,date,student,revision,text){
+  const notes=[...new Set(student.lessons.filter(l=>!rules.exclusion(l)).map(l=>l.timeNoteText).filter(Boolean))];
+  if(!notes.length)return null;
+  return {notes,key:hash([actor.uid,actor.academyId,kind,date,student.id,revision,text,notes])};
+}
 function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8000,webhookSecret,kind='daily-lessons'}){
   async function auth(session){const a=await bounded(()=>authorize(session),deadline);if(!a?.uid||!['ADMIN','STAFF','DESK'].includes(a.role)||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
   async function plan(actor,input){
@@ -46,7 +51,18 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       }
       const reviewRevision=s.mappingRevision||day.mappingRevision;
       const version=['daily-lessons','student-daily-lessons'].includes(kind)?hash([actor.academyId,input.date,s.id,c.text]):hash([actor.academyId,input.date,s.id,c.lessons,c.excluded,reviewRevision]);
-      rows.push({studentId:s.id,name:s.name,date:input.date,version,reviewRevision,text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
+      // Acknowledgement belongs to one operator's individual preview of this exact memo and body.
+      let memoReview;
+      if(input.targets.length===1&&['daily-lessons','student-daily-lessons'].includes(kind)&&
+         c.reasons.includes('시간 메모 확인 필요')&&c.reasons.every(r=>['시간 메모 확인 필요','수신자를 직접 선택해 주세요'].includes(r))){
+        const review=timeMemoReview(actor,kind,input.date,s,reviewRevision,c.text);
+        if(review){
+          const confirmed=target.reviewedMemo===review.key;
+          memoReview={...review,confirmed};
+          if(confirmed)c.reasons=c.reasons.filter(r=>r!=='시간 메모 확인 필요');
+        }
+      }
+      rows.push({studentId:s.id,name:s.name,date:input.date,version,reviewRevision,...(memoReview?{memoReview}:{}),text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
         choices:(s.recipients||[]).map(r=>({id:r.id,relation:r.relation||'관계 확인 필요',masked:rules.mask(r.phone||'')}))});
     }
     const fingerprint=hash(rows);
@@ -83,7 +99,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       }
       const id=deliveryId(a.academyId,row,date,recipient.phone,kind,prior,retryFailed);
       const retryOf=retryFailed&&['FAILED','NOT_ACCEPTED'].includes(previous?.state)?previous.id:null;
-      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,smsFallback:provider.smsFallback===true,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(batchId?{batchId}:{}),...(retryOf?{retryOf}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
+      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,smsFallback:provider.smsFallback===true,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(row.memoReview?.confirmed?{reviewedTimeMemo:row.memoReview.key}:{}),...(batchId?{batchId}:{}),...(retryOf?{retryOf}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
       const claim=retryOf&&store.claimRetry?await store.claimRetry(id,record,retryOf,previous.state):await store.claim(id,record);
       if(!claim.created){return publicRecord(claim.record);}
       let receipt;
@@ -138,4 +154,4 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       await apply(id,{messageId:e.messageId,groupId:e.groupId,statusCode:e.statusCode,key:id});}return {ok:true};}
   return {preview,send,results,reconcile,webhook,dispatch,apply};
 }
-module.exports={createService,status,verifyWebhook,hash};
+module.exports={createService,status,verifyWebhook,hash,timeMemoReview};

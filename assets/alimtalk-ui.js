@@ -23,6 +23,19 @@
         if(!row.choices?.length)receivers.append(el('p','학생 ID로 연결된 수신자 확인이 필요합니다. 자동 선택하지 않습니다.'));
         section.append(receivers);
         for(const r of row.reasons||[])section.append(el('p','보류 · '+r));
+        if(row.memoReview){
+          const memo=el('fieldset');memo.append(el('legend','시간표 원본 비고'));
+          for(const text of row.memoReview.notes)memo.append(el('p',text));
+          const label=el('label'),check=el('input');check.type='checkbox';check.checked=row.memoReview.confirmed;
+          check.onchange=()=>{
+            const target=selection.find(t=>t.studentId===row.studentId);
+            if(!target)return;
+            if(check.checked)target.reviewedMemo=row.memoReview.key;else delete target.reviewedMemo;
+            preview=null;host.querySelector('.alimtalk-confirm')?.remove();locked(send);
+          };
+          label.append(check,document.createTextNode(' 비고와 아래 수업 시각을 대조했습니다. 이 학생에게 표시된 시간표로 안내합니다.'));
+          memo.append(label);section.append(memo);
+        }
         for(const r of row.excluded||[])section.append(el('p','제외 · '+r.reason));
         if(row.text){const pre=el('pre',row.text);pre.setAttribute('aria-label','실제 치환 본문');section.append(pre);}
         host.append(section);
