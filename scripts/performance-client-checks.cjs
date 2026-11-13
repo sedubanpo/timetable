@@ -5,6 +5,7 @@ const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve()
 function fixture() {
   const elements = new Map(), timers = new Map(), deadlines = new Map(); let timerId = 0;
   const el = id => { if (!elements.has(id)) elements.set(id, { setAttribute() {}, style: {}, classList: { add() {}, remove() {} } }); return elements.get(id); };
+  el('reviewModal').style.display = 'none';
   const ctx = { window: { innerWidth: 1440, addEventListener() {} }, document: { hidden: false, getElementById: el, addEventListener() {}, body: { classList: { add() {}, remove() {} } } }, localStorage: { getItem() { return null; } }, console, alert() {}, setTimeout(fn, ms) { (ms === 65000 ? deadlines : timers).set(++timerId, { fn, ms }); return timerId; }, clearTimeout(id) { timers.delete(id); deadlines.delete(id); }, setInterval() {}, clearInterval() {}, URLSearchParams, Date, Promise, Set, Map };
   vm.createContext(ctx); vm.runInContext(app, ctx);
   const run = code => vm.runInContext(code, ctx);

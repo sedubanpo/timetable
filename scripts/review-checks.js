@@ -57,7 +57,7 @@ const inlineScripts = Array.from(index.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<
   .filter((script) => script.trim());
 assert(inlineScripts.length >= 2, "expected configuration and application scripts");
 inlineScripts.forEach((script, i) => new vm.Script(script, { filename: "Index.inline." + i + ".js" }));
-new vm.Script(server, { filename: "Code.gs" });
+const serverScript = new vm.Script(server, { filename: "Code.gs" });
 
 const appScript = inlineScripts.find(script => script.includes("function runScheduleReview()"));
 const sandbox = {
@@ -79,7 +79,11 @@ const sandbox = {
   Map
 };
 vm.createContext(sandbox);
-vm.runInContext(appScript, sandbox, { timeout: 2000 });
+const rulesScript = inlineScripts.slice(0, inlineScripts.indexOf(appScript))
+  .find(script => script.includes("root.TimetableAlimtalk="));
+assert(rulesScript, "expected shared timetable rules before the application");
+vm.runInContext(rulesScript, sandbox, { filename: "Index.timetable-rules.js", timeout: 2000 });
+vm.runInContext(appScript, sandbox, { filename: "Index.application.js", timeout: 2000 });
 sandbox.nonStudentKeywords = new Set(["자습", "자기주도", "수학", "영어", "국어", "과학"]);
 
 [
@@ -209,7 +213,11 @@ assert(reviewTimetableHtml.includes("수학"), "timetable cards must show the su
 assert(reviewTimetableHtml.includes("확인필요 표시"), "timetable cards must explain the check-needed error");
 assert(reviewTimetableHtml.includes("1강의실") && reviewTimetableHtml.includes("14:00"), "timetable must preserve room and time coordinates");
 
-assert(index.includes('withFirestoreTimeout(loadPage("", []), 20000'), "enrollment timeout regression");
+const enrollmentRead = vm.runInNewContext(
+  extractFunction(appScript, "fetchEnrollmentStatusStudents") + "\nfetchEnrollmentStatusStudents('fixture-token')",
+  { fetchTimetableCollection(collection, token, deadline) { return { collection, deadline }; } }
+);
+assert.deepStrictEqual(enrollmentRead, { collection: "students", deadline: 20000 }, "student directory reads must have a 20-second deadline");
 assert(index.includes('{ timeoutMs: 10000, retries: 2 }'), "sheet list API must retry transient Apps Script failures without extending the current worst-case wait");
 assert(index.includes("AKfycbyI3P-cTCEMrk0mqe3QTorgXQZGoaITzqs-oqCQQ3eIbsZofe8B3wj6WTruKaCfpmUIQA"), "client must use the refreshed public Apps Script deployment");
 assert(index.includes("saveSheetNamesCache(names);"), "successful sheet lists must be cached for recovery");
@@ -585,8 +593,6 @@ const serverSandbox = {
     DigestAlgorithm: { SHA_256: "sha256" }, Charset: { UTF_8: "utf8" },
     computeDigest(algorithm, value) { return Array.from(require("crypto").createHash(algorithm).update(value).digest()); }
   },
-  SCHEDULE_START_HOUR: 8,
-  SCHEDULE_END_HOUR: 23,
   CacheService: { getScriptCache() { return { get() { return null; }, put() {} }; } },
   SpreadsheetApp: {
     getActiveSpreadsheet() {
@@ -617,13 +623,7 @@ const serverSandbox = {
   }
 };
 vm.createContext(serverSandbox);
-vm.runInContext(extractFunction(server, "scheduleCacheGet_"), serverSandbox);
-vm.runInContext(extractFunction(server, "scheduleCachePut_"), serverSandbox);
-vm.runInContext(extractFunction(server, "scheduleContentRevision_"), serverSandbox);
-vm.runInContext(extractFunction(server, "scheduleRevisionCacheKey_"), serverSandbox);
-vm.runInContext(extractFunction(server, "parseScheduleStartHour_"), serverSandbox);
-vm.runInContext(extractFunction(server, "getFixedGridData"), serverSandbox);
-vm.runInContext(extractFunction(server, "toLitePayload_"), serverSandbox);
+serverScript.runInContext(serverSandbox, { timeout: 2000 });
 const parsedBoundary = serverSandbox.getFixedGridData("8/5(수)", true);
 assert(parsedBoundary.grid[8][0].some((item) => item.includes("아침학생")), "server parser must retain the 08:00 block");
 assert(parsedBoundary.grid[9][0].some((item) => item.includes("오전학생")), "server parser must retain the 09:00 block");

@@ -10,7 +10,7 @@ const baseline=process.argv.includes('--baseline');
 // Extract real production functions at their top-level indentation boundary.
 function extract(name){const start=source.indexOf('      function '+name+'(');assert(start>=0,name);const next=source.indexOf('\n      function ',start+1);const scriptEnd=source.indexOf('</script>',start);return source.slice(start,next<0?scriptEnd:Math.min(next,scriptEnd));}
 let rows=[];
-const context={SCHEDULE_START_HOUR:8,SCHEDULE_END_HOUR:23,currentSheetName:'9/8(화)',
+const context={TimetableAlimtalk:require('../assets/alimtalk-contract.js'),SCHEDULE_START_HOUR:8,SCHEDULE_END_HOUR:23,currentSheetName:'9/8(화)',
   alert:message=>{throw Error(message);},
   extractTeacherName:text=>text.split('|')[1],getSubjectName:text=>text.split('|')[2],getTypeBadgeText:text=>text.split('|')[3],
   isTeacherHeader:text=>text.startsWith('T|'),

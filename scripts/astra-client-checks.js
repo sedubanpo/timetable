@@ -5,7 +5,7 @@ const vm = require('vm');
 const assert = require('assert');
 const path = require('path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'Index.html'), 'utf8');
-const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim()).pop();
+const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).find(s => s.includes("function loadData("));
 const elements = new Map();
 function el(id) {
   if (!elements.has(id)) {
