@@ -789,6 +789,8 @@
       .teacher-student-item.is-muted-gray .teacher-student-school { color:#374151; }
       .teacher-student-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
       .teacher-student-name { font-size:1.0rem; font-weight:900; color:#0f172a; line-height:1.2; }
+      .teacher-lesson-time { display:inline-block; white-space:nowrap; font-size:0.82rem; font-weight:700; color:#334155; font-variant-numeric:tabular-nums; }
+      .teacher-student-name .teacher-lesson-time { margin-left:5px; }
       .teacher-student-school { font-size:0.92rem; color:#64748b; font-weight:700; margin-left:4px; }
       .teacher-student-note { margin-top:2px; font-size:0.82rem; color:#64748b; line-height:1.3; word-break:keep-all; }
       .teacher-student-note-chip { margin-top:6px; background:#fff7ed; border:1px solid #fdba74; border-radius:8px; color:#9a3412; font-size:0.8rem; padding:5px 7px; line-height:1.25; font-weight:700; }
@@ -2964,7 +2966,7 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
     });
     return kept.join(' ').trim();
   }
-  function readTimeNote(note,status,date){
+  function readTimeNote(note,status,date,minuteStep=30){
     note=timeNoteForDate(note,date);
     // Only 오늘만 introduces this shorthand. Dates and durations are not clock ranges.
     const todayRange=/(오늘만\s*)(\d{1,2})\s*[-~～–—]\s*(\d{1,2})\s*시(?![간\d]|\s*\d)/g;
@@ -2979,7 +2981,7 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
     const pattern=new RegExp('(?:^|[^\\d:])'+token+'\\s*[-~～–—]\\s*'+token+'(?![\\d:])','g');
     function candidates(hour,minute,period){
       hour=Number(hour);minute=Number(minute);
-      if(hour>24||minute>=60||minute%30||hour===24&&minute)return [];
+      if(hour>24||minute>=60||minute%minuteStep||hour===24&&minute)return [];
       const hours=period?(hour>=1&&hour<=12?[hour%12+(period==='오후'?12:0)]:[]):hour>=1&&hour<=12?[hour%12,hour%12+12]:[hour];
       return hours.map(h=>h*60+minute);
     }
@@ -3100,7 +3102,7 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });
 </script>
 <script>(function(root){
@@ -7302,6 +7304,7 @@ root.TimetableAlimtalkReviewUI={mount};
         var minute = Math.floor(now.getTime() / 60000);
         if (lastClockMinute === minute) return;
         lastClockMinute = minute;
+        if (!teacherMobileSimpleView && window.innerWidth <= 768) updateTeacherMobileProgress(now);
         checkVisitorLookupDateRollover(now);
         if (isLookupViewActive()) { renderVisitorLookupResults(); loadVisitorPortraits(); }
         updateTimelinePosition();
@@ -11290,6 +11293,63 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         applyOperationMemoHighlights();
         if (document.getElementById('searchInput').value.trim()) searchTable();
       }
+      function teacherMobileLessons(data, date) {
+        const byHour = new Map();
+        const lastBlock = new Map();
+        const blocks = [];
+        for (let hour = SCHEDULE_START_HOUR; hour <= SCHEDULE_END_HOUR; hour++) {
+          const lessons = [];
+          const row = data.grid?.[hour] || [];
+          data.headers.forEach((room, col) => {
+            const items = row[col] || [];
+            const header = items.find(item => item && isTeacherHeader(item)) || "";
+            const teacher = header ? extractTeacherName(header) : "";
+            const subject = getSubjectName(header);
+            const lessonType = detectClassType(header);
+            const students = [];
+            for (const rawText of items) {
+              if (!rawText || isTeacherHeader(rawText)) continue;
+              const parsed = parseStudentRawText(rawText);
+              if (!parsed.name || shouldHideStatus(parsed.status)) continue;
+              const sourceStatus = detectStudentStatusFromTokens(rawText.trim().split(/\s+/).slice(1)) || parsed.status;
+              const status = TimetableAlimtalk.scheduleStatus(sourceStatus);
+              const key = JSON.stringify([parsed.name, parsed.school, col, teacher, subject, lessonType, status]);
+              const note = TimetableAlimtalk.readTimeNote(parsed.sourceNote, sourceStatus, date, 1);
+              let block = lastBlock.get(key);
+              if (!block || block.end !== hour * 60) {
+                block = {start: hour * 60, end: hour * 60, timeRanges: [], held: false};
+                blocks.push(block);
+                lastBlock.set(key, block);
+              }
+              block.end = (hour + 1) * 60;
+              block.timeRanges.push(...note.ranges);
+              block.held ||= note.held;
+              students.push({...parsed, rawText, hour, room, subject, teacher, lessonType, block});
+            }
+            if (students.length) lessons.push({room, teacher, subject, lessonType, students});
+          });
+          if (lessons.length) byHour.set(hour, lessons);
+        }
+        for (const block of blocks) {
+          block.held ||= !TimetableAlimtalk.applyTimeNotes(block);
+          block.label = block.held ? "시간 메모 확인 필요" : formatCardHour(block.start / 60) + "–" + formatCardHour(block.end / 60);
+        }
+        return byHour;
+      }
+
+      function updateTeacherMobileProgress(now) {
+        const bars = document.querySelectorAll('#teacherMobileList .teacher-progress-wrap');
+        if (!bars.length) return;
+        const minute = Math.floor(now.getTime() / 60000);
+        bars.forEach(bar => {
+          const total = Number(bar.dataset.duration);
+          const elapsed = Math.max(0, Math.min(total, minute - Number(bar.dataset.startMinute)));
+          const percent = Math.round(100 * elapsed / total);
+          bar.querySelector('.teacher-progress-fill').style.width = percent + '%';
+          bar.querySelector('.teacher-progress-text').textContent = elapsed + '분 / ' + total + '분 · ' + percent + '%';
+        });
+      }
+
       function renderTeacherMobileView(data) {
         if(typeof scheduleFirstLessonNotice==='function')scheduleFirstLessonNotice();
         var mobileWrap = document.getElementById('teacherMobileList');
@@ -11319,41 +11379,17 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         "</div>";
         mobileWrap.insertAdjacentHTML('beforeend', toolbarHtml);
 
+        const date = attendanceDateKey(currentSheetName);
+        const dayStartMinute = Date.parse(date + 'T00:00:00+09:00') / 60000;
+        const lessonsByHour = teacherMobileLessons(data, date);
+        if (!lessonsByHour.size) {
+          mobileWrap.insertAdjacentHTML('beforeend', "<div class='teacher-empty'>표시할 강의가 없습니다.</div>");
+          return;
+        }
+
         if (teacherMobileSimpleView) {
-          var hasSimpleAny = false;
-          for (var sh = SCHEDULE_START_HOUR; sh <= SCHEDULE_END_HOUR; sh++) {
-            var simpleRow = (data.grid && data.grid[sh]) || [];
-            var entries = [];
-            for (var si = 0; si < data.headers.length; si++) {
-              var cellItems = simpleRow[si] || [];
-              if (!cellItems.length) continue;
-              var roomName = data.headers[si];
-              var teacherItem = cellItems.find(function(t) { return t && isTeacherHeader(t); }) || "";
-              var subjectName = getSubjectName(teacherItem || "") || "수업";
-              var lessonType = detectClassType(teacherItem || "");
-              var teacherName = teacherItem ? extractTeacherName(String(teacherItem)) : "";
-              cellItems.forEach(function(rawText) {
-                var raw = String(rawText || "");
-                if (!raw || isTeacherHeader(raw)) return;
-                if (shouldHideStudentText(raw)) return;
-                var parsed = parseStudentRawText(raw);
-                if (!parsed.name) return;
-                entries.push({
-                  rawText: raw,
-                  hour: sh,
-                  name: parsed.name,
-                  school: parsed.school || "",
-                  status: normalizeStatusLabel(parsed.status || ""),
-                  note: parsed.note || "",
-                  room: roomName,
-                  subject: subjectName,
-                  teacher: teacherName,
-                  lessonType: lessonType
-                });
-              });
-            }
-            if (!entries.length) continue;
-            hasSimpleAny = true;
+          for (const [sh, lessons] of lessonsByHour) {
+            const entries = lessons.flatMap(lesson => lesson.students);
             entries.sort(function(a, b) {
               var byName = String(a.name || "").localeCompare(String(b.name || ""), "ko");
               if (byName !== 0) return byName;
@@ -11367,18 +11403,19 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
               else if (statusClass === "status-notice") rowClass = " is-notice";
               var safeNote = encodeURIComponent(entry.note || "비고 없음").replace(/'/g, "%27");
               var enrollmentLabel = getEnrollmentWarningForStudent(entry.name);
-              var attendanceContext = buildAttendanceContext(entry.rawText, entry.hour, entry.room, entry.subject, entry.lessonType);
+              var attendanceContext = buildAttendanceContext(entry.rawText, entry.hour, entry.room, entry.subject || "수업", entry.lessonType);
               return "<div class='teacher-simple-student" + rowClass + (enrollmentLabel ? " enrollment-alert" : "") + "'>" +
                 "<div class='teacher-simple-main'>" +
                 "<div class='teacher-simple-name-row'>" +
                     "<button type='button' class='teacher-simple-name-trigger' data-note='" + safeNote + "' onclick='toggleNoteBubble(this, event)'>" + escapeHtml(entry.name) + "</button>" +
+                    "<span class='teacher-lesson-time'>" + entry.block.label + "</span>" +
                     (entry.school ? "<span class='teacher-simple-school'>" + escapeHtml(entry.school) + "</span>" : "") +
                     (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") +
                   "</div>" +
                   "<div class='teacher-simple-inline'>" +
                     (entry.lessonType ? getMobileTypeBadgeHtml(entry.lessonType) : "") +
                     (entry.status ? "<span class='teacher-simple-chip " + statusClass + "'>" + escapeHtml(statusLabel) + "</span>" : "") +
-                    firstLessonButton(entry.name,entry.school,entry.status,entry.subject,entry.teacher) + "<span class='teacher-simple-chip subject'>" + escapeHtml(entry.subject) + "</span>" +
+                    firstLessonButton(entry.name,entry.school,entry.status,entry.subject,entry.teacher) + "<span class='teacher-simple-chip subject'>" + escapeHtml(entry.subject || "수업") + "</span>" +
                     "<span class='teacher-simple-chip room'>" + escapeHtml(entry.room) + "</span>" +
                     (entry.teacher ? "<span class='teacher-simple-teacher-label'>" + escapeHtml(entry.teacher) + "T</span>" : "") +
                   "</div>" +
@@ -11397,111 +11434,43 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
             simpleCard.dataset.originalHtml = simpleCard.innerHTML;
             mobileWrap.appendChild(simpleCard);
           }
-          if (!hasSimpleAny) {
-            mobileWrap.insertAdjacentHTML('beforeend', "<div class='teacher-empty'>표시할 강의가 없습니다.</div>");
-          }
           return;
         }
-        var studentLessonHours = {};
-        var progressBySlot = {};
-        for (var hh = SCHEDULE_START_HOUR; hh <= SCHEDULE_END_HOUR; hh++) {
-          var rr = (data.grid && data.grid[hh]) || [];
-          for (var ci = 0; ci < data.headers.length; ci++) {
-            var roomName = data.headers[ci];
-            var it = rr[ci] || [];
-            if (!it.length) continue;
-            var teacherItemAt = it.find(function(t){ return t && isTeacherHeader(t); }) || "";
-            var typeAt = detectClassType(teacherItemAt || "");
-            var subjectAt = getSubjectName(teacherItemAt || "");
-            it.forEach(function(rowText) {
-              var raw = String(rowText || "");
-              if (!raw || isTeacherHeader(raw)) return;
-              if (shouldHideStudentText(raw)) return;
-              var p = parseStudentRawText(raw);
-              if (!p.name) return;
-              var key = [p.name, roomName, subjectAt, typeAt].join("||");
-              if (!studentLessonHours[key]) studentLessonHours[key] = [];
-              studentLessonHours[key].push(hh);
-            });
-          }
-        }
-        Object.keys(studentLessonHours).forEach(function(key){
-          var hours = studentLessonHours[key].slice().sort(function(a,b){ return a-b; });
-          if (!hours.length) return;
-          var startIdx = 0;
-          for (var i = 1; i <= hours.length; i++) {
-            var isBreak = i === hours.length || hours[i] !== hours[i-1] + 1;
-            if (!isBreak) continue;
-            var segment = hours.slice(startIdx, i);
-            var total = segment.length;
-            segment.forEach(function(h, idx){
-              progressBySlot[key + "::" + h] = { done: idx + 1, total: total };
-            });
-            startIdx = i;
-          }
-        });
-        var hasAny = false;
-        for (var h = SCHEDULE_START_HOUR; h <= SCHEDULE_END_HOUR; h++) {
-          var row = (data.grid && data.grid[h]) || [];
-          var lessons = [];
-          for (var i = 0; i < data.headers.length; i++) {
-            var items = row[i] || [];
-            if (!items.length) continue;
-            var students = items.filter(function(t) {
-              var s = String(t || "");
-              if (!s || isTeacherHeader(s)) return false;
-              return !shouldHideStudentText(s);
-            });
-            var teacherItem = items.find(function(t) { return t && isTeacherHeader(t); });
-            var lessonType = detectClassType(teacherItem || "");
-            var subjectName = getSubjectName(teacherItem || "");
-            if (!students.length) continue;
-            lessons.push({
-              room: data.headers[i],
-              students: students,
-              lessonType: lessonType,
-              subject: subjectName,
-              teacher: teacherItem ? extractTeacherName(String(teacherItem)) : ""
-            });
-          }
-
+        for (const [h, lessons] of lessonsByHour) {
           var card = document.createElement('div');
           card.className = 'teacher-hour-card ' + (h % 2 === 0 ? 'hour-even' : 'hour-odd');
           var start = h + ":00";
           var end = (h + 1) + ":00";
-          if (!lessons.length) {
-            continue;
-          }
-
-          hasAny = true;
           var lessonHtml = lessons.map(function(lesson, idx) {
             var warn = lessons.length > 1 ? " (강의실 " + (idx + 1) + ")" : "";
             var typeBadge = getMobileTypeBadgeHtml(lesson.lessonType);
             var subjectBadge = lesson.subject ? "<span class='mobile-type-badge mobile-type-blue'>" + escapeHtml(lesson.subject) + "</span>" : "";
-            var studentHtml = lesson.students.length ? lesson.students.map(function(st){
-              var parsed = parseStudentRawText(st);
-              var normalizedStatus = normalizeStatusLabel(parsed.status || "");
-              var progressKey = [parsed.name || "", lesson.room || "", lesson.subject || "", lesson.lessonType || ""].join("||") + "::" + h;
-              var progress = progressBySlot[progressKey] || { done: 1, total: 1 };
-              var percent = Math.max(0, Math.min(100, Math.round((progress.done / Math.max(1, progress.total)) * 100)));
-              var hourBadge = "<span class='teacher-hour-badge'>" + progress.done + "시간/" + progress.total + "시간</span>";
+            var studentHtml = lesson.students.map(function(parsed){
+              var normalizedStatus = parsed.status;
+              const block = parsed.block;
+              const duration = block.end - block.start;
+              const hourBadge = block.held ? "" : "<span class='teacher-hour-badge'>수업 " + duration + "분</span>";
               var statusText = normalizedStatus || "상태 미입력";
               var statusBadge = "<span class='teacher-status-chip " + getStatusChipClass(statusText) + "'>" + escapeHtml(statusText) + "</span>";
               var noteText = parsed.note || "비고 없음";
               var enrollmentLabel = getEnrollmentWarningForStudent(parsed.name);
-              var progressBar = "<div class='teacher-progress-wrap'><div class='teacher-progress-track'><div class='teacher-progress-fill' style='width:" + percent + "%;'></div></div><div class='teacher-progress-text'>진행 " + percent + "%</div></div>";
+              const showProgress = !block.held && Number.isFinite(dayStartMinute) && !TimetableAlimtalk.exclusion({status: statusText});
+              const progressBar = showProgress
+                ? "<div class='teacher-progress-wrap' data-start-minute='" + (dayStartMinute + block.start) + "' data-duration='" + duration + "'><div class='teacher-progress-track'><div class='teacher-progress-fill'></div></div><div class='teacher-progress-text'></div></div>"
+                : "";
               var alertClass = "";
               if (statusText === "당일취소") alertClass = " is-cancelled";
               else if (statusText === "결석예고" || statusText === "휴강") alertClass = " is-muted-gray";
               if (enrollmentLabel) alertClass += " enrollment-alert";
-              var attendanceContext = buildAttendanceContext(st, h, lesson.room, lesson.subject, lesson.lessonType);
+              var attendanceContext = buildAttendanceContext(parsed.rawText, h, lesson.room, lesson.subject, lesson.lessonType);
               return "<div class='teacher-student-item" + alertClass + "'><div class='teacher-student-head'><div class='teacher-student-name'>" + escapeHtml(parsed.name || "학생") +
+                     "<span class='teacher-lesson-time'>" + block.label + "</span>" +
                      (parsed.school ? "<span class='teacher-student-school'>" + escapeHtml(parsed.school) + "</span>" : "") + "</div>" +
                      "<div class='teacher-student-inline-meta'>" + hourBadge + statusBadge + firstLessonButton(parsed.name,parsed.school,normalizedStatus,lesson.subject,lesson.teacher) + (enrollmentLabel ? "<span class='enrollment-alert-badge'>" + escapeHtml(enrollmentLabel) + "</span>" : "") + buildTeacherAttendanceButtonHtml(attendanceContext) + "</div></div>" +
                      progressBar +
                      "<div class='teacher-student-note-chip'>" + escapeHtml(noteText) + "</div>" +
                      "</div>";
-            }).join("") : "<div class='teacher-empty' style='padding:4px 0;'>학생 정보 없음</div>";
+            }).join("");
             return "<div class='teacher-lesson-row'>" +
               "<div class='teacher-lesson-head'><div class='teacher-room-chip'>" + escapeHtml(lesson.room) + warn + "</div>" + typeBadge + subjectBadge + (lesson.teacher ? "<span class='teacher-simple-teacher-label'>" + escapeHtml(lesson.teacher) + "T</span>" : "") + "</div>" +
               "<div class='teacher-student-list'>" + studentHtml + "</div>" +
@@ -11512,7 +11481,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
           mobileWrap.appendChild(card);
         }
 
-        if (!hasAny) mobileWrap.insertAdjacentHTML('beforeend', "<div class='teacher-empty'>표시할 강의가 없습니다.</div>");
+        updateTeacherMobileProgress(new Date());
       }
       function normalizeLookupKeyword(text) {
         return String(text || "").replace(/\s+/g, "").toUpperCase();

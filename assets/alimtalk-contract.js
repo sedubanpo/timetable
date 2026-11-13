@@ -67,7 +67,7 @@
     });
     return kept.join(' ').trim();
   }
-  function readTimeNote(note,status,date){
+  function readTimeNote(note,status,date,minuteStep=30){
     note=timeNoteForDate(note,date);
     // Only 오늘만 introduces this shorthand. Dates and durations are not clock ranges.
     const todayRange=/(오늘만\s*)(\d{1,2})\s*[-~～–—]\s*(\d{1,2})\s*시(?![간\d]|\s*\d)/g;
@@ -82,7 +82,7 @@
     const pattern=new RegExp('(?:^|[^\\d:])'+token+'\\s*[-~～–—]\\s*'+token+'(?![\\d:])','g');
     function candidates(hour,minute,period){
       hour=Number(hour);minute=Number(minute);
-      if(hour>24||minute>=60||minute%30||hour===24&&minute)return [];
+      if(hour>24||minute>=60||minute%minuteStep||hour===24&&minute)return [];
       const hours=period?(hour>=1&&hour<=12?[hour%12+(period==='오후'?12:0)]:[]):hour>=1&&hour<=12?[hour%12,hour%12+12]:[hour];
       return hours.map(h=>h*60+minute);
     }
@@ -203,5 +203,5 @@
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });
