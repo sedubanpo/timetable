@@ -3,17 +3,20 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),{parseSna
 global.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
 const now=Date.parse('2026-11-07T03:00:00Z');
 function fixture(){const grid={},owners={};for(let h=8;h<=23;h++){grid[h]=[[]];owners[h]=[[]];}grid[16]=[['1:1 수학 가상T','가학생 가상중2 정규']];return {schema:1,date:'2026-11-07',sheet:'11/7(토)',capturedAt:now,data:{headers:['2관 3강의실'],version:'v1',grid},owners,rooms:{rooms:['2관 3강의실'],rows:[]}};}
-test('dated half-hour notes survive raw sheet import and appear in the message',()=>{
+function importRows(s,rows){
  const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
- const rows=[['','1강의실','','','']];
- for(const hour of [15,16]){
-  rows.push([hour+':00','개별 사탐 검증T','','',''],['','가학생','가상고3','오늘만','11/7(토) 하루만 15:30-17:30']);
- }
  const gas={SpreadsheetApp:{getActiveSpreadsheet:()=>({getSheetByName:()=>({getDataRange:()=>({getDisplayValues:()=>rows})})})},
   CacheService:{getScriptCache:()=>({put(){}})}};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../Code.gs'),'utf8'),gas);
  gas.scheduleContentRevision_=()=>'fixture';
- const s=fixture();s.data=JSON.parse(JSON.stringify(gas.getFixedGridData(s.sheet,true)));
+ s.data=JSON.parse(JSON.stringify(gas.getFixedGridData(s.sheet,true)));
+}
+test('dated half-hour notes survive raw sheet import and appear in the message',()=>{
+ const rows=[['','1강의실','','','']];
+ for(const hour of [15,16]){
+  rows.push([hour+':00','개별 사탐 검증T','','',''],['','가학생','가상고3','오늘만','11/7(토) 하루만 15:30-17:30']);
+ }
+ const s=fixture();importRows(s,rows);
  const lessons=parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'}));
  const body=require('../snapshot-functions/alimtalk-contract').compose({id:'s',name:'가학생',mappingVerified:true},s.date,lessons);
  assert.deepEqual(body.reasons,[]);assert.match(body.text,/사탐 오늘만 15:30–17:30/);
@@ -129,4 +132,22 @@ test('Saturday choice uses the verified student policy and clears only the match
  s.data.grid[10][0][1]='가학생 가상중2 정규';s.data.grid[16][0][1]+=' 16:30 등원';assert(compose().reasons.includes('시간 메모 확인 필요'));
  const rows=[{studentId:'s',date:'2026-11-06',sourceId:'fri',subject:'수학',teacher:'가상',building:'본관',room:'1강의실',type:'개별',status:'정규',start:'10:00',end:'13:00',reviewReasons:['시간 메모 확인 필요']}];
  c=R.compose(student,rows[0].date,rows);assert.deepEqual(c.reasons,['시간 메모 확인 필요']);assert.equal(c.variables['#{등원시각}'],'10:00');
+});
+
+test('orphan attendance cells do not block the date or change the confirmed makeup hours',()=>{
+ const s=fixture();s.date='2026-11-14';s.sheet='11/14(토)';
+ const rows=[['','1강의실','','','']];
+ for(const hour of [11,12,13]){
+  rows.push([hour+':00','수학','개별','검증T',''],
+   ['','가학생','가상중2','결석보강','11/14(토) 확정 11/17 결예에 대한, 11:30-13:30 (1시간은 추후 보강 예정)']);
+ }
+ rows.push(['','정규','가상중2','정규',''],['','','','정규',''],['',' ',' ','보강','11/14 확정']);
+ importRows(s,rows);
+ const parsed=parseSnapshot(s,now);
+ assert.deepEqual(parsed.issues,[]);assert(parsed.complete);
+ assert.deepEqual(parsed.entries.map(e=>e.sourceName),['가학생','가학생','가학생','정규']);
+ const body=require('../snapshot-functions/alimtalk-contract').compose({id:'s',name:'가학생',mappingVerified:true},s.date,
+  parsed.entries.filter(e=>e.sourceName==='가학생').map(e=>({...e.lesson,studentId:'s'})));
+ assert.deepEqual(body.reasons,[]);assert.equal(body.lessons.length,1);
+ assert.match(body.text,/결석보강 11:30–13:30/);assert.match(body.text,/개별 2시간/);
 });

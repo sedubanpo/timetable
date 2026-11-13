@@ -1382,7 +1382,7 @@ function parseScheduleStartHour_(timeText) {
 function getFixedGridData(sheetName, forceRefresh) {
   try {
     var cache = CacheService.getScriptCache();
-    var cacheKey = "SHEET_DATA_V66_" + sheetName;
+    var cacheKey = "SHEET_DATA_V67_" + sheetName;
     var snapshot = null;
 
     if (!forceRefresh) {
@@ -1449,6 +1449,7 @@ function getFixedGridData(sheetName, forceRefresh) {
     var skipKeywords = ["개학시간표","개학","필드","주말","질문","클리닉","휴식","직전"];
     var moveNoticePattern = /(시간|반|자리|교실)\s*이동|이동\s*(예정|완료|요청)/;
     var datePattern = /\d+\/\d+/; 
+    var attendanceCell = /^(?:정규|보강|결석보강|보충|일반보충|당취보충|자습|오늘만|신규생|첫수업|결석|결석예고|당일취소|당취|휴강|지각|병결|직보|특강)$/;
     var lessonClock = /\d{1,2}\s*:\s*\d{2}|\d{1,2}\s*시(?!간)/;
 
     for (var i = headerRowIndex + 1; i < values.length; i++) {
@@ -1462,6 +1463,10 @@ function getFixedGridData(sheetName, forceRefresh) {
       }
       if (currentHour >= SCHEDULE_START_HOUR && currentHour <= SCHEDULE_END_HOUR) {
         classrooms.forEach(function(room, roomIndex) {
+          // 이름·학교가 비어 있고 출결 드롭다운만 남은 줄은 학생 행이 아니다.
+          if (room.endCol >= room.startCol + 2 &&
+              !String(row[room.startCol] || "").trim() && !String(row[room.startCol + 1] || "").trim() &&
+              attendanceCell.test(String(row[room.startCol + 2] || "").trim())) return;
           var parts = [];
           var firstNonEmptyCol = -1;
           for (var c = room.startCol; c <= room.endCol; c++) {
