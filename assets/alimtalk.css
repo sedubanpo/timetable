@@ -12,3 +12,17 @@
 #studentImageModal #cardUnsentReason{box-sizing:border-box;max-width:100%}
 
 #studentImageModal .student-list-item[data-student-name]{flex-direction:column;align-items:stretch;gap:8px}#studentImageModal .student-list-actions{flex-wrap:wrap;justify-content:space-between}#studentImageModal .student-list-actions button:not(.student-list-toggle-btn){min-height:44px;padding:8px 10px;border:1px solid #aebed2;border-radius:6px;background:white;color:#183755;font:inherit;font-size:13px}
+
+.notice-contact-form{max-width:640px;min-width:0}
+.notice-contact-form>label{display:block;margin-top:20px}
+.notice-contact-form details{margin:16px 0}
+.notice-contact-form summary{cursor:pointer;font-weight:700;min-height:36px}
+.notice-contact-form ul{padding-left:22px;line-height:1.6}
+.notice-contact-form select,.notice-contact-form input[type=tel]{box-sizing:border-box;display:block;width:100%;min-width:0;min-height:44px;margin-top:6px;padding:9px 10px;color:#183755;background:#fff;border:1px solid #aebed2;border-radius:6px;font:inherit;font-size:14px}
+.notice-contact-form input::placeholder{color:#536778}
+.notice-contact-form :focus-visible{outline:2px solid #0755b3;outline-offset:3px}
+.notice-contact-form input[type=checkbox]{width:18px;height:18px;accent-color:#183755;vertical-align:middle;margin:0 8px 0 0}
+.notice-contact-row{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:16px 0;border-bottom:1px solid #dce3eb}
+.notice-contact-row strong{padding-top:4px}.notice-contact-row p{margin:0 0 8px}.notice-contact-row label{display:block;margin-top:8px}
+.alimtalk-panel .notice-contact-save{background:#183755;color:#fff;border-color:#183755}.alimtalk-panel .notice-contact-save:hover{background:#244b70}
+@media(max-width:480px){.notice-contact-row{grid-template-columns:1fr;gap:4px}.notice-contact-form>button{width:100%}}

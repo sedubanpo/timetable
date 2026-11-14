@@ -27,3 +27,10 @@ test('actual persistent dedupe: two callers claim once and fresh adapter recover
 test('actual atomic rate limit: only configured number succeeds',async()=>{
  const who=id();const r=await Promise.allSettled(Array.from({length:4},()=>ds.rate(who,'synthetic',1,2)));assert.equal(r.filter(x=>x.status==='fulfilled').length,2);assert(r.filter(x=>x.status==='rejected').every(x=>x.reason.code==='RATE_LIMIT'));
 });
+test('actual daily-contact transaction preserves assignment ownership and CAS; audit stores phone hash only',async()=>{
+ const date='2026-11-15',student=id(),entry=id(),record={academyId:'banpo',date,studentId:student,identityRevision:'synthetic',revision:id(),checkedBy:'synthetic-admin',checkedAt:1,confirmed:true,recipients:{student:{phone:'01000000003'}}};
+ const mapping={academyId:'banpo',date,studentId:student,identityRevision:'synthetic',sourceRevision:'source',sourceCapturedAt:1,revision:id(),verifiedBy:'synthetic-admin',verifiedAt:1,entries:[{id:entry,fingerprint:'synthetic'}]};
+ const r=await Promise.allSettled([rs.saveNoticeContacts({record,mapping,guest:null},null,null),rs.saveNoticeContacts({record:{...record,revision:id()},mapping:{...mapping,revision:id()},guest:null},null,null)]);assert.equal(r.filter(x=>x.status==='fulfilled').length,1);assert.equal(r.find(x=>x.status==='rejected').reason.code,'REVIEW_CONFLICT');
+ const saved=await rs.noticeContacts('banpo',date,student),audit=(await db.collection('timetableAlimtalkReviewHistory').doc(saved.revision).get()).data();assert.equal(saved.recipients.student.phone,'01000000003');assert(!JSON.stringify(audit).includes('01000000003'));assert.equal(audit.recipients.student.phoneHash.length,64);
+ const other=id();await assert.rejects(rs.saveNoticeContacts({record:{...record,studentId:other,revision:id()},mapping:{...mapping,studentId:other,revision:id()}},null,null),{code:'ENTRY_ALREADY_ASSIGNED'});assert.equal(await rs.noticeContacts('banpo',date,other),null);
+});

@@ -209,6 +209,10 @@ function drawAlimtalkRoster(list,keyword){
    selectStudentImageItem(name,{skipListRender:true});refreshStudentImageListSelectionState();showDetail(name);};
   const tile=make('div');tile.className='roster-student-card';tile.append(b);
   const actionLabel={unsent:'발송',failed:'재발송',changed:'변경 발송',pending:'결과 확인',unconfirmed:'접수 확인'}[state];
+  if(ready&&row?.studentId&&row.issue==='시간 메모 확인 필요'){
+   const review=make('button','비고 확인 후 개별 발송 준비');review.type='button';review.className='roster-student-action';
+   review.onclick=()=>openCardAlimtalk(false);controls.push(review);
+  }
   if(ready&&row?.studentId&&studentImageScheduleMap[name]&&actionLabel){
    const action=make('button',actionLabel);action.type='button';action.className='roster-student-action';
    action.setAttribute('aria-label',name+' '+(cardAudience==='student'?'학생 본인':'학부모')+' '+actionLabel);
@@ -219,6 +223,7 @@ function drawAlimtalkRoster(list,keyword){
     try{await openCardRosterAction(name,state);}finally{action.disabled=false;action.removeAttribute('aria-busy');action.textContent=actionLabel;}
    };controls.push(action);
   }
+  if(studentImageScheduleMap[name]){const contactButton=make('button','등록·임시 연락처');contactButton.type='button';contactButton.className='roster-contact-action';contactButton.onclick=()=>openCardNoticeContacts();controls.push(contactButton);}
   sections.get(group).push(tile);
  }
  for(const [state,[title,description]] of Object.entries(groups)){

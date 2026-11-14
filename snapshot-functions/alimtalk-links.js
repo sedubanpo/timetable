@@ -11,7 +11,7 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
    const name=names[next++],entries=groups.get(name);
    const excludedOnly=entries.every(e=>exclusion(e.lesson));
    try{
-    const candidates=await findCandidates(name);
+    const candidates=await findCandidates(name,source);
     let selected=candidates[0];
     // A cancelled day may still need its existing mapping refreshed; never create a new one for it.
     if(excludedOnly && (candidates.length!==1 || !(await store.mapping(actor.academyId,source.date,selected))))continue;

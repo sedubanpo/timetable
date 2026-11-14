@@ -13,7 +13,7 @@ function contacts(doc){
     return {id,relation,verified,phone:verified?unique[0]:'',reason:!unique.length?'번호 없음':verified?'':'연락처 충돌 또는 형식 확인 필요'};
   });
 }
-function createStudentAdapter({readStudent,findMappings}){
+function createStudentAdapter({readStudent,findMappings,allowInactiveNotices=false}){
   return async function resolve(id,signal){
     if(!valid(id))fail('INVALID_STUDENT_ID');
     const seen=new Set();let current=id,doc;
@@ -35,10 +35,12 @@ function createStudentAdapter({readStudent,findMappings}){
       if(!doc)fail('STUDENT_NOT_FOUND');
       if(doc.isDeleted===true||doc.deletedAt||doc.disabled===true)fail('STUDENT_NOT_ACTIVE');
       if(doc.isAlias===true||doc.identityStatus==='ALIAS'||doc.mergedInto)fail('IDENTITY_UNRESOLVED');
-      if(!['ACTIVE','RETURNED'].includes(doc.status)||doc.active===false||doc.isActive===false)fail('STUDENT_NOT_ACTIVE');
+      const inactive=!['ACTIVE','RETURNED'].includes(doc.status)||doc.active===false||doc.isActive===false;
+      if(inactive&&!(allowInactiveNotices&&['INACTIVE','STOPPED','PAUSED','SUSPENDED','중지','휴원','퇴원','ACTIVE','RETURNED'].includes(doc.status)))fail('STUDENT_NOT_ACTIVE');
+      if(doc.campusId&&doc.campusId!=='banpo')fail('STUDENT_NOT_ACTIVE');
       if(typeof doc.name!=='string'||!doc.name.trim())fail('STUDENT_NAME_REQUIRED');
       if(signal?.aborted)fail('ABORTED');
-      return {id:current,...(doc.timetableSaturdayArrivalChoice===true?{timetableSaturdayArrivalChoice:true}:{}),name:doc.name.trim(),school:doc.school||'',grade:doc.grade||'',recipients:contacts(doc),identityRevision:digest([current,[...seen],doc.canonicalStudentId||'',doc.studentIdAliases||[],doc.status,doc.name,doc.school||'',doc.grade||''])};
+      return {id:current,...(inactive?{registrationInactive:true}:{}),...(doc.timetableSaturdayArrivalChoice===true?{timetableSaturdayArrivalChoice:true}:{}),name:doc.name.trim(),school:doc.school||'',grade:doc.grade||'',recipients:contacts(doc),identityRevision:digest([current,[...seen],doc.canonicalStudentId||'',doc.studentIdAliases||[],doc.status,doc.name,doc.school||'',doc.grade||'',...(doc.active===false||doc.isActive===false?['inactive-flags',doc.active===false,doc.isActive===false]:[])])};
     }
     fail('IDENTITY_DEPTH_LIMIT');
   };
@@ -57,7 +59,7 @@ function firestoreStudentReader(db){
 }
 // loadMappedDay must verify fresh source completeness and persisted operator mapping.
 // It cannot be a browser-submitted grid or the name/school candidate resolver.
-function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,now=Date.now,audience='guardian'}){
+function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,readNoticeContacts,now=Date.now,audience='guardian'}){
   return async(actor,date,ids,signal)=>{
     const day=await loadMappedDay(actor,date,ids,signal);
     const students=[];
@@ -81,9 +83,15 @@ function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,now=Da
       try{
         if(typeof readClearance!=='function')fail('CONTACT_CLEARANCE_REQUIRED');
         const clearance=await readClearance(actor,id,date,signal);
+        const notice=typeof readNoticeContacts==='function'?await readNoticeContacts(actor,id,date):null;
+        const {validRecord,applyNoticeContacts}=require('./alimtalk-notice-contacts');
+        const approved=validRecord(notice,actor,date,student,now());
+        if(student.noticeDate&&student.noticeDate!==date)fail('TEMPORARY_ATTENDANCE_REQUIRED');
+        if(student.registrationInactive&&!approved)fail('TEMPORARY_ATTENDANCE_REQUIRED');
+        if(approved){student=applyNoticeContacts(student,notice);mapped.mappingRevision=digest([mapped.mappingRevision,notice.revision]);}
         // From this lesson date, the directory supplies the default recipients.
         // A saved daily selection still takes precedence (including restrictions).
-        if(clearance===null && date>='2026-11-07'){
+        if((clearance===null||approved) && date>='2026-11-07'){
           const mother=student.recipients.find(r=>r.id==='mother');
           const father=student.recipients.find(r=>r.id==='father');
           const guardian=mother?.verified ? mother : father;
@@ -106,7 +114,7 @@ function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,now=Da
         students.push({...mapped,...student,mappingRevision:digest([mapped.mappingRevision,student.identityRevision,clearance.revision])});
       }catch(e){
         if(signal?.aborted||e.code==='ABORTED')throw e;
-        students.push({...mapped,name:student.name,recipients:[],holdReasons:['CONTACT_CLEARANCE_REQUIRED']});
+        students.push({...mapped,name:student.name,recipients:[],holdReasons:[e.code==='TEMPORARY_ATTENDANCE_REQUIRED'?e.code:'CONTACT_CLEARANCE_REQUIRED']});
       }
     }
     return {...day,students};

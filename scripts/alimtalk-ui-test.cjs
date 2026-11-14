@@ -33,7 +33,7 @@ test('roster shortcuts are sibling controls, scoped to audience and status; ambi
  assert.deepEqual(calls,[['실패','failed']]);
  pick('변경');const comparison=w.document.querySelector('#rosterComparison');assert(!comparison.hidden);assert.deepEqual(Array.from(comparison.querySelectorAll('pre'),p=>p.textContent),['17:00 과학','18:00 과학']);assert.match(comparison.textContent,/모·부/);assert.equal(calls.length,1);detail.querySelector('.roster-student-action').click();
  assert.deepEqual(calls.at(-1),['변경','changed']);
- for(const name of ['동명','제외','완료']){pick(name);assert(comparison.hidden);assert.equal(detail.querySelectorAll('button').length,0);}
+ for(const name of ['동명','제외','완료']){pick(name);assert(comparison.hidden);assert.equal(detail.querySelectorAll('.roster-student-action').length,0);assert(detail.querySelector('.roster-contact-action'));}
  dom.window.close();
 });
 

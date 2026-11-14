@@ -10,7 +10,7 @@ const kinds={student:'student-daily-lessons',guardian:'daily-lessons'};
 const outstanding=new Set(['REQUESTING','ACCEPTED','PROCESSING','UNKNOWN']);
 const newest=(a,b)=>b.createdAt-a.createdAt||b.id.localeCompare(a.id);
 const reason=c=>({
- CONTACT_CLEARANCE_REQUIRED:'받는 번호 확인 필요',MAPPING_CHANGED:'수업과 학생 다시 확인',
+ TEMPORARY_ATTENDANCE_REQUIRED:'중지생 · 이 수업일의 연락처 확인 필요',CONTACT_CLEARANCE_REQUIRED:'받는 번호 확인 필요',MAPPING_CHANGED:'수업과 학생 다시 확인',
  STUDENT_COVERAGE_INCOMPLETE:'변경된 수업 다시 연결',STUDENT_IDENTITY_REVIEW_REQUIRED:'이름·학교 확인 필요',
  STUDENT_SCHOOL_MISMATCH:'학교·학년 확인 필요',CANONICAL_RECONFIRM_REQUIRED:'학생 원장 다시 확인'
 }[c]||'학생·연락처 확인 필요');
@@ -65,7 +65,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
      if(excludedOnly){issue='안내 대상 수업 없음 · '+[...new Set(entries.map(e=>rules.exclusion(e.lesson)))].join(', ');}
      else {
      const day=await withStudentDirectory({loadMappedDay:async()=>mapped,resolveStudent:getStudent,
-      readClearance:(actor,sid,d)=>reviewStore.clearance(actor.academyId,d,sid),now,audience})(a,date,[id]);
+      readClearance:(actor,sid,d)=>reviewStore.clearance(actor.academyId,d,sid),readNoticeContacts:reviewStore.noticeContacts?((actor,sid,d)=>reviewStore.noticeContacts(actor.academyId,d,sid)):undefined,now,audience})(a,date,[id]);
      verified=day.students[0];
      if(verified.holdReasons?.length)issue=reason(verified.holdReasons[0]);
      else if(!verified.recipients.length)issue=verified.recipientIssue||'이 발송 대상의 확인된 번호 없음';

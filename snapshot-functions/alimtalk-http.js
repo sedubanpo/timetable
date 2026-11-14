@@ -17,7 +17,7 @@ function createHandler({review,delivery,allowedOrigins,allowSend=false,batch,stu
   if(!req.headers['content-type']?.startsWith('application/json'))return res.status(415).json({code:'JSON_REQUIRED'});
   if(!req.body||Buffer.byteLength(JSON.stringify(req.body))>100000)return res.status(413).json({code:'REQUEST_LIMIT'});
   const {action,input}=req.body,session={authorization:req.headers.authorization};
-  const routes={reviewState:review.reviewState,inspect:review.inspect,candidates:review.candidates,saveMapping:review.saveMapping,contactChoices:review.contactChoices,saveClearance:review.saveClearance,preview:delivery.preview,send:delivery.send,results:delivery.results,reconcile:(s,i)=>delivery.reconcile(s,i.id)};
+  const routes={noticeContactOptions:review.noticeContactOptions,saveNoticeContacts:review.saveNoticeContacts,reviewState:review.reviewState,inspect:review.inspect,candidates:review.candidates,saveMapping:review.saveMapping,contactChoices:review.contactChoices,saveClearance:review.saveClearance,preview:delivery.preview,send:delivery.send,results:delivery.results,reconcile:(s,i)=>delivery.reconcile(s,i.id)};
   if(batch)Object.assign(routes,batch);
   if(studentDelivery)Object.assign(routes,{studentPreview:studentDelivery.preview,studentSend:studentDelivery.send,studentResults:studentDelivery.results,studentReconcile:(s,i)=>studentDelivery.reconcile(s,i.id)});
   if(testDelivery)Object.assign(routes,{testPreview:testDelivery.preview,testSend:testDelivery.send,testResults:testDelivery.results,testReconcile:(s,i)=>testDelivery.reconcile(s,i.id)});
@@ -28,8 +28,8 @@ function createHandler({review,delivery,allowedOrigins,allowSend=false,batch,stu
   // Mutation timeout is explicitly uncertain; clients must reconcile, never auto-replay.
   // Deployment remains gated on durable recovery UI and hosting deadline validation.
   let timer;
-  try{const result=await Promise.race([routes[action](session,input),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),action==='batchSend'?105000:action.startsWith('batch')?25000:deadline);})]);return res.json(['preview','studentPreview','testPreview','realTestPreview'].includes(action)?{...result,sendEnabled:['preview','studentPreview'].includes(action)?allowSend:allowTestSend}:result);}
-  catch(e){const mutation=['saveMapping','saveClearance','send','studentSend','testSend','realTestSend','batchSend','batchReleaseUnreceived'].includes(action);if(e.code==='TIMEOUT'&&mutation)return res.status(504).json({code:'RESULT_UNCERTAIN',retry:false});const code=typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'REQUEST_FAILED';return res.status(code==='FORBIDDEN'?403:code==='TIMEOUT'?504:409).json({code});}
+  try{const result=await Promise.race([routes[action](session,input),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),action==='batchSend'?105000:(action.startsWith('batch')||['noticeContactOptions','saveNoticeContacts'].includes(action))?25000:deadline);})]);return res.json(['preview','studentPreview','testPreview','realTestPreview'].includes(action)?{...result,sendEnabled:['preview','studentPreview'].includes(action)?allowSend:allowTestSend}:result);}
+  catch(e){const mutation=['saveNoticeContacts','saveMapping','saveClearance','send','studentSend','testSend','realTestSend','batchSend','batchReleaseUnreceived'].includes(action);if(e.code==='TIMEOUT'&&mutation)return res.status(504).json({code:'RESULT_UNCERTAIN',retry:false});const code=typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'REQUEST_FAILED';return res.status(code==='FORBIDDEN'?403:code==='TIMEOUT'?504:409).json({code});}
   finally{clearTimeout(timer);}
  };
 }

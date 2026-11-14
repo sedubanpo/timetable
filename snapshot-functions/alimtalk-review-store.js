@@ -6,6 +6,28 @@ function firestoreReviewStore(db){
  const key=(a,d,s)=>hash([a,d,s]),maps=db.collection('timetableStudentMappings'),days=db.collection('timetableStudentMappingDays'),reviews=db.collection('timetableAlimtalkClearances'),audit=db.collection('timetableAlimtalkReviewHistory');
  const bounded=v=>{if(Buffer.byteLength(JSON.stringify(v))>800000)fail('MAPPING_LIMIT');};
  return {
+  async noticeContacts(a,d,s){return (await db.collection('timetableNoticeContacts').doc(key(a,d,s)).get()).data()||null;},
+  async noticeGuest(id){return (await db.collection('timetableNoticeGuests').doc(id).get()).data()||null;},
+  async saveNoticeContacts({record,mapping,guest},expected,expectedMapping){
+   bounded(record);bounded(mapping);
+   const id=key(record.academyId,record.date,record.studentId),ref=db.collection('timetableNoticeContacts').doc(id),mapRef=maps.doc(id),dayRef=days.doc(key(record.academyId,record.date,'day'));
+   return db.runTransaction(async tx=>{
+    const [oldSnap,mapSnap,daySnap]=await Promise.all([tx.get(ref),tx.get(mapRef),tx.get(dayRef)]);
+    const old=oldSnap.data(),prior=mapSnap.data();
+    if((old?.revision||null)!==expected)fail('REVIEW_CONFLICT');
+    if((prior?.revision||null)!==expectedMapping)fail('MAPPING_CONFLICT');
+    if(prior?.sourceCapturedAt>mapping.sourceCapturedAt)fail('SOURCE_CHANGED');
+    const assignments={...(daySnap.data()?.assignments||{})};
+    for(const e of prior?.entries||[]){const k=hash(e.id);if(assignments[k]?.studentId===record.studentId)delete assignments[k];}
+    for(const e of mapping.entries){const k=hash(e.id);if(assignments[k]&&assignments[k].studentId!==record.studentId)fail('ENTRY_ALREADY_ASSIGNED');assignments[k]={studentId:record.studentId,fingerprint:e.fingerprint,revision:mapping.revision};}
+    const day={academyId:record.academyId,date:record.date,assignments};bounded(day);
+    if(guest)tx.set(db.collection('timetableNoticeGuests').doc(guest.id),guest);
+    if(mapping.identityLink)tx.set(maps.doc(key(record.academyId,'identity',record.studentId)),{academyId:record.academyId,date:'identity',studentId:record.studentId,...mapping.identityLink,identityRevision:mapping.identityRevision,revision:mapping.revision,verifiedBy:mapping.verifiedBy,verifiedAt:mapping.verifiedAt});
+    tx.set(mapRef,mapping);tx.set(dayRef,day);tx.set(ref,record);
+    const recipients=Object.fromEntries(Object.entries(record.recipients).map(([k,v])=>[k,{phoneHash:hash(v.phone)}]));
+    tx.create(audit.doc(record.revision),{kind:'notice-contacts',...record,recipients,mappingRevision:mapping.revision});
+   });
+  },
   async dayAssignments(a,d){return (await days.doc(key(a,d,'day')).get()).data()?.assignments||{};},
   async mapping(a,d,s){return (await maps.doc(key(a,d,s)).get()).data()||null;},
   async clearance(a,d,s){return (await reviews.doc(key(a,d,s)).get()).data()||null;},

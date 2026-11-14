@@ -14,14 +14,30 @@ const templateProvider=options=>require('./alimtalk-provider').createProvider(op
 function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,fallbackFrom='',testPhone='',webhookSecret='',enableTestSend=false,now=Date.now}){
  if(typeof request!=='function')fail('TRANSPORT_REQUIRED');
  const authorize=createAuthorizer({verifyIdToken:(t,r)=>auth.verifyIdToken(t,r),readAccount:firestoreAccountReader(db)});
- const rs=firestoreReviewStore(db),store=firestoreStore(db),resolveStudent=createStudentAdapter(firestoreStudentReader(db));
+ const rs=firestoreReviewStore(db),store=firestoreStore(db);
+ const directoryStudent=createStudentAdapter({...firestoreStudentReader(db),allowInactiveNotices:true});
+ const resolveStudent=async(id,signal)=>{
+  if(/^notice_[a-f0-9]{64}$/.test(id)){const guest=await rs.noticeGuest(id);if(!guest||guest.id!==id||!guest.noticeDate)fail('STUDENT_NOT_FOUND');return guest;}
+  return directoryStudent(id,signal);
+ };
+ const searchStudents=async(actor,name)=>{
+  const snap=await db.collection('students').where('name','==',name).limit(21).get();if(snap.size>20)fail('CANDIDATE_LIMIT');
+  const candidates=snap.docs.filter(d=>{const s=d.data();return !s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS'&&s.status!=='MERGED'&&s.disabled!==true&&(!s.campusId||s.campusId===actor.academyId);}).map(d=>({...d.data(),id:d.id}));
+  if(snap.size&&!candidates.length)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
+  return candidates;
+ };
  const reader=createSourceReader({sourceUrl,secret:sourceSecret,now,request:async(url,options)=>{
   const response=await request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:options.body,signal:options.signal});
   if(!response.ok)fail('SOURCE_UNAVAILABLE');return response.json();
  }});
- const linkSource=require('./alimtalk-links').createLinkResolver({store:rs,resolveStudent,now,findCandidates:async name=>{
-  const snap=await db.collection('students').where('name','==',name).limit(21).get();if(snap.size>20)fail('CANDIDATE_LIMIT');
-  return snap.docs.filter(d=>{const s=d.data();return ['ACTIVE','RETURNED'].includes(s.status)&&!s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS'&&s.active!==false&&s.isActive!==false&&s.disabled!==true;}).map(d=>d.id);
+ const linkSource=require('./alimtalk-links').createLinkResolver({store:rs,resolveStudent,now,findCandidates:async(name,source)=>{
+  const candidates=await searchStudents({academyId:'banpo'},name);
+  const usable=candidates.filter(s=>['ACTIVE','RETURNED','INACTIVE','STOPPED','PAUSED','SUSPENDED','중지','휴원','퇴원'].includes(s.status));
+  if(usable.length)return usable.map(s=>s.id);
+  const schools=[...new Set(source.entries.filter(e=>e.sourceName===name).map(e=>e.sourceSchool))];
+  if(schools.length===1){const id=require('./alimtalk-notice-contacts').guestId(source.date,name,schools[0]);if(await rs.noticeGuest(id))return [id];}
+  return [];
+
  }});
  const loadSource=async(actor,date,signal)=>{
   if(actor.academyId!=='banpo'||!rules.validDate(date))fail('FORBIDDEN');
@@ -44,12 +60,13 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
  };
  function deliveryFor(audience,kind){
   const loadDay=withStudentDirectory({
-   loadMappedDay:mapped,resolveStudent,readClearance:(actor,id,date)=>rs.clearance(actor.academyId,date,id),now,audience
+   loadMappedDay:mapped,resolveStudent,readClearance:(actor,id,date)=>rs.clearance(actor.academyId,date,id),readNoticeContacts:(actor,id,date)=>rs.noticeContacts(actor.academyId,date,id),now,audience
   });
   return createService({authorize,loadDay,store,provider:templateProvider({apiKey,apiSecret,request,verifiedRecipientSend:true,fallbackFrom}),webhookSecret,now,kind});
  }
  const delivery=deliveryFor('guardian','daily-lessons');
  const studentDelivery=deliveryFor('student','student-daily-lessons');
+ Object.assign(review,require('./alimtalk-notice-contacts').createNoticeContactsService({authorize,loadSource,searchStudents,resolveStudent,store:rs,now}));
  const batch=require('./alimtalk-batch').createBatch({authorize,loadSource,resolveStudent,reviewStore:rs,store,
   provider:templateProvider({apiKey,apiSecret,request}),services:{student:studentDelivery,guardian:delivery},now});
  // Every review action is rate limited too; permission is checked before rate-store writes.
