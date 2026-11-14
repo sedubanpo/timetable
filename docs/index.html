@@ -10849,18 +10849,23 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         if (!m) return { text: n, month: "", day: "", dow: "" };
         return { text: m[1] + "/" + m[2] + "(" + m[3] + ")", month: m[1], day: m[2], dow: m[3] };
       }
-      function detectAttendanceIssueType(status, note) {
+      function detectAttendanceIssueType(status, note, reportHour) {
         var s = normalizeStatusLabel(status || "");
         var nt = String(note || "");
         var lateNotePattern = /(지각|늦게|연락\s*두절|연락두절|\d{1,2}:\d{2}\s*등원\s*예정|등원\s*예정|등원예정)/;
+        // A recorded arrival in this reporting slot can replace an earlier "지각 예정" note.
+        // A separate lesson-time range can specify a non-hourly start, so leave those notes alone.
+        var arrival = nt.match(/(?:^|[,;]\s*)(\d{1,2}):([0-5]\d)\s*(?:등원|도착)(?:\s*완료)?[.!]?\s*$/);
+        var hasTimeRange = /\d\s*(?:시|분)?\s*[-–~〜]\s*\d/.test(nt);
+        var arrivedLate = arrival && Number(arrival[1]) === reportHour && Number(arrival[2]) > 0 && !hasTimeRange;
         if (s === "보강" || s === "보충") {
-          if (lateNotePattern.test(nt)) return "late";
+          if (arrivedLate || lateNotePattern.test(nt)) return "late";
           if (/(당취|당일취소|결석|병결|휴강).*(보강|보충|대체수업)|(보강|보충|대체수업).*(당취|당일취소|결석|병결|휴강)/.test(nt)) return "";
           return "";
         }
         if (s === "지각") return "late";
         if (s === "당일취소" || s === "결석예고" || s === "병결" || s === "휴강") return "absent";
-        if (lateNotePattern.test(nt)) return "late";
+        if (arrivedLate || lateNotePattern.test(nt)) return "late";
         if (/(당일취소|당취|결석|병결|휴강)/.test(nt)) {
           if (/(보강|보충|대체수업)/.test(nt)) return "";
           return "absent";
@@ -10922,7 +10927,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
             if (!parsed.name) return;
             totalStudentCount += 1;
             roomClassSummaryMap[classSummaryKey].totalCount += 1;
-            var issueType = detectAttendanceIssueType(parsed.status, parsed.note);
+            var issueType = detectAttendanceIssueType(parsed.status, parsed.note, h);
             if (!issueType) {
               roomClassSummaryMap[classSummaryKey].activeCount += 1;
               return;

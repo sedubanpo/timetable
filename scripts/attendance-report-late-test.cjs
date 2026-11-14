@@ -26,6 +26,13 @@ for (const file of ['Index.html','docs/index.html']) {
   assert.equal(report.items[0].note,note);
   assert.match(scope.composeAttendanceReportText(report),/10분 지각 예정/);
   assert.match(scope.attendanceTeacherMessages(report)[0].text,/10분 지각 예정/);
+  for (const [arrival, expectedLate] of [
+    ['10:19 등원', 1], ['10:00 등원', 0], ['09:55 도착', 0],
+    ['10:20–12:20 수업, 10:19 등원', 0]
+  ]) {
+    scope.lastData.grid[10][0][1] = raw.replace('10분 지각 예정', arrival);
+    assert.equal(scope.buildAttendanceReport().lateCount, expectedLate);
+  }
   scope.lastData.grid[10][0][1] = raw.replace(', 10분 지각 예정','');
   assert.equal(scope.buildAttendanceReport().activeCount,2);
 }
