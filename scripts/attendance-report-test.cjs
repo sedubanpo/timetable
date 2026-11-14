@@ -1,8 +1,12 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const a=fs.readFileSync('docs/index.html','utf8'),b=fs.readFileSync('Index.html','utf8');
-const block=h=>h.slice(h.indexOf('      function getCurrentReportHour('),h.indexOf('      function isTeacherHeader('));assert.equal(block(a),block(b));assert(a.includes(fs.readFileSync('scripts/attendance-report.css','utf8')));
+const block=h=>h.slice(h.indexOf('      function getCurrentReportHour('),h.indexOf('      function isTeacherHeader('));assert.equal(block(a),block(b));
+const reportCss = fs.readFileSync('scripts/attendance-report.css', 'utf8');
+for (const [file, html] of [['docs/index.html', a], ['Index.html', b]]) {
+  assert(html.includes(reportCss), file + ' must include the shared attendance report CSS');
+}
 for(const h of [a,b])for(const s of h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))if(s[1].trim())new vm.Script(s[1]);
-const els={attendanceReportFeedback:{textContent:''}},ctx=vm.createContext({console,Date,Map,Set,Promise,JSON,Array,Object,String,Number,Math,setTimeout,URL,navigator:{},document:{getElementById:k=>els[k],querySelectorAll:()=>[]},currentSheetName:'10/3(토)',getScheduleSessionKey:()=> 'test-account',normalizeStatusLabel:s=>s,attendanceReportHideResolved:false,attendanceReportPayload:null,attendanceReportHourOffset:0,SCHEDULE_START_HOUR:0,SCHEDULE_END_HOUR:23});vm.runInContext(block(a),ctx);
+const els={attendanceReportFeedback:{textContent:''}},ctx=vm.createContext({console,Date,Map,Set,Promise,JSON,Array,Object,String,Number,Math,setTimeout,URL,navigator:{},document:{getElementById:k=>els[k],querySelectorAll:()=>[]},currentSheetName:'10/3(토)',getScheduleSessionKey:()=> 'test-account',normalizeStatusLabel:s=>s,attendanceReportHiddenStatuses:new Set(),attendanceReportPayload:null,attendanceReportHourOffset:0,SCHEDULE_START_HOUR:0,SCHEDULE_END_HOUR:23});vm.runInContext(block(a),ctx);
 const one={type:'late',name:'가상학생',school:'반포고2',teacher:'가상강사',classType:'개별',subject:'영어',room:'1강의실',status:'지각',note:'10/3(토) 확정, 곧 등원 예정'};
 const two={...one,name:'다른학생',status:'결석예고',type:'absent',note:'개인 일정으로 결석예고'};
 const p={dateText:'10/3(토)',slotText:'21:00~22:00',hour:21,activeCount:2,items:[one,two]};ctx.attendanceReportPayload=p;
@@ -11,7 +15,7 @@ assert.equal(ctx.cleanAttendanceTeacherNote('등원 시간 미확정'),'등원 �
 let msg=ctx.attendanceTeacherMessages(p);assert.equal(msg.length,1);assert(msg[0].text.includes('가상학생(반포고2)'));assert(msg[0].text.includes('다른학생'));assert(!msg[0].text.includes('확정'));
 assert(ctx.composeAttendanceReportText(p).includes('가상학생 · 가상강사(개별) · '));assert(!ctx.composeAttendanceReportText(p).includes('1강의실'));
 ctx.attendanceReportDrafts[ctx.attendanceReportNoteKey(one)]='21:30 등원 예정';assert(ctx.composeAttendanceReportText(p).includes('21:30 등원 예정'));assert(ctx.attendanceTeacherMessages(p)[0].text.includes('21:30 등원 예정'));assert.equal(one.note,'10/3(토) 확정, 곧 등원 예정');
-ctx.currentSheetName='10/4(일)';assert.equal(ctx.attendanceReportNote(one),one.note);ctx.currentSheetName='10/3(토)';ctx.attendanceReportHideResolved=true;assert.equal(ctx.getVisibleAttendanceItems(p).length,1);assert(!ctx.attendanceTeacherMessages(p)[0].text.includes('다른학생'));ctx.attendanceReportHideResolved=false;
+ctx.currentSheetName='10/4(일)';assert.equal(ctx.attendanceReportNote(one),one.note);ctx.currentSheetName='10/3(토)';ctx.attendanceReportHiddenStatuses.add('결석예고');assert.equal(ctx.getVisibleAttendanceItems(p).length,1);assert(!ctx.attendanceTeacherMessages(p)[0].text.includes('다른학생'));ctx.attendanceReportHiddenStatuses.clear();
 assert.equal(ctx.attendanceReportEscape('<img onerror="x">'), '&lt;img onerror=&quot;x&quot;&gt;');assert(ctx.composeAttendanceReportText({...p,items:[]}).includes('특이사항이 없습니다'));assert.equal(ctx.attendanceTeacherMessages({...p,items:[{...one,teacher:''}]}).length,0);
 (async()=>{
  await ctx.copyAttendanceReportImage();assert(els.attendanceReportFeedback.textContent.includes('지원되지'));
@@ -25,9 +29,47 @@ assert.equal(ctx.attendanceReportEscape('<img onerror="x">'), '&lt;img onerror=&
 })().catch(e=>{console.error(e);process.exitCode=1;});
 
 // Same teacher, separate classes; hidden rows never change full class counts.
-{const data={...p,roomClassSummaryMap:{a:{teacher:one.teacher,subject:'영어',room:'1강의실',classType:'개별',activeCount:3}}};let groups=ctx.attendanceReportGroups(data);assert.equal(groups.length,1);assert.equal(groups[0].classes.length,1);assert.equal(groups[0].classes[0].active,3);assert.equal(groups[0].classes[0].late,1);assert.equal(groups[0].classes[0].absent,1);ctx.attendanceReportHideResolved=true;groups=ctx.attendanceReportGroups(data);assert.equal(groups[0].classes[0].students.length,1);assert.equal(groups[0].classes[0].absent,1);ctx.attendanceReportHideResolved=false;groups=ctx.attendanceReportGroups({...data,items:[one,{...two,subject:'국어',room:'2강의실'}]});assert.equal(groups[0].classes.length,2);console.log('PASS: teacher/class grouping, per-class counts, filter count integrity.');}
+{const data={...p,roomClassSummaryMap:{a:{teacher:one.teacher,subject:'영어',room:'1강의실',classType:'개별',activeCount:3}}};let groups=ctx.attendanceReportGroups(data);assert.equal(groups.length,1);assert.equal(groups[0].classes.length,1);assert.equal(groups[0].classes[0].active,3);assert.equal(groups[0].classes[0].late,1);assert.equal(groups[0].classes[0].absent,1);ctx.attendanceReportHiddenStatuses.add('결석예고');groups=ctx.attendanceReportGroups(data);assert.equal(groups[0].classes[0].students.length,1);assert.equal(groups[0].classes[0].absent,1);ctx.attendanceReportHiddenStatuses.clear();groups=ctx.attendanceReportGroups({...data,items:[one,{...two,subject:'국어',room:'2강의실'}]});assert.equal(groups[0].classes.length,2);console.log('PASS: teacher/class grouping, per-class counts, filter count integrity.');}
 {const groups=[{teacher:'정상',classes:[{active:2,late:0,absent:0}]},{teacher:'혼합',classes:[{active:2,late:0,absent:0},{active:0,late:0,absent:1,students:[]}]}];assert.deepEqual(Array.from(ctx.attendanceClearGroups(groups),g=>g.teacher),['정상']);const counts=ctx.attendanceReportCounts(2,1,3);assert(counts.includes('×2'));assert(counts.includes('aria-label="지각 1명"'));ctx.getSubjectBadgeHtml=s=>'<shared>'+s+'</shared>';assert(ctx.attendanceTeacherIcon({classes:[{subject:'수학'},{subject:'수학'}]}).includes('<shared>수학</shared>'));console.log('PASS: compact normal teacher classification and shared subject icon delegation.');}
-{els.attendanceReportPreview={innerHTML:''};els.attendanceReportTimeLabel={textContent:''};ctx.attendanceReportHideResolved=true;ctx.renderAttendanceReportPreview({...p,items:[two],lateCount:0,absentCount:1});assert(!els.attendanceReportPreview.innerHTML.includes('class="ar-teacher"'));assert(!els.attendanceReportPreview.innerHTML.includes('학생 숨김'));ctx.attendanceReportHideResolved=false;ctx.renderAttendanceReportPreview({...p,items:[one,{...two,teacher:'두번째강사'}],lateCount:1,absentCount:1});const colors=[...els.attendanceReportPreview.innerHTML.matchAll(/--teacher-bg:([^";]+)/g)].map(m=>m[1]);assert.equal(colors.length,2);assert.equal(new Set(colors).size,2);console.log('PASS hidden-only teacher omission and distinct pastel backgrounds.');}
+els.attendanceReportPreview = {innerHTML: ''};
+els.attendanceReportTimeLabel = {textContent: ''};
+function preview(data) {
+  ctx.renderAttendanceReportPreview(data);
+  return els.attendanceReportPreview.innerHTML;
+}
 
-{ctx.attendanceReportHideResolved=true;ctx.renderAttendanceReportPreview({...p,items:[one,{...two,room:'숨김강의실'}],lateCount:1,absentCount:1});assert(!els.attendanceReportPreview.innerHTML.includes('숨김강의실'));assert(!els.attendanceReportPreview.innerHTML.includes('학생 숨김'));ctx.attendanceReportHideResolved=false;}
-{ctx.attendanceReportHideResolved=true;assert.equal(ctx.getVisibleAttendanceItems({...p,items:[{...two,status:'휴강'}]}).length,0);ctx.attendanceReportHideResolved=false;const data={...p,items:[],lateCount:0,absentCount:0,roomClassSummaryMap:{zero:{teacher:'빈강사',room:'0강의실',activeCount:0},live:{teacher:'정상강사',room:'2관 1강의실',subject:'수학',activeCount:2}}};assert.equal(ctx.attendanceReportGroups(data).length,1);ctx.renderAttendanceReportPreview(data);assert(!els.attendanceReportPreview.innerHTML.includes('빈강사'));assert(els.attendanceReportPreview.innerHTML.includes('ar-clear-room">2관 1강의실'));console.log('PASS cancelled lesson filter, zero-count omission and clear teacher room label.');}
+const closed = {...two, name:'휴강학생', status:'휴강'};
+const cancelled = {...two, name:'당취학생', status:'당일취소'};
+const filteredReport = {...p, items:[one, two, closed, cancelled], lateCount:1, absentCount:3};
+for (const hidden of [two, closed, cancelled]) {
+  ctx.attendanceReportHiddenStatuses.add(hidden.status);
+  const visible = ctx.getVisibleAttendanceItems(filteredReport);
+  assert.deepEqual(Array.from(visible, item => item.name),
+    filteredReport.items.filter(item => item !== hidden).map(item => item.name));
+  ctx.attendanceReportHiddenStatuses.clear();
+}
+
+ctx.attendanceReportHiddenStatuses.add('결석예고');
+ctx.attendanceReportHiddenStatuses.add('당일취소');
+const filtered = preview(filteredReport);
+assert(!filtered.includes(two.name));
+assert(!filtered.includes(cancelled.name));
+assert(filtered.includes(closed.name));
+assert(filtered.includes(one.name));
+assert(filtered.includes('aria-label="불참 3명"'));
+
+const separateClass = preview({...p, items:[one, {...two, room:'2강의실', teacher:'다른강사'}], lateCount:1, absentCount:1});
+assert(separateClass.includes('다른강사 선생님'));
+assert(separateClass.includes('2강의실'));
+assert(!separateClass.includes(two.name));
+assert(separateClass.includes('aria-label="불참 1명" title="불참"'));
+const hiddenGroup = ctx.attendanceReportGroups({...p, items:[{...two, room:'2강의실'}]})[0];
+assert.equal(hiddenGroup.classes[0].absent, 1);
+assert.equal(hiddenGroup.classes[0].students.length, 0);
+const colors = Array.from(separateClass.matchAll(/--teacher-bg:([^";]+)/g), match => match[1]);
+assert.equal(colors.length, 2);
+assert.equal(new Set(colors).size, 2);
+ctx.attendanceReportHiddenStatuses.clear();
+console.log('PASS: independent status filters, preserved class summaries and distinct teacher colors.');
+
+{const data={...p,items:[],lateCount:0,absentCount:0,roomClassSummaryMap:{zero:{teacher:'빈강사',room:'0강의실',activeCount:0},live:{teacher:'정상강사',room:'2관 1강의실',subject:'수학',activeCount:2}}};assert.equal(ctx.attendanceReportGroups(data).length,1);ctx.renderAttendanceReportPreview(data);assert(!els.attendanceReportPreview.innerHTML.includes('빈강사'));assert(els.attendanceReportPreview.innerHTML.includes('ar-clear-room">2관 1강의실'));console.log('PASS zero-count omission and clear teacher room label.');}
