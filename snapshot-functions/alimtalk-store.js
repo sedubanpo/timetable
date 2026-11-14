@@ -1,10 +1,20 @@
 'use strict';
-// Proposed Admin SDK store. Not instantiated by any deployed function.
+// Admin SDK store used by the timetable delivery runtime.
 // Client access must remain denied; no security rules are changed by this work.
 function firestoreStore(db){
   const records=db.collection('timetableAlimtalkDeliveries');
   const previews=db.collection('timetableAlimtalkPreviews');
+  const memoReviews=db.collection('timetableAlimtalkMemoReviews');
+  const memoId=(a,d,s)=>require('node:crypto').createHash('sha256').update(JSON.stringify([a,d,s])).digest('hex');
   return {
+    async memoReview(academyId,date,studentId){return (await memoReviews.doc(memoId(academyId,date,studentId)).get()).data()||null;},
+    async saveMemoReview(record){
+      const ref=memoReviews.doc(memoId(record.academyId,record.date,record.studentId));
+      await db.runTransaction(async tx=>{
+        tx.set(ref,record);
+        tx.set(ref.collection('history').doc(require('node:crypto').randomUUID()),record);
+      });
+    },
     async observeSchedule(record,current,capturedAt){
       const ref=records.doc(record.id);
       await db.runTransaction(async tx=>{

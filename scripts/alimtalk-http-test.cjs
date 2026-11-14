@@ -6,3 +6,11 @@ test('HTTP maps authorization only and blocks send by default',async()=>{const x
 test('HTTP cross-origin, wrong content type and unknown action rejected',async()=>{for(const mutate of [x=>x.req.headers.origin='https://wrong.invalid',x=>x.req.headers['content-type']='text/plain',x=>x.req.body.action='constructor']){const x=setup();mutate(x);await x.handler(x.req,x.res);assert(x.res.code>=400);assert.equal(x.calls.length,0);}});
 test('finite HTTP read deadline without leaking private error details',async()=>{const x=setup();const h=createHandler({review:{inspect:()=>new Promise(()=>{})},delivery:{},allowedOrigins:['https://sedubanpo.github.io'],deadline:5});x.req.body.action='inspect';await h(x.req,x.res);assert.equal(x.res.code,504);assert.equal(x.res.body.code,'TIMEOUT');});
 test('webhook routing is separate, verified by delivery and never dispatches',async()=>{const x=setup();let called=0;const h=createHandler({review:{},delivery:{webhook:async(header,rows)=>{assert.equal(header,'synthetic');assert.deepEqual(rows,[]);called++;}},allowedOrigins:['https://sedubanpo.github.io']});await h({path:'/webhook',method:'POST',headers:{'x-solapi-secret':'synthetic'},body:[]},x.res);assert.equal(x.res.code,200);assert.equal(called,1);});
+
+
+test('memo review save routes are separated by audience and do not require send enablement',async()=>{
+ const x=setup(),calls=[];
+ const handler=createHandler({review:{},delivery:{saveMemoReview:async()=>{calls.push('guardian');return {saved:true};}},studentDelivery:{saveMemoReview:async()=>{calls.push('student');return {saved:true};}},allowedOrigins:['https://sedubanpo.github.io']});
+ for(const action of ['saveMemoReview','studentSaveMemoReview']){x.req.body={action,input:{previewId:'synthetic',confirmed:true}};await handler(x.req,x.res);assert.equal(x.res.body.saved,true);}
+ assert.deepEqual(calls,['guardian','student']);
+});

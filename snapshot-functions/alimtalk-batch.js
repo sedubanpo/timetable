@@ -2,7 +2,7 @@
 // A roster is a read. Only a reviewed, actor-bound ticket can cross the delivery boundary.
 const {randomUUID}=require('node:crypto');
 const rules=require('./alimtalk-contract');
-const {hash,timeMemoReview}=require('./alimtalk-service');
+const {hash,timeMemoReview,memoScheduleKey}=require('./alimtalk-service');
 const {verifiedStudentDay}=require('./alimtalk-verified-day');
 const {withStudentDirectory}=require('./alimtalk-students');
 const fail=code=>{throw Object.assign(Error(code),{code});};
@@ -67,6 +67,10 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
      const day=await withStudentDirectory({loadMappedDay:async()=>mapped,resolveStudent:getStudent,
       readClearance:(actor,sid,d)=>reviewStore.clearance(actor.academyId,d,sid),readNoticeContacts:reviewStore.noticeContacts?((actor,sid,d)=>reviewStore.noticeContacts(actor.academyId,d,sid)):undefined,now,audience})(a,date,[id]);
      verified=day.students[0];
+     const savedMemo=await store.memoReview?.(a.academyId,date,id);
+     if(savedMemo?.scheduleKey===memoScheduleKey(a.academyId,date,{id,lessons:entries.map(e=>e.lesson)},c)){
+      c.reasons=c.reasons.filter(r=>r!=='시간 메모 확인 필요');
+     }
      if(verified.holdReasons?.length)issue=reason(verified.holdReasons[0]);
      else if(!verified.recipients.length)issue=verified.recipientIssue||'이 발송 대상의 확인된 번호 없음';
      else if(c.reasons.length){

@@ -3,17 +3,13 @@
   const R=root.TimetableAlimtalk;
   function mount({host,api,context,deadline=10000}){
     let preview=null,selection=[],generation=0,busy=false,requestContext='';
-    // Only the note acknowledgement is shared between audiences. Recipient selection is never shared.
-    const checkedNotes=new Map();
-    const memoScope=(ctx)=>JSON.stringify([ctx.session,ctx.date,ctx.studentId]);
-    const memoContent=row=>JSON.stringify([row.memoReview.notes,row.text]);
     function current(g){if(g!==generation)return false;if(requestContext!==JSON.stringify(context())){reset();shell();host.append(el('p','학생·날짜·로그인 상태가 변경됐습니다. 다시 미리보기해 주세요.'));return false;}return true;}
     const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
     const button=(text,fn)=>{const b=el('button',text);b.type='button';b.onclick=fn;return b;};
     function reset(){generation++;preview=null;selection=[];busy=false;host.replaceChildren();}
     function shell(){host.replaceChildren();host.append(el('h3','알림톡 안내'));const note=el('p','받는 번호와 수업 시각을 확인해 주세요.');host.append(note);}
-    function error(e){const messages={TIMEOUT:'요청 시간이 초과되었습니다. 재발송 전에 발송 결과를 확인하세요.',AUTH_CONNECTION_FAILED:'로그인 연결을 불러오지 못했습니다.',TOKEN_UNAVAILABLE:'로그인 인증을 확인하지 못했습니다. 로그인 상태를 확인해 주세요.',NETWORK_UNAVAILABLE:'알림톡 서버에 연결하지 못했습니다. 네트워크 또는 브라우저 차단을 확인하세요.',INVALID_RESPONSE:'서버 응답을 해석하지 못했습니다.',UNAUTHORIZED:'허브 로그인 상태를 확인해 주세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 시간표·데스크 접근 권한을 확인해 주세요.',SESSION_CHANGED:'학생·날짜·로그인 상태가 변경됐습니다.'};const code=e&&typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'UI_ERROR';const p=el('p','확인을 완료하지 못했습니다. '+(messages[code]||'확인 코드: '+code));p.setAttribute('role','alert');host.append(p,button('미리보기 다시 확인',()=>load()),button('발송 결과 확인',()=>showResults()));}
-    async function run(fn){
+    function error(e){const messages={MEMO_REVIEW_CHANGED:'비고 또는 수업 내용이 바뀌었습니다. 최신 본문을 다시 확인해 주세요.',RESULT_UNCERTAIN:'저장 결과를 확인하지 못했습니다. 미리보기를 다시 조회해 저장 여부를 확인하세요.',TIMEOUT:'요청 시간이 초과되었습니다. 재발송 전에 발송 결과를 확인하세요.',AUTH_CONNECTION_FAILED:'로그인 연결을 불러오지 못했습니다.',TOKEN_UNAVAILABLE:'로그인 인증을 확인하지 못했습니다. 로그인 상태를 확인해 주세요.',NETWORK_UNAVAILABLE:'알림톡 서버에 연결하지 못했습니다. 네트워크 또는 브라우저 차단을 확인하세요.',INVALID_RESPONSE:'서버 응답을 해석하지 못했습니다.',UNAUTHORIZED:'허브 로그인 상태를 확인해 주세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 시간표·데스크 접근 권한을 확인해 주세요.',SESSION_CHANGED:'학생·날짜·로그인 상태가 변경됐습니다.'};const code=e&&typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'UI_ERROR';const p=el('p','확인을 완료하지 못했습니다. '+(messages[code]||'확인 코드: '+code));p.setAttribute('role','alert');host.append(p,button('미리보기 다시 확인',()=>load()),button('발송 결과 확인',()=>showResults()));}
+    async function run(fn,operationDeadline=deadline){
       if(busy)return;
       busy=true;const g=++generation;requestContext=JSON.stringify(context());
       host.querySelectorAll('button').forEach(b=>b.disabled=true);
@@ -52,16 +48,20 @@
           const memo=el('fieldset');memo.append(el('legend','시간표 원본 비고'));
           for(const text of row.memoReview.notes)memo.append(el('p',text));
           const label=el('label'),check=el('input');check.type='checkbox';check.checked=row.memoReview.confirmed;
-          check.onchange=()=>{
-            const target=selection.find(t=>t.studentId===row.studentId);
-            if(!target)return;
-            const scope=memoScope(context());
-            if(check.checked){target.reviewedMemo=row.memoReview.key;checkedNotes.set(scope,memoContent(row));}
-            else {delete target.reviewedMemo;checkedNotes.delete(scope);}
-            preview=null;host.querySelector('.alimtalk-confirm')?.remove();locked(send);void load();
+          check.disabled=row.memoReview.persisted===true;
+          check.onchange=async()=>{
+            if(!check.checked)return;
+            const id=preview?.previewId;
+            preview=null;host.querySelector('.alimtalk-confirm')?.remove();locked(send);check.disabled=true;
+            let saved=false;
+            await run(async g=>{
+              await api('saveMemoReview',{previewId:id,confirmed:true});
+              if(current(g))saved=true;
+            },28000);
+            if(saved)await load();
           };
           label.append(check,document.createTextNode(' 비고와 아래 수업 시각을 대조했습니다. 이 학생에게 표시된 시간표로 안내합니다.'));
-          memo.append(label);section.append(memo);
+          memo.append(label);if(row.memoReview.persisted)memo.append(el('p','확인 완료 · 저장됨. 수업 내용이 바뀌면 다시 확인합니다.'));section.append(memo);
         }
         for(const r of row.excluded||[])section.append(el('p','제외 · '+r.reason));
         if(row.text){const pre=el('pre',row.text);pre.setAttribute('aria-label','실제 치환 본문');section.append(pre);}
@@ -85,9 +85,6 @@
         let again=false;
         if(initial&&only&&(ctx.audience==='student'?only.id==='student':['mother','father'].includes(only.id))){
           target.recipientIds=[only.id];again=true;
-        }
-        if(row.memoReview&&!row.memoReview.confirmed&&checkedNotes.get(memoScope(ctx))===memoContent(row)){
-          target.reviewedMemo=row.memoReview.key;again=true;
         }
         if(again){renewDeadline();p=await read();if(!current(g))return;}
       }

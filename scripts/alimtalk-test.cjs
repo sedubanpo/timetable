@@ -64,3 +64,40 @@ test('staff may acknowledge the reviewed time memo for one individual preview an
  const result=await student.send('',{previewId:(await student.preview('',f.input)).previewId});
  assert.equal(result.results[0].reviewedTimeMemo,priorKey);assert.equal(f.sent.length,1);
 });
+
+
+test('saved memo review survives service restart, audience/operator switch and harmless note/source changes',async()=>{
+ const f=fixture();f.lesson.reviewReasons=['시간 메모 확인 필요'];f.lesson.timeNoteText='오늘만 16–17시';
+ const service=createService(f.deps),p=await service.preview('',f.input);
+ await service.saveMemoReview('',{previewId:p.previewId,confirmed:true});assert.equal(f.sent.length,0);
+ f.lesson.timeNoteText='문구만 보완';f.day.revision='new-source';f.day.mappingRevision='new-map';f.lesson.sourceId='moved-cell';
+ const other=createService({...f.deps,kind:'student-daily-lessons',authorize:async()=>({...f.actor,uid:'other'})});
+ const next=await other.preview('',f.input);assert.equal(next.rows[0].memoReview.persisted,true);assert.equal(next.counts.messages,1);
+ f.student.recipients=[];const missing=await other.preview('',f.input);assert.equal(missing.counts.messages,0);assert(!missing.rows[0].reasons.includes('시간 메모 확인 필요'));
+ assert.equal(f.sent.length,0);
+});
+test('saved memo review expires only for changed lesson content and never clears other holds',async()=>{
+ for(const [field,value] of Object.entries({start:'15:00',end:'18:00',subject:'국어',teacher:'다른강사',building:'2관',room:'7강의실',type:'개별',status:'오늘만',todayOnly:true})){
+  const f=fixture();f.lesson.reviewReasons=['시간 메모 확인 필요'];f.lesson.timeNoteText='시간 확인';const service=createService(f.deps);
+  const p=await service.preview('',f.input);await service.saveMemoReview('',{previewId:p.previewId,confirmed:true});
+  f.lesson[field]=value;const q=await service.preview('',f.input);assert(q.rows[0].reasons.includes('시간 메모 확인 필요'),field);
+  assert.equal(f.sent.length,0);
+ }
+ const f=fixture();f.lesson.reviewReasons=['시간 메모 확인 필요'];f.lesson.timeNoteText='시간 확인';const service=createService(f.deps);
+ await service.saveMemoReview('',{previewId:(await service.preview('',f.input)).previewId,confirmed:true});
+ f.student.holdReasons=['CONTACT_CLEARANCE_REQUIRED'];assert.equal((await service.preview('',f.input)).counts.messages,0);
+ f.student.holdReasons=[];f.lesson.reviewReasons.push('강사 메모 확인 필요');assert((await service.preview('',f.input)).rows[0].reasons.includes('강사 메모 확인 필요'));
+ f.lesson.reviewReasons=['시간 메모 확인 필요'];f.day.date='2026-10-29';f.lesson.date=f.day.date;f.input.date=f.day.date;
+ assert((await service.preview('',f.input)).rows[0].reasons.includes('시간 메모 확인 필요'));
+});
+test('memo save is actor-bound, explicitly confirmed, revalidates displayed content and authorization',async()=>{
+ for(const scenario of ['unchecked','otherActor','staleSchedule','staleNote','expired','revoked']){
+  const f=fixture();let tick=1000;f.deps.now=()=>tick;f.lesson.reviewReasons=['시간 메모 확인 필요'];f.lesson.timeNoteText='시간 확인';
+  const service=createService(f.deps),p=await service.preview('',f.input);let saving=service;
+  if(scenario==='otherActor')saving=createService({...f.deps,authorize:async()=>({...f.actor,uid:'other'})});
+  if(scenario==='staleSchedule')f.lesson.end='18:00';if(scenario==='staleNote')f.lesson.timeNoteText+=' 수정';
+  if(scenario==='expired')tick+=300001;if(scenario==='revoked')f.actor.active=false;
+  await assert.rejects(saving.saveMemoReview('',{previewId:p.previewId,confirmed:scenario!=='unchecked'}));
+  assert.equal(await f.deps.store.memoReview('banpo',f.input.date,f.student.id),undefined);assert.equal(f.sent.length,0);
+ }
+});

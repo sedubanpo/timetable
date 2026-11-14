@@ -276,3 +276,20 @@ test('a new teacher timing hold after preview invalidates the send tickets',asyn
  x.src.entries[0].lesson.reviewReasons=['강사 메모 확인 필요'];x.src.entries[0].lesson.headerNote='18시까지 수업 가능';
  await assert.rejects(x.send(p),{code:'BATCH_CHANGED'});assert.equal(x.f.sent.length,0);
 });
+
+
+test('saved memo review removes roster hold for both audiences; bulk rechecks actual content and contacts',async()=>{
+ const {memoScheduleKey}=require('../snapshot-functions/alimtalk-service'),rules=require('../snapshot-functions/alimtalk-contract');
+ const x=setup(1),id='id1',lesson=x.src.entries[0].lesson;
+ lesson.reviewReasons=['시간 메모 확인 필요'];lesson.timeNoteText='시간 확인';
+ assert.equal((await x.preview()).items.length,0);
+ const student={...x.people[id],mappingVerified:true,lessons:[{...lesson,studentId:id}]};
+ const c=rules.compose(student,x.base.date,student.lessons);
+ await x.f.deps.store.saveMemoReview({academyId:'banpo',date:x.base.date,studentId:id,scheduleKey:memoScheduleKey('banpo',x.base.date,student,c),checkedAt:1,checkedBy:'operator'});
+ const p=await x.preview();assert.equal(p.rows[0].issue,'');assert.equal(p.items.length,1);
+ lesson.timeNoteText='비고 문구 보완';x.src.revision='unrelated-refresh';
+ assert.equal((await x.preview({audience:'student'})).items.length,1);
+ lesson.end='18:00';assert.equal((await x.preview()).items.length,0);await assert.rejects(x.send(p),{code:'BATCH_CHANGED'});
+ lesson.end='17:00';delete x.clear.id1;assert.equal((await x.preview()).items.length,0);
+ assert.equal(x.f.sent.length,0);
+});

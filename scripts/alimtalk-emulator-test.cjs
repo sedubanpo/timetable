@@ -34,3 +34,13 @@ test('actual daily-contact transaction preserves assignment ownership and CAS; a
  const saved=await rs.noticeContacts('banpo',date,student),audit=(await db.collection('timetableAlimtalkReviewHistory').doc(saved.revision).get()).data();assert.equal(saved.recipients.student.phone,'01000000003');assert(!JSON.stringify(audit).includes('01000000003'));assert.equal(audit.recipients.student.phoneHash.length,64);
  const other=id();await assert.rejects(rs.saveNoticeContacts({record:{...record,studentId:other,revision:id()},mapping:{...mapping,studentId:other,revision:id()}},null,null),{code:'ENTRY_ALREADY_ASSIGNED'});assert.equal(await rs.noticeContacts('banpo',date,other),null);
 });
+
+
+test('memo review persists through fresh store, is scoped to student/date and retains audit',async()=>{
+ const student=id(),record={academyId:'banpo',date:'2026-11-15',studentId:student,scheduleKey:'synthetic-schedule',checkedBy:'operator',checkedAt:1,notes:['합성 비고']};
+ await ds.saveMemoReview(record);
+ const restarted=firestoreStore(db);assert.deepEqual(await restarted.memoReview('banpo',record.date,student),record);
+ assert.equal(await restarted.memoReview('banpo','2026-11-16',student),null);assert.equal(await restarted.memoReview('banpo',record.date,id()),null);
+ const key=crypto.createHash('sha256').update(JSON.stringify(['banpo',record.date,student])).digest('hex');
+ assert.equal((await db.collection('timetableAlimtalkMemoReviews').doc(key).collection('history').get()).size,1);
+});

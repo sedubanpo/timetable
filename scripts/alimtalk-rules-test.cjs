@@ -2,7 +2,7 @@
 // Local emulator only; no credentials and no production fallback.
 const assert=require('node:assert/strict');
 const base='http://127.0.0.1:18829/v1/projects/demo-timetable-alimtalk/databases/(default)/documents';
-const cols=['timetableNoticeContacts','timetableNoticeGuests','timetableStudentMappings','timetableStudentMappingDays','timetableAlimtalkClearances','timetableAlimtalkReviewHistory','timetableAlimtalkDeliveries','timetableAlimtalkPreviews','timetableAlimtalkLimits'];
+const cols=['timetableAlimtalkMemoReviews','timetableNoticeContacts','timetableNoticeGuests','timetableStudentMappings','timetableStudentMappingDays','timetableAlimtalkClearances','timetableAlimtalkReviewHistory','timetableAlimtalkDeliveries','timetableAlimtalkPreviews','timetableAlimtalkLimits'];
 const enc=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
 const token=role=>enc({alg:'none',typ:'JWT'})+'.'+enc({sub:'synthetic-'+role,user_id:'synthetic-'+role,role,aud:'demo-timetable-alimtalk',iss:'https://securetoken.google.com/demo-timetable-alimtalk',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+3600,firebase:{sign_in_provider:'custom'}})+'.';
 (async()=>{let passed=0;

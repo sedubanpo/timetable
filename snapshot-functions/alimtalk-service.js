@@ -24,6 +24,14 @@ function timeMemoReview(actor,kind,date,student,revision,text){
   if(!notes.length)return null;
   return {notes,key:hash([actor.uid,actor.academyId,kind,date,student.id,revision,text,notes])};
 }
+// Memo wording, source-cell IDs, directory revisions and audience are not lesson content.
+function memoScheduleKey(academyId,date,student,c){
+  const lessons=c.lessons.map(({sourceIds,...lesson})=>lesson);
+  const excluded=student.lessons.filter(l=>rules.exclusion(l)).map(l=>
+    ['subject','teacher','building','room','type','start','end','status'].map(k=>String(l[k]||'').trim()));
+  excluded.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  return hash(['memo-schedule-v1',academyId,date,student.id,c.text,lessons,excluded]);
+}
 function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8000,webhookSecret,kind='daily-lessons'}){
   async function auth(session){const a=await bounded(()=>authorize(session),deadline);if(!a?.uid||!['ADMIN','STAFF','DESK'].includes(a.role)||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
   async function plan(actor,input){
@@ -52,18 +60,22 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       }
       const reviewRevision=s.mappingRevision||day.mappingRevision;
       const version=['daily-lessons','student-daily-lessons'].includes(kind)?hash([actor.academyId,input.date,s.id,c.text]):hash([actor.academyId,input.date,s.id,c.lessons,c.excluded,reviewRevision]);
-      // Acknowledgement belongs to one operator's individual preview of this exact memo and body.
+      const memoSchedule=memoScheduleKey(actor.academyId,input.date,s,c);
+      const savedMemo=await store.memoReview?.(actor.academyId,input.date,s.id);
+      const persisted=!!savedMemo&&savedMemo.scheduleKey===memoSchedule;
+      if(persisted)c.reasons=c.reasons.filter(r=>r!=='시간 메모 확인 필요');
+      // A save requires an actor-bound preview; the saved lesson confirmation is shared across audiences.
       let memoReview;
       if(input.targets.length===1&&['daily-lessons','student-daily-lessons'].includes(kind)&&
-         c.reasons.includes('시간 메모 확인 필요')&&c.reasons.every(r=>['시간 메모 확인 필요','수신자를 직접 선택해 주세요'].includes(r))){
+         (persisted||c.reasons.includes('시간 메모 확인 필요'))&&c.reasons.every(r=>['시간 메모 확인 필요','수신자를 직접 선택해 주세요'].includes(r))){
         const review=timeMemoReview(actor,kind,input.date,s,reviewRevision,c.text);
         if(review){
-          const confirmed=target.reviewedMemo===review.key;
-          memoReview={...review,confirmed};
+          const confirmed=persisted||target.reviewedMemo===review.key;
+          memoReview={...review,confirmed,persisted,...(persisted?{checkedAt:savedMemo.checkedAt}:{})};
           if(confirmed)c.reasons=c.reasons.filter(r=>r!=='시간 메모 확인 필요');
         }
       }
-      rows.push({studentId:s.id,name:s.name,date:input.date,version,reviewRevision,...(memoReview?{memoReview}:{}),text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
+      rows.push({studentId:s.id,name:s.name,date:input.date,version,reviewRevision,memoSchedule,...(memoReview?{memoReview}:{}),text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
         choices:(s.recipients||[]).map(r=>({id:r.id,relation:r.relation||'관계 확인 필요',masked:rules.mask(r.phone||'')}))});
     }
     const fingerprint=hash(rows);
@@ -72,6 +84,21 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
   function publicPlan(p){return {...p,rows:p.rows.map(r=>({...r,recipients:r.recipients.map(({phone,...r})=>r)})),counts:{students:p.rows.filter(r=>!r.reasons.length).length,messages:p.rows.filter(r=>!r.reasons.length).reduce((n,r)=>n+r.recipients.length,0),numbers:new Set(p.rows.filter(r=>!r.reasons.length).flatMap(r=>r.recipients.map(x=>x.phone))).size}};}
   function publicRecord(r){if(!r)return null;const {phone,variables,...rest}=r;return {...rest,trackingMissing:!r.messageId||!r.groupId,masked:rules.mask(phone),label:rules.labels[r.state]};}
   async function preview(session,input){const a=await auth(session);await store.rate(a.uid,'preview',now(),30);const p=await plan(a,input);await auth(session);const id=crypto.randomUUID();await store.savePreview(id,{actor:a.uid,academyId:a.academyId,input,kind,plan:p,expires:now()+300000});await auth(session);return {...publicPlan(p),previewId:id};}
+  async function saveMemoReview(session,{previewId,confirmed}){
+    const a=await auth(session);await store.rate(a.uid,'saveMemoReview',now(),20);
+    if(confirmed!==true||!['daily-lessons','student-daily-lessons'].includes(kind))fail('INVALID_REQUEST');
+    const saved=await store.preview(previewId);
+    if(!saved||saved.kind!==kind||saved.actor!==a.uid||saved.academyId!==a.academyId||saved.expires<=now())fail('PREVIEW_EXPIRED');
+    const fresh=await plan(a,saved.input),row=fresh.rows[0],before=saved.plan.rows[0];
+    if(fresh.rows.length!==1||!row?.memoReview||!before?.memoReview)fail('MEMO_REVIEW_REQUIRED');
+    // The operator must have seen the current memo and schedule before saving.
+    if(row.memoSchedule!==before.memoSchedule||row.memoReview.key!==before.memoReview.key)fail('MEMO_REVIEW_CHANGED');
+    if(row.reasons.some(r=>!['시간 메모 확인 필요','수신자를 직접 선택해 주세요'].includes(r)))fail('HELD');
+    await auth(session);
+    await store.saveMemoReview({academyId:a.academyId,date:fresh.date,studentId:row.studentId,
+      scheduleKey:row.memoSchedule,checkedBy:a.uid,checkedAt:now(),notes:row.memoReview.notes});
+    return {saved:true,studentId:row.studentId,date:fresh.date};
+  }
   async function send(session,{previewId,confirmChanges=false}){
     const a=await auth(session);await store.rate(a.uid,'send',now(),10);await store.rate('academy:'+a.academyId,'send',now(),30);
     const saved=await store.preview(previewId);
@@ -153,6 +180,6 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       // Replacement reports have their own ID. Reconcile their group before settling the original.
       if(old.smsFallback && (e.replacement===true||['SMS','LMS'].includes(e.type)))continue;
       await apply(id,{messageId:e.messageId,groupId:e.groupId,statusCode:e.statusCode,key:id});}return {ok:true};}
-  return {preview,send,results,reconcile,webhook,dispatch,apply};
+  return {preview,saveMemoReview,send,results,reconcile,webhook,dispatch,apply};
 }
-module.exports={createService,status,verifyWebhook,hash,timeMemoReview};
+module.exports={createService,status,verifyWebhook,hash,timeMemoReview,memoScheduleKey};

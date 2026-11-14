@@ -74,24 +74,34 @@ test('individual history resolves a fallback on open and retains other receipts 
  }finally{dom.window.close();}
 });
 
-test('one eligible number and a checked timetable need no extra preview click; reuse only unchanged notes and body across audiences',async()=>{
+test('memo confirmation is saved without sending and survives remount and audience changes',async()=>{
  const {dom,w,host}=setup(),ctx={date:sample.date,studentId:'s1',session:'desk',audience:'guardian'};
- let body='10:00–13:00 / 16:00–19:00',available=true;
- const calls=[],ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api:async(action,{targets:[t]})=>{
-  calls.push(action);assert.equal(action,'preview');
+ let body='10:00–13:00 / 16:00–19:00',available=true,savedBody='';
+ const calls=[],api=async(action,input)=>{
+  calls.push(action);if(action==='saveMemoReview'){assert.equal(input.previewId,'p');assert.equal(input.confirmed,true);savedBody=body;return {saved:true};}assert.equal(action,'preview');const t=input.targets[0];
   const id=ctx.audience==='student'?'student':'mother',key=ctx.audience+body;
-  const confirmed=t.reviewedMemo===key,ready=available&&confirmed&&t.recipientIds.join()===id;
+  const confirmed=savedBody===body,ready=available&&confirmed&&t.recipientIds.join()===id;
   return {previewId:'p',counts:{students:+ready,messages:+ready,numbers:+ready},rows:[{studentId:'s1',text:body,
-   choices:available?[{id,relation:id,masked:'***'}]:[],reasons:ready?[]:['보류'],memoReview:{key,confirmed,notes:['확인할 비고']}}]};
- }});
+   choices:available?[{id,relation:id,masked:'***'}]:[],reasons:ready?[]:['보류'],memoReview:{key,confirmed,persisted:confirmed,notes:['확인할 비고']}}]};
+ };let ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api});
  try{
   await ui.load();assert(host.querySelector('input').checked);assert(host.querySelector('.send-action').disabled);
   host.querySelectorAll('input')[1].click();await new Promise(r=>setTimeout(r,0));
-  assert(!host.querySelector('.send-action').disabled);
-  ui.reset();ctx.audience='student';await ui.load();
+  assert(!host.querySelector('.send-action').disabled);assert.match(host.textContent,/확인 완료 · 저장됨/);assert.equal(calls.filter(a=>a==='saveMemoReview').length,1);
+  ui.reset();ctx.audience='student';ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api});await ui.load();
   assert(!host.querySelector('.send-action').disabled);assert(host.querySelectorAll('input')[1].checked);
   ui.reset();body+=' 수정';await ui.load();assert(host.querySelector('.send-action').disabled);
   ui.reset();available=false;await ui.load();assert(host.querySelector('.send-action').disabled);
   assert(!calls.includes('send'));
  }finally{dom.window.close();}
+});
+
+
+test('failed memo save never enables send or claims saved confirmation; explicit reload recovers',async()=>{
+ const {dom,w,host}=setup();let calls=0;
+ const ui=w.TimetableAlimtalkUI.mount({host,context:()=>({studentId:'s1',date:sample.date}),api:async action=>{
+  if(action==='saveMemoReview'){calls++;throw Object.assign(Error(),{code:'RESULT_UNCERTAIN'});}
+  return {...sample,sendEnabled:true,counts:{students:0,messages:0,numbers:0},rows:[{studentId:'s1',text:'확인 본문',reasons:['시간 메모 확인 필요'],choices:[],memoReview:{key:'k',confirmed:false,persisted:false,notes:['비고']}}]};
+ }});
+ try{await ui.load();host.querySelector('input').click();await new Promise(r=>setTimeout(r,0));assert.equal(calls,1);assert(host.querySelector('.send-action').disabled);assert(!host.textContent.includes('확인 완료 · 저장됨'));assert.match(host.textContent,/저장 결과를 확인하지 못했습니다/);await ui.load();assert(!host.querySelector('input').checked);}finally{dom.window.close();}
 });
