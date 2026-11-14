@@ -76,8 +76,15 @@
       todayOnly=true;
       return prefix+start+':00-'+end+':00';
     });
-    // Explicit arrival records are attendance notes, not lesson start/end overrides.
-    if(status==='지각'||/지각/.test(note))note=note.replace(/(?:오전|오후)?\s*\d{1,2}:\d{2}\s*도착(?:\s*예정)?/g,' ');
+    // A recorded arrival is about attendance, not the start of a lesson. Match
+    // complete clauses so a range endpoint or a separate timing instruction survives.
+    const late=status==='지각'||/지각/.test(note);
+    note=note.replace(/(^|[,，;\n])\s*(?:(?:확정|지각)\s+)*(?:오전|오후)?\s*(?:[01]?\d|2[0-3]):([0-5]\d)\s*(도착|등원)\s*(완료|예정)?[.!]?\s*(?=$|[,，;\n])/g,
+      (clause,separator,minute,verb,qualifier)=>{
+        // A bare grid-aligned "16:30 등원" can still be a scheduled start.
+        const recorded=verb==='도착'||late||qualifier==='완료'||(!!separator&&!qualifier&&Number(minute)%30!==0);
+        return recorded?separator:clause;
+      });
     const token='(오전|오후)?\\s*(\\d+)(?::(\\d+)|\\s*시(?:\\s*(\\d+)\\s*분?)?)';
     const pattern=new RegExp('(?:^|[^\\d:])'+token+'\\s*[-~～–—]\\s*'+token+'(?![\\d:])','g');
     function candidates(hour,minute,period){

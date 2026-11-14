@@ -151,3 +151,27 @@ test('orphan attendance cells do not block the date or change the confirmed make
  assert.deepEqual(body.reasons,[]);assert.equal(body.lessons.length,1);
  assert.match(body.text,/결석보강 11:30–13:30/);assert.match(body.text,/개별 2시간/);
 });
+
+test('attendance updates preserve the delivered lesson list, while actual schedule changes still surface',()=>{
+ const R=require('../snapshot-functions/alimtalk-contract'),s=fixture(),student={id:'s',name:'가학생',mappingVerified:true};
+ function message(status,note){
+  s.data.grid[10]=[['개별 사회 검증T','가학생 가상중2 '+status+' '+note]];
+  return R.compose(student,s.date,parseSnapshot(s,now).entries.map(e=>({...e.lesson,studentId:'s'})));
+ }
+ for(const [status,note] of [
+  ['정규','확정, 10:10 도착'],['정규','확정, 지각, 10:13 등원'],
+  ['정규','확정, 지각, 10:15 등원'],['정규','확정, 지각, 10:21 등원'],
+  ['지각','10:10 도착 예정'],['당취보충','10/31(토) 당취 건에 대한 보충, 10:19 등원']
+ ]){
+  const baseline=message(status==='지각'?'정규':status,'');
+  const actual=message(status,'11/7(토) '+note);
+  assert.deepEqual(actual.reasons,[],note);assert.equal(actual.text,baseline.text,note);
+ }
+ const normal=message('정규','');
+ for(const [status,note] of [['당일취소','10:10 도착'],['오늘만','10:10 도착'],['정규','10:30-11:00, 지각, 10:31 등원']]){
+  const changed=message(status,note);assert.deepEqual(changed.reasons,[]);assert.notEqual(changed.text,normal.text);
+ }
+ for(const note of ['10:10 도착, 11시 시작 여부 미정','지각, 10:30 등원 후 11시 수업','16:30 등원']){
+  assert(message('정규',note).reasons.includes('시간 메모 확인 필요'),note);
+ }
+});

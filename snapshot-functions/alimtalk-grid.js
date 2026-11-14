@@ -20,13 +20,15 @@ function parseSnapshot(snapshot,now=Date.now()){
    const schoolToken=(isRetakerLabel(parts[1])||isHomeschoolLabel(parts[1]))?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
    const school=isRetakerLabel(schoolToken)?'재수생':schoolToken;
    if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!(header&&parts.slice(1).some(s=>statuses.has(s))))){issues.push('STUDENT_TEXT_UNRECOGNIZED');continue;}
-   const found=parts.slice(1).filter(s=>statuses.has(s)),cancel=found.find(s=>exclusion({status:s}));
-   const status=/휴강/.test(roomText)?'휴강':cancel||found[0]||'';
+   // A cancellation mentioned in the memo can describe an earlier lesson.
+   // Only the status field and a dedicated closure room set this lesson's status.
+   const statusIndex=schoolToken?parts.indexOf(schoolToken)+1:1;
+   const fieldStatus=statuses.has(parts[statusIndex])?parts[statusIndex]:'';
+   const status=/휴강/.test(roomText)?'휴강':fieldStatus;
    // Preserve every identifiable occurrence, including held/cancelled lessons.
    // Human ID mapping cannot clear a lesson hold; compose independently blocks that student.
    const reviewReasons=[];
-   let noteIndex=schoolToken&&parts[1]===schoolToken?2:1;
-   if(statuses.has(parts[noteIndex]))noteIndex++;
+   const noteIndex=statusIndex+(fieldStatus?1:0);
    const note=chunks.slice(noteIndex).join(''),timeNote=readTimeNote(note,status,snapshot.date);
    if(!school)reviewReasons.push('학교·학년 확인 필요');
    if(!exclusion({status})){

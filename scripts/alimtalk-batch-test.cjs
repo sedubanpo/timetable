@@ -242,3 +242,19 @@ test('missing student number takes precedence over time memo; guardian remains a
  assert.equal((await roster('guardian')).rows[0].issue,'시간 메모 확인 필요');
  assert.equal(x.f.sent.length,0);
 });
+
+test('recorded arrival keeps the delivered guardian roster current without hiding a student’s unsent notice or a later schedule change',async()=>{
+ const x=setup(1);
+ await x.send(await x.preview()); // local fake provider
+ const {readTimeNote}=require('../snapshot-functions/alimtalk-contract');
+ const note=readTimeNote('확정, 지각, 16:13 등원','정규',x.base.date);
+ const lesson=x.src.entries[0].lesson;
+ lesson.timeRanges=note.ranges;lesson.reviewReasons=note.held?['시간 메모 확인 필요']:[];
+ const [parent]= (await x.b.batchRoster('',x.base)).rows;
+ assert.equal(parent.state,'sent');assert(!parent.issue);
+ assert.deepEqual((await x.preview({mode:'changed'})).items,[]);
+ const [student]=(await x.b.batchRoster('',{...x.base,audience:'student'})).rows;
+ assert.equal(student.state,'unsent');assert(!student.issue);
+ lesson.status='오늘만';
+ assert.equal((await x.preview({mode:'changed'})).items.length,1);
+});
