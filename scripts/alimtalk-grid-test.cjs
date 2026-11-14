@@ -175,3 +175,27 @@ test('attendance updates preserve the delivered lesson list, while actual schedu
   assert(message('정규',note).reasons.includes('시간 메모 확인 필요'),note);
  }
 });
+
+test('teacher header with trailing availability note isolates affected students and never becomes a student',()=>{
+ const R=require('../assets/alimtalk-contract'),s=fixture();
+ s.data.grid[13]=[['수학 개별 검증T , 7일만 18시까지 수업 가능','나학생 가상중2 정규','다학생 가상중2 결석예고']];
+ const p=parseSnapshot(s,now);assert(p.complete);assert.deepEqual(p.issues,[]);
+ assert.deepEqual(p.entries.map(e=>e.sourceName),['나학생','다학생','가학생']);
+ const e=p.entries[0];assert.equal(e.lesson.teacher,'검증');assert.equal(e.lesson.subject,'수학');assert.equal(e.lesson.type,'개별');
+ assert.equal(e.lesson.headerNote,'7일만 18시까지 수업 가능');assert.deepEqual(e.lesson.reviewReasons,['강사 메모 확인 필요']);
+ const body=name=>R.compose({id:'s',name,mappingVerified:true},s.date,p.entries.filter(e=>e.sourceName===name).map(e=>({...e.lesson,studentId:'s'})));
+ assert.deepEqual(body('가학생').reasons,[]);
+ assert.deepEqual(body('나학생').reasons,['강사 메모 확인 필요']);assert.match(body('나학생').text,/수학 정규 13:00–14:00/);
+ assert.deepEqual(p.entries[1].lesson.reviewReasons,[]);assert.equal(body('다학생').excluded.length,1);
+ for(const note of ['자료 확인','상담 완료']){
+  s.data.grid[13][0][0]='수학 개별 검증T , '+note;
+  assert.deepEqual(parseSnapshot(s,now).entries[0].lesson.reviewReasons,[]);
+ }
+});
+test('header parser does not consume student memos and unknown identity still prevents omission',()=>{
+ const R=require('../assets/alimtalk-contract');
+ for(const raw of ['가학생 가상중2 정규 검증T , 18시까지','가학생 정규 검증T','수학 두과목 검증T','수학 영어 개별 검증T'])assert.equal(R.parseLessonHeader(raw),null,raw);
+ for(const raw of ['수학 개별 검증T , 18시까지','개별 수학 검증 T\n18시까지','수학 개별 검증T: 18시까지'])assert.equal(R.parseLessonHeader(raw).teacher,'검증',raw);
+ const s=fixture();s.data.grid[13]=[['수학 개별 검증T , 18시까지','누군지 알 수 없음']];
+ assert.equal(parseSnapshot(s,now).complete,false);
+});

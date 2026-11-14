@@ -61,3 +61,11 @@ for(const file of ['Index.html','docs/index.html']){
  assert.match(source,/previewNoteHidden\("absence",name,v\)/);
  console.log(file+': half-hour shift, hidden-note time, temporary edits, source preservation, date isolation, ambiguous fallback, strict Excel isolation PASS');
 }
+
+// Headers with notes use the same strict grammar on both browser mirrors and the server.
+for(const file of ['Index.html','docs/index.html']){
+ const source=fs.readFileSync(file,'utf8'),start=source.indexOf('      function isTeacherHeader('),end=source.indexOf('\n      function ',start+1);
+ const scope={TimetableAlimtalk:require('../assets/alimtalk-contract')};vm.createContext(scope);vm.runInContext(source.slice(start,end),scope);
+ assert.equal(scope.isTeacherHeader('수학 개별 검증T , 15일만 18시까지 수업 가능'),true);
+ assert.equal(scope.isTeacherHeader('검증학생 가상중2 정규 검증T , 18시까지'),false);
+}

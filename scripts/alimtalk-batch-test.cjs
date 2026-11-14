@@ -258,3 +258,21 @@ test('recorded arrival keeps the delivered guardian roster current without hidin
  lesson.status='오늘만';
  assert.equal((await x.preview({mode:'changed'})).items.length,1);
 });
+
+test('header timing holds exclude the whole student for both audiences while ready students can prepare and send',async()=>{
+ for(const audience of ['guardian','student']){
+  const x=setup(3);
+  x.src.entries[1].lesson.reviewReasons=['강사 메모 확인 필요'];
+  x.src.entries[1].lesson.headerNote='15일만 18시까지 수업 가능';
+  const p=await x.preview({audience});
+  assert.equal(p.items.length,2);assert.deepEqual(p.items.map(r=>r.studentId),['id1','id3']);
+  assert.match(p.rows.find(r=>r.studentId==='id2').issue,/강사 메모 확인 필요.*15일만 18시까지/);
+  assert.equal(x.f.sent.length,0);
+  await x.send(p);assert.equal(x.f.sent.length,2);
+ }
+});
+test('a new teacher timing hold after preview invalidates the send tickets',async()=>{
+ const x=setup(1),p=await x.preview();
+ x.src.entries[0].lesson.reviewReasons=['강사 메모 확인 필요'];x.src.entries[0].lesson.headerNote='18시까지 수업 가능';
+ await assert.rejects(x.send(p),{code:'BATCH_CHANGED'});assert.equal(x.f.sent.length,0);
+});

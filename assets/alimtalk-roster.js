@@ -190,7 +190,11 @@ function drawAlimtalkRoster(list,keyword){
  if(!ready){
   msg.append(make('span',cardRosterError||((cardAudience==='student'?'학생':'학부모')+' 발송 기록 확인 중…')));
   if(cardRosterError){const retry=make('button','다시 확인');retry.type='button';retry.onclick=()=>reloadCardRoster();msg.append(retry);}
- }else{msg.textContent=(cardAudience==='student'?'학생 본인':'학부모')+' 기준 · 변경 대상 '+counts.changed+'명 · 미발송 '+counts.unsent+'명';}
+ }else{
+  const eligible=cardRosterRows.filter(r=>!r.issue&&r.state==='unsent').length;
+  const held=cardRosterRows.filter(r=>r.issue&&!r.issue.includes('본인 번호 없음')).length;
+  msg.textContent=(cardAudience==='student'?'학생 본인':'학부모')+' 기준 · 변경 대상 '+counts.changed+'명 · 미발송 '+counts.unsent+'명 · 발송 준비 '+eligible+'명'+(held?' · 확인 필요 '+held+'명 (일괄 발송에서 자동 제외)':'');
+ }
  for(const name of visible){
   const row=byName.get(name),state=cardRosterGroup(row);
   const group=row?.state==='changed'?'changed':state;

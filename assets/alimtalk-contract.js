@@ -7,6 +7,19 @@
   // Exact text observed in the SOLAPI template API on 2026-11-06. Recheck server-side before send.
   const content="[에스학원 수업 일정 안내]\n#{학생명} 학생의 수업 안내드립니다.\n\n▶ 수업일: #{수업일}\n▶ 등원 시각: #{등원시각}\n\n[수업 안내: 과목·시간·강사·관·강의실]\n#{수업목록}\n\n수업 일정에 관한 변경 문의는 아래 ‘수업 문의’ 버튼을 이용해 주세요 💬\n\n전과목, 소수 정예 수업\n 💫 반포 에스학원";
   const labels={REQUESTING:'요청 중',ACCEPTED:'접수',PROCESSING:'처리 중',DELIVERED:'수신 완료',FAILED:'실패',NOT_ACCEPTED:'미접수 확인',UNKNOWN:'결과 확인 필요'};
+  // Parse only a proven lesson prefix. A student's memo mentioning a teacher is not a header.
+  function parseLessonHeader(value){
+    const text=String(value||'').trim();
+    const match=text.match(/^(.*?)\s*([가-힣A-Za-z]+)\s*T(?=$|\s|[,，:：])/);
+    if(!match)return null;
+    const tokens=match[1].trim().split(/\s+/).filter(Boolean);
+    const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
+    const type=/^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|직보|상담)$/;
+    if(tokens.some(t=>!subject.test(t)&&!type.test(t)))return null;
+    const subjects=tokens.filter(t=>subject.test(t)),types=tokens.filter(t=>type.test(t));
+    if(subjects.length>1||types.length>1)return null;
+    return {subject:subjects[0]||'',type:types[0]||'',teacher:match[2],note:text.slice(match[0].length).replace(/^[\s,，:：]+/,'').trim()};
+  }
   function exclusion(row){
     if(row.generated===true||row.isBreak===true)return '자동 생성 공강';
     const s=String(row.status||'').trim();
@@ -139,9 +152,9 @@
       const review=Array.isArray(r.reviewReasons)?r.reviewReasons:[];
       const timeHeld=review.includes('시간 메모 확인 필요');
       if(review.length){
-        reasons.push(...review.map(reason=>['시간 메모 확인 필요','강의실 표기 확인 필요'].includes(reason)?reason:'원본 수업 확인 필요'));
+        reasons.push(...review.map(reason=>['시간 메모 확인 필요','강의실 표기 확인 필요','강사 메모 확인 필요'].includes(reason)?reason:'원본 수업 확인 필요'));
         // Show the complete grid interval in a held preview; never treat an ambiguous note as a new start.
-        if(review.some(reason=>reason!=='시간 메모 확인 필요'))continue;
+        if(review.some(reason=>!['시간 메모 확인 필요','강사 메모 확인 필요'].includes(reason)))continue;
       }
       const fields=['subject','teacher','building','room','type','sourceId'];
       if(fields.some(k=>typeof r[k]!=='string'||!r[k].trim())){reasons.push('필수 수업 정보 누락');continue;}
@@ -210,5 +223,5 @@
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });

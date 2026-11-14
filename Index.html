@@ -2617,7 +2617,7 @@ function mount({host,api,context,refresh}){
  function holds(rows){
   for(const [title,items,help] of [
    ['학부모만 안내',rows.filter(r=>r.issue?.includes('본인 번호 없음')),'학생 본인 번호가 없어 이번 학생 발송에서 제외됩니다. 학부모 수신 여부는 학부모 발송 메뉴에서 확인하세요.'],
-   ['정보 확인 필요',rows.filter(r=>r.issue&&!r.issue.includes('본인 번호 없음')),'아래 사유를 확인하고 학생·연락처 정보를 보완한 뒤 명단을 다시 확인하세요.']
+   ['정보 확인 필요',rows.filter(r=>r.issue&&!r.issue.includes('본인 번호 없음')),'수업 원본·학생·연락처에 확인할 내용이 있는 학생은 자동 제외합니다. 나머지 준비된 학생만 선택해 발송할 수 있습니다.']
   ]){
    if(!items.length)continue;
    const details=el('details',undefined,'bulk-holds');details.append(el('summary',title+' '+items.length+'명'),note(help));
@@ -2993,6 +2993,19 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
   // Exact text observed in the SOLAPI template API on 2026-11-06. Recheck server-side before send.
   const content="[에스학원 수업 일정 안내]\n#{학생명} 학생의 수업 안내드립니다.\n\n▶ 수업일: #{수업일}\n▶ 등원 시각: #{등원시각}\n\n[수업 안내: 과목·시간·강사·관·강의실]\n#{수업목록}\n\n수업 일정에 관한 변경 문의는 아래 ‘수업 문의’ 버튼을 이용해 주세요 💬\n\n전과목, 소수 정예 수업\n 💫 반포 에스학원";
   const labels={REQUESTING:'요청 중',ACCEPTED:'접수',PROCESSING:'처리 중',DELIVERED:'수신 완료',FAILED:'실패',NOT_ACCEPTED:'미접수 확인',UNKNOWN:'결과 확인 필요'};
+  // Parse only a proven lesson prefix. A student's memo mentioning a teacher is not a header.
+  function parseLessonHeader(value){
+    const text=String(value||'').trim();
+    const match=text.match(/^(.*?)\s*([가-힣A-Za-z]+)\s*T(?=$|\s|[,，:：])/);
+    if(!match)return null;
+    const tokens=match[1].trim().split(/\s+/).filter(Boolean);
+    const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
+    const type=/^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|직보|상담)$/;
+    if(tokens.some(t=>!subject.test(t)&&!type.test(t)))return null;
+    const subjects=tokens.filter(t=>subject.test(t)),types=tokens.filter(t=>type.test(t));
+    if(subjects.length>1||types.length>1)return null;
+    return {subject:subjects[0]||'',type:types[0]||'',teacher:match[2],note:text.slice(match[0].length).replace(/^[\s,，:：]+/,'').trim()};
+  }
   function exclusion(row){
     if(row.generated===true||row.isBreak===true)return '자동 생성 공강';
     const s=String(row.status||'').trim();
@@ -3125,9 +3138,9 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
       const review=Array.isArray(r.reviewReasons)?r.reviewReasons:[];
       const timeHeld=review.includes('시간 메모 확인 필요');
       if(review.length){
-        reasons.push(...review.map(reason=>['시간 메모 확인 필요','강의실 표기 확인 필요'].includes(reason)?reason:'원본 수업 확인 필요'));
+        reasons.push(...review.map(reason=>['시간 메모 확인 필요','강의실 표기 확인 필요','강사 메모 확인 필요'].includes(reason)?reason:'원본 수업 확인 필요'));
         // Show the complete grid interval in a held preview; never treat an ambiguous note as a new start.
-        if(review.some(reason=>reason!=='시간 메모 확인 필요'))continue;
+        if(review.some(reason=>!['시간 메모 확인 필요','강사 메모 확인 필요'].includes(reason)))continue;
       }
       const fields=['subject','teacher','building','room','type','sourceId'];
       if(fields.some(k=>typeof r[k]!=='string'||!r[k].trim())){reasons.push('필수 수업 정보 누락');continue;}
@@ -3196,7 +3209,7 @@ root.TimetableBatchUI={mount,errorText,lessonChanges};
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });
 </script>
 <script>(function(root){
@@ -9014,7 +9027,11 @@ function drawAlimtalkRoster(list,keyword){
  if(!ready){
   msg.append(make('span',cardRosterError||((cardAudience==='student'?'학생':'학부모')+' 발송 기록 확인 중…')));
   if(cardRosterError){const retry=make('button','다시 확인');retry.type='button';retry.onclick=()=>reloadCardRoster();msg.append(retry);}
- }else{msg.textContent=(cardAudience==='student'?'학생 본인':'학부모')+' 기준 · 변경 대상 '+counts.changed+'명 · 미발송 '+counts.unsent+'명';}
+ }else{
+  const eligible=cardRosterRows.filter(r=>!r.issue&&r.state==='unsent').length;
+  const held=cardRosterRows.filter(r=>r.issue&&!r.issue.includes('본인 번호 없음')).length;
+  msg.textContent=(cardAudience==='student'?'학생 본인':'학부모')+' 기준 · 변경 대상 '+counts.changed+'명 · 미발송 '+counts.unsent+'명 · 발송 준비 '+eligible+'명'+(held?' · 확인 필요 '+held+'명 (일괄 발송에서 자동 제외)':'');
+ }
  for(const name of visible){
   const row=byName.get(name),state=cardRosterGroup(row);
   const group=row?.state==='changed'?'changed':state;
@@ -11103,14 +11120,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
         return captureAttendanceReportImage().then(function(blob){var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);attendanceReportFeedback('보고 이미지를 저장했습니다.');}).catch(function(){attendanceReportFeedback('이미지 생성에 실패했습니다. 다시 시도해 주세요.');}).finally(function(){if(button)button.disabled=false;});
       }
       function isTeacherHeader(value) {
-        var text = String(value || "").trim();
-        // A note mentioning a teacher is not a lesson header.
-        if (!/(?:^|\s)[가-힣A-Za-z]+\s*T$/.test(text)) return false;
-        var prefix = text.replace(/(?:^|\s)[가-힣A-Za-z]+\s*T$/, "").trim();
-        return !prefix || prefix.split(/\s+/).every(function(token) {
-          return /^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|상담)$/.test(token) ||
-            getSubjectName(token) === token;
-        });
+        return !!TimetableAlimtalk.parseLessonHeader(value);
       }
       function getSubjectName(text) {
         var tokens = String(text || "").trim().split(/\s+/);

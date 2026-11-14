@@ -117,7 +117,7 @@ function mount({host,api,context,refresh}){
  function holds(rows){
   for(const [title,items,help] of [
    ['학부모만 안내',rows.filter(r=>r.issue?.includes('본인 번호 없음')),'학생 본인 번호가 없어 이번 학생 발송에서 제외됩니다. 학부모 수신 여부는 학부모 발송 메뉴에서 확인하세요.'],
-   ['정보 확인 필요',rows.filter(r=>r.issue&&!r.issue.includes('본인 번호 없음')),'아래 사유를 확인하고 학생·연락처 정보를 보완한 뒤 명단을 다시 확인하세요.']
+   ['정보 확인 필요',rows.filter(r=>r.issue&&!r.issue.includes('본인 번호 없음')),'수업 원본·학생·연락처에 확인할 내용이 있는 학생은 자동 제외합니다. 나머지 준비된 학생만 선택해 발송할 수 있습니다.']
   ]){
    if(!items.length)continue;
    const details=el('details',undefined,'bulk-holds');details.append(el('summary',title+' '+items.length+'명'),note(help));

@@ -69,7 +69,15 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
      verified=day.students[0];
      if(verified.holdReasons?.length)issue=reason(verified.holdReasons[0]);
      else if(!verified.recipients.length)issue=verified.recipientIssue||'이 발송 대상의 확인된 번호 없음';
-     else if(c.reasons.length)issue=c.reasons.join(' · ');
+     else if(c.reasons.length){
+      issue=c.reasons.join(' · ');
+      if(c.reasons.includes('강사 메모 확인 필요')){
+       const notes=[...new Set(entries.filter(e=>!rules.exclusion(e.lesson)&&e.lesson.headerNote).map(e=>{
+        const l=e.lesson;return l.building+' '+l.room+' · '+l.subject+' '+l.teacher+'T: '+l.headerNote;
+       }))];
+       issue+=' · '+notes.join(' / ');
+      }
+     }
      else recipients=verified.recipients.filter((r,i,all)=>r.verified&&all.findIndex(x=>x.phone===r.phone)===i);
      }
     }catch(e){issue=reason(e.code);}
