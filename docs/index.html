@@ -8550,7 +8550,7 @@ window.SeduHubAdapter={
             school = "재수생";
             continue;
           }
-          if (status && tk === status && !statusConsumed) {
+          if (!statusConsumed && status && normalizeStatusLabel(tk) === status) {
             statusConsumed = true;
             continue;
           }
