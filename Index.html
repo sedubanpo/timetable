@@ -2107,6 +2107,10 @@
       .staff-menu-panel section {padding:6px 0;border-bottom:1px solid #edf0f5;}
       .staff-menu-panel section:last-child {border:0;}
       .staff-menu-panel section:has(> button[hidden]):not(:has(> button:not([hidden]))) {display:none;}
+      .staff-menu-panel button > .work-tool-art {width:30px;height:30px;fill:none;flex:none;}
+      .staff-menu-panel button:has(.work-tool-art) {gap:10px;padding:5px 9px;}
+      .staff-menu-panel > #studentImageBtn {background:#edf4ff;color:#1d4c89;font-weight:700;}
+      .staff-menu-panel > #studentImageBtn:hover {background:#e1edff;}
       .staff-menu-panel h3 {margin:4px 10px;color:#65778e;font-size:11px;font-weight:700;}
       .staff-menu-panel button {width:100%;justify-content:flex-start;border-color:transparent;background:#fff;padding:9px 10px;}
       .staff-toolbar .toggle-wrapper {display:flex;position:relative;flex-direction:row-reverse;justify-content:space-between;gap:16px;margin:0!important;padding:10px;min-height:42px;}
@@ -2355,7 +2359,28 @@
 #studentImageModal .batch-journey-head,#studentImageModal .batch-line,#studentImageModal .batch-totals{display:flex;align-items:center;gap:10px}
 #studentImageModal .batch-journey-head{margin:16px 0 24px}
 #studentImageModal .batch-journey-head h3{margin:0;color:#163954;font-size:22px;line-height:1.3}
-#studentImageModal .batch-orbit{width:20px;height:20px;box-sizing:border-box;border:3px solid #c4daef;border-top-color:#24649f;border-radius:50%;animation:timetableOrbit .95s linear infinite;flex:none}
+#studentImageModal .batch-orbit{position:relative;display:inline-block;flex:none;width:40px;height:36px;border-radius:10px;background:#deebfc}
+#studentImageModal .batch-orbit::before,
+#studentImageModal .batch-orbit::after{content:"";position:absolute;box-sizing:border-box}
+#studentImageModal .batch-orbit::before{
+  left:11px;top:4px;width:18px;height:20px;border:1px solid #b7cee8;border-top:4px solid #65afa9;border-radius:3px;
+  background:linear-gradient(#91aecb 0 0) 3px 4px/10px 2px no-repeat,linear-gradient(#bdd0e2 0 0) 3px 8px/7px 2px no-repeat,#fff;
+  transform:rotate(-6deg);animation:dispatchSheet 2.3s ease-in-out infinite
+}
+#studentImageModal .batch-orbit::after{
+  left:6px;top:15px;width:28px;height:15px;border-radius:0 0 4px 4px;
+  clip-path:polygon(0 0,50% 38%,100% 0,100% 100%,0 100%);
+  background:conic-gradient(from 52deg at 50% 36%,#4985d4 0 78deg,#2e62b3 78deg 180deg,#5e96df 180deg);
+  animation:dispatchEnvelope 2.3s ease-in-out infinite
+}
+@keyframes dispatchSheet{0%,100%{transform:translateY(3px) rotate(-4deg)}40%{transform:translateY(-3px) rotate(4deg)}74%{transform:translateY(4px) rotate(-4deg)}}
+@keyframes dispatchEnvelope{0%,100%{transform:translateY(0)}74%{transform:translateY(1.5px)}}
+#studentImageModal .batch-journey[data-state] .batch-orbit{width:24px;height:24px}
+#studentImageModal .batch-journey[data-state] .batch-orbit::before{content:none}
+#studentImageModal .batch-journey[data-state] .batch-orbit::after{position:static;width:auto;height:auto;background:none;clip-path:none;animation:none}
+@media(prefers-reduced-motion:reduce){
+  #studentImageModal .batch-orbit::before,#studentImageModal .batch-orbit::after{animation:none}
+}
 @keyframes timetableOrbit{to{transform:rotate(1turn)}}
 #studentImageModal .batch-line{justify-content:space-between;flex-wrap:wrap}
 #studentImageModal .batch-line span{font-size:13px;color:#526780}
@@ -3554,7 +3579,7 @@ root.TimetableNoticeContactsUI={mount};
       </div>
     </div>
       <div id="studentImageModal" data-card-mode="message"><div class="modal-box student-img-box">
-        <div class="card-modal-head"><div class="modal-title">시간표 카드 생성</div><div class="card-mode-tabs" role="tablist" aria-label="시간표 전달 방식" onkeydown="handleCardModeKey(event)"><button id="cardMessageTab" role="tab" data-card-tab="message" aria-selected="true" aria-controls="cardDeliveryWorkspace" onclick="setStudentCardMode('message')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-6 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h6"/></svg>시간표 알림톡</button><button id="cardImageTab" role="tab" data-card-tab="image" aria-selected="false" aria-controls="cardDeliveryWorkspace" tabindex="-1" onclick="setStudentCardMode('image')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 4-6 5 7"/></svg>시간표 이미지</button></div><select id="cardSheetDate" aria-label="시간표 카드 수업일" onchange="changeCardSheet(this.value)"></select><button id="studentImageRefreshBtn" onclick="refreshStudentImageDashboard()">새로고침</button></div>
+        <div class="card-modal-head"><div class="modal-title">시간표 발송</div><div class="card-mode-tabs" role="tablist" aria-label="시간표 전달 방식" onkeydown="handleCardModeKey(event)"><button id="cardMessageTab" role="tab" data-card-tab="message" aria-selected="true" aria-controls="cardDeliveryWorkspace" onclick="setStudentCardMode('message')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-6 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M7 8h10M7 12h6"/></svg>시간표 알림톡</button><button id="cardImageTab" role="tab" data-card-tab="image" aria-selected="false" aria-controls="cardDeliveryWorkspace" tabindex="-1" onclick="setStudentCardMode('image')"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 4-6 5 7"/></svg>시간표 이미지</button></div><select id="cardSheetDate" aria-label="시간표 발송 수업일" onchange="changeCardSheet(this.value)"></select><button id="studentImageRefreshBtn" onclick="refreshStudentImageDashboard()">새로고침</button></div>
         <div id="studentCardStatusNotice" role="status" aria-live="polite" hidden></div>
         <div class="batch-bar" data-card-channel="message"><div class="recipient-switch" role="group" aria-label="발송 대상"><button type="button" data-card-audience="guardian" aria-pressed="true" onclick="setCardAudience('guardian')">학부모 발송</button><button type="button" data-card-audience="student" aria-pressed="false" onclick="setCardAudience('student')">학생 본인 발송</button></div><div class="roster-filters" role="group" aria-label="발송 상태"><button type="button" data-roster-filter="all">전체</button><button type="button" data-roster-filter="changed">변경 대상</button><button type="button" data-roster-filter="unsent">미발송</button><button type="button" data-roster-filter="sent">발송완료</button></div><div class="batch-actions"><button id="batchInitial" type="button" onclick="openCardBulk('unsent')">학부모 일괄 발송</button><button id="batchChanges" type="button" onclick="openCardBulk('changed')">변경 대상자 알림톡</button><button type="button" onclick="openCardBulk('history')">전체 발송 이력</button></div></div>
         <div id="cardDeliveryWorkspace" role="tabpanel" aria-labelledby="cardMessageTab" class="student-dashboard-layout"><div class="student-list-panel"><div class="student-list-panel-title">발송 대상</div>
@@ -3749,7 +3774,13 @@ root.TimetableNoticeContactsUI={mount};
             <div id="teacherPickerOptions" class="teacher-picker-options" aria-label="강사 선택"></div>
           </div>
         </div>
-        <button id="visitorBannerAdminBtn" type="button" class="nav-btn" hidden onclick="openVisitorBannerAdmin()">방문 배너</button>
+        <button id="visitorBannerAdminBtn" type="button" class="nav-btn" hidden onclick="openVisitorBannerAdmin()"><svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#fbe6ee"/>
+                <rect x="4" y="7" width="24" height="18" rx="3" fill="#ae557e"/>
+                <rect x="6" y="9" width="20" height="14" rx="1.5" fill="#fff6fa"/>
+                <circle cx="12" cy="13" r="2" fill="#eba546"/>
+                <path fill="#dd91ae" d="m6 21 6-6 5 5 4-7 5 7v3H6z"/><path fill="#ae557e" d="m14 23 7-7 5 5v2z"/>
+              </svg><span>방문 배너</span></button>
         <button id="roomOverviewBtn" type="button" class="nav-btn" style="display:none" onclick="openRoomOverview()">전체 강의실</button>
         <button id="teacherLoginBtn" class="nav-btn" onclick="openAuthModal()">강사 로그인</button>
         
@@ -3762,20 +3793,46 @@ root.TimetableNoticeContactsUI={mount};
           <button class="excel-btn" onclick="exportScheduleToExcel()" title="시수 저장 (엑셀)">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg><span>시수 저장</span>
           </button>
-          <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="학생별 시간표 카드 생성">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h9a1 1 0 001-1V8.414a1 1 0 00-.293-.707l-3.414-3.414A1 1 0 009.586 4H4zm7 1.414L13.586 7H11V4.414z"/><path d="M16 9a1 1 0 011 1v5h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-5a1 1 0 011-1z"/></svg><span>시간표 카드</span>
+          <button id="studentImageBtn" class="img-student-btn" onclick="openStudentImageModal()" title="시간표 발송">
+            <svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#e3edff"/>
+                <path fill="#658edb" d="m4 15 12-9 12 9v11H4z"/>
+                <rect x="9" y="6" width="14" height="17" rx="2" fill="#fff"/>
+                <path stroke="#6ca6d9" d="M12 10h8m-8 4h5"/>
+                <path fill="#3573d0" d="m4 15 12 6 12-6v10q0 2-2 2H6q-2 0-2-2z"/>
+                <path fill="#174ea1" d="m5 26 9-8q2-2 4 0l9 8z"/>
+              </svg><span>시간표 발송</span>
           </button>
           <button id="operationMemoBtn" class="operation-memo-btn" onclick="openOperationMemoModal()" style="display:none;" title="운영 메모">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L15 3.586A2 2 0 0013.586 3H4zm9 1.5V7h2.5L13 4.5zM6 10a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z"/></svg><span>운영 메모</span>
+            <svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#fff2cf"/>
+                <path fill="#dca853" d="m6 8 18-2 2 18-17 3z"/>
+                <path fill="#ffdc79" d="M6 6h18v14l-5 5H6z"/><path fill="#c58839" d="M19 25v-5h5z"/>
+                <path stroke="#996528" d="M10 11h9m-9 4h6"/>
+                <path fill="#335774" d="m16 21 9-11 2 2-9 11-3 1z"/>
+              </svg><span>운영 메모</span>
           </button>
           <button class="review-btn" onclick="runScheduleReview()" title="시간표 점검">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>시간표 점검</span>
+            <svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#e9f2fc"/>
+                <rect x="5" y="6" width="15" height="20" rx="3" fill="#82a8d0"/>
+                <path stroke="#fff" d="M9 11h7m-7 4h4"/>
+                <path stroke="#285582" stroke-width="3" d="m22 21 5 6"/>
+                <circle cx="19" cy="18" r="6.5" fill="#fcffff" stroke="#356796"/>
+                <path stroke="#30918b" d="m16 18 2 2 4-4"/>
+              </svg><span>시간표 점검</span>
           </button>
         </div>
         <div class="action-group">
 
           <button id="teacherViewLogBtn" class="review-btn" onclick="openTeacherViewLogModal()" style="display:none;" aria-label="강사 대시보드" title="강사 대시보드">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-3.414-3.414A2 2 0 008.586 3H4zm4 2a1 1 0 012 0v2h2a1 1 0 110 2H9a1 1 0 01-1-1V5zm-1 6a1 1 0 000 2h5a1 1 0 100-2H7zm0 3a1 1 0 100 2h3a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><span>강사 대시보드</span>
+            <svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#eee9fc"/>
+                <rect x="4" y="6" width="24" height="17" rx="3" fill="#675398"/>
+                <rect x="6" y="8" width="20" height="12" rx="1.5" fill="#fff"/>
+                <path fill="#b49bdf" d="M9 17v-4h3v4zm5 0V9h3v8zm5 0v-6h3v6z"/>
+                <path stroke="#675398" d="M16 23v3m-5 1h10"/>
+              </svg><span>강사 대시보드</span>
           </button>
 
           <button class="capture-btn admin-toolbar-hidden" onclick="captureScreen()" title="이미지 저장">
@@ -3793,17 +3850,35 @@ root.TimetableNoticeContactsUI={mount};
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg><span>상세안내</span>
           </button>
           <button id="absenceNoticeBtn" class="absence-notice-btn" onclick="openAbsenceNoticeModal()">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm.75 4.5a.75.75 0 00-1.5 0v4a.75.75 0 001.5 0v-4zM10 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg><span>결석/당취 안내</span>
+            <svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#ffede3"/>
+                <path fill="#b45331" d="M8 7h17v19H8z"/>
+                <rect x="6" y="6" width="18" height="19" rx="3" fill="#fff"/>
+                <path fill="#eb865b" d="M6 9q0-3 3-3h12q3 0 3 3v3H6z"/>
+                <path stroke="#9e492d" d="M11 5v4m8-4v4"/>
+                <circle cx="22" cy="22" r="6" fill="#c95736"/><path stroke="#fff" d="M19.5 22h5"/>
+              </svg><span>결석/당취 안내</span>
           </button>
           <button id="attendanceReportBtn" class="attendance-report-btn" onclick="openAttendanceReportModal()">
-            <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm-.75 3.5a.75.75 0 011.5 0v4.25l2.5 1.5a.75.75 0 11-.75 1.3l-2.87-1.72a.75.75 0 01-.38-.65V5.5z" clip-rule="evenodd"/></svg><span>출결 현황 보고</span>
+            <svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#dff3ef"/>
+                <rect x="7" y="6" width="18" height="22" rx="3" fill="#30887c"/>
+                <rect x="9" y="7" width="14" height="18" rx="2" fill="#fff"/>
+                <rect x="12" y="4" width="8" height="5" rx="2" fill="#165e59"/>
+                <path stroke="#57ad9d" d="M12 20v-4m4 4v-7m4 7v-5"/>
+              </svg><span>출결 현황 보고</span>
           </button>
 
 
           <button id="attendanceInboxBtn" class="review-btn attendance-inbox-btn" onclick="openAttendanceInbox()" style="display:none;" title="보낸 출결과 접수·처리 기록 확인">
             <svg class="icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a2 2 0 00-2 2v9a2 2 0 002 2h3.586l2.707 2.707a1 1 0 001.414 0L13.414 16H17a2 2 0 002-2V5a2 2 0 00-2-2H3zm3 5a1 1 0 100 2h8a1 1 0 100-2H6zm0 3a1 1 0 100 2h5a1 1 0 100-2H6z" clip-rule="evenodd"/></svg><span>출결 전달함</span><span id="attendanceInboxCount" class="attendance-inbox-count"></span>
           </button>
-          <button id="timetableHandoffBtn" class="review-btn" type="button" onclick="openTimetableHandoff()" title="선생님 시간표 작성 및 전달"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3h14v14H3zM3 7h14M7 3v14M11 10h3M11 13h3"/></svg><span>시간표 전달</span></button>
+          <button id="timetableHandoffBtn" class="review-btn" type="button" onclick="openTimetableHandoff()" title="선생님 시간표 작성 및 전달"><svg class="icon work-tool-art" aria-hidden="true" focusable="false" viewBox="0 0 32 32" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect width="32" height="32" rx="9" fill="#def1fc"/>
+                <rect x="5" y="6" width="17" height="21" rx="3" fill="#4481aa"/>
+                <rect x="7" y="10" width="13" height="14" rx="1" fill="#fff"/>
+                <path stroke="#8fc3d9" d="M9 14h8m-8 4h5"/><path fill="#247b9e" d="M16 18h5v-4l7 6-7 6v-4h-5z"/>
+              </svg><span>시간표 전달</span></button>
           <button id="snapshotSaveBtn" class="review-btn" type="button" hidden onclick="saveScheduleSnapshot()" title="선택 날짜의 원본 시간표를 스냅샷으로 저장">
             <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3h11l3 3v11H3zM6 3v5h7V3M6 17v-6h8v6"/></svg><span>스냅샷 저장</span>
           </button>
@@ -7148,9 +7223,9 @@ root.TimetableNoticeContactsUI={mount};
         function menu(label){var d=document.createElement('details');d.className='staff-menu';d.innerHTML='<summary>'+label+' <span aria-hidden="true">⌄</span></summary><div class="staff-menu-panel"></div>';actions.appendChild(d);d.addEventListener('toggle',function(){if(d.open)staffToolbarRoot.querySelectorAll('details').forEach(function(other){if(other!==d)other.open=false;});});return d.querySelector('.staff-menu-panel');}
         var tools=menu('업무 도구'),view=menu('보기 설정');
         function group(label,selectors){var section=document.createElement('section');section.innerHTML='<h3>'+label+'</h3>';tools.appendChild(section);selectors.forEach(function(s){move(s,section);});}
+        move('#studentImageBtn',tools);
         group('출결',['#absenceNoticeBtn','#attendanceReportBtn']);
         group('시간표 운영',['#operationMemoBtn','button[onclick="runScheduleReview()"]','#teacherViewLogBtn','#timetableHandoffBtn']);
-        group('저장·제작',['#studentImageBtn']);
         group('방문 화면 관리',['#visitorBannerAdminBtn']);
         ['privacyToggle','timelineToggle','dimmingToggle','hide9amToggle'].forEach(function(id){move('label:has(#'+id+')',view);});
         var labels={privacyToggle:'학생 이름 가리기',timelineToggle:'현재 시간선 표시',dimmingToggle:'지난 수업 흐리게',hide9amToggle:'9시 요약표 숨기기'};
@@ -13743,7 +13818,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 	          html += "<iframe id='examReviewFrame' title='시험 대비 점검' src='./exam-review/index.html' style='width:100%;height:76dvh;min-height:540px;border:0;background:#f5f7fa'></iframe>";
 	          html += "</section>";
 	          html += "<section class='review-panel' data-review-panel='send'>";
-	          html += "<p class='review-submenu-copy'>등원 안내/시간표 카드 발송 전에 처리해야 할 위험 신호를 모아 확인합니다.</p>";
+	          html += "<p class='review-submenu-copy'>등원 안내/시간표 발송 전에 처리해야 할 위험 신호를 모아 확인합니다.</p>";
 	          html += "<div class='review-signal-grid'>" +
 	            renderReviewSignalCard("발송 전 차단 후보", sendBlockingCount, "누락/확인필요/강사표시 오류 중심") +
 	            renderReviewSignalCard("1시간 배정", issues.filter(function(issue) { return issue.type === 'single'; }).length, "의도된 단시간 수업인지 확인") +

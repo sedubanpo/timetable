@@ -61,7 +61,28 @@
 #studentImageModal .batch-journey-head,#studentImageModal .batch-line,#studentImageModal .batch-totals{display:flex;align-items:center;gap:10px}
 #studentImageModal .batch-journey-head{margin:16px 0 24px}
 #studentImageModal .batch-journey-head h3{margin:0;color:#163954;font-size:22px;line-height:1.3}
-#studentImageModal .batch-orbit{width:20px;height:20px;box-sizing:border-box;border:3px solid #c4daef;border-top-color:#24649f;border-radius:50%;animation:timetableOrbit .95s linear infinite;flex:none}
+#studentImageModal .batch-orbit{position:relative;display:inline-block;flex:none;width:40px;height:36px;border-radius:10px;background:#deebfc}
+#studentImageModal .batch-orbit::before,
+#studentImageModal .batch-orbit::after{content:"";position:absolute;box-sizing:border-box}
+#studentImageModal .batch-orbit::before{
+  left:11px;top:4px;width:18px;height:20px;border:1px solid #b7cee8;border-top:4px solid #65afa9;border-radius:3px;
+  background:linear-gradient(#91aecb 0 0) 3px 4px/10px 2px no-repeat,linear-gradient(#bdd0e2 0 0) 3px 8px/7px 2px no-repeat,#fff;
+  transform:rotate(-6deg);animation:dispatchSheet 2.3s ease-in-out infinite
+}
+#studentImageModal .batch-orbit::after{
+  left:6px;top:15px;width:28px;height:15px;border-radius:0 0 4px 4px;
+  clip-path:polygon(0 0,50% 38%,100% 0,100% 100%,0 100%);
+  background:conic-gradient(from 52deg at 50% 36%,#4985d4 0 78deg,#2e62b3 78deg 180deg,#5e96df 180deg);
+  animation:dispatchEnvelope 2.3s ease-in-out infinite
+}
+@keyframes dispatchSheet{0%,100%{transform:translateY(3px) rotate(-4deg)}40%{transform:translateY(-3px) rotate(4deg)}74%{transform:translateY(4px) rotate(-4deg)}}
+@keyframes dispatchEnvelope{0%,100%{transform:translateY(0)}74%{transform:translateY(1.5px)}}
+#studentImageModal .batch-journey[data-state] .batch-orbit{width:24px;height:24px}
+#studentImageModal .batch-journey[data-state] .batch-orbit::before{content:none}
+#studentImageModal .batch-journey[data-state] .batch-orbit::after{position:static;width:auto;height:auto;background:none;clip-path:none;animation:none}
+@media(prefers-reduced-motion:reduce){
+  #studentImageModal .batch-orbit::before,#studentImageModal .batch-orbit::after{animation:none}
+}
 @keyframes timetableOrbit{to{transform:rotate(1turn)}}
 #studentImageModal .batch-line{justify-content:space-between;flex-wrap:wrap}
 #studentImageModal .batch-line span{font-size:13px;color:#526780}
