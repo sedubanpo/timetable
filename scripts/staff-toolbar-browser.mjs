@@ -32,11 +32,69 @@ try{
  
  for(const selector of ['#attendanceInboxBtn','.excel-btn','#snapshotSaveBtn'])assert(await page.locator('.staff-actions > '+selector).isVisible());
  assert.equal(await page.locator('#attendanceReportBtn').isVisible(),false);
- await page.getByText('업무 도구',{exact:false}).first().click();assert(await page.locator('#attendanceReportBtn').isVisible());
- await page.screenshot({path:out+'/staff-menu.png'});
- await page.keyboard.press('Escape');assert.equal(await page.locator('#attendanceReportBtn').isVisible(),false);
- await page.locator('.staff-menu summary').nth(1).click();assert.equal(await page.locator('#privacyToggle').count(),1);
- await page.keyboard.press('Escape');
+ // Keep dispatch reads local and record any unexpected operation, including a send.
+ await page.evaluate(()=>{
+  window.dispatchActions=[];
+  cardAlimtalkApi=async action=>{
+   dispatchActions.push(action);
+   if(action!=='batchRoster')throw Error('Unexpected dispatch operation: '+action);
+   return {rows:[]};
+  };
+ });
+ const tools=page.locator('.staff-menu').filter({has:page.locator('#studentImageBtn')});
+ const summary=tools.locator('summary');
+ const dispatch=tools.getByRole('button',{name:'시간표 발송',exact:true});
+ const modal=page.locator('#studentImageModal');
+ const message=modal.getByRole('tab',{name:'시간표 알림톡'});
+ const image=modal.getByRole('tab',{name:'시간표 이미지'});
+ async function checkMode(active,inactive){
+  const activeId=await active.getAttribute('id');
+  assert.equal(await active.getAttribute('aria-selected'),'true');
+  assert.equal(await inactive.getAttribute('aria-selected'),'false');
+  assert.equal(await modal.getByRole('tabpanel').getAttribute('aria-labelledby'),activeId);
+  assert.equal(await active.evaluate(el=>el.tabIndex),0);
+  assert.equal(await inactive.evaluate(el=>el.tabIndex),-1);
+  assert.equal(await modal.locator('.batch-bar').isVisible(),activeId==='cardMessageTab');
+  assert.equal(await modal.getByRole('button',{name:'PNG 저장'}).isVisible(),activeId==='cardImageTab');
+ }
+ for(const width of [1440,390]){
+  await page.setViewportSize({width,height:900});
+  if(width===390)await page.locator('.mobile-toolbar-toggle').click();
+  await summary.press('Enter');
+  await dispatch.waitFor();
+  await page.keyboard.press('Tab');
+  assert(await dispatch.evaluate(el=>el===document.activeElement));
+  await page.keyboard.press('Tab');
+  assert(await tools.locator('#absenceNoticeBtn').evaluate(el=>el===document.activeElement));
+  if(width===1440)await page.screenshot({path:out+'/staff-menu.png'});
+  await page.keyboard.press('Escape');
+  assert.equal(await dispatch.isVisible(),false);
+  assert(await summary.evaluate(el=>el===document.activeElement));
+
+  await summary.press('Space');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await modal.waitFor();
+  assert.equal(await modal.locator('.modal-title').innerText(),'시간표 발송');
+  assert.equal(await tools.evaluate(el=>el.open),false);
+  await checkMode(message,image);
+  await image.click();
+  await checkMode(image,message);
+  for(const [key,active,inactive] of [['ArrowLeft',message,image],['End',image,message],['Home',message,image],['ArrowRight',image,message]]){
+   await page.keyboard.press(key);
+   await checkMode(active,inactive);
+   assert(await active.evaluate(el=>el===document.activeElement));
+  }
+  await modal.getByRole('button',{name:'닫기',exact:true}).click();
+  await modal.waitFor({state:'hidden'});
+  await page.locator('.staff-menu summary').nth(1).click();
+  assert(await page.locator('label:has(#privacyToggle)').isVisible());
+  await page.keyboard.press('Escape');
+  if(width===390)await page.locator('.mobile-toolbar-toggle').click();
+ }
+ const dispatchActions=await page.evaluate(()=>dispatchActions);
+ assert(dispatchActions.length>0);
+ assert(dispatchActions.every(action=>action==='batchRoster'));
  for(const width of [1920,1440,390]){
   await page.setViewportSize({width,height:900});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
@@ -48,5 +106,5 @@ try{
  assert.equal(await page.locator('.nav-group button').count(),3);
  assert.equal(await page.locator('.action-group #snapshotSaveBtn').count(),1);
  assert.deepEqual(errors,[]);
- console.log('PASS direct actions, grouped menus, Escape, responsive layout and visitor restoration');
+ console.log('PASS desktop/mobile dispatch tabs, keyboard menu traversal and focus, read-only roster, responsive layout and visitor restoration');
 }finally{await browser.close();server.close();}
