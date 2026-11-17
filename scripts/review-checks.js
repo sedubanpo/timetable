@@ -373,7 +373,7 @@ assert(server.includes('PropertiesService.getScriptProperties().setProperty(key'
 assert(server.includes('var raw = String(properties.getProperty(key)'), "admin sessions must recover after best-effort cache eviction");
 assert(index.includes('function refreshDashboardAdminSession()'), "expired admin dashboard sessions must be refreshable from the live Firebase login");
 assert(index.includes('function withDashboardAdminSession(operation)'), "dashboard reads and writes must share one session-retry path");
-assert(index.includes('withDashboardAdminSession(function(token) { return callServer("getTeacherViewOverrides", [token]); })'), "dashboard opening must retry with a refreshed admin session");
+assert(/withDashboardAdminSession\(function\(token\)\s*\{\s*return callServer\('getTeacherDashboardMonth',\s*\[month,\s*token\]\)/.test(index), "dashboard opening must retry with a refreshed admin session");
 assert(index.includes("return callServer('setTeacherViewOverride', [teacherName, sheetName, state, state === 'viewed' ? count : 0, token]);"), "dashboard edits must retry with a refreshed admin session");
 
 const durableSessionProperties = {};
@@ -425,16 +425,18 @@ assert(effectiveLogs.filter((item) => item.teacherName === "배유진").every((i
 
 vm.runInContext(`
   currentSheetName = "8/8(토)";
+  teacherDashboardSelectedDate="2026-08-08"; teacherDashboardHistoryDate=currentSheetName;
   teacherDashboardEditMode = true;
   authState = { loggedIn: true, isMaster: true, isLookup: false, teacherName: "", loginId: "admin", dashboardAdminToken: "session-token" };
   teacherViewOverridesCache = [{ teacherName: "배유진", sheetName: "8/8(토)", state: "missing", count: 0, updatedAt: "2026-08-08 12:00:00", updatedBy: "admin" }];
 `, sandbox);
-const adminDashboardCard = sandbox.renderCurrentTeacherLogPanel(null, ["배유진"]);
+const dashboardDay = {sheets:{"2026-08-08":"8/8(토)"},rosters:{"2026-08-08":{"배유진":{subjects:{"국어":1}}}},counts:{},subjects:{},failed:new Set()};
+const adminDashboardCard = sandbox.renderReadDay(dashboardDay,"");
 assert(adminDashboardCard.includes("관리자 조정"), "manual state must be visible to administrators");
 assert(adminDashboardCard.includes("teacher-log-adjust-panel"), "admin dashboard must expose direct adjustment controls");
 assert(adminDashboardCard.includes("실제 로그로 복원"), "admin dashboard must make rollback explicit");
 vm.runInContext("authState.isMaster = false;", sandbox);
-const teacherDashboardCard = sandbox.renderCurrentTeacherLogPanel(null, ["배유진"]);
+const teacherDashboardCard = sandbox.renderReadDay(dashboardDay,"");
 assert(!teacherDashboardCard.includes("teacher-log-adjust-panel"), "non-admin dashboards must not render adjustment controls");
 
 assert(server.includes('if (!logTeacherView_(logTeacher, logSheet, logLoginId))'), "server must expose a failed log write to the client");

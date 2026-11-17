@@ -127,7 +127,7 @@ function handleApiRequest_(params) {
   var requestId = String(params.requestId || "");
   params._requestId = /^[A-Za-z0-9_-]{1,80}$/.test(requestId) ? requestId : Utilities.getUuid();
   var action = String(params.action || "grid").toLowerCase();
-  var knownActions = ["ping", "sheets", "auth", "teacher_roster", "teacher_sheets", "teacher_view_log", "teacher_view_logs", "teacher_view_overrides", "teacher_view_override_set", "student_card_statuses", "student_card_mark", "version", "grid"];
+  var knownActions = ["ping", "sheets", "auth", "teacher_roster", "teacher_sheets", "teacher_view_log", "teacher_view_logs", "teacher_view_month", "teacher_view_overrides", "teacher_view_override_set", "student_card_statuses", "student_card_mark", "version", "grid"];
   try {
     return dispatchApiRequest_(params);
   } finally {
@@ -215,6 +215,9 @@ function dispatchApiRequest_(params) {
       return jsonOutput_({ ok: true }, params);
     }
 
+    if (action === "teacher_view_month") {
+      return jsonOutput_({ok:true, data:getTeacherDashboardMonth(params.month, params.adminToken)}, params);
+    }
     if (action === "teacher_view_logs") {
       var filterTeacher = String(params.teacher || "").trim();
       var limit = parseInt(String(params.limit || "120"), 10);
@@ -1086,6 +1089,34 @@ function logTeacherView_(teacherName, sheetName, loginId) {
   }
 }
 
+// Sheet labels omit the year. Resolve the lesson date nearest to the event so
+// December previews of a January schedule belong to the following year.
+function teacherViewMonthKey_(sheet, timestamp) {
+  var target = /^(\d{1,2})\/(\d{1,2})(?:\(|\s|$)/.exec(sheet);
+  var event = /^(\d{4})-(\d{2})-(\d{2})/.exec(timestamp);
+  if (!target || !event) return "";
+  var year = Number(event[1]), difference = Number(target[1]) - Number(event[2]);
+  if (difference > 6) year--;
+  if (difference < -6) year++;
+  return year + "-" + String(target[1]).padStart(2, "0");
+}
+
+function getTeacherDashboardMonth(month, adminToken) {
+  if (!getDashboardAdminSessionLogin_(adminToken)) throw new Error("DASHBOARD_ADMIN_SESSION_REQUIRED");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("INVALID_MONTH");
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("강사열람로그");
+  var last = sheet ? sheet.getLastRow() : 0;
+  var rows = last > 1 ? sheet.getRange(2, 1, last - 1, 3).getDisplayValues() : [];
+  var logs = rows.filter(function(row) {
+    return teacherViewMonthKey_(row[2], row[0]) === month;
+  }).map(function(row) { return { viewedAt: row[0], teacherName: row[1], sheetName: row[2] }; });
+  var sheets = getSheetNames();
+  if (sheets.some(function(name) { return /^ERROR:/.test(name); })) throw new Error("SCHEDULE_CATALOG_UNAVAILABLE");
+  return {month: month, logs: logs, overrides: getTeacherViewOverrides_(month), sheets: sheets.filter(function(name) {
+    return /^\d{1,2}\/\d{1,2}/.test(name) && Number(name.split("/")[0]) === Number(month.slice(5));
+  })};
+}
+
 function getTeacherViewLogs_(teacherName, limit) {
   try {
     var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("강사열람로그");
@@ -1136,7 +1167,7 @@ function sanitizeTeacherViewOverrideState_(state) {
   return value === "viewed" || value === "missing" || value === "auto" ? value : "";
 }
 
-function getTeacherViewOverrides_() {
+function getTeacherViewOverrides_(month) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("강사열람집계수정");
     if (!sheet || sheet.getLastRow() <= 1) return [];
@@ -1147,6 +1178,7 @@ function getTeacherViewOverrides_() {
       var teacherName = String((row && row[1]) || "").trim();
       var state = sanitizeTeacherViewOverrideState_((row && row[2]) || "");
       if (!sheetName || !teacherName || !state) return;
+      if (month && teacherViewMonthKey_(sheetName, row[4]) !== month) return;
       var count = Math.max(0, Math.min(99, parseInt(String((row && row[3]) || "0"), 10) || 0));
       newestByKey[normalizeTeacherViewOverrideKey_(sheetName, teacherName)] = {
         sheetName: sheetName,
@@ -1161,6 +1193,7 @@ function getTeacherViewOverrides_() {
       return item.state !== "auto";
     });
   } catch (e) {
+    if (month) throw e;
     return [];
   }
 }

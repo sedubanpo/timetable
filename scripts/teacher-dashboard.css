@@ -169,3 +169,56 @@
  #teacherViewLogModal .td-table .td-detail-row>td { padding:16px 12px; }
  #teacherViewLogModal .td-history li { flex-wrap:wrap; gap:4px; }
 }
+
+/* Daily readership and monthly rankings */
+#teacherViewLogModal .td-day-nav { position:sticky; top:0; }
+#teacherViewLogModal #td-calendar-toggle { display:none; }
+#teacherViewLogModal .td-content h3, #teacherViewLogModal .td-section-head h3 { margin:0; }
+#teacherViewLogModal .td-read-group { margin-top:26px; }
+#teacherViewLogModal :is(.td-read-group,.td-rank) h4 { margin:0 0 12px; font-size:16px; color:#1b304a; }
+#teacherViewLogModal .td-read-group h4 span { margin-left:6px; font-size:13px; font-weight:600; color:#536176; }
+#teacherViewLogModal .td-read-group.missing h4 { color:#96381f; }
+#teacherViewLogModal .td-read-group.viewed h4 { color:#186047; }
+#teacherViewLogModal .td-read-group ul { display:flex; flex-wrap:wrap; gap:8px 12px; list-style:none; margin:0; padding:0; }
+#teacherViewLogModal .td-read-group:has(.teacher-log-adjust-panel) ul { display:grid; }
+#teacherViewLogModal .td-read-group:has(.teacher-log-adjust-panel) li { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+#teacherViewLogModal .td-read-group>p, #teacherViewLogModal .td-rank>p { color:#536176; font-size:13px; }
+#teacherViewLogModal .td-read-pair { display:inline-flex; align-items:center; white-space:nowrap; }
+#teacherViewLogModal .td-teacher-label { display:inline-flex; align-items:center; gap:6px; padding:5px 9px; line-height:1.3; border-radius:6px; font-size:14px; font-weight:700; color:var(--ink,#475569); background:var(--tint,#f8fafc); border:1px solid var(--line,#d9e2ec); }
+.td-teacher-label.kor { --ink:#be123c; --tint:#fff1f2; --line:#fecdd3; }
+.td-teacher-label.math { --ink:#4f46e5; --tint:#eef2ff; --line:#c7d2fe; }
+.td-teacher-label.eng { --ink:#0369a1; --tint:#e0f2fe; --line:#bae6fd; }
+.td-teacher-label.social { --ink:#92400e; --tint:#fffbeb; --line:#fde68a; }
+.td-teacher-label.sci { --ink:#2458b8; --tint:#eff6ff; --line:#bfdbfe; }
+.td-teacher-label.chem { --ink:#9a3412; --tint:#fff7ed; --line:#fed7aa; }
+.td-teacher-label.bio { --ink:#047857; --tint:#ecfdf5; --line:#a7f3d0; }
+.td-teacher-label.earth { --ink:#0f766e; --tint:#f0fdfa; --line:#99f6e4; }
+#teacherViewLogModal .td-teacher-label svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+#teacherViewLogModal .td-read-count { min-width:44px; min-height:42px; padding:0 6px; color:#284768; border:0; background:transparent; font-size:13px; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .td-read-count:hover { background:#edf3f9; }
+#teacherViewLogModal .td-read-count span { color:#64748b; }
+#teacherViewLogModal .td-rank-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:36px; margin-top:24px; }
+#teacherViewLogModal .td-rank h4 { margin-bottom:5px; }
+#teacherViewLogModal .td-rank ol { margin:16px 0 0; padding:0; list-style:none; }
+#teacherViewLogModal .td-rank li { display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid #e1e7ee; }
+#teacherViewLogModal .td-rank li strong { margin-left:auto; font-variant-numeric:tabular-nums; }
+#teacherViewLogModal .td-rank small, #teacherViewLogModal .td-place { color:#536176; font-size:12px; }
+#teacherViewLogModal .td-place { min-width:30px; }
+#teacherViewLogModal #tdReadMonth { font:inherit; border:1px solid #bec9d6; border-radius:5px; background:#fff; padding:8px; }
+#tdReadPopup { width:min(350px,calc(100% - 32px)); max-height:70vh; box-sizing:border-box; border:0; border-radius:12px; color:#192e48; padding:20px; box-shadow:0 12px 42px #172b4933; }
+#tdReadPopup::backdrop { background:rgba(17,36,58,.23); }
+#tdReadPopup header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+#tdReadPopup h3 { margin:0; font-size:17px; }
+#tdReadPopup p { margin:8px 0; font-size:13px; color:#536176; }
+#tdReadPopup ol { padding:0; margin:12px 0 0; list-style:none; }
+#tdReadPopup li { padding:9px 0; border-top:1px solid #e1e7ee; font-variant-numeric:tabular-nums; }
+@media(max-width:800px) {
+  #teacherViewLogModal .td-day-nav { position:static; }
+  #teacherViewLogModal #td-calendar-toggle { display:inline-flex; }
+  #teacherViewLogModal #td-day-calendar:not(.expanded) { display:none; }
+  #teacherViewLogModal #td-day-calendar.expanded { margin-top:8px; }
+  #teacherViewLogModal .td-layout { gap:18px; }
+  #teacherViewLogModal .td-rank-columns { grid-template-columns:1fr; gap:28px; }
+  #teacherViewLogModal .teacher-dashboard-tabs { gap:16px; padding-inline:14px; }
+  #teacherViewLogModal .teacher-dashboard-tab { white-space:nowrap; font-size:13px; }
+}

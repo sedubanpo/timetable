@@ -16,7 +16,7 @@ function context(){
   SCHEDULE_START_HOUR:8,SCHEDULE_END_HOUR:23,clientCache:{},lastData:null,
   document:{getElementById:id=>els[id]||(els[id]={value:'',innerHTML:'',textContent:'',classList:{add(){},toggle(){}},setAttribute(){}})},
   getScheduleSessionKey(){return c.authState.loginId;},getActiveTeacherName(){return '';},
-  isTeacherHeader:s=>s.endsWith('T'),extractTeacherName:s=>s.replace('T','')};
+  getSubjectName:()=> '국어',isTeacherHeader:s=>s.endsWith('T'),extractTeacherName:s=>s.replace('T','')};
  vm.createContext(c);vm.runInContext(script,c);
  c.tick=ms=>now+=ms;c.setTime=v=>now=Date.parse(v);c.storage=storage;c.els=els;
  c.reads=[];c.callServer=async(name,args)=>{c.reads.push(args[0]);return {headers:['1강의실','2관 1강의실'],grid:{13:[['가상T','개인정보 학생'],['테스트T']]}};};
@@ -39,19 +39,30 @@ function context(){
  console.log('PASS: HTML syntax/parity; per-day cache, expiry, KST finalization, added dates, force refresh, isolated account, aggregate privacy, partial retry, deduplication, stale response and permission handling.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
 
-// Calendar selection and raw drilldown must not fabricate timestamps from overrides.
+// Check the actual monthly source, including rows beyond the original tail limit.
 {
- const c=context();c.teacherDashboardHistoryDate='9/30(수)';c.teacherDashboardCalendarMonth='2026-09';
- c.teacherViewLogsCache=[{teacherName:'가상',sheetName:'9/30(수)',viewedAt:'2026-09-29 19:00:00'},{teacherName:'가상',sheetName:'9/30(수)',viewedAt:'2026-09-29 20:00:00'},{teacherName:'다른 강사',sheetName:'9/30(수)',viewedAt:'2026-09-29 21:00:00'},{teacherName:'가상',sheetName:'9/29(화)',viewedAt:'2026-09-28 19:00:00'}];
- c.teacherViewOverridesCache=[{teacherName:'가상',sheetName:'9/30(수)',state:'viewed',count:9,updatedAt:'2026-09-30 10:00:00'}];
- assert.equal(c.teacherViewDetailRecords('가상','9/30(수)').length,2);assert.equal(c.teacherViewDetailRecords('가상','9/30(수)')[0].viewedAt,'2026-09-29 20:00:00');
- let detail=c.renderTeacherViewDetailRow('가상','9/30(수)','test-history',4);assert(detail.includes('9회 열람'));assert(detail.includes('2회 · 한국시간'));assert.equal((detail.match(/<time>/g)||[]).length,2);
- c.teacherDashboardSelectedDate='2025-09-30';assert.equal(c.teacherViewDetailRecords('가상','9/30(수)').length,0,'details cannot leak records from another year');c.teacherDashboardSelectedDate='2026-09-30';assert.equal(c.teacherViewDetailRecords('가상','9/30(수)').length,2);c.teacherDashboardSelectedDate='';
- assert(c.renderTeacherViewDetailRow('없는 강사','9/30(수)','empty',4).includes('저장된 실제 열람 기록이 없습니다.'));
- assert(c.renderTeacherViewDetailButton('<img src=x>','safe').includes('&lt;img src=x&gt;'));
- const calendar=c.renderTeacherDashboardCalendar(c.buildTeacherLogDashboardData(c.teacherViewLogsCache,''));assert.equal((calendar.match(/class="td-cal-day/g)||[]).length,30);assert(calendar.includes('id="td-day-2026-09-30"'));assert(calendar.includes('aria-pressed="true"'));assert(calendar.includes('4회'));
- c.teacherDashboardHistoryDate='9/1(화)';assert(c.renderTeacherLogWeekStack(c.buildTeacherLogDashboardData(c.teacherViewLogsCache,'')).includes('선택한 날짜에 조건에 맞는 열람 기록이 없습니다.'));
- c.teacherDashboardCalendarMonth='2026-12';c.filterTeacherViewLogs=()=>{};c.shiftTeacherDashboardMonth(1);assert.equal(c.teacherDashboardCalendarMonth,'2027-01');
- const row={hidden:true};c.els['detail-test']=row;const button={attrs:{'aria-controls':'detail-test','aria-expanded':'false'},getAttribute(k){return this.attrs[k];},setAttribute(k,v){this.attrs[k]=v;}};c.toggleTeacherViewDetail(button);assert.equal(row.hidden,false);assert.equal(button.attrs['aria-expanded'],'true');c.toggleTeacherViewDetail(button);assert.equal(row.hidden,true);
- console.log('PASS: month calendar, year transition, empty-date isolation, escaped teacher labels, raw detail ordering, override separation and accessible disclosure.');
+ const code=fs.readFileSync('Code.gs','utf8');
+ const rows=Array.from({length:340},()=>['2026-09-28 18:00:00','가상','9/30(수)']);
+ rows.push(['2026-12-31 18:00:00','가상','1/1(금)']);
+ const monthServer={getSheetNames:()=>['9/30(수)'],getDashboardAdminSessionLogin_:t=>t==='ok',getTeacherViewOverrides_:()=>[],SpreadsheetApp:{getActiveSpreadsheet:()=>({getSheetByName:()=>({getLastRow:()=>rows.length+1,getRange:()=>({getDisplayValues:()=>rows})})})}};
+ vm.runInNewContext(code.slice(code.indexOf('function teacherViewMonthKey_'),code.indexOf('function getTeacherViewLogs_')),monthServer);
+ assert.equal(monthServer.getTeacherDashboardMonth('2026-09','ok').logs.length,340);
+ assert.equal(monthServer.getTeacherDashboardMonth('2027-01','ok').logs.length,1);
+ assert.throws(()=>monthServer.getTeacherDashboardMonth('2026-09',''),/ADMIN_SESSION/);
+ const c=context();
+ const sheets={'2026-09-28':'9/28(월)','2026-09-29':'9/29(화)','2026-09-30':'9/30(수)','2026-10-01':'10/1(목)'};
+ const counts=c.dashboardDays([{teacherName:'가상',sheetName:'9/28(월)',viewedAt:'2026-09-27 20:00:00'},{teacherName:'가상',sheetName:'9/28(월)',viewedAt:'2026-09-28 09:00:00'}]);
+ const rank=c.monthlyReadRank({sheets,counts,rosters:{'2026-09-28':{'가상':{}},'2026-09-30':{'가상':{},'다른':{}}},failed:new Set(['2026-09-29'])});
+ assert.equal(rank.viewed['가상'],2);assert.equal(rank.missing['가상'],1);assert.equal(rank.missing['다른'],1);
+ assert.equal(rank.scheduled['가상'],2);assert.equal(rank.days,3);assert.equal(rank.known,2);assert.equal(rank.failed,1);
+ const data={month:'2026-09',sheets,counts,subjects:{},failed:new Set(),rosters:{'2026-09-28':{'가상':{subjects:{'국어':2}},'미확인':{}}}};
+ c.teacherDashboardSelectedDate='2026-09-28';c.teacherDashboardHistoryDate='9/28(월)';c.teacherDashboardStatusFilter='all';c.teacherDashboardEditMode=false;c.teacherViewOverridesCache=[];
+ const daily=c.renderReadDay(data,'');
+ assert(daily.indexOf('미열람 <span>1명')<daily.indexOf('>열람 <span>1명'));assert(daily.includes('td-teacher-label kor'));assert(daily.includes('가상 2회 상세 열람 이력'));assert.match(c.teacherSubjectLabel('<img>',[]),/&lt;img&gt;/);
+ c.teacherViewLogsCache=[{teacherName:'가상',sheetName:'9/28(월)',viewedAt:'2026-09-27 20:00:00'},{teacherName:'가상',sheetName:'9/28(월)',viewedAt:'2026-09-28 09:00:00'},{teacherName:'가상',sheetName:'9/29(화)',viewedAt:'2026-09-28 15:00:00'}];
+ c.teacherViewOverridesCache=[{teacherName:'가상',sheetName:'9/28(월)',state:'viewed',count:9,updatedAt:'2026-09-28 10:00:00'}];
+ c.els.tdReadPopup={showModal(){}};
+ c.teacherReadDetail({dataset:{teacher:'가상'}});
+ const detail=c.els.tdReadHistory.innerHTML;assert(detail.includes('실제 2회'));assert(detail.includes('관리자가 집계'));assert(detail.indexOf('09:00:00')<detail.indexOf('20:00:00'));assert(!detail.includes('15:00:00'));
+ console.log('PASS: full-month records, year boundary, admin access, assignment-aware missing days, future/failed days, subject labels, popup raw timestamps and overrides.');
 }

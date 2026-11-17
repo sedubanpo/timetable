@@ -11,10 +11,10 @@ http.createServer((req,res)=>{
  var names=['강가람','김하늘','김여름','문다온','박지음','서이든','송라온','오지안','윤서우','이도담','이로운','정해솔','최다솜','한마루'];
  var lastData={headers:['1강의실','2강의실','2관 1강의실','3관 1강의실'],grid:{}};
  for(var hour=11;hour<23;hour++)lastData.grid[hour]=Array.from({length:4},(_,i)=>[names[(hour+i)%names.length]+'T','합성 학생']);
- function getScheduleSessionKey(){return 'fixture';}function getActiveTeacherName(){return '';}function getAdminSelectedTeacher(){return '';}
+ function teacherFixtureSubject(name){return ['국어','수학','영어','사회','물리'][names.indexOf(name)%5];} function getSubjectName(raw){return teacherFixtureSubject(extractTeacherName(raw));} function getScheduleSessionKey(){return 'fixture';}function getActiveTeacherName(){return '';}function getAdminSelectedTeacher(){return '';}
  function isTeacherHeader(s){return s.endsWith('T');}function extractTeacherName(s){return s.replace(/T$/,'');}function withDashboardAdminSession(fn){return fn('fixture');}
  var logs=[];availableSheets.forEach((sheet,di)=>names.slice(0,11).forEach((name,i)=>{for(var n=0;n<(i%5)+1;n++)logs.push({teacherName:name,sheetName:sheet,viewedAt:'2026-10-02 '+String(14+i%9).padStart(2,'0')+':'+String(n*11).padStart(2,'0')+':00',loginId:'fixture'});}));
- async function callServer(name,args){await new Promise(r=>setTimeout(r,120));if(name==='getTeacherViewLogs')return logs;if(name==='getTeacherViewOverrides')return [];if(name==='getFixedGridData')return lastData;if(name==='setTeacherViewOverride')return {ok:true};throw Error('Unknown fixture request');}
+ async function callServer(name,args){await new Promise(r=>setTimeout(r,120));if(name==='getTeacherDashboardMonth')return {month:args[0],sheets:availableSheets,logs:args[0]==='2026-10'?logs:[],overrides:[]};if(name==='getTeacherViewLogs')return logs;if(name==='getTeacherViewOverrides')return [];if(name==='getFixedGridData')return lastData;if(name==='setTeacherViewOverride')return {ok:true};throw Error('Unknown fixture request');}
  ${funcs}
  openTeacherViewLogModal();
  </script></body></html>`);

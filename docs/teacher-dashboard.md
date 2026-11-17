@@ -1,5 +1,12 @@
 # Teacher dashboard
 
+## Readership — 2026-11-17
+
+The daily view groups assigned teachers by unread/read and lists other readers separately. Subject labels come from timetable headers. The count button opens a small native dialog with the original Korean-time events, including when an administrator adjusted the displayed count. On narrow screens the date picker starts collapsed.
+
+The monthly tab reads all records for the target timetable month through the admin session. Read rank counts effective views (including explicit overrides). Unread rank counts distinct assigned dates through today in Korea with zero effective views. Failed or unavailable rosters never count as unread. Ties share a rank. Each list shows five teachers initially and can expand. The room allocation tab and daily adjustment controls remain available.
+
+
 Implemented 2026-09-30 in `Index.html`; dashboard styling is scoped in `scripts/teacher-dashboard.css`. This change concerns the administrator's teacher dashboard only.
 
 ## Screen and interaction
