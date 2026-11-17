@@ -27,6 +27,7 @@ function el(id) {
   return elements.get(id);
 }
 const sandbox = { window: { innerWidth: 1440, addEventListener() {} }, document: { getElementById: el, addEventListener() {}, querySelectorAll() { return []; }, body: { classList: { add() {}, remove() {} } } }, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} }, console, alert() {}, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, requestAnimationFrame() {}, cancelAnimationFrame() {}, URLSearchParams, Date, Promise, Set, Map };
+sandbox.TimetableAlimtalk = require('../assets/alimtalk-contract.js');
 vm.createContext(sandbox);
 vm.runInContext(app, sandbox);
 const run = code => vm.runInContext(code, sandbox);

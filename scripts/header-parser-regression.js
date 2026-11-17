@@ -5,8 +5,8 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const client = fs.readFileSync(path.join(root, 'Index.html'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'Code.gs'), 'utf8');
-function load(source, names) {
-  const ctx = vm.createContext({});
+function load(source, names, globals = {}) {
+  const ctx = vm.createContext(globals);
   for (const name of names) {
     const start = source.indexOf('function ' + name + '(');
     const end = source.indexOf('function ', start + 9);
@@ -14,7 +14,9 @@ function load(source, names) {
   }
   return ctx;
 }
-const a = load(client, ['isTeacherHeader', 'getSubjectName']);
+const a = load(client, ['isTeacherHeader', 'getSubjectName'], {
+  TimetableAlimtalk: require('../assets/alimtalk-contract.js')
+});
 const b = load(server, ['isTeacherHeader_', 'getSubjectName_']);
 for (const [text, expected] of [
   ['생윤 1:1 정지호T', true], ['개별 수학 안준성T', true],
