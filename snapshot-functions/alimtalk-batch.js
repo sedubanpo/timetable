@@ -115,7 +115,8 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
     if(reviewed&&records.every(p=>p.state==='DELIVERED'))return {id,name,state:'sent',issue:'',items:[],past,comparisons};
     if(reviewed&&records.every(p=>outstanding.has(p.state)||p.state==='DELIVERED'))return {id,name,state:'pending',issue:'',items:[],past,comparisons};
    }
-   return {id,name,state,issue,excludedOnly,text:c.text,policyPreview:student?.timetableSaturdayArrivalChoice===true&&!src.linkIssues?.[name],comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
+   const absentSubjects=state==='changed'?[...new Set(entries.filter(e=>['결석','결석예고','당일취소','당취'].includes(rules.exclusion(e.lesson))).map(e=>e.lesson.subject).filter(Boolean))]:[];
+   return {id,name,state,issue,excludedOnly,absentSubjects,stoppedWithoutLessons:student?.registrationInactive===true&&!entries.length,text:c.text,policyPreview:student?.timetableSaturdayArrivalChoice===true&&!src.linkIssues?.[name],comparisons,items,failed:items.some(t=>t.lastState==='FAILED'),past};
   });
   if(!only){
    const seen=new Set(rows.map(r=>r.name));
@@ -138,7 +139,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
  const summary=r=>({studentId:r.id,name:r.name,state:r.state,issue:r.issue,
   ...(r.state==='unsent'&&!r.issue?{waitReason:waitReason(r)}:{}),
   ...(r.policyPreview?{policyPreview:r.text}:{}),
-  ...(r.state==='changed'?{current:r.text,comparisons:r.comparisons}:{}),failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
+  ...(r.state==='changed'?{current:r.text,comparisons:r.comparisons,...(r.absentSubjects?.length?{absentSubjects:r.absentSubjects}:{}),...(r.stoppedWithoutLessons?{stoppedWithoutLessons:true}:{})}:{}),failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
  async function roster(session,input){
   const a=await reviewer(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
   const rows=await scan(a,input,input.studentIds);await reviewer(session);return {rows:rows.map(summary)};

@@ -2556,6 +2556,20 @@
 #studentImageModal[data-card-mode=message] .student-preview-panel{min-height:0;overflow:hidden}
 #studentImageModal[data-card-mode=message] .card-workarea{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:clamp(8px,1.2vw,18px)}
 #studentImageModal[data-card-mode=message] #cardEditorSidebar{width:100%;max-width:none}
+
+#studentImageModal .roster-change-cluster{display:flex;align-items:center;flex-wrap:wrap;gap:4px;max-width:100%}
+#studentImageModal .roster-change-cluster .roster-student-card:first-child{gap:3px}
+#studentImageModal .roster-change-tag{padding:2px 5px;border-radius:4px;font-size:11px;font-weight:650;line-height:1.35;white-space:nowrap;background:#ebedf0;color:#404951}
+#studentImageModal .change-room{background:#e3effc;color:#234f81}
+#studentImageModal .change-absence{background:#ffead6;color:#814013}
+#studentImageModal .change-order{background:#efe6ff;color:#59358b}
+#studentImageModal .change-stop{background:#f7e4ed;color:#7f2b51}
+#studentImageModal .change-wrong{background:#ffe3e1;color:#942c25}
+#studentImageModal .change-time{background:#dbf3f3;color:#155d60}
+#studentImageModal .change-teacher{background:#e3f0de;color:#34612a}
+#studentImageModal .change-lessons{background:#f6edc9;color:#66500c}
+#studentImageModal .change-removed{background:#e5e7f4;color:#404a79}
+#studentImageModal .change-mixed{background:#f1e8dd;color:#68462f}
 #studentImageModal .roster-wait-reason{flex:0 0 100%;margin:0 0 2px;color:#76392c;font-size:12px;line-height:1.5}
 #studentImageModal .roster-versions mark{color:inherit;background:#fff0ce}
 #studentImageModal .roster-versions section+section mark{background:#dbf3e8}
@@ -2595,10 +2609,10 @@ function readLessons(text){
  const lessons=[];
  for(const block of list.split(/\n\s*\n/)){
   const [heading,teacher,room,...extra]=block.trim().split('\n');
-  const parts=/^(?:[①-⑳]|\d+\.)\s+(\S+)(.*?)\s+(\d\d:\d\d)\s*[–~-]\s*(\d\d:\d\d)$/.exec(heading);
+  const parts=/^(?:[①-⑳]|\d+\.)\s+(\S+)(.*?)\s+(\d\d:\d\d\s*[–~-]\s*\d\d:\d\d(?:\(자정\))?|10:00 또는 11:00 시작 · \d\d:\d\d 종료)$/.exec(heading);
   if(!parts||!teacher||!room||extra.length)return null;
   const [instructor,...format]=teacher.split(' · ');
-  lessons.push({subject:parts[1],status:parts[2].trim(),time:parts[3]+'–'+parts[4],
+  lessons.push({subject:parts[1],status:parts[2].trim(),time:parts[3].replace(/(\d)\s*[~-]\s*(?=\d)/,'$1–'),
    teacher:instructor,room,type:format.join(' · ').replace(/\s+\d+(?:시간|분).*$/,'')});
  }
  return lessons;
@@ -3043,7 +3057,7 @@ function mount({host,api,context,refresh}){
  }
  return {review,compare:target=>review('changed',target,true),quickSend,history,reset,errorText,isSending:()=>sending};
 }
-root.TimetableBatchUI={mount,errorText,lessonChanges};
+root.TimetableBatchUI={mount,errorText,lessonChanges,readLessons};
 })(globalThis);
 </script>
   <!-- ALIMTALK shared contract and UI: generated from assets, parity-tested -->
@@ -9188,6 +9202,49 @@ function rosterCategory(row){
  if(['held','unsent','failed'].includes(state)&&!row?.issue?.startsWith('안내 대상 수업 없음'))return 'unsent';
  return '';
 }
+const rosterChangeLabels={
+ room:'강의실 변경',absence:'결석 전환',order:'과목 순서 변경',stop:'중지',wrong:'오발송',
+ time:'시간 변경',teacher:'강사 변경',lessons:'수업 구성 변경',removed:'현재 수업 없음',
+ mixed:'복합 변경',other:'변경 확인 필요'
+};
+function rosterComparisonType(previous,current,excluded){
+ const day=body=>/^▶ 수업일: (\d{4}-\d{2}-\d{2})$/m.exec(body||'')?.[1];
+ if(day(previous)&&day(current)&&day(previous)!==day(current))return 'wrong';
+ const before=TimetableBatchUI.readLessons(previous),after=TimetableBatchUI.readLessons(current);
+ if(!before||!after)return 'other';
+ const subjects=list=>list.map(l=>l.subject);
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ const reordered=same(subjects(before).sort(),subjects(after).sort())&&!same(subjects(before),subjects(after));
+ const changes=new Set();
+ if(reordered)changes.add('order');
+ const slotsChanged=!same(before.map(l=>l.time),after.map(l=>l.time));
+ for(const diff of TimetableBatchUI.lessonChanges(previous,current)){
+  const old=diff.before,next=diff.after;
+  if(!old||!next){
+   changes.add(old&&excluded.includes(old.subject)?'absence':'lessons');
+   continue;
+  }
+  if(old.subject!==next.subject||old.type!==next.type||old.status!==next.status)changes.add('lessons');
+  if(old.room!==next.room)changes.add('room');
+  if(old.teacher!==next.teacher)changes.add('teacher');
+  if(old.time!==next.time&&(!reordered||slotsChanged))changes.add('time');
+ }
+ if(!changes.size&&previous.match(/^▶ 등원 시각: .+$/m)?.[0]!==current.match(/^▶ 등원 시각: .+$/m)?.[0])changes.add('time');
+ return changes.size===1?[...changes][0]:changes.size?'mixed':'other';
+}
+function rosterChangeType(row){
+ const issue=row.issue||'';
+ if(/^오발송(?:$| ·)/.test(issue))return 'wrong';
+ if(row.stoppedWithoutLessons||/^중지생 ·/.test(issue))return 'stop';
+ if(issue.startsWith('안내 대상 수업 없음 · ')){
+  const reasons=issue.slice('안내 대상 수업 없음 · '.length).split(', ').filter(r=>r!=='자동 생성 공강');
+  if(reasons.length&&reasons.every(r=>['결석예고','결석','당일취소','당취'].includes(r)))return 'absence';
+  return 'removed';
+ }
+ if(issue.startsWith('현재 시간표에 수업 없음'))return 'removed';
+ const types=new Set((row.comparisons||[]).map(r=>rosterComparisonType(r.previous,row.current,row.absentSubjects||[])));
+ return types.size===1?[...types][0]:types.size?'mixed':'other';
+}
 // Use the delivered body, not a reconstruction of a former timetable.
 function renderRosterComparison(row){
  const host=document.getElementById('rosterComparison');
@@ -9311,6 +9368,20 @@ function drawAlimtalkRoster(list,keyword){
     reasons.get(reason).push(tile);
    }
    for(const items of reasons.values())grid.append(...items);
+  }else if(state==='changed'){
+   const tilesByType=new Map();
+   for(const tile of rows){
+    const type=rosterChangeType(byName.get(tile.firstChild.dataset.studentName));
+    if(!tilesByType.has(type))tilesByType.set(type,[]);
+    tilesByType.get(type).push(tile);
+   }
+   for(const [type,label] of Object.entries(rosterChangeLabels)){
+    const tiles=tilesByType.get(type);if(!tiles)continue;
+    const cluster=make('div'),tag=make('span',label);
+    cluster.className='roster-change-cluster';cluster.setAttribute('role','group');cluster.setAttribute('aria-label',label);
+    tag.className='roster-change-tag change-'+type;tiles[0].prepend(tag);
+    cluster.append(...tiles);grid.append(cluster);
+   }
   }else grid.append(...rows);
   const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
  }

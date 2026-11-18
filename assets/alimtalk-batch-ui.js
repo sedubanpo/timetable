@@ -17,10 +17,10 @@ function readLessons(text){
  const lessons=[];
  for(const block of list.split(/\n\s*\n/)){
   const [heading,teacher,room,...extra]=block.trim().split('\n');
-  const parts=/^(?:[①-⑳]|\d+\.)\s+(\S+)(.*?)\s+(\d\d:\d\d)\s*[–~-]\s*(\d\d:\d\d)$/.exec(heading);
+  const parts=/^(?:[①-⑳]|\d+\.)\s+(\S+)(.*?)\s+(\d\d:\d\d\s*[–~-]\s*\d\d:\d\d(?:\(자정\))?|10:00 또는 11:00 시작 · \d\d:\d\d 종료)$/.exec(heading);
   if(!parts||!teacher||!room||extra.length)return null;
   const [instructor,...format]=teacher.split(' · ');
-  lessons.push({subject:parts[1],status:parts[2].trim(),time:parts[3]+'–'+parts[4],
+  lessons.push({subject:parts[1],status:parts[2].trim(),time:parts[3].replace(/(\d)\s*[~-]\s*(?=\d)/,'$1–'),
    teacher:instructor,room,type:format.join(' · ').replace(/\s+\d+(?:시간|분).*$/,'')});
  }
  return lessons;
@@ -465,5 +465,5 @@ function mount({host,api,context,refresh}){
  }
  return {review,compare:target=>review('changed',target,true),quickSend,history,reset,errorText,isSending:()=>sending};
 }
-root.TimetableBatchUI={mount,errorText,lessonChanges};
+root.TimetableBatchUI={mount,errorText,lessonChanges,readLessons};
 })(globalThis);

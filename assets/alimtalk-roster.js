@@ -115,6 +115,49 @@ function rosterCategory(row){
  if(['held','unsent','failed'].includes(state)&&!row?.issue?.startsWith('안내 대상 수업 없음'))return 'unsent';
  return '';
 }
+const rosterChangeLabels={
+ room:'강의실 변경',absence:'결석 전환',order:'과목 순서 변경',stop:'중지',wrong:'오발송',
+ time:'시간 변경',teacher:'강사 변경',lessons:'수업 구성 변경',removed:'현재 수업 없음',
+ mixed:'복합 변경',other:'변경 확인 필요'
+};
+function rosterComparisonType(previous,current,excluded){
+ const day=body=>/^▶ 수업일: (\d{4}-\d{2}-\d{2})$/m.exec(body||'')?.[1];
+ if(day(previous)&&day(current)&&day(previous)!==day(current))return 'wrong';
+ const before=TimetableBatchUI.readLessons(previous),after=TimetableBatchUI.readLessons(current);
+ if(!before||!after)return 'other';
+ const subjects=list=>list.map(l=>l.subject);
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ const reordered=same(subjects(before).sort(),subjects(after).sort())&&!same(subjects(before),subjects(after));
+ const changes=new Set();
+ if(reordered)changes.add('order');
+ const slotsChanged=!same(before.map(l=>l.time),after.map(l=>l.time));
+ for(const diff of TimetableBatchUI.lessonChanges(previous,current)){
+  const old=diff.before,next=diff.after;
+  if(!old||!next){
+   changes.add(old&&excluded.includes(old.subject)?'absence':'lessons');
+   continue;
+  }
+  if(old.subject!==next.subject||old.type!==next.type||old.status!==next.status)changes.add('lessons');
+  if(old.room!==next.room)changes.add('room');
+  if(old.teacher!==next.teacher)changes.add('teacher');
+  if(old.time!==next.time&&(!reordered||slotsChanged))changes.add('time');
+ }
+ if(!changes.size&&previous.match(/^▶ 등원 시각: .+$/m)?.[0]!==current.match(/^▶ 등원 시각: .+$/m)?.[0])changes.add('time');
+ return changes.size===1?[...changes][0]:changes.size?'mixed':'other';
+}
+function rosterChangeType(row){
+ const issue=row.issue||'';
+ if(/^오발송(?:$| ·)/.test(issue))return 'wrong';
+ if(row.stoppedWithoutLessons||/^중지생 ·/.test(issue))return 'stop';
+ if(issue.startsWith('안내 대상 수업 없음 · ')){
+  const reasons=issue.slice('안내 대상 수업 없음 · '.length).split(', ').filter(r=>r!=='자동 생성 공강');
+  if(reasons.length&&reasons.every(r=>['결석예고','결석','당일취소','당취'].includes(r)))return 'absence';
+  return 'removed';
+ }
+ if(issue.startsWith('현재 시간표에 수업 없음'))return 'removed';
+ const types=new Set((row.comparisons||[]).map(r=>rosterComparisonType(r.previous,row.current,row.absentSubjects||[])));
+ return types.size===1?[...types][0]:types.size?'mixed':'other';
+}
 // Use the delivered body, not a reconstruction of a former timetable.
 function renderRosterComparison(row){
  const host=document.getElementById('rosterComparison');
@@ -238,6 +281,20 @@ function drawAlimtalkRoster(list,keyword){
     reasons.get(reason).push(tile);
    }
    for(const items of reasons.values())grid.append(...items);
+  }else if(state==='changed'){
+   const tilesByType=new Map();
+   for(const tile of rows){
+    const type=rosterChangeType(byName.get(tile.firstChild.dataset.studentName));
+    if(!tilesByType.has(type))tilesByType.set(type,[]);
+    tilesByType.get(type).push(tile);
+   }
+   for(const [type,label] of Object.entries(rosterChangeLabels)){
+    const tiles=tilesByType.get(type);if(!tiles)continue;
+    const cluster=make('div'),tag=make('span',label);
+    cluster.className='roster-change-cluster';cluster.setAttribute('role','group');cluster.setAttribute('aria-label',label);
+    tag.className='roster-change-tag change-'+type;tiles[0].prepend(tag);
+    cluster.append(...tiles);grid.append(cluster);
+   }
   }else grid.append(...rows);
   const desc=make('p',description);desc.className='roster-description';g.append(h,desc,grid);list.append(g);
  }

@@ -134,6 +134,9 @@ test('a fully cancelled verified day has no initial recipient; earlier delivery 
  const x=setup(1),prior=await x.preview();await x.send(prior);x.src.entries[0].lesson.status='결석예고';
  const student=await x.preview({audience:'student'});assert.deepEqual(student.rows,[]);assert.deepEqual(student.items,[]);
  const changes=await x.preview({mode:'changed'});assert.equal(changes.rows[0].state,'changed');assert.match(changes.rows[0].issue,/결석예고/);assert.equal(changes.items.length,0);
+ assert.deepEqual(changes.rows[0].absentSubjects,['수학']);
+ x.src.entries=[];x.people.id1.registrationInactive=true;
+ const stopped=await x.b.batchRoster('',x.base);assert.equal(stopped.rows[0].stoppedWithoutLessons,true);
 });
 
 test('a confirmed SMS at the corrected number counts as delivered and retains the original failure',async()=>{

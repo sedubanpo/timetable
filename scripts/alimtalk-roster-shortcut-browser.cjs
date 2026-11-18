@@ -9,7 +9,7 @@ for(const [label,width,height] of [['desktop',1440,1000],['mobile',390,844]]){
  await page.evaluate(()=>{
  document.querySelectorAll('style').forEach(n=>document.head.append(n));const modal=document.getElementById('studentImageModal');document.body.replaceChildren(modal);document.body.className='';modal.style.display='flex';modal.dataset.cardMode='message';document.querySelectorAll('[data-card-channel=image]').forEach(n=>n.hidden=true);
  Object.assign(window,{studentCardMode:'message',cardAudience:'student',currentSheetName:'11/12(목)',attendanceDateKey:()=> '2026-11-12',getScheduleSessionKey:()=> 'offline',timetableLoginSequence:1,studentImageScheduleMap:{검증대기:[],검증실패:[],검증미확정:[],검증완료:[],검증변경:[]},selectedStudentForImage:'검증실패',isStudentImageModalOpen:()=>true,
- refreshStudentImageListSelectionState:()=>{},selectStudentImageItem:(n)=>{selectedStudentForImage=n;},resetCardAlimtalk:()=>{cardBulkUI?.reset();},filterStudentImageList:()=>drawAlimtalkRoster(document.getElementById('studentImageList'),'')});
+ renderCardMessageReference:()=>{},refreshStudentImageListSelectionState:()=>{},selectStudentImageItem:(n)=>{selectedStudentForImage=n;},resetCardAlimtalk:()=>{cardBulkUI?.reset();},filterStudentImageList:()=>drawAlimtalkRoster(document.getElementById('studentImageList'),'')});
  cardRosterScope=rosterKey();cardRosterRows=[{name:'검증대기',studentId:'wait',state:'unsent'},{name:'검증실패',studentId:'failed',state:'unsent',failed:true},{name:'검증미확정',studentId:'pending',state:'pending',trackingMissing:true},{name:'검증완료',studentId:'done',state:'sent'},{name:'검증변경',studentId:'change',state:'changed'}];
  document.querySelectorAll('[data-card-audience]').forEach(n=>n.setAttribute('aria-pressed',String(n.dataset.cardAudience==='student')));document.getElementById('batchInitial').textContent='학생 일괄 발송';
  window.calls=[];window.cardAlimtalkApi=async(action,input)=>{
@@ -19,6 +19,11 @@ for(const [label,width,height] of [['desktop',1440,1000],['mobile',390,844]]){
  if(action==='batchHistory')return {results:[{id:'fake-result',studentId:'pending',name:'검증미확정',state:'UNKNOWN',trackingMissing:true,trackingIssue:'RECEIPT_NOT_FOUND',createdAt:1,masked:'010-****-0000',relation:'학생'}]};throw Error('SEND_FORBIDDEN');};
  drawAlimtalkRoster(document.getElementById('studentImageList'),'');
  });
+ const badge=page.locator('.roster-change-tag'),firstName=page.locator('.roster-change-cluster .recipient-student').first();
+ assert.equal(await badge.textContent(),'변경 확인 필요');
+ const tagBox=await badge.boundingBox(),nameBox=await firstName.boundingBox();
+ assert(tagBox.width>0&&tagBox.x+tagBox.width<=nameBox.x+1&&Math.abs(tagBox.y-nameBox.y)<nameBox.height);
+
  await page.screenshot({path:'/tmp/timetable-ux-review/'+label+'-shortcut-list.png'});
  await page.getByRole('button',{name:'검증실패 학생 본인 재발송',exact:true}).click();
  await page.getByText('발송 요청 접수 완료',{exact:true}).waitFor();

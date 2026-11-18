@@ -202,6 +202,20 @@
 #studentImageModal[data-card-mode=message] .student-preview-panel{min-height:0;overflow:hidden}
 #studentImageModal[data-card-mode=message] .card-workarea{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:clamp(8px,1.2vw,18px)}
 #studentImageModal[data-card-mode=message] #cardEditorSidebar{width:100%;max-width:none}
+
+#studentImageModal .roster-change-cluster{display:flex;align-items:center;flex-wrap:wrap;gap:4px;max-width:100%}
+#studentImageModal .roster-change-cluster .roster-student-card:first-child{gap:3px}
+#studentImageModal .roster-change-tag{padding:2px 5px;border-radius:4px;font-size:11px;font-weight:650;line-height:1.35;white-space:nowrap;background:#ebedf0;color:#404951}
+#studentImageModal .change-room{background:#e3effc;color:#234f81}
+#studentImageModal .change-absence{background:#ffead6;color:#814013}
+#studentImageModal .change-order{background:#efe6ff;color:#59358b}
+#studentImageModal .change-stop{background:#f7e4ed;color:#7f2b51}
+#studentImageModal .change-wrong{background:#ffe3e1;color:#942c25}
+#studentImageModal .change-time{background:#dbf3f3;color:#155d60}
+#studentImageModal .change-teacher{background:#e3f0de;color:#34612a}
+#studentImageModal .change-lessons{background:#f6edc9;color:#66500c}
+#studentImageModal .change-removed{background:#e5e7f4;color:#404a79}
+#studentImageModal .change-mixed{background:#f1e8dd;color:#68462f}
 #studentImageModal .roster-wait-reason{flex:0 0 100%;margin:0 0 2px;color:#76392c;font-size:12px;line-height:1.5}
 #studentImageModal .roster-versions mark{color:inherit;background:#fff0ce}
 #studentImageModal .roster-versions section+section mark{background:#dbf3e8}
