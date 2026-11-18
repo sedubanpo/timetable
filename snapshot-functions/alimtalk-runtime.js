@@ -11,6 +11,14 @@ const {createService}=require('./alimtalk-service');
 const {createHandler}=require('./alimtalk-http');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 const templateProvider=options=>require('./alimtalk-provider').createProvider(options);
+function selectSourceSheet(names,date,now){
+ const matches=names.filter(name=>{
+  if(date==='2026-11-19'&&name!=='11/19(목) 수능')return false;
+  try{return core.dateForSheet(name,now)===date;}catch{return false;}
+ });
+ if(matches.length!==1)fail('SOURCE_SHEET_UNCONFIRMED');
+ return matches[0];
+}
 function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,fallbackFrom='',testPhone='',webhookSecret='',enableTestSend=false,now=Date.now}){
  if(typeof request!=='function')fail('TRANSPORT_REQUIRED');
  const authorize=createAuthorizer({verifyIdToken:(t,r)=>auth.verifyIdToken(t,r),readAccount:firestoreAccountReader(db)});
@@ -42,9 +50,8 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
  const loadSource=async(actor,date,signal)=>{
   if(actor.academyId!=='banpo'||!rules.validDate(date))fail('FORBIDDEN');
   const catalog=(await db.collection('liveTimetableSnapshotJobs').doc('catalog').get()).data();
-  const sheets=(catalog?.sheets||[]).filter(s=>{try{return core.dateForSheet(s,now())===date;}catch{return false;}});
-  if(sheets.length!==1)fail('SOURCE_SHEET_UNCONFIRMED');
-  return linkSource(actor,parseSnapshot(await reader({sheet:sheets[0],date,signal}),now()));
+  const sheet=selectSourceSheet(catalog?.sheets||[],date,now());
+  return linkSource(actor,parseSnapshot(await reader({sheet,date,signal}),now()));
  };
  const review=createReviewService({authorize,loadSource,resolveStudent,store:rs,now,searchStudents:async(actor,query)=>{
   // Exact-name candidates only; no bootstrap/full roster and never auto choose.
@@ -75,4 +82,4 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
  const realTestDelivery=require('./alimtalk-real-admin-test').createRealAdminTest({authorize,store,provider:templateProvider({apiKey,apiSecret,request,testPhone,enableTestSend}),testPhone,loadSource,resolveStudent,reviewStore:rs,now});
  return createHandler({review,delivery,studentDelivery,batch,testDelivery,realTestDelivery,allowTestSend:enableTestSend&&require('./alimtalk-test-recipients').testRecipients(testPhone).length>0,allowedOrigins:['https://sedubanpo.github.io'],allowSend:true});
 }
-module.exports={createRuntime,templateProvider};
+module.exports={createRuntime,templateProvider,selectSourceSheet};

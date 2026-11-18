@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),{createRuntime,templateProvider}=require('../snapshot-functions/alimtalk-runtime'),R=require('../snapshot-functions/alimtalk-contract');
+const {test}=require('node:test'),assert=require('node:assert/strict'),{createRuntime,templateProvider,selectSourceSheet}=require('../snapshot-functions/alimtalk-runtime'),R=require('../snapshot-functions/alimtalk-contract');
 global.fetch=()=>{throw Error('OUTBOUND_FORBIDDEN');};
 function memoryDb(seed){const data=new Map(Object.entries(seed));let chain=Promise.resolve();const snap=(id,v)=>({id,exists:v!==undefined,data:()=>structuredClone(v)});const doc=path=>({get:async()=>snap(path.split('/').at(-1),data.get(path)),create:async v=>{assert(!data.has(path));data.set(path,structuredClone(v));},path});
  const query=(c,filters=[],limit=Infinity)=>({doc:id=>doc(c+'/'+id),where:(k,op,v)=>query(c,[...filters,[k,op,v]],limit),limit:n=>query(c,filters,n),get:async()=>{const rows=[...data].filter(([p,v])=>p.startsWith(c+'/')&&filters.every(([k,op,x])=>op==='=='?v[k]===x:op==='array-contains'?(v[k]||[]).includes(x):op==='in'?x.includes(v[k]):false)).slice(0,limit).map(([p,v])=>snap(p.split('/').at(-1),v));return {docs:rows,size:rows.length};}});
@@ -41,3 +41,10 @@ for(const runtimeRole of ['ADMIN','STAFF','DESK'])test(runtimeRole+' assembled H
  assert.equal((await api('results',{date,studentIds:['s1']})).body.results.length,1);
 });
 test('provider hard lock remains even when HTTP handler bypassed',async()=>{let calls=0;const p=templateProvider({apiKey:'synthetic',apiSecret:'synthetic',request:async()=>{calls++;}});await assert.rejects(p.sendOne({}),{code:'SENDING_DISABLED'});assert.equal(calls,0);});
+
+test('November 19 notices use the confirmed exam timetable only',()=>{
+ const now=Date.UTC(2026,10,18),date='2026-11-19',sheet='11/19(목) 수능',draft=sheet+'_가안';
+ assert.equal(selectSourceSheet([draft,sheet],date,now),sheet);
+ for(const names of [[draft],['11/19(목)'],[]])assert.throws(()=>selectSourceSheet(names,date,now),{code:'SOURCE_SHEET_UNCONFIRMED'});
+ assert.throws(()=>selectSourceSheet(['11/20(금)','11/20(금) 가안'],'2026-11-20',now),{code:'SOURCE_SHEET_UNCONFIRMED'});
+});
