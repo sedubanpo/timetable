@@ -1,12 +1,12 @@
 'use strict';
 const {hash}=require('./alimtalk-service');
 const {directorySchoolKey,exclusion}=require('./alimtalk-contract');
-// Reuse only a human-confirmed identity. A schedule row is never proof of identity.
+// Directory matches for first lessons apply only to the current guardian notice.
 function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
- return async(actor,source)=>{
+ return async(actor,source,audience)=>{
   if(!source.complete)return source;
   const groups=new Map();for(const e of source.entries){if(!groups.has(e.sourceName))groups.set(e.sourceName,[]);groups.get(e.sourceName).push(e);}
-  const names=[...groups.keys()],plans=[],issues={};let next=0;
+  const names=[...groups.keys()],plans=[],issues={},guardianMatches=[];let next=0;
   await Promise.all(Array.from({length:Math.min(6,names.length)},async()=>{while(next<names.length){
    const name=names[next++],entries=groups.get(name);
    const excludedOnly=entries.every(e=>exclusion(e.lesson));
@@ -27,7 +27,15 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
     const proof=await store.rememberedMapping(actor.academyId,student.id);
     const alias=proof?.date==='identity' && proof.studentId===student.id && proof.identityRevision===student.identityRevision && proof.verifiedBy ? proof.confirmedSourceSchool : null;
     if(student.name!==name||!directorySchoolKey(student.school,student.grade)||entries.some(e=>e.sourceSchool!==directorySchoolKey(student.school,student.grade) && (!alias || e.sourceSchool!==alias))){issues[name]='이름·학교·학년 불일치 · 원장 확인 필요';continue;}
-    if(!proof){issues[name]='처음 연결하는 학생 · 학생 확인 필요';continue;}
+    if(!proof){
+     const firstLesson=entries.some(e=>['신규생','첫수업'].includes(e.lesson.status));
+     const guardian=student.recipients?.some(r=>['mother','father'].includes(r.id)&&r.verified===true);
+     if(audience==='guardian' && candidates.length===1 && firstLesson && guardian &&
+        !student.registrationInactive && !student.noticeDate && student.identityRevision){
+      guardianMatches.push({id:student.id,identityRevision:student.identityRevision});
+     }else issues[name]='처음 연결하는 학생 · 학생 확인 필요';
+     continue;
+    }
     if(proof.identityRevision!==student.identityRevision){issues[name]='원장 정보 변경 · 학생 연결 재확인 필요';continue;}
     plans.push({student,proof,entries});
    }catch(e){issues[name]=e.code==='IDENTITY_MAPPING_LIMIT'?'동명이인·원장 연결 확인 필요':'원장·기존 학생 연결 조회 확인 필요';}
@@ -53,7 +61,7 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
   }while(removed);
 
   if(safe.length)await store.synchronizeMappings(actor,source,safe,now());
-  return {...source,linkIssues:issues,linkedStudentIds:safe.map(p=>p.student.id)};
+  return {...source,guardianMatches,linkIssues:issues,linkedStudentIds:safe.map(p=>p.student.id)};
  };
 }
 module.exports={createLinkResolver};

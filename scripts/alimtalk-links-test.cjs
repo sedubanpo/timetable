@@ -78,3 +78,49 @@ test('transaction rechecks ownership revision before releasing a vacated positio
  await assert.rejects(x.link(x.actor,x.source),{code:'ENTRY_ALREADY_ASSIGNED'});
  assert.equal((await x.store.mapping('banpo',x.source.date,'a')).revision,'old-a');
 });
+
+test('a new student with a matching directory guardian appears in both individual and bulk guardian previews',async()=>{
+ const x=await setup();
+ x.db.data.clear();
+ x.source.entries[0].lesson={...require('./alimtalk-fixture.cjs').fixture().lesson,date:x.source.date,status:'신규생'};
+ const loadSource=(actor,date,signal,audience)=>x.link(actor,x.source,audience);
+ const loadDay=withStudentDirectory({
+  loadMappedDay:(actor,date,[id],signal)=>verifiedStudentDay({
+   actor,date,id,signal,audience:'guardian',loadSource,resolveStudent:x.resolveStudent,reviewStore:x.store
+  }),resolveStudent:x.resolveStudent,readClearance:async()=>null
+ });
+ const day=await loadDay(x.actor,x.source.date,[x.student.id]);
+ assert.deepEqual(day.students[0].recipients.map(r=>r.id),['mother']);
+ const {deps,sent}=require('./alimtalk-fixture.cjs').fixture();
+ deps.store.dayHistory=async()=>[];
+ const batch=require('../snapshot-functions/alimtalk-batch').createBatch({
+  ...deps,loadSource,resolveStudent:x.resolveStudent,reviewStore:x.store
+ });
+ const args={date:x.source.date,audience:'guardian',mode:'unsent'};
+ const preview=await batch.batchPreview('',args);
+ assert.deepEqual(preview.items.map(r=>[r.studentId,r.relation]),[['s1','모']]);
+ assert.equal((await batch.batchRoster('',args)).rows[0].issue,'');
+ assert.equal((await batch.batchPreview('',{...args,audience:'student'})).items.length,0);
+ assert.equal(await x.store.rememberedMapping('banpo','s1'),null);
+ assert.equal(sent.length,0);
+ x.student.recipients[0].verified=false;
+ assert.equal((await batch.batchPreview('',args)).items.length,0);
+});
+
+test('automatic guardian matching requires a unique active first lesson student and free schedule cells',async()=>{
+ for(const scenario of ['duplicate','inactive','school','regular','noGuardian','ownership']){
+  const x=await setup();
+  x.db.data.clear();
+  x.source.entries[0].lesson.status='첫수업';
+  if(scenario==='duplicate')x.candidates(['s1','s2']);
+  if(scenario==='inactive')x.student.registrationInactive=true;
+  if(scenario==='school')x.source.entries[0].sourceSchool='다른중2';
+  if(scenario==='regular')x.source.entries[0].lesson.status='정규';
+  if(scenario==='noGuardian')x.student.recipients=x.student.recipients.filter(r=>r.id==='student');
+  if(scenario==='ownership')await x.store.saveMapping({academyId:'banpo',date:x.source.date,studentId:'other',revision:'existing',entries:[{id:'new-cell',fingerprint:'prior'}]},null);
+  await assert.rejects(verifiedStudentDay({
+   actor:x.actor,date:x.source.date,id:'s1',audience:'guardian',resolveStudent:x.resolveStudent,reviewStore:x.store,
+   loadSource:(actor,date,signal,audience)=>x.link(actor,x.source,audience)
+  }),scenario);
+ }
+});

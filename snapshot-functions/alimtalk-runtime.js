@@ -47,11 +47,11 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   return [];
 
  }});
- const loadSource=async(actor,date,signal)=>{
+ const loadSource=async(actor,date,signal,audience)=>{
   if(actor.academyId!=='banpo'||!rules.validDate(date))fail('FORBIDDEN');
   const catalog=(await db.collection('liveTimetableSnapshotJobs').doc('catalog').get()).data();
   const sheet=selectSourceSheet(catalog?.sheets||[],date,now());
-  return linkSource(actor,parseSnapshot(await reader({sheet,date,signal}),now()));
+  return linkSource(actor,parseSnapshot(await reader({sheet,date,signal}),now()),audience);
  };
  const review=createReviewService({authorize,loadSource,resolveStudent,store:rs,now,searchStudents:async(actor,query)=>{
   // Exact-name candidates only; no bootstrap/full roster and never auto choose.
@@ -61,13 +61,13 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   if(!docs.length){const snap=await db.collection('students').where('name','==',query).limit(21).get();if(snap.size>20)fail('CANDIDATE_LIMIT');docs=snap.docs;}
   return docs.filter(d=>{const s=d.data();return !s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS';}).map(d=>{const s=d.data();return {id:d.id,name:s.name||'',school:s.school||'',grade:s.grade||'',status:s.status||''};});
  }});
- const mapped=async(actor,date,ids,signal)=>{
+ const mapped=async(actor,date,ids,signal,audience)=>{
   if(ids.length!==1)fail('SELECT_ONE_STUDENT');
-  return require('./alimtalk-verified-day').verifiedStudentDay({actor,date,id:ids[0],signal,loadSource,resolveStudent,reviewStore:rs,allowUnchangedCells:true});
+  return require('./alimtalk-verified-day').verifiedStudentDay({actor,date,id:ids[0],signal,audience,loadSource,resolveStudent,reviewStore:rs,allowUnchangedCells:true});
  };
  function deliveryFor(audience,kind){
   const loadDay=withStudentDirectory({
-   loadMappedDay:mapped,resolveStudent,readClearance:(actor,id,date)=>rs.clearance(actor.academyId,date,id),readNoticeContacts:(actor,id,date)=>rs.noticeContacts(actor.academyId,date,id),now,audience
+   loadMappedDay:(actor,date,ids,signal)=>mapped(actor,date,ids,signal,audience),resolveStudent,readClearance:(actor,id,date)=>rs.clearance(actor.academyId,date,id),readNoticeContacts:(actor,id,date)=>rs.noticeContacts(actor.academyId,date,id),now,audience
   });
   return createService({authorize,loadDay,store,provider:templateProvider({apiKey,apiSecret,request,verifiedRecipientSend:true,fallbackFrom}),webhookSecret,now,kind});
  }

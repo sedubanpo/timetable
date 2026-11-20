@@ -38,12 +38,12 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
  }
  async function scan(a,{date,audience},only){
   const kind=kinds[audience];
-  const [src,hist]=await Promise.all([loadSource(a,date),
+  const [src,hist]=await Promise.all([loadSource(a,date,undefined,audience),
    only?selectedHistory(a,date,only):store.dayHistory(a.academyId,date,kind)]);
   if(!src.complete||!src.revision||src.date!==date||src.academyId!==a.academyId||src.entries.length>5000)fail('SOURCE_INCOMPLETE');
   const assign=await reviewStore.dayAssignments(a.academyId,date);
   const history=hist.filter(r=>r.studentId!=='__alimtalk_admin_test__'&&(r.kind||'daily-lessons')===kind).sort(newest);
-  const ids=only||[...new Set([...Object.values(assign).map(v=>v.studentId),...history.map(r=>r.studentId)])];
+  const ids=only||[...new Set([...(src.guardianMatches||[]).map(match=>match.id),...Object.values(assign).map(v=>v.studentId),...history.map(r=>r.studentId)])];
   if(ids.length>350)fail('ROSTER_LIMIT');
   const rows=await pooled(ids,async id=>{
    const past=history.filter(r=>r.studentId===id),received=past.filter(r=>r.state==='DELIVERED');
@@ -59,7 +59,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    if(!issue&&entries.length){
     try{
      const getStudent=async()=>({...student});
-     const mapped=await verifiedStudentDay({actor:a,date,id,allowUnchangedCells:true,loadSource:async()=>src,resolveStudent:getStudent,
+     const mapped=await verifiedStudentDay({actor:a,date,id,audience,allowUnchangedCells:true,loadSource:async()=>src,resolveStudent:getStudent,
       reviewStore:{mapping:(...args)=>reviewStore.mapping(...args),dayAssignments:async()=>assign}});
      excludedOnly=entries.every(e=>rules.exclusion(e.lesson));
      if(excludedOnly){issue='안내 대상 수업 없음 · '+[...new Set(entries.map(e=>rules.exclusion(e.lesson)))].join(', ');}
