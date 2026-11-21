@@ -64,6 +64,19 @@ test('a broken identity in a relocation chain keeps dependent students held with
  const src=await x.link(x.actor,x.source);assert.equal(src.linkedStudentIds.length,0);assert.equal(Object.keys(src.linkIssues).length,3);
  const assignments=await x.store.dayAssignments('banpo',src.date);assert.equal(assignments[hash('cell-1')].studentId,'b');assert.equal(assignments[hash('cell-2')].studentId,'c');
 });
+test('a removed student and a dependent hold identify the previous owner and affected lesson',async()=>{
+ const x=await movedStudents();
+ x.source.entries.pop();
+ for(const entry of x.source.entries)Object.assign(entry.lesson,{start:'10:00',building:'본관',room:'4강의실',subject:'수학'});
+ const src=await x.link(x.actor,x.source);
+ assert.match(src.linkIssues['나학생'],/10:00 본관 4강의실 수학 · 기존 연결 다학생\(현재 시간표에 없음\)/);
+ assert.match(src.linkIssues['가학생'],/기존 연결 나학생\(연결 확인 중\)/);
+ assert.deepEqual(src.linkedStudentIds,[]);
+ x.students.pop();
+ const missing=await x.link(x.actor,x.source);
+ assert.match(missing.linkIssues['나학생'],/10:00 본관 4강의실 수학 · 기존 연결 다른 학생/);
+ assert.deepEqual(missing.linkedStudentIds,[]);
+});
 test('same-fingerprint ownership conflict is not treated as a room move',async()=>{
  const x=await movedStudents();x.source.entries[0].fingerprint='old-fp-b';
  const src=await x.link(x.actor,x.source);assert(src.linkIssues['가학생']);assert(!src.linkedStudentIds.includes('a'));

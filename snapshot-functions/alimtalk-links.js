@@ -44,21 +44,46 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
   // Cell IDs describe positions, not people. A room move or reordered cell can reuse
   // another verified student's old position. Release only through that student's
   // verified replacement plan, in the same transaction as all new assignments.
+  const conflicts=new Map();
+  const knownStudents=new Map(plans.map(p=>[p.student.id,p.student]));
   let safe=[...plans],removed;
   do{
    removed=false;
    const byId=new Map(safe.map(p=>[p.student.id,p]));
    safe=safe.filter(p=>{
-    const conflict=p.entries.some(e=>{
+    const blocked=p.entries.filter(e=>{
      const old=assigned[hash(e.id)];
      if(!old||old.studentId===p.student.id)return false;
      const owner=byId.get(old.studentId);
      return !owner||old.fingerprint===e.fingerprint||owner.entries.some(x=>x.id===e.id);
     });
-    if(conflict){issues[p.student.name]='시간표 위치 변경 · 학생 연결 확인 필요';removed=true;}
-    return !conflict;
+    if(blocked.length){conflicts.set(p.student.name,blocked);removed=true;}
+    return !blocked.length;
    });
   }while(removed);
+
+  // Look up only the previous owners needed for the explanation. A missing name
+  // must not suppress a hold or prevent the rest of the roster from loading.
+  for(const [name,entries] of conflicts){
+   const details=[];
+   for(const entry of entries.slice(0,3)){
+    const id=assigned[hash(entry.id)].studentId;
+    if(!knownStudents.has(id)){
+     let student;
+     try{student=await resolveStudent(id);}catch{}
+     knownStudents.set(id,student?.id===id?student:null);
+    }
+    const previous=knownStudents.get(id)?.name;
+    const lesson=entry.lesson;
+    const slot=[lesson.start,lesson.building,lesson.room,lesson.subject].filter(Boolean).join(' ');
+    let owner=previous||'다른 학생';
+    if(previous&&!groups.has(previous))owner+='(현재 시간표에 없음)';
+    else if(conflicts.has(previous))owner+='(연결 확인 중)';
+    details.push([slot,'기존 연결 '+owner].filter(Boolean).join(' · '));
+   }
+   const more=entries.length>details.length?' 외 '+(entries.length-details.length)+'곳':'';
+   issues[name]='학생 연결 확인 필요 — '+details.join(' / ')+more+'. 원본 시간표에서 이 자리의 학생 이름과 순서를 확인해 주세요.';
+  }
 
   if(safe.length)await store.synchronizeMappings(actor,source,safe,now());
   return {...source,guardianMatches,linkIssues:issues,linkedStudentIds:safe.map(p=>p.student.id)};
