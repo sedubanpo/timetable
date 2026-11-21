@@ -51,7 +51,8 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   if(actor.academyId!=='banpo'||!rules.validDate(date))fail('FORBIDDEN');
   const catalog=(await db.collection('liveTimetableSnapshotJobs').doc('catalog').get()).data();
   const sheet=selectSourceSheet(catalog?.sheets||[],date,now());
-  return linkSource(actor,parseSnapshot(await reader({sheet,date,signal}),now()),audience);
+  const [snapshot,assignments]=await Promise.all([reader({sheet,date,signal}),rs.dayAssignments(actor.academyId,date)]);
+  return linkSource(actor,parseSnapshot(snapshot,now(),assignments),audience);
  };
  const review=createReviewService({authorize,loadSource,resolveStudent,store:rs,now,searchStudents:async(actor,query)=>{
   // Exact-name candidates only; no bootstrap/full roster and never auto choose.

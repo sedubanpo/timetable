@@ -199,3 +199,39 @@ test('header parser does not consume student memos and unknown identity still pr
  const s=fixture();s.data.grid[13]=[['수학 개별 검증T , 18시까지','누군지 알 수 없음']];
  assert.equal(parseSnapshot(s,now).complete,false);
 });
+
+test('row permutations and removals retain the verified same-hour lesson and its daily clearance revision',async()=>{
+ const s=fixture(),header=s.data.grid[16][0][0];
+ const names=['가학생','나학생','다학생'],roster=names.map(n=>n+' 가상중2 정규');
+ s.data.grid[16][0]=[header,...roster];
+ const original=parseSnapshot(s,now),assignments={},maps={};
+ for(const e of original.entries){
+  maps[e.sourceName]={studentId:e.sourceName,academyId:'banpo',date:s.date,sourceRevision:original.revision,
+   verifiedBy:'staff',identityRevision:'identity',revision:'map-'+e.sourceName,entries:[{id:e.id,fingerprint:e.fingerprint}]};
+  assignments[hash(e.id)]={studentId:e.sourceName,fingerprint:e.fingerprint,revision:maps[e.sourceName].revision};
+ }
+ for(const order of [[2,0,1],[2,0],[1],[0,1,2]]){
+  s.data.grid[16][0]=[header,...order.map(i=>roster[i])];
+  s.data.version='reordered';
+  const src=parseSnapshot(s,now,assignments);
+  for(const e of src.entries){
+   assert.equal(e.lesson.sourceId,e.id);
+   const day=await require('../snapshot-functions/alimtalk-verified-day').verifiedStudentDay({
+    actor:{academyId:'banpo'},date:s.date,id:e.sourceName,loadSource:async()=>src,allowUnchangedCells:true,
+    resolveStudent:async id=>({id,name:id,school:'가상중',grade:'2',identityRevision:'identity'}),
+    reviewStore:{mapping:async(a,d,id)=>maps[id],dayAssignments:async()=>assignments}
+   });
+   assert.equal(day.mappingRevision,maps[e.sourceName].revision);
+  }
+ }
+ // An edited attendance status remains visible. An identical row in another
+ // hour cannot acquire the previous hour's verified assignment.
+ s.data.grid[16][0]=[header,roster[2],roster[0].replace('정규','결석예고'),roster[1]];
+ s.data.grid[17][0]=[header,roster[0]];
+ const changed=parseSnapshot(s,now,assignments);
+ assert.equal(new Set(changed.entries.map(e=>e.id)).size,4);
+ assert.equal(changed.entries[0].id,original.entries[2].id);
+ assert.equal(changed.entries[1].lesson.status,'결석예고');
+ assert.notEqual(changed.entries[1].fingerprint,original.entries[0].fingerprint);
+ assert(!assignments[hash(changed.entries[3].id)]);
+});
