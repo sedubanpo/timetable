@@ -40,7 +40,8 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const kind=kinds[audience];
   const [src,hist]=await Promise.all([loadSource(a,date,undefined,audience),
    only?selectedHistory(a,date,only):store.dayHistory(a.academyId,date,kind)]);
-  if(!src.complete||!src.revision||src.date!==date||src.academyId!==a.academyId||src.entries.length>5000)fail('SOURCE_INCOMPLETE');
+  if(!src.revision||src.date!==date||src.academyId!==a.academyId||src.entries.length>5000)fail('SOURCE_INCOMPLETE');
+  if(!src.complete)throw Object.assign(Error('SOURCE_INCOMPLETE'),{code:'SOURCE_INCOMPLETE',sourceProblem:src.sourceProblem});
   const assign=await reviewStore.dayAssignments(a.academyId,date);
   const history=hist.filter(r=>r.studentId!=='__alimtalk_admin_test__'&&(r.kind||'daily-lessons')===kind).sort(newest);
   const ids=only||[...new Set([...(src.guardianMatches||[]).map(match=>match.id),...Object.values(assign).map(v=>v.studentId),...history.map(r=>r.studentId)])];

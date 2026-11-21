@@ -1,5 +1,6 @@
 // Page adapter for the date-wide list. A roster read is independent of the highlighted student.
 var cardBulkUI=null,cardRosterRows=null,cardRosterScope='',cardRosterError='',cardRosterRead=0;
+var cardRosterSourceBlocked=false;
 function cardBatchContext(){return {date:attendanceDateKey(currentSheetName),audience:cardAudience,session:getScheduleSessionKey()+'|'+timetableLoginSequence};}
 function rosterKey(){return JSON.stringify(cardBatchContext());}
 var cardRosterCache=new Map(),cardRosterCacheScope='';
@@ -12,7 +13,7 @@ function acceptCardRoster(rows,key,studentIds){
  }
  cardRosterCache.set(key,{rows,at:Date.now()});
  // A completed preview supersedes older in-flight roster reads.
- cardRosterRead++;cardRosterScope=key;cardRosterRows=rows;cardRosterError='';
+ cardRosterRead++;cardRosterScope=key;cardRosterRows=rows;cardRosterError='';cardRosterSourceBlocked=false;
  filterStudentImageList();
 }
 var cardRosterStudentReads=new Map();
@@ -34,6 +35,7 @@ async function reloadCardRosterStudents(options){
   acceptCardRoster(response.rows,key,fresh);
  }catch(e){
   if(key===rosterKey()){
+   if(e.code==='SOURCE_INCOMPLETE'&&ids.some(id=>cardRosterStudentReads.get(key+'|'+id)===read))return reloadCardRoster();
    const fresh=ids.filter(id=>cardRosterStudentReads.get(key+'|'+id)===read);
    acceptCardRoster((cardRosterRows||[]).filter(r=>fresh.includes(r.studentId)).map(r=>({...r,localStatus:'목록 갱신 지연 · 결과 확인'})),key,fresh);
   }
@@ -57,13 +59,13 @@ async function reloadCardRoster(options={}){
   }).catch(e=>{if(cardRosterCache.get(key)===entry)cardRosterCache.delete(key);throw e;});
  }
  const existing=options.background&&cardRosterScope===key?cardRosterRows:null;
- cardRosterScope=key;cardRosterRows=entry.rows||existing||null;cardRosterError='';filterStudentImageList();
+ cardRosterScope=key;cardRosterRows=entry.rows||existing||null;cardRosterError='';cardRosterSourceBlocked=false;filterStudentImageList();
  if(entry.rows)return;
  try{
   const rows=await entry.promise;
   if(seq!==cardRosterRead||key!==rosterKey()||!isStudentImageModalOpen()||studentCardMode!=='message')return;
   cardRosterRows=rows;
- }catch(e){if(seq!==cardRosterRead||key!==rosterKey())return;cardRosterError=TimetableBatchUI.errorText(e);}
+ }catch(e){if(seq!==cardRosterRead||key!==rosterKey())return;if(e.code==='SOURCE_INCOMPLETE'){cardRosterRows=null;cardRosterSourceBlocked=!!e.sourceProblem;}cardRosterError=TimetableBatchUI.errorText(e);}
  if(isStudentImageModalOpen()&&studentCardMode==='message')filterStudentImageList();
 }
 function cardRosterGroup(row){
@@ -198,7 +200,8 @@ function drawAlimtalkRoster(list,keyword){
  for(const row of ready?cardRosterRows:[]){if(!byName.has(row.name))byName.set(row.name,row);else byName.set(row.name,{name:row.name,state:'held',issue:'동명이인 · 개별 확인'});}
  const names=[...new Set([...Object.keys(studentImageScheduleMap),...byName.keys()].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
  const groups={changed:['시간표 변경','이전에 받은 안내와 현재 시간표가 다릅니다. 변경 발송을 누르면 최신 시간표를 바로 보냅니다.'],unsent:['발송 대기','발송 버튼을 누르면 확인된 번호로 바로 전송됩니다.'],failed:['발송 실패','실패 사유와 번호를 확인한 뒤 재시도하세요.'],unconfirmed:['접수 확인 필요','최초 발송의 접수 기록을 찾지 못했습니다. 결과 조회가 필요합니다.'],pending:['결과 확인 중','최종 수신 결과를 확인하고 있습니다.'],guardianOnly:['학부모만 안내','학생 본인 번호가 없어 학생 발송 대상에서 제외됩니다.'],held:['확인 필요','학생별 사유를 확인하고 정보를 보완해 주세요.'],sent:['수신 완료','현재 안내를 알림톡 또는 문자로 받았습니다.']};
- if(!ready)groups.held=[cardRosterError?'조회 실패':'기록 확인 중',cardRosterError?'다시 확인을 눌러 조회해 주세요.':'서버 기록을 확인한 뒤 발송 상태를 표시합니다.'];
+ if(!ready&&cardRosterSourceBlocked)groups.held=['원본 수정 대기','원본 수정 후 명단을 다시 조회하세요.'];
+ else if(!ready)groups.held=[cardRosterError?'조회 실패':'기록 확인 중',cardRosterError?'다시 확인을 눌러 조회해 주세요.':'서버 기록을 확인한 뒤 발송 상태를 표시합니다.'];
  const counts={all:names.length,changed:0,unsent:0,sent:0};
  if(ready)for(const name of names){const category=rosterCategory(byName.get(name));if(category)counts[category]++;}
  for(const b of document.querySelectorAll('[data-roster-filter]')){
@@ -231,7 +234,7 @@ function drawAlimtalkRoster(list,keyword){
  if(loading){const spinner=make('span');spinner.className='batch-orbit';spinner.setAttribute('aria-hidden','true');msg.append(spinner);}
 
  if(!ready){
-  msg.append(make('span',cardRosterError||((cardAudience==='student'?'학생':'학부모')+' 발송 기록 확인 중…')));
+  const notice=make('span',cardRosterError||((cardAudience==='student'?'학생':'학부모')+' 발송 기록 확인 중…'));notice.style.whiteSpace='pre-line';msg.append(notice);
   if(cardRosterError){const retry=make('button','다시 확인');retry.type='button';retry.onclick=()=>reloadCardRoster();msg.append(retry);}
  }else{
   const eligible=cardRosterRows.filter(r=>!r.issue&&r.state==='unsent').length;
@@ -244,7 +247,7 @@ function drawAlimtalkRoster(list,keyword){
   if(!sections.has(group))sections.set(group,[]);
   const b=make('button');b.type='button';b.className='recipient-student';b.dataset.studentName=name;b.setAttribute('aria-pressed',String(name===selectedStudentForImage));
   b.append(make('strong',name));
-  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?'기록 확인 중':!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?(row.waitReason||'현재 수신 번호로 수신 완료된 기록 없음'):state==='sent'?'수신 완료':'');
+  const sub=row?.localStatus||row?.issue||(row?.trackingMissing?'접수 기록 연결 확인 필요':'')||(!studentImageScheduleMap[name]?'현재 수업 없음':row?.failed?'이전 발송 실패 · 결과 확인':!ready?groups.held[0]:!row?'시간표 대조 필요':state==='changed'?'시간표 변경 · 새 안내 필요':state==='unsent'?(row.waitReason||'현재 수신 번호로 수신 완료된 기록 없음'):state==='sent'?'수신 완료':'');
   const caption=sub||groups[group][0],controls=[];
   b.title=caption;
   details.set(name,{caption,controls,row});

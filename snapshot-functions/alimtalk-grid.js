@@ -34,7 +34,7 @@ function retainCellReferences(entries,positionId,cellLength,assignments,knownFin
  }
 }
 function parseSnapshot(snapshot,now=Date.now(),assignments={}){
- core.validate(snapshot,now);const entries=[],issues=[];
+ core.validate(snapshot,now);const entries=[],issues=[],locations=[];
  const saved=Object.values(assignments),knownFingerprints=new Set(saved.map(row=>row.fingerprint));
  for(let hour=8;hour<=23;hour++)snapshot.data.grid[hour].forEach((items,col)=>{
   if(!items.length)return;
@@ -48,7 +48,16 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
    const chunks=raw.match(/\S+\s*/g),parts=chunks.map(s=>s.trimEnd()),name=parts[0];
    const schoolToken=(isRetakerLabel(parts[1])||isHomeschoolLabel(parts[1]))?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
    const school=isRetakerLabel(schoolToken)?'재수생':schoolToken;
-   if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!(header&&parts.slice(1).some(s=>statuses.has(s))))){issues.push('STUDENT_TEXT_UNRECOGNIZED');continue;}
+   if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!(header&&parts.slice(1).some(s=>statuses.has(s))))){
+    issues.push('STUDENT_TEXT_UNRECOGNIZED');
+    if(locations.length<20){
+     const kind=/[가-힣A-Za-z]\s*T(?:$|[\s,，:：])/.test(raw)?'header':'row';
+     // Show the first word only. Memos and contact details are unnecessary for finding the row.
+     const first=/^[가-힣A-Za-z]{1,16}$/.test(name)?name:'';
+     locations.push({hour,room:room?(room[1]||'본관')+' '+room[2]:(col+1)+'번째 강의실 열',position:index+1,kind,first});
+    }
+    continue;
+   }
    // A cancellation mentioned in the memo can describe an earlier lesson.
    // Only the status field and a dedicated closure room set this lesson's status.
    const statusIndex=schoolToken?parts.indexOf(schoolToken)+1:1;
@@ -76,7 +85,7 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
   retainCellReferences(cellEntries,positionId,items.length,assignments,knownFingerprints,saved.length);
   entries.push(...cellEntries);
  });
- return {academyId:'banpo',date:snapshot.date,capturedAt:snapshot.capturedAt,revision:snapshot.data.version,complete:issues.length===0,entries,issues:[...new Set(issues)]};
+ return {academyId:'banpo',date:snapshot.date,capturedAt:snapshot.capturedAt,revision:snapshot.data.version,complete:issues.length===0,entries,issues:[...new Set(issues)],...(issues.length?{sourceProblem:{sheet:snapshot.sheet,count:issues.length,locations}}:{})};
 }
 function createMappedDay({loadSource,readDayAssignments,readMapping}){
  return async(actor,date,ids,signal)=>{

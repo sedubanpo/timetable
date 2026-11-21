@@ -84,3 +84,16 @@ for(const file of ['Index.html','docs/index.html']){
   }
  });
 }
+
+for(const file of ['Index.html','docs/index.html']){
+ test(file+': staff see the location and repair instructions for a rejected roster read',async()=>{
+  const {scope}=setup(file);
+  const sourceProblem={sheet:'11/21(토)',count:1,locations:[{hour:16,room:'본관 1강의실',position:1,kind:'header',first:'수학'}]};
+  scope.fetch=async()=>({ok:false,json:async()=>({code:'SOURCE_INCOMPLETE',sourceProblem})});
+  vm.runInContext(fs.readFileSync('assets/alimtalk-batch-ui.js','utf8'),scope);
+  await assert.rejects(scope.cardAlimtalkApi('batchRoster',{}),e=>{
+   const message=scope.TimetableBatchUI.errorText(e);
+   return message.includes('11/21(토)')&&message.includes('16:00 · 본관 1강의실 · 1번째 항목')&&message.includes('수업 유형')&&message.includes('원본 시트를 수정한 뒤 다시 확인');
+  });
+ });
+}

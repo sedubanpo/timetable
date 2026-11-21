@@ -235,3 +235,29 @@ test('row permutations and removals retain the verified same-hour lesson and its
  assert.notEqual(changed.entries[1].fingerprint,original.entries[0].fingerprint);
  assert(!assignments[hash(changed.entries[3].id)]);
 });
+
+test('subject consulting lesson is a header and produces a complete notice for the actual student',()=>{
+ const rules=require('../snapshot-functions/alimtalk-contract'),s=fixture();
+ s.data.grid[16]=[['수학 컨설팅 가상T','가학생 가상중2 오늘만 11/7(토) 확정 고교입시 컨설팅']];
+ const source=parseSnapshot(s,now);
+ assert.equal(source.complete,true);
+ assert.deepEqual(source.entries.map(e=>e.sourceName),['가학생']);
+ const notice=rules.compose({id:'s',name:'가학생',mappingVerified:true},s.date,source.entries.map(e=>({...e.lesson,studentId:'s'})));
+ assert.deepEqual(notice.reasons,[]);
+ assert.match(notice.text,/수학 오늘만 16:00–17:00\n가상T · 컨설팅 1시간/);
+ assert.deepEqual(rules.parseLessonHeader('개별 컨설팅 가상T'),{subject:'컨설팅',type:'개별',teacher:'가상',note:''});
+ assert.equal(rules.parseLessonHeader('수학 영어 가상T'),null);
+});
+
+test('unrecognized source text reports cell locations without memo contents and clears after repair',()=>{
+ const s=fixture();s.data.grid[16]=[['수학 영어 가상T','가학생 가상중2 정규','? 비공개메모']];
+ const broken=parseSnapshot(s,now);
+ assert.equal(broken.complete,false);
+ assert.deepEqual(broken.sourceProblem,{sheet:s.sheet,count:2,locations:[
+  {hour:16,room:'2관 3강의실',position:1,kind:'header',first:'수학'},
+  {hour:16,room:'2관 3강의실',position:3,kind:'row',first:''}
+ ]});
+ s.data.grid[16]=[['개별 수학 가상T','가학생 가상중2 정규']];
+ const fixed=parseSnapshot(s,now);
+ assert.equal(fixed.complete,true);assert.equal(fixed.sourceProblem,undefined);
+});

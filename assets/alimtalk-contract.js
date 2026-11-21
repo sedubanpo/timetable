@@ -16,7 +16,10 @@
     const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
     const type=/^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|직보|상담)$/;
     if(tokens.some(t=>!subject.test(t)&&!type.test(t)))return null;
-    const subjects=tokens.filter(t=>subject.test(t)),types=tokens.filter(t=>type.test(t));
+    // 컨설팅 is a subject in "개별 컨설팅" and the lesson type in "수학 컨설팅".
+    const consulting=tokens.length===2&&tokens.includes('컨설팅')&&tokens.some(t=>t!=='컨설팅'&&subject.test(t));
+    const subjects=tokens.filter(t=>subject.test(t)&&!(consulting&&t==='컨설팅'));
+    const types=consulting?['컨설팅']:tokens.filter(t=>type.test(t));
     if(subjects.length>1||types.length>1)return null;
     return {subject:subjects[0]||'',type:types[0]||'',teacher:match[2],note:text.slice(match[0].length).replace(/^[\s,，:：]+/,'').trim()};
   }

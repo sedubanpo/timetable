@@ -4,7 +4,16 @@ const el=(tag,s,cls)=>{const n=document.createElement(tag);if(s!==undefined)n.te
 const button=(s,fn)=>{const b=el('button',s);b.type='button';b.onclick=fn;return b;};
 const body=(title,text)=>{const d=el('details');d.append(el('summary',title),el('pre',text));return d;};
 const audienceName=a=>a==='student'?'학생 본인':'학부모';
-const errorText=e=>({BATCH_CHANGED:'시간표, 번호 또는 발송 기록이 바뀌었습니다. 명단과 본문을 다시 확인하세요.',
+function sourceProblemText(problem){
+ if(!problem?.locations?.length)return '';
+ const lines=problem.locations.map(({hour,room,position,kind,first})=>{
+  const location=hour+':00 · '+room+' · '+position+'번째 항목'+(first?' (‘'+first+'’로 시작)':'');
+  return location+' — '+(kind==='header'?'수업 제목의 과목과 수업 유형을 확인하고, 강사명 뒤에 T를 붙여 주세요.':'수업 제목과 학생 줄을 구분해 주세요. 학생 줄에는 이름, 학교·학년, 수업 상태를 입력해 주세요.');
+ });
+ if(problem.count>lines.length)lines.push('외 '+(problem.count-lines.length)+'건');
+ return [problem.sheet+' 원본 시간표에서 '+problem.count+'개 항목을 확인해 주세요.',...lines,'원본 시트를 수정한 뒤 다시 확인을 누르세요.'].join('\n');
+}
+const errorText=e=>e?.code==='SOURCE_INCOMPLETE'&&sourceProblemText(e.sourceProblem)||({BATCH_CHANGED:'시간표, 번호 또는 발송 기록이 바뀌었습니다. 명단과 본문을 다시 확인하세요.',
  PREVIEW_EXPIRED:'검토 시간이 지났거나 대상이 바뀌었습니다. 다시 검토하세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 허브 로그인과 시간표·데스크 접근 권한을 확인해 주세요.',
  RESULT_UNCERTAIN:'서버에서 이번 묶음의 결과를 확정하지 못했습니다.',TIMEOUT:'서버 응답이 늦어 이번 묶음의 결과를 확인하지 못했습니다.',NETWORK_UNAVAILABLE:'네트워크 연결이 끊겼습니다.',SOURCE_INCOMPLETE:'원본 시간표에 해석할 수 없는 수업이 있습니다.',RATE_LIMIT:'잠시 후 이력을 확인하고 다시 검토하세요.',
  RECEIPT_FOUND:'기존 접수 기록이 확인되거나 상태가 바뀌었습니다. 발송 이력을 갱신해 주세요.',RECEIPT_REVIEW_REQUIRED:'접수 미확정 기록만 미접수 확인 처리할 수 있습니다.',RECEIPT_REVIEW_TOO_EARLY:'최초 요청 후 10분 동안은 접수 기록을 다시 확인해 주세요.',
@@ -465,5 +474,5 @@ function mount({host,api,context,refresh}){
  }
  return {review,compare:target=>review('changed',target,true),quickSend,history,reset,errorText,isSending:()=>sending};
 }
-root.TimetableBatchUI={mount,errorText,lessonChanges,readLessons};
+root.TimetableBatchUI={mount,errorText,sourceProblemText,lessonChanges,readLessons};
 })(globalThis);
