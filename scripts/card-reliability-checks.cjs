@@ -10,7 +10,7 @@ const element = id => {
   if (!elements.has(id)) elements.set(id, { style: {}, textContent: '', hidden: true, innerHTML: '', value: '', classList: { add() {}, remove() {} } });
   return elements.get(id);
 };
-const scope = { console, window: { addEventListener() {} }, document: { addEventListener() {}, getElementById: element, querySelectorAll: () => [] }, localStorage: { getItem: () => null }, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, alert() {}, URLSearchParams, Date, Promise, Set, Map };
+const scope = { TimetableAlimtalk: require("../assets/alimtalk-contract"), console, window: { addEventListener() {} }, document: { addEventListener() {}, getElementById: element, querySelectorAll: () => [] }, localStorage: { getItem: () => null }, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, alert() {}, URLSearchParams, Date, Promise, Set, Map };
 vm.createContext(scope);
 vm.runInContext(app, scope);
 const run = code => vm.runInContext(code, scope);
@@ -31,6 +31,9 @@ async function read(statuses) {
   assert(logout.includes('studentCardStatusContext = ""') && logout.includes('studentCardStatusSequence++'), 'logout invalidates card history and pending requests');
   run(`markStudentCardSentStatus('Alice',true);`);
   assert.equal(run('requests.length'), 0, 'unknown status blocks writes');
+  await read({ '가학생B': { sent: true, updatedAt: '2026-11-22T09:00:00Z' } });
+  assert.equal(run("getStudentCardStatusRecord('가학생b').studentName"),'가학생B');
+  assert.equal(run("getStudentCardStatusRecord('가학생b').sent"),true);
   await read({ Alice: { sent: true, updatedAt: 'known' } });
   run(`loadStudentCardStatuses();requests.at(-1).reject(new Error('read unavailable'));`);
   await flush();

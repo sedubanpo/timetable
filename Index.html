@@ -9704,7 +9704,8 @@ function drawAlimtalkRoster(list,keyword){
       }
       function getStudentCardStatusRecord(name) {
         var records = TimetableAlimtalk.studentNameSpellings(name).map(function(spelling) {
-          return studentCardSentMap[spelling];
+          var record = studentCardSentMap[spelling];
+          return record && Object.assign({studentName: spelling}, record);
         }).filter(Boolean);
         records.sort(function(a, b) { return (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0); });
         return records[0] || { studentName: TimetableAlimtalk.studentNameKey(name), sent: false, updatedAt: "", updatedBy: "" };
