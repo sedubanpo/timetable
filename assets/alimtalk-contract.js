@@ -8,10 +8,22 @@
   const content="[에스학원 수업 일정 안내]\n#{학생명} 학생의 수업 안내드립니다.\n\n▶ 수업일: #{수업일}\n▶ 등원 시각: #{등원시각}\n\n[수업 안내: 과목·시간·강사·관·강의실]\n#{수업목록}\n\n수업 일정에 관한 변경 문의는 아래 ‘수업 문의’ 버튼을 이용해 주세요 💬\n\n전과목, 소수 정예 수업\n 💫 반포 에스학원";
   const labels={REQUESTING:'요청 중',ACCEPTED:'접수',PROCESSING:'처리 중',DELIVERED:'수신 완료',FAILED:'실패',NOT_ACCEPTED:'미접수 확인',UNKNOWN:'결과 확인 필요'};
   // Parse only a proven lesson prefix. A student's memo mentioning a teacher is not a header.
+  function studentNameKey(value){
+    return String(value||'').trim().replace(/([가-힣])([A-Z])$/,(_,last,suffix)=>last+suffix.toLowerCase());
+  }
+  function studentNameSpellings(value){
+    const key=studentNameKey(value);
+    return /[가-힣][a-z]$/.test(key)?[key,key.slice(0,-1)+key.slice(-1).toUpperCase()]:[key];
+  }
   function parseLessonHeader(value){
     const text=String(value||'').trim();
     const match=text.match(/^(.*?)\s*([가-힣A-Za-z]+)\s*T(?=$|\s|[,，:：])/);
     if(!match)return null;
+    // A student with suffix T followed by their school is a student row.
+    if(!match[1].trim()){
+      const next=text.slice(match[0].length).trim().split(/\s+/)[0];
+      if(/[초중고]\d+$/.test(next)||isRetakerLabel(next)||isHomeschoolLabel(next))return null;
+    }
     const tokens=match[1].trim().split(/\s+/).filter(Boolean);
     const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
     const type=/^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|직보|상담)$/;
@@ -226,5 +238,5 @@
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,studentNameKey,studentNameSpellings,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });

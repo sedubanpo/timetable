@@ -261,3 +261,18 @@ test('unrecognized source text reports cell locations without memo contents and 
  const fixed=parseSnapshot(s,now);
  assert.equal(fixed.complete,true);assert.equal(fixed.sourceProblem,undefined);
 });
+
+test('only the trailing student discriminator folds, with stable verified legacy cell identities',()=>{
+ const r=require('../snapshot-functions/alimtalk-contract');
+ assert.equal(r.studentNameKey('가학생B'),'가학생b');
+ assert.equal(r.studentNameKey('Alex'),'Alex');
+ const s=fixture(),header='개별 수학 검증T',upper='가학생B 가상중2 정규',lower='가학생b 가상중2 정규';
+ s.data.grid[16]=[[header,upper,'가학생 가상중2 정규','가학생C 가상중2 정규','가학생T 가상중2 정규']];
+ const old=parseSnapshot(s,now).entries;
+ assert.deepEqual(old.map(e=>e.sourceName),['가학생b','가학생','가학생c','가학생t']);
+ const legacy=hash(['source-parser-v2',upper,[header],s.data.headers[0]]);
+ const saved={[hash(old[0].id)]:{fingerprint:legacy}};
+ s.data.grid[16][0].splice(1,1);s.data.grid[16][0].push(lower);
+ const row=parseSnapshot(s,now,saved).entries.find(e=>e.sourceName==='가학생b');
+ assert.equal(row.id,old[0].id);assert.equal(row.fingerprint,legacy);
+});

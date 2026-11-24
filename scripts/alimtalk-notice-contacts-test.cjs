@@ -110,3 +110,24 @@ test('same-name stopped and active records remain selectable and an explicit dai
 test('deleted or foreign-campus registry entries cannot be bypassed by creating a guest',async()=>{
  for(const patch of [{isDeleted:true},{disabled:true},{campusId:'other'}]){const f=fixture();Object.assign(f.db.data.get('students/s1'),patch);const r=await f.api('noticeContactOptions',{date:f.date,name:f.name});assert.notEqual(r.code,200);assert(!r.candidates);}
 });
+
+test('mixed-case timetable lessons use a single directory ID, complete preview, and distinct homonyms',async()=>{
+ const f=fixture(),base=f.name,reg=f.db.data.get('students/s1');
+ f.db.data.set('students/s1',{...reg,name:base+'B',status:'ACTIVE'});
+ f.db.data.set('students/s2',{...reg,name:base+'c',status:'ACTIVE'});
+ f.snapshot.data.grid[13]=[['개별 수학 검증T',base+'b 가상고3 첫수업']];
+ f.snapshot.data.grid[19]=[['개별 국어 강사T',base+'B 가상고3 정규',base+'C 가상고3 첫수업']];
+ const roster=await f.api('batchRoster',{date:f.date,audience:'guardian'});
+ assert.equal(roster.code,200);
+ assert.deepEqual(roster.rows.map(r=>[r.studentId,r.name,r.issue]),[['s1',base+'b',''],['s2',base+'c','']]);
+ const preview=await f.api('preview',{date:f.date,targets:[{studentId:'s1',recipientIds:['mother']}]});
+ assert.equal(preview.code,200);
+ const notice=JSON.stringify(preview.rows[0]);
+ assert.match(notice,/13:00–14:00/);assert.match(notice,/19:00–20:00/);
+ const options=await f.api('noticeContactOptions',{date:f.date,name:base+'b'});
+ assert.equal(options.candidates[0].matches,true);assert.equal(options.lessons.length,2);
+ f.db.data.set('students/duplicate',{...reg,name:base+'b',status:'ACTIVE'});
+ const ambiguous=await f.api('batchRoster',{date:f.date,audience:'guardian'});
+ assert.match(ambiguous.rows.find(r=>r.name===base+'b').issue,/동명이인/);
+ assert.equal(f.sent.length,0);
+});

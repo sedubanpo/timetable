@@ -28,10 +28,16 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   if(/^notice_[a-f0-9]{64}$/.test(id)){const guest=await rs.noticeGuest(id);if(!guest||guest.id!==id||!guest.noticeDate)fail('STUDENT_NOT_FOUND');return guest;}
   return directoryStudent(id,signal);
  };
+ async function directoryNameDocs(name){
+  const snapshots=await Promise.all(rules.studentNameSpellings(name).map(spelling=>db.collection('students').where('name','==',spelling).limit(21).get()));
+  const docs=[...new Map(snapshots.flatMap(s=>s.docs.map(doc=>[doc.id,doc]))).values()];
+  if(docs.length>20)fail('CANDIDATE_LIMIT');
+  return docs;
+ }
  const searchStudents=async(actor,name)=>{
-  const snap=await db.collection('students').where('name','==',name).limit(21).get();if(snap.size>20)fail('CANDIDATE_LIMIT');
-  const candidates=snap.docs.filter(d=>{const s=d.data();return !s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS'&&s.status!=='MERGED'&&s.disabled!==true&&(!s.campusId||s.campusId===actor.academyId);}).map(d=>({...d.data(),id:d.id}));
-  if(snap.size&&!candidates.length)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
+  const docs=await directoryNameDocs(name);
+  const candidates=docs.filter(d=>{const s=d.data();return !s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS'&&s.status!=='MERGED'&&s.disabled!==true&&(!s.campusId||s.campusId===actor.academyId);}).map(d=>({...d.data(),id:d.id}));
+  if(docs.length&&!candidates.length)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
   return candidates;
  };
  const reader=createSourceReader({sourceUrl,secret:sourceSecret,now,request:async(url,options)=>{
@@ -43,7 +49,7 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   const usable=candidates.filter(s=>['ACTIVE','RETURNED','INACTIVE','STOPPED','PAUSED','SUSPENDED','중지','휴원','퇴원'].includes(s.status));
   if(usable.length)return usable.map(s=>s.id);
   const schools=[...new Set(source.entries.filter(e=>e.sourceName===name).map(e=>e.sourceSchool))];
-  if(schools.length===1){const id=require('./alimtalk-notice-contacts').guestId(source.date,name,schools[0]);if(await rs.noticeGuest(id))return [id];}
+  if(schools.length===1)return (await require('./alimtalk-notice-contacts').existingGuests(rs,source.date,name,schools[0])).map(s=>s.id);
   return [];
 
  }});
@@ -59,7 +65,7 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   if(query.includes('/'))fail('INVALID_QUERY');
   const direct=await db.collection('students').doc(query).get();
   let docs=direct.exists?[direct]:[];
-  if(!docs.length){const snap=await db.collection('students').where('name','==',query).limit(21).get();if(snap.size>20)fail('CANDIDATE_LIMIT');docs=snap.docs;}
+  if(!docs.length)docs=await directoryNameDocs(query);
   return docs.filter(d=>{const s=d.data();return !s.isDeleted&&!s.deletedAt&&!s.isAlias&&!s.mergedInto&&s.identityStatus!=='ALIAS';}).map(d=>{const s=d.data();return {id:d.id,name:s.name||'',school:s.school||'',grade:s.grade||'',status:s.status||''};});
  }});
  const mapped=async(actor,date,ids,signal,audience)=>{

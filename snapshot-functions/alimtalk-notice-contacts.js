@@ -2,9 +2,13 @@
 // Date-scoped contacts for temporary attendance. Never changes the registration record.
 const {randomUUID}=require('node:crypto');
 const {hash}=require('./alimtalk-service');
-const {mask,validDate,directorySchoolKey,exclusion}=require('./alimtalk-contract');
+const {mask,validDate,studentNameKey,studentNameSpellings,directorySchoolKey,exclusion}=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 const guestId=(date,name,school)=>'notice_'+hash(['banpo',date,name,school]);
+async function existingGuests(store,date,name,school){
+ const rows=await Promise.all(studentNameSpellings(name).map(spelling=>store.noticeGuest(guestId(date,spelling,school))));
+ return rows.filter(Boolean);
+}
 function validRecord(r,actor,date,student,now=Date.now()){
  return !!r&&r.academyId===actor.academyId&&r.date===date&&r.studentId===student.id&&r.identityRevision===student.identityRevision&&r.confirmed===true&&!!r.checkedBy&&!!r.revision&&Number.isFinite(r.checkedAt)&&r.checkedAt<=now;
 }
@@ -21,7 +25,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   if(!validDate(input.date)||typeof input.name!=='string'||!input.name.trim()||input.name.length>100)fail('INVALID_REQUEST');
   const source=await loadSource(a,input.date);
   if(!source.complete||source.academyId!==a.academyId||source.date!==input.date)fail('SOURCE_INCOMPLETE');
-  const entries=source.entries.filter(e=>e.sourceName===input.name);
+  const entries=source.entries.filter(e=>e.sourceName===studentNameKey(input.name));
   if(!entries.length||entries.every(e=>exclusion(e.lesson)))fail('NO_NOTICE_LESSONS');
   const schools=[...new Set(entries.map(e=>e.sourceSchool))];
   if(schools.length!==1||!schools[0])fail('STUDENT_SCHOOL_MISMATCH');
@@ -32,11 +36,13 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
    try{const s=await resolveStudent(c.id);if(s.id!==c.id)continue;rows.push(s);}catch(e){if(e.code!=='STUDENT_NOT_ACTIVE')throw e;}
   }
   if(candidates.length&&!rows.length)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
+  if(!candidates.length&&store.noticeGuest)rows.push(...await existingGuests(store,input.date,input.name,schools[0]));
   return {source,entries,school:schools[0],rows,fingerprint:hash(entries.map(e=>[e.id,e.fingerprint]))};
  }
  function guest(date,name,school){
   const m=/^(.*?)([1-6])$/.exec(school);
   if(!m&&school!=='재수생')fail('STUDENT_SCHOOL_MISMATCH');
+  name=studentNameKey(name);
   const id=guestId(date,name,school);
   return {id,name,school:m?m[1]:'재수생',grade:m?m[2]:'',noticeDate:date,registrationInactive:true,identityRevision:hash([id,name,school]),recipients:[['student','학생'],['mother','모'],['father','부']].map(([id,relation])=>({id,relation,phone:'',verified:false,reason:'번호 없음'}))};
  }
@@ -46,7 +52,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   for(const s of students){
    const record=await store.noticeContacts(a.academyId,input.date,s.id);
    const effective=validRecord(record,a,input.date,s,now())?applyNoticeContacts(s,record):s;
-   candidates.push({id:s.id,name:s.name,school:s.school,grade:s.grade,inactive:!!s.registrationInactive,guest:!!s.noticeDate,matches:s.name===input.name&&directorySchoolKey(s.school,s.grade)===c.school,
+   candidates.push({id:s.id,name:s.name,school:s.school,grade:s.grade,inactive:!!s.registrationInactive,guest:!!s.noticeDate,matches:studentNameKey(s.name)===studentNameKey(input.name)&&directorySchoolKey(s.school,s.grade)===c.school,
     contactVersion:hash([s.identityRevision,s.recipients]),expectedRevision:record?.revision||null,
     choices:effective.recipients.map(r=>({id:r.id,relation:r.relation,masked:mask(r.phone),available:r.verified,temporary:!!r.temporary,canEnter:s.recipients.find(x=>x.id===r.id).reason==='번호 없음',reason:r.reason}))});
   }
@@ -58,7 +64,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   if(input.confirmed!==true||input.sourceFingerprint!==c.fingerprint)fail('SOURCE_CHANGED');
   let student=c.rows.find(s=>s.id===input.studentId);
   if(!student&&c.rows.length===0){student=guest(input.date,input.name,c.school);if(student.id!==input.studentId)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');}
-  if(!student||student.name!==input.name||directorySchoolKey(student.school,student.grade)!==c.school)fail('STUDENT_SCHOOL_MISMATCH');
+  if(!student||studentNameKey(student.name)!==studentNameKey(input.name)||directorySchoolKey(student.school,student.grade)!==c.school)fail('STUDENT_SCHOOL_MISMATCH');
   if(hash([student.identityRevision,student.recipients])!==input.contactVersion)fail('CONTACT_CHANGED');
   const old=await store.noticeContacts(a.academyId,input.date,student.id);
   if((old?.revision||null)!==(input.expectedRevision||null))fail('REVIEW_CONFLICT');
@@ -90,4 +96,4 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
  }
  return {noticeContactOptions:options,saveNoticeContacts:save};
 }
-module.exports={createNoticeContactsService,guestId,validRecord,applyNoticeContacts};
+module.exports={createNoticeContactsService,guestId,existingGuests,validRecord,applyNoticeContacts};

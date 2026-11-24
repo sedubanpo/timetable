@@ -1,6 +1,6 @@
 'use strict';
 const {hash}=require('./alimtalk-service');
-const {directorySchoolKey,exclusion}=require('./alimtalk-contract');
+const {studentNameKey,directorySchoolKey,exclusion}=require('./alimtalk-contract');
 // Directory matches for first lessons apply only to the current guardian notice.
 function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
  return async(actor,source,audience)=>{
@@ -26,7 +26,7 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
     if(student.id!==selected){issues[name]='원장 대표 학생 변경 · 다시 확인 필요';continue;}
     const proof=await store.rememberedMapping(actor.academyId,student.id);
     const alias=proof?.date==='identity' && proof.studentId===student.id && proof.identityRevision===student.identityRevision && proof.verifiedBy ? proof.confirmedSourceSchool : null;
-    if(student.name!==name||!directorySchoolKey(student.school,student.grade)||entries.some(e=>e.sourceSchool!==directorySchoolKey(student.school,student.grade) && (!alias || e.sourceSchool!==alias))){issues[name]='이름·학교·학년 불일치 · 원장 확인 필요';continue;}
+    if(studentNameKey(student.name)!==name||!directorySchoolKey(student.school,student.grade)||entries.some(e=>e.sourceSchool!==directorySchoolKey(student.school,student.grade) && (!alias || e.sourceSchool!==alias))){issues[name]='이름·학교·학년 불일치 · 원장 확인 필요';continue;}
     if(!proof){
      const firstLesson=entries.some(e=>['신규생','첫수업'].includes(e.lesson.status));
      const guardian=student.recipients?.some(r=>['mother','father'].includes(r.id)&&r.verified===true);
@@ -57,7 +57,7 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
      const owner=byId.get(old.studentId);
      return !owner||old.fingerprint===e.fingerprint||owner.entries.some(x=>x.id===e.id);
     });
-    if(blocked.length){conflicts.set(p.student.name,blocked);removed=true;}
+    if(blocked.length){conflicts.set(studentNameKey(p.student.name),blocked);removed=true;}
     return !blocked.length;
    });
   }while(removed);
@@ -73,7 +73,7 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
      try{student=await resolveStudent(id);}catch{}
      knownStudents.set(id,student?.id===id?student:null);
     }
-    const previous=knownStudents.get(id)?.name;
+    const previous=studentNameKey(knownStudents.get(id)?.name);
     const lesson=entry.lesson;
     const slot=[lesson.start,lesson.building,lesson.room,lesson.subject].filter(Boolean).join(' ');
     let owner=previous||'다른 학생';

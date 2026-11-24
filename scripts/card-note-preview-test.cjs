@@ -45,6 +45,13 @@ for(const file of ['Index.html','docs/index.html']){
   assert.equal(scheduled[0].status,status==='지각'?'정규':status);
   assert.equal(scope.TimetableAlimtalk.lessonStatusLabel(scheduled[0].status,false),status==='지각'?'정규':status);
  }
+ Object.assign(scope,{SCHEDULE_START_HOUR:13,SCHEDULE_END_HOUR:19,lastData:{headers:['1강의실'],grid:{
+  13:[['개별 수학 검증T','가학생b 가상중3 정규','가학생C 가상중3 정규']],
+  19:[['개별 수학 검증T','가학생B 가상중3 정규','가학생 가상중3 정규']]
+ }}});
+ scope.buildStudentImageMap();
+ assert.deepEqual(Object.keys(scope.studentImageScheduleMap).sort(),['가학생','가학생b','가학생c']);
+ assert.deepEqual(Array.from(scope.studentImageScheduleMap['가학생b'],row=>row.hour),[13,19]);
  assert.equal(scope.parseStudentRawText('검증학생 가상중3 정규 지각, 10:11 도착').status,'지각','live attendance still shows lateness');
  for(const label of ['고3@','재수','재수1','재수2','교육청']){
   scope.SCHEDULE_START_HOUR=10;scope.SCHEDULE_END_HOUR=12;

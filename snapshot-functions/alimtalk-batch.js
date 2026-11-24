@@ -48,12 +48,13 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(ids.length>350)fail('ROSTER_LIMIT');
   const rows=await pooled(ids,async id=>{
    const past=history.filter(r=>r.studentId===id),received=past.filter(r=>r.state==='DELIVERED');
-   let student,name=past[0]?.variables?.['#{학생명}']||'',issue='';
-   try{student=await resolveStudent(id);name=student.name;if(student.id!==id)fail('CANONICAL_RECONFIRM_REQUIRED');}
+   let student,displayName=past[0]?.variables?.['#{학생명}']||'',issue='';
+   try{student=await resolveStudent(id);displayName=student.name;if(student.id!==id)fail('CANONICAL_RECONFIRM_REQUIRED');}
    catch(e){issue=reason(e.code);}
+   const name=rules.studentNameKey(displayName);
    const entries=src.entries.filter(e=>e.sourceName===name);
    // This draft is for classification/display only; never use it to authorize a recipient.
-   const c=rules.compose({id,name,mappingVerified:true,timetableSaturdayArrivalChoice:student?.timetableSaturdayArrivalChoice===true},date,entries.map(e=>({...e.lesson,studentId:id})));
+   const c=rules.compose({id,name:displayName,mappingVerified:true,timetableSaturdayArrivalChoice:student?.timetableSaturdayArrivalChoice===true},date,entries.map(e=>({...e.lesson,studentId:id})));
    const version=hash([a.academyId,date,id,c.text]);
    let verified,recipients=[],excludedOnly=false;
    if(src.linkIssues?.[name])issue=src.linkIssues[name];

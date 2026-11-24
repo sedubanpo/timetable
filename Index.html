@@ -3109,10 +3109,22 @@ root.TimetableBatchUI={mount,errorText,sourceProblemText,lessonChanges,readLesso
   const content="[에스학원 수업 일정 안내]\n#{학생명} 학생의 수업 안내드립니다.\n\n▶ 수업일: #{수업일}\n▶ 등원 시각: #{등원시각}\n\n[수업 안내: 과목·시간·강사·관·강의실]\n#{수업목록}\n\n수업 일정에 관한 변경 문의는 아래 ‘수업 문의’ 버튼을 이용해 주세요 💬\n\n전과목, 소수 정예 수업\n 💫 반포 에스학원";
   const labels={REQUESTING:'요청 중',ACCEPTED:'접수',PROCESSING:'처리 중',DELIVERED:'수신 완료',FAILED:'실패',NOT_ACCEPTED:'미접수 확인',UNKNOWN:'결과 확인 필요'};
   // Parse only a proven lesson prefix. A student's memo mentioning a teacher is not a header.
+  function studentNameKey(value){
+    return String(value||'').trim().replace(/([가-힣])([A-Z])$/,(_,last,suffix)=>last+suffix.toLowerCase());
+  }
+  function studentNameSpellings(value){
+    const key=studentNameKey(value);
+    return /[가-힣][a-z]$/.test(key)?[key,key.slice(0,-1)+key.slice(-1).toUpperCase()]:[key];
+  }
   function parseLessonHeader(value){
     const text=String(value||'').trim();
     const match=text.match(/^(.*?)\s*([가-힣A-Za-z]+)\s*T(?=$|\s|[,，:：])/);
     if(!match)return null;
+    // A student with suffix T followed by their school is a student row.
+    if(!match[1].trim()){
+      const next=text.slice(match[0].length).trim().split(/\s+/)[0];
+      if(/[초중고]\d+$/.test(next)||isRetakerLabel(next)||isHomeschoolLabel(next))return null;
+    }
     const tokens=match[1].trim().split(/\s+/).filter(Boolean);
     const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
     const type=/^(개별정규|개별|정규|[1-9][0-9]*:1|특강|보강|보충|직보|상담)$/;
@@ -3327,7 +3339,7 @@ root.TimetableBatchUI={mount,errorText,sourceProblemText,lessonChanges,readLesso
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,studentNameKey,studentNameSpellings,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });
 </script>
 <script>(function(root){
@@ -8359,7 +8371,7 @@ root.TimetableNoticeContactsUI={mount};
               if(isTeacherHeader(txt)||txt.includes("결석예고"))return;
               if (shouldHideStudentText(txt)) return;
               var ct=txt.replace("확인필요","").replace(/신\s*규\s*생?|첫\s*수\s*업/g,"").trim(); 
-              ct=ct.split(" ")[0]; 
+              ct=TimetableAlimtalk.studentNameKey(ct.split(" ")[0]);
               if(!ct || ignoreNames.has(ct)) return;
               if(!map[ct]){ map[ct]={time:ts,room:rn,is2:is2}; } 
             }); 
@@ -8404,7 +8416,7 @@ root.TimetableNoticeContactsUI={mount};
               if (shouldHideStudentText(txt)) return;
               var cleanText = txt.replace("확인필요", "").replace(/신\s*규\s*생?|첫\s*수\s*업/g, "").trim();
               var parts = cleanText.split(" ");
-              var studentName = parts[0]; 
+              var studentName = TimetableAlimtalk.studentNameKey(parts[0]);
               
               if(!studentScheduleMap[studentName]) studentScheduleMap[studentName] = [];
               
@@ -8783,7 +8795,7 @@ root.TimetableNoticeContactsUI={mount};
         var text = String(rawText || "").replace("확인필요", "").trim();
         var chunks = text.match(/\S+\s*/g) || [];
         var tokens = chunks.map(function(part){ return part.trimEnd(); });
-        var name = tokens[0] || "";
+        var name = TimetableAlimtalk.studentNameKey(tokens[0]);
         var status = detectStudentStatusFromTokens(tokens.slice(1)) || detectStudentStatus(text);
         status = normalizeStatusLabel(status);
         var school = "";
@@ -8962,9 +8974,9 @@ root.TimetableNoticeContactsUI={mount};
               var raw = String(text || "");
               if (!raw || isTeacherHeader(raw)) return;
               var clean = raw.replace("확인필요", "").trim();
-              var student = clean.split(" ")[0];
-              if (!student || /^(자습|자기주도|자기주도학습)$/.test(student)) return;
               var parsed = parseStudentRawText(clean);
+              var student = parsed.name;
+              if (!student || /^(자습|자기주도|자기주도학습)$/.test(student)) return;
               if (TimetableAlimtalk.exclusion({status:parsed.status})) return;
               // Keep the original attendance cell's subtype for the card and message.
               var sourceSubtype=clean.match(/^\S+\s+(?:\S+\s+)?(당취보충|일반보충|결석보강)(?=\s|$)/);
@@ -9691,7 +9703,11 @@ function drawAlimtalkRoster(list,keyword){
         });
       }
       function getStudentCardStatusRecord(name) {
-        return studentCardSentMap[name] || { studentName: name, sent: false, updatedAt: "", updatedBy: "" };
+        var records = TimetableAlimtalk.studentNameSpellings(name).map(function(spelling) {
+          return studentCardSentMap[spelling];
+        }).filter(Boolean);
+        records.sort(function(a, b) { return (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0); });
+        return records[0] || { studentName: TimetableAlimtalk.studentNameKey(name), sent: false, updatedAt: "", updatedBy: "" };
       }
       function getStudentCardStatusLabel(name) {
         if (!isStudentCardStatusContextCurrent() || !studentCardStatusKnown) return "상태 확인 필요";
@@ -9735,7 +9751,7 @@ function drawAlimtalkRoster(list,keyword){
       function selectStudentImageItem(name, options) {
         resetCardAlimtalk();
         var opts = options || {};
-        selectedStudentForImage = String(name || "").trim();
+        selectedStudentForImage = TimetableAlimtalk.studentNameKey(name);
         if (!opts.skipListRender) filterStudentImageList();
         renderStudentImagePreview(selectedStudentForImage);
         if(studentCardMode==='message')renderCardMessageReference();
@@ -9836,17 +9852,18 @@ function drawAlimtalkRoster(list,keyword){
         if (selectedStudentForImage === studentName) renderStudentImagePreview(studentName);
         refreshStudentImageListSelectionState();
         syncStudentCardActionButtons();
-        return callServer("setStudentCardSentStatus", [targetSheet, studentName, !!sent, loginId, reason]).then(function(status) {
+        var storedName = getStudentCardStatusRecord(studentName).studentName;
+        return callServer("setStudentCardSentStatus", [targetSheet, storedName, !!sent, loginId, reason]).then(function(status) {
           if (!isCurrentStatusRequest()) return status;
-          if (!status || status.studentName !== studentName || status.sent !== !!sent || String(status.unsentReason||'') !== reason) {
+          if (!status || status.studentName !== storedName || status.sent !== !!sent || String(status.unsentReason||'') !== reason) {
             throw new Error("발송 상태 저장 응답을 확인할 수 없습니다.");
           }
-          studentCardSentMap[studentName] = status;
+          studentCardSentMap[storedName] = status;
           filterStudentImageList();
           if (selectedStudentForImage === studentName) renderStudentImagePreview(studentName);
           refreshStudentImageListSelectionState();
           syncStudentCardActionButtons();
-          return studentCardSentMap[studentName];
+          return studentCardSentMap[storedName];
         }).catch(function(err) {
           if (!isCurrentStatusRequest()) return null;
           studentCardStatusError = "저장 응답을 확인하지 못해 서버 기록을 다시 확인하고 있습니다." + getStudentCardErrorDetail(err);
@@ -9856,7 +9873,7 @@ function drawAlimtalkRoster(list,keyword){
             if (!isCurrentStatusRequest()) return null;
             studentCardSentMap = validateStudentCardStatuses(statuses);
             studentCardStatusKnown = true;
-            var confirmed = studentCardSentMap[studentName];
+            var confirmed = studentCardSentMap[storedName];
             if (confirmed && confirmed.sent === !!sent && String(confirmed.unsentReason||'')===reason && err.operationId && err.datasetId &&
               confirmed.operationId === err.operationId && confirmed.datasetId === err.datasetId) {
               studentCardStatusError = "";
@@ -12826,7 +12843,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
             .replace(/결석예고|당일취소|휴강|오늘만|보충|보강|보호|지각/g, " ")
             .trim();
           var first = cleaned.split(/\s+/)[0] || "";
-          var cleanName = normalizeReviewNameToken(first);
+          var cleanName = TimetableAlimtalk.studentNameKey(normalizeReviewNameToken(first));
           return cleanName && !isNonStudentName(cleanName) ? cleanName : "";
         }
 	        function buildReviewSnapshot(data) {
@@ -13390,7 +13407,7 @@ function card(s){const lessons=mergedLessons(s);const colors=cardLessonColors(le
 	          return "";
 	        }
 	        function normalizeReviewExternalName(value) {
-	          return normalizeReviewNameToken(value).replace(/[Bb]$/, function(match) { return match === "B" ? "b" : match; });
+	          return TimetableAlimtalk.studentNameKey(normalizeReviewNameToken(value));
 	        }
 	        function parseFirestoreRestValue(value) {
 	          if (!value || typeof value !== "object") return undefined;

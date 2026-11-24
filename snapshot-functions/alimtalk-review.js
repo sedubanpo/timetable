@@ -3,7 +3,7 @@
 const crypto=require('node:crypto');
 const {hash}=require('./alimtalk-service');
 const {contactHash}=require('./alimtalk-students');
-const {mask,validDate,directorySchoolKey,isHomeschoolLabel}=require('./alimtalk-contract');
+const {mask,validDate,studentNameKey,directorySchoolKey,isHomeschoolLabel}=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 function createReviewService({authorize,loadSource,searchStudents,resolveStudent,store,now=Date.now}){
   async function auth(session){const a=await authorize(session);if(!a?.uid||!['ADMIN','STAFF','DESK'].includes(a.role)||a.active!==true||a.academyId!=='banpo'||a.canSendTimetable!==true)fail('FORBIDDEN');return a;}
@@ -18,7 +18,7 @@ function createReviewService({authorize,loadSource,searchStudents,resolveStudent
     const student=await resolveStudent(input.studentId);if(student.id!==input.studentId)fail('CANONICAL_RECONFIRM_REQUIRED');
     const revision=crypto.randomUUID();
     const mapping={academyId:a.academyId,date:s.date,studentId:student.id,sourceRevision:s.revision,revision,verifiedBy:a.uid,verifiedAt:now(),entries:entries.map(e=>({id:e.id,fingerprint:e.fingerprint})),identityRevision:student.identityRevision};
-    if(entries.every(e=>e.sourceName===student.name&&e.sourceSchool===directorySchoolKey(student.school,student.grade)))mapping.identityLink={name:student.name,school:student.school,grade:student.grade};
+    if(entries.every(e=>e.sourceName===studentNameKey(student.name)&&e.sourceSchool===directorySchoolKey(student.school,student.grade)))mapping.identityLink={name:student.name,school:student.school,grade:student.grade};
     if(input.confirmSchoolAlias===true && !mapping.identityLink){
       const label=entries[0].sourceSchool;
       const schoolKey=directorySchoolKey(student.school,student.grade);
@@ -26,8 +26,8 @@ function createReviewService({authorize,loadSource,searchStudents,resolveStudent
         (isHomeschoolLabel(label) && schoolKey && label.slice(-1)===schoolKey.slice(-1));
       const active=(await searchStudents(a,student.name)).filter(row=>['ACTIVE','RETURNED'].includes(row.status));
       if(!special || active.length!==1 || active[0].id!==student.id ||
-          entries.length!==s.entries.filter(e=>e.sourceName===student.name).length ||
-          entries.some(e=>e.sourceName!==student.name||e.sourceSchool!==label))fail('STUDENT_SCHOOL_MISMATCH');
+          entries.length!==s.entries.filter(e=>e.sourceName===studentNameKey(student.name)).length ||
+          entries.some(e=>e.sourceName!==studentNameKey(student.name)||e.sourceSchool!==label))fail('STUDENT_SCHOOL_MISMATCH');
       mapping.identityLink={name:student.name,school:student.school,grade:student.grade,confirmedSourceSchool:label};
     }
     // compareAndSet must reject already assigned entries and stale expected revision atomically.
