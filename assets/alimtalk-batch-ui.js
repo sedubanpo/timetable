@@ -152,7 +152,7 @@ function mount({host,api,context,refresh}){
     status.replaceChildren(note(row?.issue||'현재 발송 가능한 번호가 없습니다. 기존 발송 결과를 확인해 주세요.'));
     return;
    }
-   host.append(note(items.map(r=>r.relation+' · '+r.masked).join(' / ')),body('발송 본문',items[0].text));
+   host.append(note(items.map(r=>r.relation+' · '+r.masked+(r.channel==='LMS'?' · 문자 전용':'')).join(' / ')),...[...new Set(items.map(item=>item.text))].map(text=>body('발송 본문',text)));
    status.querySelector('p').textContent=who+' '+items.length+'건 발송 중…';
    attempted=true;
    const response=await api('batchSend',{date,audience,mode,previewId:p.previewId,confirmed:true,tickets:items.map(r=>r.ticket)});
@@ -257,16 +257,16 @@ function mount({host,api,context,refresh}){
     }
     empty.hidden=visible>0;
    }
-   host.append(note('알림톡 전달에 실패하면 같은 번호로 문자 대체 발송을 시도합니다.'));
+   host.append(note(data.some(item=>item.channel==='LMS')?'문자 전용 번호에는 시간표를 장문 문자로 바로 보냅니다.':'알림톡 전달에 실패하면 같은 번호로 문자 대체 발송을 시도합니다.'));
    const list=el('details',undefined,'bulk-pick-list');
    if(target)list.open=true;
    list.append(el('summary','수신자별 선택 · 본문 보기 ('+data.length+'건)'));host.append(list);
    for(const items of students.values()){
     const group=el('section',undefined,'bulk-review-row');group.append(el('strong',items[0].name));
     for(const item of items){const l=el('label'),i=el('input');i.type='checkbox';checks.push([i,item.ticket]);i.onchange=()=>{setChosen(item.ticket,i.checked);sync();};
-     l.append(i,document.createTextNode(' '+item.relation+' · '+item.masked+(item.retry?' · 실패 건 재시도':'')));group.append(l);
+     l.append(i,document.createTextNode(' '+item.relation+' · '+item.masked+(item.channel==='LMS'?' · 문자 전용':'')+(item.retry?' · 실패 건 재시도':'')));group.append(l);
     }
-    const content=body('보낼 본문 보기',items[0].text);if(target)content.open=true;group.append(content);
+    for(const text of new Set(items.map(item=>item.text))){const content=body('보낼 본문 보기',text);if(target)content.open=true;group.append(content);}
     if(mode==='changed'&&target)group.append(body('이전에 받은 본문',items[0].previous||'이전 본문 기록 없음'));list.append(group);
    }
    const foot=el('div',undefined,'bulk-confirm-footer bulk-send-footer');
@@ -287,7 +287,7 @@ function mount({host,api,context,refresh}){
      manifestList.replaceChildren();
      for(const items of students.values()){
       const recipients=items.filter(item=>chosen.has(item.ticket));
-      if(recipients.length)manifestList.append(el('li',items[0].name+' · '+recipients.map(item=>item.relation+' '+item.masked).join(' / ')));
+      if(recipients.length)manifestList.append(el('li',items[0].name+' · '+recipients.map(item=>item.relation+' '+item.masked+(item.channel==='LMS'?' · 문자 전용':'')).join(' / ')));
      }
      manifest.hidden=!chosen.size;
      manifestTitle.textContent='최종 발송 명단 · '+manifestList.childElementCount+'명 · '+chosen.size+'건';
@@ -443,7 +443,7 @@ function mount({host,api,context,refresh}){
     if(rows.length>1){const latest=rows.find(r=>r.state==='DELIVERED')||rows[0];chain.append(el('strong',latest.name+' · '+(kind==='delivered'?'재발송 수신 완료':'재발송 결과 확인'),'history-chain-title'));}
     for(const r of rows){const group=el('section',undefined,'bulk-review-row');
     const stamp=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(r.createdAt);
-    group.append(el('strong',r.name+' · '+root.TimetableAlimtalk.historyLabel(r)),note([r.relation,r.masked,stamp,r.retryOf?'알림톡 재발송':r.originalDeliveryId?'문자 재발송':r.batch?'일괄 알림톡':'개별 알림톡'].join(' · ')));
+    group.append(el('strong',r.name+' · '+root.TimetableAlimtalk.historyLabel(r)),note([r.relation,r.masked,stamp,r.originalDeliveryId?'문자 재발송':r.channel==='LMS'?'문자 전용':r.retryOf?'알림톡 재발송':r.batch?'일괄 알림톡':'개별 알림톡'].join(' · ')));
     if(r.originalDeliveryId&&r.updatedAt){
      const time=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hourCycle:'h23',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(r.updatedAt);
      group.append(note('솔라피 결과 확인 · '+time));

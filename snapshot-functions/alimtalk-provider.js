@@ -29,17 +29,27 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
   async getTemplate(id,signal){if(id!==rules.templateId)fail('TEMPLATE_MISMATCH');return call('/kakao/v2/templates/'+id,'GET',null,signal);},
   async sendOne(m,signal){
    if(!verifiedRecipientSend&&(!enableTestSend||!testPhones.length))fail('SENDING_DISABLED');
-   if((verifiedRecipientSend?!/^010\d{8}$/.test(m.to):!testPhones.includes(m.to))||m.type!=='ATA'||m.kakaoOptions?.pfId!==rules.pfId||m.kakaoOptions?.templateId!==rules.templateId||m.kakaoOptions?.disableSms!==(!smsFallback)||!(/^[a-f0-9]{64}$/).test(m.customFields?.timetableKey||''))fail('TEST_RECIPIENT_REQUIRED');
-   const message={...(smsFallback?{from:fallbackFrom}:{}),to:m.to,type:'ATA',country:'82',autoTypeDetect:false,kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:m.kakaoOptions.variables,disableSms:!smsFallback,buttons:[{buttonType:'WL',buttonName:'수업 문의',linkMo:'https://pf.kakao.com/_KIZxin',linkPc:'https://pf.kakao.com/_KIZxin'}]},customFields:{timetableKey:m.customFields.timetableKey}};
-   // Provider-managed replacement only: same recipient, one LMS if ATA fails.
-   // Never accept caller-supplied replacement recipients or content.
-   if(smsFallback)message.replacements=[{to:m.to,from:fallbackFrom,type:'LMS',country:'82',subject:'반포 에스학원 수업 일정 안내',text:fallbackText(m.kakaoOptions.variables)}];
+   const direct=m.type==='LMS'&&smsFallback;
+   const validNumber=verifiedRecipientSend?/^010\d{8}$/.test(m.to):testPhones.includes(m.to);
+   const options=m.kakaoOptions;
+   const validKakao=m.type==='ATA'&&options?.pfId===rules.pfId&&options.templateId===rules.templateId&&options.disableSms===!smsFallback;
+   if(!validNumber||(!direct&&!validKakao)||!(/^[a-f0-9]{64}$/).test(m.customFields?.timetableKey||''))fail('TEST_RECIPIENT_REQUIRED');
+   const message={to:m.to,type:m.type,country:'82',autoTypeDetect:false,customFields:{timetableKey:m.customFields.timetableKey}};
+   if(smsFallback)message.from=fallbackFrom;
+   if(direct){
+    message.subject='반포 에스학원 수업 일정 안내';
+    message.text=fallbackText(m.variables);
+   }else{
+    message.kakaoOptions={pfId:rules.pfId,templateId:rules.templateId,variables:options.variables,disableSms:!smsFallback,buttons:[{buttonType:'WL',buttonName:'수업 문의',linkMo:'https://pf.kakao.com/_KIZxin',linkPc:'https://pf.kakao.com/_KIZxin'}]};
+    if(smsFallback)message.replacements=[{to:m.to,from:fallbackFrom,type:'LMS',country:'82',subject:'반포 에스학원 수업 일정 안내',text:fallbackText(options.variables)}];
+   }
    const r=await call('/messages/v4/send-many/detail','POST',{messages:[message],showMessageList:true,allowDuplicates:false},signal);
    const good=r.messageList||[],bad=r.failedMessageList||[];
    if(!Array.isArray(good)||!Array.isArray(bad)||good.length+bad.length!==1)fail('UNKNOWN_RESULT');
    return event(good[0]||{...bad[0],registrationFailed:true},r.groupInfo?.groupId,m.customFields.timetableKey);
   },
-  async lookup({messageId,groupId,key,phone,createdAt,smsFallback:expectedFallback},signal){
+  async lookup({messageId,groupId,key,phone,createdAt,smsFallback:expectedFallback,channel},signal){
+   const expectedType=channel==='LMS'?'LMS':'ATA';
    if(!(/^[a-f0-9]{64}$/).test(key||''))fail('INVALID_RESULT');
    let matched;
    if(!messageId||!groupId){
@@ -51,7 +61,7 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
      const result=await call('/messages/v4/list?'+q,'GET',null,signal);
      if(!result.messageList||typeof result.messageList!=='object'||Array.isArray(result.messageList))fail('INVALID_RESULT');
      for(const m of Object.values(result.messageList)){
-      if(m.customFields?.timetableKey!==key||m.replacement===true||m.type!=='ATA')continue;
+      if(m.customFields?.timetableKey!==key||m.replacement===true||m.type!==expectedType)continue;
       const time=Date.parse(m.dateCreated);
       if(m.to!==phone||!Number.isFinite(time)||time<start||time>end||
        (messageId&&m.messageId!==messageId)||(groupId&&m.groupId!==groupId)||
@@ -72,7 +82,7 @@ function createProvider({apiKey,apiSecret,request,testPhone='',enableTestSend=fa
     const r=await call('/messages/v4/list?'+q,'GET',null,signal);
     if(!r.messageList||typeof r.messageList!=='object'||Array.isArray(r.messageList))fail('INVALID_RESULT');
     const rows=Object.values(r.messageList);if(!rows.length)return null;
-    if(r.nextKey||rows.length!==1||rows[0].messageId!==messageId||rows[0].groupId!==groupId||rows[0].type!=='ATA'||rows[0].replacement===true)fail('RESULT_MISMATCH');
+    if(r.nextKey||rows.length!==1||rows[0].messageId!==messageId||rows[0].groupId!==groupId||rows[0].type!==expectedType||rows[0].replacement===true)fail('RESULT_MISMATCH');
     matched=rows[0];
    }
    const original=event(matched,groupId,key);

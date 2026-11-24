@@ -9,7 +9,7 @@ function memoryDb(seed){
  const snap=(id,v)=>({id,exists:v!==undefined,data:()=>structuredClone(v)});
  const doc=path=>({id:path.split('/').at(-1),path,get:async()=>snap(path.split('/').at(-1),data.get(path)),create:async v=>{assert(!data.has(path));data.set(path,structuredClone(v));}});
  const query=(c,filters=[],limit=Infinity)=>({doc:id=>doc(c+'/'+id),where:(k,op,v)=>query(c,[...filters,[k,op,v]],limit),limit:n=>query(c,filters,n),get:async()=>{const docs=[...data].filter(([p,v])=>p.startsWith(c+'/')&&filters.every(([k,op,x])=>op==='=='?v[k]===x:op==='array-contains'?(v[k]||[]).includes(x):op==='in'?x.includes(v[k]):false)).slice(0,limit).map(([p,v])=>snap(p.split('/').at(-1),v));return {docs,size:docs.length};}});
- return {data,collection:c=>query(c),runTransaction:fn=>{const p=chain.then(async()=>{const writes=[];const result=await fn({get:r=>r.get(),set:(r,v)=>writes.push([r.path,v]),create:(r,v)=>{assert(!data.has(r.path));writes.push([r.path,v]);}});for(const [p,v]of writes)data.set(p,structuredClone(v));return result;});chain=p.catch(()=>{});return p;}};
+ return {data,collection:c=>query(c),runTransaction:fn=>{const p=chain.then(async()=>{const writes=[];const result=await fn({get:r=>r.get(),update:(r,v)=>writes.push([r.path,{...data.get(r.path),...v}]),set:(r,v)=>writes.push([r.path,v]),create:(r,v)=>{assert(!data.has(r.path));writes.push([r.path,v]);}});for(const [p,v]of writes)data.set(p,structuredClone(v));return result;});chain=p.catch(()=>{});return p;}};
 }
 function fixture({guest=false,missing=false}={}){
  let now=Date.parse('2026-11-14T07:00:00Z');const date='2026-11-15',name='가상학생';
@@ -130,4 +130,32 @@ test('mixed-case timetable lessons use a single directory ID, complete preview, 
  const ambiguous=await f.api('batchRoster',{date:f.date,audience:'guardian'});
  assert.match(ambiguous.rows.find(r=>r.name===base+'b').issue,/동명이인/);
  assert.equal(f.sent.length,0);
+});
+test('registered number can select direct LMS; stale tickets stop, guardian keeps Kakao, new numbers use the default',async()=>{
+ const f=fixture(),ctx={date:f.date,audience:'student',mode:'unsent'};
+ const form=await f.form();
+ assert.equal((await f.api('saveNoticeContacts',form)).code,200);
+ const old=await f.api('batchPreview',ctx);
+ const change=(v,channel)=>f.api('saveNoticeChannel',{...form,relation:'student',channel,contactVersion:v});
+ const updated=await change(form.contactVersion,'LMS');
+ assert.equal(updated.code,200);
+ assert.equal((await change(form.contactVersion,'ATA')).code,'CONTACT_CHANGED');
+ const current=await f.form();
+ assert.equal(current.choices.find(r=>r.id==='student').channel,'LMS');
+ assert.equal(current.choices.find(r=>r.id==='mother').channel,'ATA');
+ assert.equal((await f.api('batchSend',{...ctx,previewId:old.previewId,tickets:old.items.map(i=>i.ticket),confirmed:true})).code,'BATCH_CHANGED');
+ assert.equal(f.sent.length,0);
+ const single=await f.api('studentPreview',{date:f.date,targets:[{studentId:'s1',recipientIds:['student']}]});
+ assert.equal(single.rows[0].recipients[0].channel,'LMS');
+ const fresh=await f.api('batchPreview',ctx);assert.equal(fresh.items[0].channel,'LMS');
+ assert.equal((await f.api('batchSend',{...ctx,previewId:fresh.previewId,tickets:fresh.items.map(i=>i.ticket),confirmed:true})).code,200);
+ assert.equal(f.sent[0].type,'LMS');assert.equal(f.sent[0].text,single.rows[0].messageText);assert.equal(f.sent[0].text,fresh.items[0].text);
+ assert(!f.sent[0].kakaoOptions&&!f.sent[0].replacements);
+ const g=await f.api('preview',{date:f.date,targets:[{studentId:'s1',recipientIds:['mother']}]});
+ assert.equal((await f.api('send',{previewId:g.previewId})).code,200);assert.equal(f.sent[1].type,'ATA');assert.equal(f.sent[1].replacements[0].type,'LMS');
+ assert.equal((await change(updated.contactVersion,'ATA')).code,200);
+ assert.equal((await f.api('batchPreview',ctx)).items.length,0);
+ assert.equal((await change((await f.form()).contactVersion,'LMS')).code,200);
+ f.db.data.get('students/s1').studentContact='01000000008';
+ assert.equal((await f.form()).choices.find(r=>r.id==='student').channel,'ATA');
 });

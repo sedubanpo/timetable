@@ -39,8 +39,11 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     if(input.targets.some(t=>typeof t.studentId!=='string'||!t.studentId||t.studentId.length>128))fail('STUDENT_ID_REQUIRED');
     if(input.targets.some(t=>t.recipientIds!==undefined&&(!Array.isArray(t.recipientIds)||t.recipientIds.length>10||t.recipientIds.some(id=>typeof id!=='string'||id.length>128))))fail('INVALID_RECIPIENTS');
     if(new Set(input.targets.map(t=>t.studentId)).size!==input.targets.length)fail('DUPLICATE_STUDENT');
-    const [day,template]=await Promise.all([bounded(signal=>loadDay(actor,input.date,input.targets.map(t=>t.studentId),signal),deadline),bounded(signal=>provider.getTemplate(rules.templateId,signal),deadline)]);
+    const day=await bounded(signal=>loadDay(actor,input.date,input.targets.map(t=>t.studentId),signal),deadline);
     if(day.academyId!==actor.academyId||day.date!==input.date||day.complete!==true||!day.revision||!day.mappingRevision)fail('SOURCE_NOT_VERIFIED');
+    const selectedFor=(s,t)=>(s.recipients||[]).filter(r=>!t.recipientIds?.length||t.recipientIds.includes(r.id));
+    const needsKakao=input.targets.some(t=>!selectedFor(day.students.find(s=>s.id===t.studentId)||{},t).every(r=>r.channel==='LMS'));
+    const templateVerified=needsKakao&&rules.verifyTemplate(await bounded(signal=>provider.getTemplate(rules.templateId,signal),deadline));
     const rows=[];
     for(const target of input.targets){
       const matches=day.students.filter(s=>s.id===target.studentId);
@@ -49,14 +52,14 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       for(const reason of s.holdReasons||[]){
         c.reasons.push(reason==='CONTACT_CLEARANCE_REQUIRED'?'받는 번호·연락 가능 여부 확인 필요':'학생 원장·대표 ID·연락처 연결 재확인 필요');
       }
-      if(!rules.verifyTemplate(template))c.reasons.push('템플릿 승인·본문·변수 재확인 필요');
+      if(selectedFor(s,target).some(r=>r.channel!=='LMS')&&!templateVerified)c.reasons.push('템플릿 승인·본문·변수 재확인 필요');
       if(!(s.recipients||[]).length && !(s.holdReasons||[]).length)c.reasons.push(s.recipientIssue||'이 발송 대상의 확인된 번호 없음');
       else if(!Array.isArray(target.recipientIds)||!target.recipientIds.length)c.reasons.push('수신자를 직접 선택해 주세요');
       for(const id of new Set(target.recipientIds||[])){
         const candidates=(s.recipients||[]).filter(r=>r.id===id);
         const r=candidates[0];
         if(candidates.length!==1||!r.relation||r.verified!==true||!/^010\d{8}$/.test(r.phone||'')){c.reasons.push('수신자 관계·번호 연결 확인 필요');continue;}
-        if(!recipients.some(p=>p.phone===r.phone))recipients.push({id:r.id,relation:r.relation,phone:r.phone,masked:rules.mask(r.phone)});
+        if(!recipients.some(p=>p.phone===r.phone))recipients.push({id:r.id,relation:r.relation,...(r.channel==='LMS'?{channel:'LMS'}:{}),phone:r.phone,masked:rules.mask(r.phone)});
       }
       const reviewRevision=s.mappingRevision||day.mappingRevision;
       const version=['daily-lessons','student-daily-lessons'].includes(kind)?hash([actor.academyId,input.date,s.id,c.text]):hash([actor.academyId,input.date,s.id,c.lessons,c.excluded,reviewRevision]);
@@ -76,10 +79,11 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
         }
       }
       rows.push({studentId:s.id,name:s.name,date:input.date,version,reviewRevision,memoSchedule,...(memoReview?{memoReview}:{}),text:c.text,variables:c.variables,reasons:[...new Set(c.reasons)],excluded:c.excluded,recipients,
-        choices:(s.recipients||[]).map(r=>({id:r.id,relation:r.relation||'관계 확인 필요',masked:rules.mask(r.phone||'')}))});
+        ...(recipients.some(r=>r.channel==='LMS')&&c.variables?.['#{수업목록}']?{messageText:require('./alimtalk-fallback').fallbackText(c.variables)}:{}),
+        choices:(s.recipients||[]).map(r=>({id:r.id,relation:r.relation||'관계 확인 필요',...(r.channel==='LMS'?{channel:'LMS'}:{}),masked:rules.mask(r.phone||'')}))});
     }
     const fingerprint=hash(rows);
-    return {rows,fingerprint,date:input.date,templateVerified:rules.verifyTemplate(template)};
+    return {rows,fingerprint,date:input.date,templateVerified};
   }
   function publicPlan(p){return {...p,rows:p.rows.map(r=>({...r,recipients:r.recipients.map(({phone,...r})=>r)})),counts:{students:p.rows.filter(r=>!r.reasons.length).length,messages:p.rows.filter(r=>!r.reasons.length).reduce((n,r)=>n+r.recipients.length,0),numbers:new Set(p.rows.filter(r=>!r.reasons.length).flatMap(r=>r.recipients.map(x=>x.phone))).size}};}
   function publicRecord(r){if(!r)return null;const {phone,variables,...rest}=r;return {...rest,trackingMissing:!r.messageId||!r.groupId,masked:rules.mask(phone),label:rules.labels[r.state]};}
@@ -127,13 +131,15 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       }
       const id=deliveryId(a.academyId,row,date,recipient.phone,kind,prior,retryFailed);
       const retryOf=retryFailed&&['FAILED','NOT_ACCEPTED'].includes(previous?.state)?previous.id:null;
-      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,smsFallback:provider.smsFallback===true,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(row.memoReview?.confirmed?{reviewedTimeMemo:row.memoReview.key}:{}),...(batchId?{batchId}:{}),...(retryOf?{retryOf}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
+      const direct=recipient.channel==='LMS';
+      if(direct&&!provider.smsFallback)fail('SMS_SENDER_REQUIRED');
+      const record={id,academyId:a.academyId,studentId:row.studentId,date,version:row.version,phone:recipient.phone,...(direct?{channel:'LMS',messageText:require('./alimtalk-fallback').fallbackText(row.variables)}:{}),smsFallback:!direct&&provider.smsFallback===true,relation:recipient.relation,text:row.text,variables:row.variables,kind,...(row.memoReview?.confirmed?{reviewedTimeMemo:row.memoReview.key}:{}),...(batchId?{batchId}:{}),...(retryOf?{retryOf}:{}),actor:a.uid,createdAt:now(),state:'REQUESTING',messageId:null,groupId:null,errorCode:null};
       const claim=retryOf&&store.claimRetry?await store.claimRetry(id,record,retryOf,previous.state):await store.claim(id,record);
       if(!claim.created){return publicRecord(claim.record);}
       let receipt;
       try{
         // One message per provider group: siblings sharing a number never suppress one another.
-        const r=await bounded(signal=>provider.sendOne({to:recipient.phone,type:'ATA',kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:row.variables,disableSms:!record.smsFallback},customFields:{timetableKey:id}},signal),deadline);
+        const r=await bounded(signal=>provider.sendOne({to:recipient.phone,...(direct?{type:'LMS',variables:row.variables}:{type:'ATA',kakaoOptions:{pfId:rules.pfId,templateId:rules.templateId,variables:row.variables,disableSms:!record.smsFallback}}),customFields:{timetableKey:id}},signal),deadline);
         if(!r?.messageId||!r?.groupId)fail('UNKNOWN_RESULT');
         receipt=r;
         await apply(id,{...r,key:id});
@@ -154,7 +160,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     const result=await lookupRecord(old);await auth(session);return publicRecord(result);
   }
   async function lookupRecord(old){
-    const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:old.id,phone:old.phone,createdAt:old.createdAt,smsFallback:old.smsFallback},signal),deadline);
+    const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:old.id,phone:old.phone,createdAt:old.createdAt,smsFallback:old.smsFallback,channel:old.channel},signal),deadline);
     if(r){if(r.key!==old.id||!r.messageId||!r.groupId)fail('RESULT_MISMATCH');return apply(old.id,r);}
     // An empty provider search does not prove non-delivery; keep retries blocked.
     return store.update(old.id,current=>({...current,lastResultCheckAt:now(),...(!current.messageId||!current.groupId?{trackingIssue:'RECEIPT_NOT_FOUND'}:{})}));
@@ -178,6 +184,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     // Persist before acknowledging; failed storage returns non-2xx to permit provider retry.
     for(const e of events){const id=e.customFields?.timetableKey;if(id===undefined)continue;if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');const old=await store.get(id);if(!old)continue;
       // Replacement reports have their own ID. Reconcile their group before settling the original.
+      if(old.channel==='LMS'&&(e.replacement===true||e.type&&e.type!=='LMS'))continue;
       if(old.smsFallback && (e.replacement===true||['SMS','LMS'].includes(e.type)))continue;
       await apply(id,{messageId:e.messageId,groupId:e.groupId,statusCode:e.statusCode,key:id});}return {ok:true};}
   return {preview,saveMemoReview,send,results,reconcile,webhook,dispatch,apply};

@@ -6,6 +6,20 @@ function firestoreReviewStore(db){
  const key=(a,d,s)=>hash([a,d,s]),maps=db.collection('timetableStudentMappings'),days=db.collection('timetableStudentMappingDays'),reviews=db.collection('timetableAlimtalkClearances'),audit=db.collection('timetableAlimtalkReviewHistory');
  const bounded=v=>{if(Buffer.byteLength(JSON.stringify(v))>800000)fail('MAPPING_LIMIT');};
  return {
+  async setNoticeChannel(student,recipient,channel){
+   const {contacts}=require('./alimtalk-students'),ref=db.collection('students').doc(student.id);
+   return db.runTransaction(async tx=>{
+    const doc=(await tx.get(ref)).data();
+    if(!doc||doc.status==='MERGED'||doc.mergedInto||doc.isAlias||doc.isDeleted||doc.disabled||doc.deletedAt||doc.name?.trim()!==student.name||(doc.school||'')!==student.school||(doc.grade||'')!==student.grade||
+       doc.campusId&&doc.campusId!=='banpo'||doc.canonicalStudentId&&doc.canonicalStudentId!==student.id||doc.identityStatus==='ALIAS')fail('CONTACT_CHANGED');
+    if(hash(contacts(doc))!==hash(student.recipients))fail('CONTACT_CHANGED');
+    const settings={...doc.timetableTextOnly};
+    if(channel==='LMS')settings[recipient.id]=hash(recipient.phone);
+    else delete settings[recipient.id];
+    tx.update(ref,{timetableTextOnly:settings});
+    return contacts({...doc,timetableTextOnly:settings});
+   });
+  },
   async noticeContacts(a,d,s){return (await db.collection('timetableNoticeContacts').doc(key(a,d,s)).get()).data()||null;},
   async noticeGuest(id){return (await db.collection('timetableNoticeGuests').doc(id).get()).data()||null;},
   async saveNoticeContacts({record,mapping,guest},expected,expectedMapping){

@@ -10,7 +10,7 @@ function contacts(doc){
     const values=raw.map(v=>typeof v==='string'?v.replace(/[\s()-]/g,''):'INVALID');
     const unique=[...new Set(values)];
     const verified=unique.length===1&&/^010\d{8}$/.test(unique[0]);
-    return {id,relation,verified,phone:verified?unique[0]:'',reason:!unique.length?'번호 없음':verified?'':'연락처 충돌 또는 형식 확인 필요'};
+    return {id,relation,verified,...(verified&&doc.timetableTextOnly?.[id]===digest(unique[0])?{channel:'LMS'}:{}),phone:verified?unique[0]:'',reason:!unique.length?'번호 없음':verified?'':'연락처 충돌 또는 형식 확인 필요'};
   });
 }
 function createStudentAdapter({readStudent,findMappings,allowInactiveNotices=false}){

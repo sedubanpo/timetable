@@ -37,6 +37,27 @@ function mount({host,api,context,onReady}){
     const row=el('div');row.className='notice-contact-row';row.append(el('strong',c.relation));
     const value=el('div');row.append(value);
     value.append(el('p',c.available?(c.temporary?'임시 번호 · ':'등록 번호 · ')+c.masked:c.reason));
+    if(c.channel){
+     const channelLabel=el('p'),toggle=button('',async()=>{
+      if(!current()||toggle.disabled)return;
+      const channel=c.channel==='LMS'?'ATA':'LMS';
+      const controls=[...form.querySelectorAll('input,select,button')],disabled=controls.map(n=>n.disabled);
+      controls.forEach(n=>n.disabled=true);
+      try{
+       const result=await api('saveNoticeChannel',{...ctx,studentId:selected.id,relation:c.id,channel,contactVersion:selected.contactVersion});
+       if(!current())return;
+       selected.contactVersion=result.contactVersion;c.channel=result.channel;paintChannel();
+       status.textContent=c.relation+' '+c.masked+'의 시간표 발송 방식을 저장했습니다. 다음 수업일에도 적용됩니다.';
+      }catch(e){if(current())status.textContent=errors[e.code]||'발송 방식을 저장하지 못했습니다. 등록 연락처를 다시 조회해 주세요.';}
+      finally{if(current())controls.forEach((n,i)=>n.disabled=disabled[i]);}
+     });
+     function paintChannel(){
+      const direct=c.channel==='LMS';channelLabel.textContent='시간표 발송 방식 · '+(direct?'문자 전용':'알림톡 우선');
+      toggle.textContent=direct?'알림톡 우선으로 변경':'문자 전용으로 설정';
+      toggle.setAttribute('aria-label',c.relation+' '+c.masked+' '+toggle.textContent);
+     }
+     paintChannel();value.append(channelLabel,toggle);
+    }
     if(c.canEnter){
      const inputLabel=el('label',c.relation+' 임시 연락처'),input=el('input');input.type='tel';input.inputMode='tel';input.autocomplete='off';input.maxLength=20;input.placeholder='010-0000-0000';inputLabel.append(input);value.append(inputLabel);
      const keep=el('input');keep.type='checkbox';keep.checked=!!c.temporary;

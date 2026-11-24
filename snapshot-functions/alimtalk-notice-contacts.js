@@ -54,7 +54,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
    const effective=validRecord(record,a,input.date,s,now())?applyNoticeContacts(s,record):s;
    candidates.push({id:s.id,name:s.name,school:s.school,grade:s.grade,inactive:!!s.registrationInactive,guest:!!s.noticeDate,matches:studentNameKey(s.name)===studentNameKey(input.name)&&directorySchoolKey(s.school,s.grade)===c.school,
     contactVersion:hash([s.identityRevision,s.recipients]),expectedRevision:record?.revision||null,
-    choices:effective.recipients.map(r=>({id:r.id,relation:r.relation,masked:mask(r.phone),available:r.verified,temporary:!!r.temporary,canEnter:s.recipients.find(x=>x.id===r.id).reason==='번호 없음',reason:r.reason}))});
+    choices:effective.recipients.map(r=>({id:r.id,relation:r.relation,masked:mask(r.phone),...(!s.noticeDate&&r.verified&&!r.temporary?{channel:r.channel||'ATA'}:{}),available:r.verified,temporary:!!r.temporary,canEnter:s.recipients.find(x=>x.id===r.id).reason==='번호 없음',reason:r.reason}))});
   }
   await auth(session);
   return {date:input.date,name:input.name,school:c.school,sourceFingerprint:c.fingerprint,candidates,lessons:c.entries.filter(e=>!exclusion(e.lesson)).map(e=>e.summary)};
@@ -94,6 +94,17 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   await store.saveNoticeContacts({record,mapping,guest:student.noticeDate?student:null},input.expectedRevision||null,existing?.revision||null);
   return {studentId:student.id,date:input.date,revision:record.revision};
  }
- return {noticeContactOptions:options,saveNoticeContacts:save};
+ async function saveChannel(session,input){
+  const a=await auth(session),c=await context(a,input);
+  if(!['student','mother','father'].includes(input.relation)||!['ATA','LMS'].includes(input.channel))fail('INVALID_REQUEST');
+  const s=c.rows.find(s=>s.id===input.studentId&&!s.noticeDate);
+  if(!s||studentNameKey(s.name)!==studentNameKey(input.name)||directorySchoolKey(s.school,s.grade)!==c.school)fail('STUDENT_SCHOOL_MISMATCH');
+  const r=s.recipients.find(r=>r.id===input.relation);
+  if(!r?.verified||hash([s.identityRevision,s.recipients])!==input.contactVersion)fail('CONTACT_CHANGED');
+  await auth(session);
+  const recipients=await store.setNoticeChannel(s,r,input.channel);
+  return {channel:input.channel,contactVersion:hash([s.identityRevision,recipients])};
+ }
+ return {noticeContactOptions:options,saveNoticeContacts:save,saveNoticeChannel:saveChannel};
 }
 module.exports={createNoticeContactsService,guestId,existingGuests,validRecord,applyNoticeContacts};

@@ -93,7 +93,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
     const delivered=records.find(x=>x.state==='DELIVERED'),pending=records.find(x=>outstanding.has(x.state));
     const state=pending?'pending':!delivered?'unsent':delivered.version===version?'sent':'changed';
     const latest=records[0];
-    const ticket=hash([kind,date,id,r.id,r.phone,verified.mappingRevision,version,latest?.id||'',latest?.state||'',state]);
+    const ticket=hash([kind,date,id,r.id,r.phone,verified.mappingRevision,version,latest?.id||'',latest?.state||'',state,...(r.channel==='LMS'?['LMS']:[])]);
     return {ticket,state,recipient:r,previous:delivered?.text||'',lastState:latest?.state||'',studentId:id,name,date,version,text:c.text,variables:c.variables};
    });
    // A removed/replaced number is not evidence that the new number has received anything.
@@ -155,7 +155,8 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   const changes=mode==='changed'?rows.filter(r=>r.comparisons?.length).map(r=>({
    name:r.name,studentId:r.id,current:r.text,issue:r.issue,comparisons:r.comparisons
   })):[];
-  if((mode==='unsent'||a.canSendTimetable)&&!rules.verifyTemplate(await provider.getTemplate(rules.templateId)))fail('TEMPLATE_MISMATCH');
+  const tickets=rows.flatMap(r=>r.items.filter(x=>x.state===mode));
+  if((!tickets.length||tickets.some(x=>x.recipient.channel!=='LMS'))&&(mode==='unsent'||a.canSendTimetable)&&!rules.verifyTemplate(await provider.getTemplate(rules.templateId)))fail('TEMPLATE_MISMATCH');
   const access=await reviewer(session);
   if(!access.canSendTimetable||!a.canSendTimetable){
    const eligibleStudents=mode==='unsent'?rows.flatMap(r=>{
@@ -164,13 +165,12 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    }):[];
    return {date,audience,mode,readOnly:true,eligibleStudents,changes,rows:rows.map(summary),items:[]};
   }
-  const tickets=rows.flatMap(r=>r.items.filter(x=>x.state===mode));
   const previewId=randomUUID(),expires=now()+15*60000;
   await actor(session);
   if(tickets.length)await store.savePreview(previewId,{kind:'bulk',academyId:a.academyId,actor:a.uid,date,audience,mode,expires,
    tickets:Object.fromEntries(tickets.map(x=>[x.ticket,x.studentId]))});
   return {date,audience,mode,batchSize:40,previewId,expires,changes,rows:rows.map(summary),items:tickets.map(x=>({
-   ticket:x.ticket,studentId:x.studentId,name:x.name,relation:x.recipient.relation,masked:rules.mask(x.recipient.phone),previous:x.previous,text:x.text,retry:x.lastState==='FAILED'
+   ticket:x.ticket,studentId:x.studentId,name:x.name,relation:x.recipient.relation,masked:rules.mask(x.recipient.phone),previous:x.previous,...(x.recipient.channel==='LMS'?{channel:'LMS',text:require('./alimtalk-fallback').fallbackText(x.variables)}:{text:x.text}),retry:x.lastState==='FAILED'
   }))};
  }
  async function send(session,input){
@@ -182,11 +182,11 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
     p.audience!==input.audience||p.date!==input.date||p.mode!==input.mode||tickets.some(t=>!Object.hasOwn(p.tickets,t)))fail('PREVIEW_EXPIRED');
   await store.rate(a.uid,'batchSend',now(),36);await store.rate('academy:'+a.academyId,'batchSend',now(),48);
   const ids=[...new Set(tickets.map(t=>p.tickets[t]))];
-  const [rows,template]=await Promise.all([scan(a,p,ids),provider.getTemplate(rules.templateId)]);
-  if(!rules.verifyTemplate(template))fail('TEMPLATE_MISMATCH');
+  const rows=await scan(a,p,ids);
   const fresh=rows.flatMap(r=>r.items.filter(x=>x.state===p.mode));
   const selected=tickets.map(t=>fresh.find(x=>x.ticket===t));
   if(selected.some(x=>!x))fail('BATCH_CHANGED');
+  if(selected.some(x=>x.recipient.channel!=='LMS')&&!rules.verifyTemplate(await provider.getTemplate(rules.templateId)))fail('TEMPLATE_MISMATCH');
   if(wallNow()-start>30000||p.expires<=now())fail('PREVIEW_EXPIRED');
   let stopped=false;
   const settled=await pooled(selected,async x=>{
@@ -213,7 +213,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(old.state!=='UNKNOWN'||old.messageId||old.groupId||old.trackingIssue!=='RECEIPT_NOT_FOUND')fail('RECEIPT_REVIEW_REQUIRED');
   if(now()-old.createdAt<600000)fail('RECEIPT_REVIEW_TOO_EARLY');
   // An operator must first inspect the provider console. An empty API result alone is insufficient.
-  const event=await provider.lookup({key:old.id,phone:old.phone,createdAt:old.createdAt,smsFallback:old.smsFallback},AbortSignal.timeout(8000));
+  const event=await provider.lookup({key:old.id,phone:old.phone,createdAt:old.createdAt,smsFallback:old.smsFallback,channel:old.channel},AbortSignal.timeout(8000));
   if(event){await services[audience].apply(old.id,event);fail('RECEIPT_FOUND');}
   await actor(session);
   await store.update(id,current=>{
@@ -232,7 +232,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(records.some(r=>!r||r.academyId!==a.academyId||r.date!==date||r.kind!==kinds[audience]||r.studentId==='__alimtalk_admin_test__'))fail('FORBIDDEN');
   const events=await Promise.all(records.map(async r=>{
    if(!outstanding.has(r.state))return null;
-   return provider.lookup({messageId:r.messageId,groupId:r.groupId,key:r.id,phone:r.phone,createdAt:r.createdAt,smsFallback:r.smsFallback},AbortSignal.timeout(8000));
+   return provider.lookup({messageId:r.messageId,groupId:r.groupId,key:r.id,phone:r.phone,createdAt:r.createdAt,smsFallback:r.smsFallback,channel:r.channel},AbortSignal.timeout(8000));
   }));
   await actor(session);
   await Promise.all(records.map((r,i)=>{
@@ -255,7 +255,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
    await pooled(rows.filter(r=>r.scheduleObservedAt),async r=>events.set(r.id,await store.recentChanges(r.id)));
   }
   return {recoveryDeferred,recoveryChecked:missing.length,results:rows.filter(r=>r.studentId!=='__alimtalk_admin_test__').sort(newest).map(r=>({id:r.id,studentId:r.studentId,name:r.variables?.['#{학생명}']||'',createdAt:r.createdAt,
-   trackingMissing:!r.messageId||!r.groupId,trackingIssue:r.trackingIssue||null,lastResultCheckAt:r.lastResultCheckAt||null,state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,retryOf:r.retryOf||null,recoveryResolution:r.recoveryResolution||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.text,hasScheduleChanges:!!r.scheduleObservedAt,scheduleChanges:events.get(r.id),batch:!!r.batchId}))};
+   trackingMissing:!r.messageId||!r.groupId,trackingIssue:r.trackingIssue||null,lastResultCheckAt:r.lastResultCheckAt||null,state:r.state,channel:r.channel||'ATA',originalDeliveryId:r.originalDeliveryId||null,retryOf:r.retryOf||null,recoveryResolution:r.recoveryResolution||null,updatedAt:r.updatedAt||null,fallbackResult:r.fallbackResult||null,ataErrorCode:r.ataErrorCode||null,relation:r.relation,masked:rules.mask(r.phone),errorCode:r.errorCode,text:r.messageText||r.text,hasScheduleChanges:!!r.scheduleObservedAt,scheduleChanges:events.get(r.id),batch:!!r.batchId}))};
  }
  return {batchRoster:roster,batchPreview:prepare,batchSend:send,batchHistory:history,batchRefresh:refresh,batchReleaseUnreceived:releaseUnreceived};
 }

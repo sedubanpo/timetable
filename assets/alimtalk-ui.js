@@ -37,7 +37,7 @@
         const receivers=el('fieldset');receivers.append(el('legend','받는 번호'));
         for(const r of row.choices||[]){const label=el('label');const check=el('input');check.type='checkbox';check.checked=(selection.find(t=>t.studentId===row.studentId)?.recipientIds||[]).includes(r.id);
           check.onchange=()=>{host.querySelector('.alimtalk-confirm')?.remove();preview=null;let target=selection.find(t=>t.studentId===row.studentId);if(!target){target={studentId:row.studentId,recipientIds:[]};selection.push(target);}target.recipientIds=check.checked?[...new Set([...target.recipientIds,r.id])]:target.recipientIds.filter(id=>id!==r.id);locked(send);void load();};
-          label.append(check,document.createTextNode(' '+r.relation+' · '+r.masked));receivers.append(label);}
+          label.append(check,document.createTextNode(' '+r.relation+' · '+r.masked+(r.channel==='LMS'?' · 문자 전용':'')));receivers.append(label);}
         if(!row.choices?.length)receivers.append(el('p','이 대상에게 보낼 수 있는 번호가 없습니다. 학생 원장의 연락처와 이 수업일의 수신자 설정을 확인해 주세요.'));
         section.append(receivers);
         for(const r of row.reasons||[]){
@@ -64,7 +64,8 @@
           memo.append(label);if(row.memoReview.persisted)memo.append(el('p','확인 완료 · 저장됨. 수업 내용이 바뀌면 다시 확인합니다.'));section.append(memo);
         }
         for(const r of row.excluded||[])section.append(el('p','제외 · '+r.reason));
-        if(row.text){const pre=el('pre',row.text);pre.setAttribute('aria-label','실제 치환 본문');section.append(pre);}
+        if(row.messageText){section.append(el('strong','문자 전용 본문'),el('pre',row.messageText));}
+        if(row.text&&(!row.messageText||row.recipients.some(r=>r.channel!=='LMS'))){const pre=el('pre',row.text);pre.setAttribute('aria-label','실제 치환 본문');section.append(pre);}
         host.append(section);
       }
       const c=p.counts||{students:0,messages:0,numbers:0};host.append(el('p','학생 '+c.students+'명 · 메시지 '+c.messages+'건 · 수신번호 '+c.numbers+'개'));
@@ -92,7 +93,7 @@
     });}
     function confirmSend(confirmChanges){
       if(!preview)return;const p=preview,c=p.counts;const box=el('div');box.className='alimtalk-confirm';box.setAttribute('role','group');box.setAttribute('aria-label','알림톡 발송 확인');
-      if(!p.testMode)for(const row of p.rows)box.append(el('p',row.name+' · '+row.date+' · '+(row.recipients||[]).map(r=>r.relation+' '+r.masked).join(', ')));
+      if(!p.testMode)for(const row of p.rows)box.append(el('p',row.name+' · '+row.date+' · '+(row.recipients||[]).map(r=>r.relation+' '+r.masked+(r.channel==='LMS'?' · 문자 전용':'')).join(', ')));
       if(p.testMode)box.append(el('p','선택한 관리자에게만 실제 알림톡을 발송합니다. '+(p.realScheduleTest?'실제 학생 일정입니다.':'가상 학생 일정입니다.')));
       box.append(el('p',c.students+'명의 하루 수업 안내 '+c.messages+'건을 '+c.numbers+'개 번호로 요청합니다. API 접수는 수신 완료나 읽음을 뜻하지 않습니다.'));
       const commit=button('확인 후 발송 요청',()=>run(async g=>{
@@ -106,11 +107,11 @@
     function changes(before=[],after=[]){host.append(el('h4','이전 안내'));before.forEach(x=>host.append(el('pre',x.text||'')));host.append(el('h4','현재 안내'));after.forEach(x=>host.append(el('pre',x.text||'')));}
     function renderResults(rows){shell();host.append(el('h4','발송 결과'));if(!rows.length)host.append(el('p','알림톡 이력이 없습니다. 수동 전달 기록과는 별도입니다.'));
       for(const r of rows){const line=el('section');
-        line.append(el('p',[r.date,r.relation,r.masked].filter(Boolean).join(' · ')));
+        line.append(el('p',[r.date,r.relation,r.masked,r.channel==='LMS'?'문자':''].filter(Boolean).join(' · ')));
         const state=el('strong',(r.state==='DELIVERED'?'✓ ':'')+(({CHECKING:'문자 대체 결과 확인 중',DELIVERED:'대체 문자 수신 완료',FAILED:'대체 문자 발송 실패',NOT_SENT:'대체 문자 미발송'})[r.fallbackResult]||R.historyLabel(r)));
         state.className=r.state==='DELIVERED'?'delivery-success':'delivery-state';line.append(state);
         if(r.errorCode)line.append(el('p','오류 코드: '+r.errorCode));if(r.messageId)line.append(el('p','메시지 ID: '+r.messageId));if(r.groupId)line.append(el('p','그룹 ID: '+r.groupId));
-        if(r.text){const details=el('details');details.append(el('summary','전송 내용 이력'),el('pre',r.text));line.append(details);}
+        if(r.text){const details=el('details');details.append(el('summary','전송 내용 이력'),el('pre',r.messageText||r.text));line.append(details);}
         if(['UNKNOWN','REQUESTING','ACCEPTED','PROCESSING'].includes(r.state))line.append(button('서버에서 결과 확인',()=>run(async g=>{const result=await api('reconcile',{id:r.id});if(current(g))renderResults([result]);})));
         host.append(line);}
       host.append(button('알림톡 미리보기',()=>load()));
