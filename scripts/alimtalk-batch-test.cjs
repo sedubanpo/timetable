@@ -296,3 +296,38 @@ test('saved memo review removes roster hold for both audiences; bulk rechecks ac
  lesson.end='17:00';delete x.clear.id1;assert.equal((await x.preview()).items.length,0);
  assert.equal(x.f.sent.length,0);
 });
+
+test('an abandoned bulk claim with no receipt reaches manual review without opening an automatic retry',async()=>{
+ const x=setup(1),id='c'.repeat(64);
+ const claim={id,academyId:'banpo',date:x.base.date,kind:'daily-lessons',studentId:'id1',phone:x.people.id1.recipients[0].phone,state:'REQUESTING',createdAt:100000,messageId:null,groupId:null};
+ const input={...x.base,id,studentId:'id1',confirmedNotReceived:true};
+ await x.f.deps.store.claim(id,claim);
+ const refresh=()=>x.b.batchRefresh('',{...x.base,ids:[id]});
+ await refresh();
+ assert.equal(x.f.records.get(id).state,'REQUESTING');
+ await assert.rejects(x.b.batchReleaseUnreceived('',input),{code:'RECEIPT_REVIEW_REQUIRED'});
+ x.expire();
+ const {results}=await x.b.batchHistory('',x.base);
+ assert.equal(results[0].state,'UNKNOWN');
+ assert.equal(results[0].trackingIssue,'RECEIPT_NOT_FOUND');
+ assert.equal((await x.preview()).items.length,0);
+ await x.b.batchReleaseUnreceived('',input);
+ assert.equal(x.f.records.get(id).state,'NOT_ACCEPTED');
+ assert.equal(x.f.sent.length,0);
+});
+
+test('missing-receipt history repair records successful lookups even when a sibling lookup fails',async()=>{
+ const x=setup(2),ids=['a'.repeat(64),'b'.repeat(64)];
+ for(const [i,id] of ids.entries()){
+  await x.f.deps.store.claim(id,{id,academyId:'banpo',date:x.base.date,kind:'daily-lessons',studentId:'id'+(i+1),state:'UNKNOWN',createdAt:1,messageId:null,groupId:null});
+ }
+ x.f.deps.provider.lookup=async({key})=>{
+  if(key===ids[0])throw Error('single lookup unavailable');
+  return {key,messageId:'recovered',groupId:'g',statusCode:'4000'};
+ };
+ const history=await x.b.batchHistory('',x.base);
+ assert.equal(history.recoveryDeferred,true);
+ assert.equal(history.results.find(r=>r.id===ids[0]).state,'UNKNOWN');
+ assert.equal(history.results.find(r=>r.id===ids[1]).state,'DELIVERED');
+ assert.equal(x.f.sent.length,0);
+});

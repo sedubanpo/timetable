@@ -2,7 +2,7 @@
 // A roster is a read. Only a reviewed, actor-bound ticket can cross the delivery boundary.
 const {randomUUID}=require('node:crypto');
 const rules=require('./alimtalk-contract');
-const {hash,timeMemoReview,memoScheduleKey}=require('./alimtalk-service');
+const {afterEmptyLookup,hash,timeMemoReview,memoScheduleKey}=require('./alimtalk-service');
 const {verifiedStudentDay}=require('./alimtalk-verified-day');
 const {withStudentDirectory}=require('./alimtalk-students');
 const fail=code=>{throw Object.assign(Error(code),{code});};
@@ -230,15 +230,19 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   await store.rate(a.uid,'batchRefresh',now(),32);
   const records=await Promise.all([...new Set(ids)].map(id=>store.get(id)));
   if(records.some(r=>!r||r.academyId!==a.academyId||r.date!==date||r.kind!==kinds[audience]||r.studentId==='__alimtalk_admin_test__'))fail('FORBIDDEN');
-  const events=await Promise.all(records.map(async r=>{
+  const events=await Promise.allSettled(records.map(async r=>{
    if(!outstanding.has(r.state))return null;
    return provider.lookup({messageId:r.messageId,groupId:r.groupId,key:r.id,phone:r.phone,createdAt:r.createdAt,smsFallback:r.smsFallback,channel:r.channel},AbortSignal.timeout(8000));
   }));
   await actor(session);
-  await Promise.all(records.map((r,i)=>{
-   if(events[i])return services[audience].apply(r.id,events[i]);
-   if(outstanding.has(r.state))return store.update(r.id,current=>({...current,lastResultCheckAt:now(),...(!current.messageId||!current.groupId?{trackingIssue:'RECEIPT_NOT_FOUND'}:{})}));
+  const writes=await Promise.allSettled(records.map(async (r,i)=>{
+   const lookup=events[i];
+   if(lookup.status==='rejected')throw lookup.reason;
+   if(lookup.value)return services[audience].apply(r.id,lookup.value);
+   if(outstanding.has(r.state))return store.update(r.id,current=>afterEmptyLookup(current,now()));
   }));
+  const failure=writes.find(result=>result.status==='rejected');
+  if(failure)throw failure.reason;
   return {checked:records.length};
  }
  async function history(session,input){
@@ -247,7 +251,10 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   // Repair missing receipts on history reads, at most five and no more than once a minute.
   const missing=rows.filter(r=>r.studentId!=='__alimtalk_admin_test__'&&outstanding.has(r.state)&&(!r.messageId||!r.groupId)&&now()-(r.lastResultCheckAt||r.createdAt)>60000).slice(0,5);
   let recoveryDeferred=false;
-  if(missing.length){try{await refresh(session,{...input,ids:missing.map(r=>r.id)});rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);}catch{recoveryDeferred=true;}}
+  if(missing.length){
+   try{await refresh(session,{...input,ids:missing.map(r=>r.id)});}catch{recoveryDeferred=true;}
+   rows=await store.dayHistory(a.academyId,input.date,kinds[input.audience]);
+  }
   await actor(session);
   const events=new Map();
   if(input.studentIds){

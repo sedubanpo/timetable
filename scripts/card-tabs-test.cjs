@@ -27,17 +27,23 @@ for (const file of ['Index.html', 'docs/index.html']) {
     search.value = '가상';
 
     let pendingRoster;
+    const imageReads = [];
+    window.loadStudentCardStatuses = async () => { imageReads.push('status'); };
+    window.loadSharedSubjectIcons = async () => {};
+    window.loadCardTeacherAssets = async () => { imageReads.push('teachers'); };
     const reload = window.reloadCardRoster;
     window.reloadCardRoster = () => (pendingRoster = reload());
     window.setStudentCardMode('message');
     assert.equal(document.getElementById('cardMessageTab').getAttribute('aria-selected'), 'true');
     assert.match(reference.textContent, /발송 문구를 확인하고 있습니다/);
     await pendingRoster;
+    assert.deepEqual(imageReads, []);
     assert.match(reference.textContent, /① 수학 정규 16:00–17:00/);
     assert.doesNotMatch(reference.textContent, /자기주도/);
 
     panel.hidden = false;
     window.setStudentCardMode('image');
+    assert.deepEqual(imageReads, ['status','teachers']);
     assert.equal(panel.hidden, true);
     assert.equal(document.getElementById('cardMessageReference').hidden, true);
     assert.equal(search.value, '가상');

@@ -15,6 +15,17 @@ function deliveryId(academy,row,date,phone,kind,history,retryFailed){
   return hash(records.some(r=>r.version===row.version)?[...base,latest.id]:base);
 }
 function status(code){const c=String(code);if(['3014','3048'].includes(c))return 'UNKNOWN';return {'2000':'ACCEPTED','3000':'PROCESSING','4000':'DELIVERED','5000':'FAILED'}[c]||(/^[123]\d{3}$/.test(c)?'FAILED':'UNKNOWN');}
+// A completed empty lookup cannot prove non-delivery. Keep an abandoned claim held
+// for operator review, and never overwrite a terminal receipt delivered concurrently.
+function afterEmptyLookup(record,checkedAt,deadline=8000){
+  if(!['REQUESTING','ACCEPTED','PROCESSING','UNKNOWN'].includes(record.state))return record;
+  const next={...record,lastResultCheckAt:checkedAt};
+  if(!record.messageId||!record.groupId)next.trackingIssue='RECEIPT_NOT_FOUND';
+  if(record.state==='REQUESTING'&&checkedAt-record.createdAt>deadline){
+    next.state='UNKNOWN';next.errorCode='RESULT_UNCERTAIN';next.updatedAt=checkedAt;
+  }
+  return next;
+}
 function verifyWebhook(secret,header){
   if(typeof secret!=='string'||!secret||typeof header!=='string'||!/^[a-f0-9]{40}$/.test(header))return false;
   return crypto.timingSafeEqual(Buffer.from(crypto.createHash('sha1').update(secret).digest('hex')),Buffer.from(header));
@@ -163,7 +174,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     const r=await bounded(signal=>provider.lookup({messageId:old.messageId,groupId:old.groupId,key:old.id,phone:old.phone,createdAt:old.createdAt,smsFallback:old.smsFallback,channel:old.channel},signal),deadline);
     if(r){if(r.key!==old.id||!r.messageId||!r.groupId)fail('RESULT_MISMATCH');return apply(old.id,r);}
     // An empty provider search does not prove non-delivery; keep retries blocked.
-    return store.update(old.id,current=>({...current,lastResultCheckAt:now(),...(!current.messageId||!current.groupId?{trackingIssue:'RECEIPT_NOT_FOUND'}:{})}));
+    return store.update(old.id,current=>afterEmptyLookup(current,now(),deadline));
   }
   async function apply(id,event){return store.update(id,old=>{
     if(!old||event.key!==id||(old.messageId&&old.messageId!==event.messageId)||(old.groupId&&old.groupId!==event.groupId))fail('RESULT_MISMATCH');
@@ -189,4 +200,4 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
       await apply(id,{messageId:e.messageId,groupId:e.groupId,statusCode:e.statusCode,key:id});}return {ok:true};}
   return {preview,saveMemoReview,send,results,reconcile,webhook,dispatch,apply};
 }
-module.exports={createService,status,verifyWebhook,hash,timeMemoReview,memoScheduleKey};
+module.exports={createService,afterEmptyLookup,status,verifyWebhook,hash,timeMemoReview,memoScheduleKey};

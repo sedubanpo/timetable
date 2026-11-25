@@ -103,7 +103,7 @@ function renderChanges(host,p,who){
   group.append(body('현재 안내 본문',student.current));host.append(group);
  }
 }
-function mount({host,api,context,refresh}){
+function mount({host,api,context,refresh,onBack}){
  let seq=0,sending=false;
 
  // Only lock this modal. Session and date changes still invalidate outstanding requests.
@@ -134,7 +134,7 @@ function mount({host,api,context,refresh}){
   }
  }
  function studentBack(target){
-  if(target)host.prepend(button('← 학생 목록',()=>{reset();host.hidden=true;delete host.dataset.bulk;}));
+  if(target)host.prepend(button('← 학생 목록',()=>{reset();host.hidden=true;delete host.dataset.bulk;onBack?.();}));
  }
  // The card button is the user's send instruction. Server checks still run before dispatch.
  async function quickSend(mode,target){

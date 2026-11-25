@@ -131,3 +131,89 @@ test('changed roster groups the visible names once per reason using delivered le
  assert.equal(reason({comparisons:[{previous:room},{previous:order}]}),'mixed');
  dom.window.close();
 });
+
+function filteredRosterFixture(){
+ const {dom,w}=setup();
+ w.document.body.innerHTML=`<main id="studentImageModal">
+   <input id="studentImageSearch"><button data-roster-filter="all">전체</button>
+   <span class="student-preview-panel-title"></span><span class="student-preview-panel-sub"></span>
+   <div id="batchRosterStatus"></div><div id="studentImageList"></div><div id="rosterDetail"></div>
+   <div id="cardAlimtalkPanel" hidden></div></main>`;
+ for(const f of ['alimtalk-batch-ui.js','alimtalk-roster.js'])w.eval(fs.readFileSync('assets/'+f,'utf8'));
+ const html=fs.readFileSync('Index.html','utf8');
+ w.eval(html.slice(html.indexOf('      function filterStudentImageList('),html.indexOf('      function getStudentPreviewThemeClass(')));
+ const panel=w.document.getElementById('cardAlimtalkPanel');
+ panel.scrollIntoView=()=>{};
+ Object.assign(w,{studentCardMode:'message',studentCardFilter:'all',cardAudience:'guardian',currentSheetName:'11/25',
+  attendanceDateKey:()=> '2026-11-25',getScheduleSessionKey:()=> 'operator',timetableLoginSequence:1,
+  isStudentImageModalOpen:()=>true,studentImageScheduleMap:{가학생:[],나학생:[]},selectedStudentForImage:'가학생',
+  getStudentCardStatusRecord:()=>({}),refreshStudentImageListSelectionState:()=>{},renderCardMessageReference:()=>{},
+  resetCardAlimtalk:()=>{panel.hidden=true;panel.replaceChildren();w.cardBulkUI?.reset();},
+  selectStudentImageItem:name=>{w.resetCardAlimtalk();w.selectedStudentForImage=name;}});
+ const first={name:'가학생',studentId:'a',state:'unsent'},next={name:'나학생',studentId:'b',state:'unsent'};
+ w.cardRosterScope=w.rosterKey();w.cardRosterRows=[first,next];w.rosterFilter='unsent';w.filterStudentImageList();
+ return {dom,w,panel,first,next};
+}
+
+test('background roster completion preserves contact edits when the student leaves the filter; explicit navigation still selects',async()=>{
+ const {dom,w,panel,first,next}=filteredRosterFixture();
+ try{
+  let finish;w.cardAlimtalkApi=()=>new Promise(resolve=>{finish=resolve;});
+  const pending=w.reloadCardRoster({background:true});
+  panel.hidden=false;
+  const input=w.document.createElement('input');panel.append(input);input.value='편집 중';input.focus();
+  finish({rows:[{...first,state:'sent'},next]});await pending;
+  assert.equal(w.selectedStudentForImage,first.name);assert.equal(panel.hidden,false);
+  assert.equal(input.value,'편집 중');assert.equal(w.document.activeElement,input);
+  assert.equal(w.document.querySelector('[data-student-name="가학생"]'),null);
+  w.document.querySelector('[data-student-name="나학생"]').click();
+  assert.equal(panel.hidden,true);assert.equal(w.selectedStudentForImage,next.name);
+  assert.equal(w.document.querySelector('#rosterDetail .roster-student-action').getAttribute('aria-label'),'나학생 학부모 발송');
+ }finally{dom.window.close();}
+});
+
+test('a fresh preview and receipt update cannot dismiss a quick-send result; returning reconciles filtered details',async()=>{
+ const {dom,w,panel,first,next}=filteredRosterFixture();
+ try{
+  const actions=[];
+  w.cardAlimtalkApi=async(action,input)=>{
+   actions.push(action);
+   if(action==='batchPreview'){
+    const rows=[{...first,state:'sent'}];
+    w.acceptCardRoster(rows,w.rosterKey(),input.studentIds);
+    return {rows,items:[]};
+   }
+   assert.equal(action,'batchRoster');
+   return {rows:[{...first,state:'sent'}]};
+  };
+  await w.openCardRosterAction(first.name,'unsent');
+  await new Promise(r=>setImmediate(r));
+  assert.deepEqual(actions,['batchPreview','batchRoster']);
+  assert.equal(panel.hidden,false);assert.match(panel.textContent,/현재 발송 가능한 번호가 없습니다/);
+  assert.equal(w.selectedStudentForImage,first.name);
+  [...panel.querySelectorAll('button')].find(b=>b.textContent==='← 학생 목록').click();
+  assert.equal(panel.hidden,true);assert.equal(w.selectedStudentForImage,next.name);
+  assert.equal(w.document.querySelector('#rosterDetail .roster-student-action').getAttribute('aria-label'),'나학생 학부모 발송');
+ }finally{dom.window.close();}
+});
+
+test('background changes keep checked bulk recipients and the bulk title until explicit filter navigation',async()=>{
+ const {dom,w,panel,first,next}=filteredRosterFixture();
+ try{
+  w.cardAlimtalkApi=async(action)=>{
+   assert.equal(action,'batchPreview');
+   return {rows:[first,next],items:[{...next,ticket:'selected',relation:'모',masked:'010-****-0000',text:'가상 안내'}]};
+  };
+  w.openCardBulk('unsent');
+  await new Promise(r=>setImmediate(r));
+  const pick=panel.querySelector('.batch-student-names input');
+  pick.click();
+  const title=w.document.querySelector('.student-preview-panel-title');
+  const previousTitle=title.textContent;
+  w.acceptCardRoster([{...first,state:'sent'},next],w.rosterKey());
+  assert.equal(panel.hidden,false);assert.equal(title.textContent,previousTitle);
+  assert.equal(panel.querySelector('.batch-student-names input'),pick);assert(pick.checked);
+  w.document.querySelector('[data-roster-filter="all"]').click();
+  assert.equal(panel.hidden,true);
+ }finally{dom.window.close();}
+});

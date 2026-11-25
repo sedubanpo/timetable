@@ -59,7 +59,7 @@ assert.equal(h.counts.filtered, 0); assert.equal(old.counts.filtered, 8);
 assert.equal(h.counts.membershipBuilds, 4, 'second teacher shares membership');
 const warm = { ...h.counts }; h.get('김샘');
 assert.deepEqual(h.counts, warm, '120-second teacher-list hit does no work');
-assert.equal(h.entries.get('TEACHER_SHEETS_V3_김샘').expires, 120);
+assert.equal(h.entries.get('TEACHER_SHEETS_V4_김샘').expires, 120);
 assert.equal(h.entries.get('SCHEDULE_REVISION_V1_2020-01-01').expires, 15);
 h.sheets.get('2020-01-01')[1][1] = '수학 새샘T';
 assert.deepEqual(h.get('김샘'), ['2020-01-01', '2026-09-17'], 'list freshness window unchanged');
@@ -79,14 +79,32 @@ for (const mode of [[false, true], [true, false], [true, true], [false, false, 1
 }
 const corrupt = harness(); corrupt.get('김샘');
 corrupt.entries.set('SCHEDULE_TEACHERS_V1_2020-01-01', { value: '{bad', expires: 999 });
-corrupt.entries.delete('TEACHER_SHEETS_V3_김샘');
+corrupt.entries.delete('TEACHER_SHEETS_V4_김샘');
 assert.deepEqual(corrupt.get('김샘'), ['2020-01-01', '2026-09-17']);
 for (const invalid of ['{bad', 'null', '{"version":"fake","grid":{},"headers":null}']) {
   const brokenBase = harness(); brokenBase.get('김샘');
   brokenBase.entries.set('SHEET_DATA_V64_2020-01-01', { value: invalid, expires: 999 });
-  brokenBase.entries.delete('TEACHER_SHEETS_V3_김샘');
+  brokenBase.entries.delete('TEACHER_SHEETS_V4_김샘');
   assert.deepEqual(brokenBase.get('김샘'), ['2020-01-01', '2026-09-17'], 'corrupt base falls through to live read');
 }
+const mixedCatalog = harness();
+mixedCatalog.sheets.set('11/25(수)', [['시간','1강의실'],['8:00','수학 김샘T']]);
+mixedCatalog.sheets.set('26-09 상담현황 추적', [['시간','1강의실'],['8:00','수학 김샘T']]);
+mixedCatalog.sheets.set('2026 학교별 상담', [['시간','1강의실'],['8:00','수학 김샘T']]);
+assert.deepEqual(mixedCatalog.get('김샘'), ['2020-01-01','2026-09-17','11/25(수)']);
+assert.equal(mixedCatalog.counts.reads,5,'dated class tabs only, ignoring non-date tabs containing years');
+const unavailable = harness();
+const readGrid = unavailable.scope.getFixedGridData;
+unavailable.scope.getFixedGridData = (name, force) => name === '2026-09-17' ? {error:'unavailable'} : readGrid(name,force);
+assert.throws(() => unavailable.get('김샘'), /전체 수업일/);
+assert.equal(unavailable.entries.has('TEACHER_SHEETS_V4_김샘'), false, 'partial date listings never cached');
+unavailable.scope.getFixedGridData = readGrid;
+assert.deepEqual(unavailable.get('김샘'), ['2020-01-01', '2026-09-17']);
+unavailable.scope.getSheetNames = () => ['ERROR: unavailable'];
+assert.throws(() => unavailable.get('김샘',true), /전체 수업일/);
+const cacheDown = harness();
+cacheDown.failures(true, true);
+assert.ok(cacheDown.scope.teacherGridHasItems_(cacheDown.scope.getTeacherGridData('2026-09-17','김샘')), 'teacher sees current authorized grid despite cache failure');
 // Extra grid columns and out-of-hours rows never become visible dates.
 const edge = harness();
 edge.scope.getFixedGridData = () => ({ headers: ['room'], grid: { 8: [[], ['수학 유령T']], 23: [['수학 유령T']] }, version: 'edge' });

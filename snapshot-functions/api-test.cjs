@@ -14,7 +14,7 @@ function fixture(){
   },require:name=>({
     'firebase-admin/app':{initializeApp(){}},'firebase-admin/auth':{getAuth:()=>({verifyIdToken:async(token,revoked)=>{assert.equal(revoked,true);if(token!=='valid')throw Error('auth');return {uid:'u'};}})},
     'firebase-admin/storage':{getStorage:()=>({bucket:()=>({file:()=>({save:async()=>{}})})})},'./annex-guides':require('./annex-guides'),'./visitor-media':require('./visitor-media'),'firebase-admin/firestore':{getFirestore:()=>db},'firebase-functions/v2/https':{onRequest:(config,handler)=>Object.assign(handler,{config})},
-    'firebase-functions/v2/scheduler':{onSchedule:(config,handler)=>Object.assign(handler,{config})},'firebase-functions/params':{defineSecret:()=>({value:()=>secret})},'node:crypto':crypto,'./core':{...core,isSnapshotRestTime:()=>restTime}
+    'firebase-functions/v2/scheduler':{onSchedule:(config,handler)=>Object.assign(handler,{config})},'firebase-functions/params':{defineSecret:()=>({value:()=>secret}),defineString:()=>({value:()=>''})},'node:crypto':crypto,'./core':{...core,isSnapshotRestTime:()=>restTime}
   })[name]};
   vm.runInNewContext(fs.readFileSync(__dirname+'/index.js','utf8'),context);
   async function request(body,token='valid'){let status=200,result;await exports.timetableSnapshotApi({method:'POST',body,headers:{authorization:'Bearer '+token}},{set(){},status(s){status=s;return this;},json(v){result=v;return this;}});return {status,...result};}

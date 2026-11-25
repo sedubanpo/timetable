@@ -15,7 +15,7 @@ const server = http.createServer((req, res) => {
   res.end(fs.readFileSync(path.join(root, 'Index.html')));
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const browser = await playwright.chromium.launch({ headless: true });
+const browser = await playwright.chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHROMIUM_CHANNEL });
 const results = { baseline, browser: browser.version(), platform: process.platform, cases: {} };
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'ko-KR', timezoneId: 'Asia/Seoul', reducedMotion: 'reduce' });
@@ -66,6 +66,24 @@ try {
   });
   await page.evaluate(() => { selectAttendanceInboxDate(window.qaYesterday); selectAttendanceInboxDate(window.qaToday); });
   results.cases.draftAcrossDates = await reply.inputValue() === '작성 중인 답변 — 보존 필요';
+  results.cases.staleDraftRequiresReview = await page.evaluate(async () => {
+    const report = attendanceRealtimeState.reports[0];
+    const controls = document.querySelector('.attendance-chat-thread .attendance-inbox-controls');
+    const draft = controls.querySelector('textarea');
+    const button = controls.querySelector('button');
+    const typed = draft.value;
+    attendanceRealtimeState.reports[0] = {...report, teacherRevision: 2, note: '강사 수정 내용'};
+    renderAttendanceInbox();
+    if (button.textContent !== '수정 내용 확인' || draft.value !== typed ||
+        !document.querySelector('.attendance-chat-thread .attendance-chat-body').textContent.includes('강사 수정 내용')) return false;
+    await saveAttendanceInboxReply(button);
+    if (button.textContent !== '답변 보내기' || draft.value !== typed || controls.dataset.revision !== '2/0') return false;
+    attendanceRealtimeState.reports[0] = {...attendanceRealtimeState.reports[0], deskRevision: 1, deskReply: '다른 데스크 답변'};
+    renderAttendanceInbox();
+    return document.querySelector('.attendance-chat-thread textarea') === draft &&
+      button.textContent === '수정 내용 확인' && controls.querySelector('[role=status]').textContent.includes('수정') &&
+      draft.value === typed && document.querySelector('.attendance-chat-thread .attendance-chat-body').textContent.includes('다른 데스크 답변');
+  });
   results.cases.explicitDate = await page.evaluate(() => attendanceReportDateKey({ dateKey: '2025-01-03', sheetName: '1/3(금)', reportedAtMs: new Date(2026, 8, 5).getTime() }) === '2025-01-03');
   results.cases.invalidDate = await page.evaluate(() => attendanceDateFromKey('2026-02-31') === null);
   await page.screenshot({ path: path.join(evidence, baseline ? 'baseline-chat.png' : 'desktop-chat.png') });

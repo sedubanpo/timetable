@@ -923,10 +923,12 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
     if (!base || base.error) return base;
     var cacheKey = "TEACHER_GRID_V6_" + sheetName + "_" + selectedTeacher;
     if (!forceRefresh) {
-      var cached = cache.get(cacheKey);
+      var cached = scheduleCacheGet_(cache, cacheKey);
       if (cached) {
-        var cachedTeacherGrid = JSON.parse(cached);
-        if (cachedTeacherGrid.version === base.version) return cachedTeacherGrid;
+        try {
+          var cachedTeacherGrid = JSON.parse(cached);
+          if (cachedTeacherGrid.version === base.version && Array.isArray(cachedTeacherGrid.headers) && cachedTeacherGrid.grid) return cachedTeacherGrid;
+        } catch (cacheError) {}
       }
     }
 
@@ -948,7 +950,7 @@ function getTeacherGridData(sheetName, teacherName, forceRefresh) {
       grid: filtered,
       version: base.version
     };
-    cache.put(cacheKey, JSON.stringify(result), 120);
+    scheduleCachePut_(cache, cacheKey, JSON.stringify(result), 120);
     return result;
   } catch (e) {
     return { error: "TEACHER_GRID_ERR: " + e.message };
@@ -973,7 +975,7 @@ function getTeacherSheetNames(teacherName, forceRefresh) {
     if (!selectedTeacher) return getSheetNames();
 
     var cache = CacheService.getScriptCache();
-    var cacheKey = "TEACHER_SHEETS_V3_" + selectedTeacher;
+    var cacheKey = "TEACHER_SHEETS_V4_" + selectedTeacher;
     if (!forceRefresh) {
       var cached = scheduleCacheGet_(cache, cacheKey);
       if (cached) {
@@ -985,17 +987,21 @@ function getTeacherSheetNames(teacherName, forceRefresh) {
     // selectedTeacher into getTeacherGridData, which normalizes it again.
     var gridTeacher = normalizeTeacherName_(selectedTeacher);
     var names = getSheetNames();
+    if (!Array.isArray(names) || names.some(function(name) { return /^ERROR:/.test(name); })) {
+      throw new Error("날짜 목록 조회 실패");
+    }
     var filtered = names.filter(function(sheetName) {
-      if (String(sheetName || "").indexOf("사본") !== -1) return false;
+      var title = String(sheetName || "").trim();
+      if (title.indexOf("사본") !== -1 || !/^(?:\d{4}[-/.])?(?:0?[1-9]|1[0-2])[-/.](?:0?[1-9]|[12]\d|3[01])(?!\d)/.test(title)) return false;
       var base = getFixedGridData(sheetName, forceRefresh);
-      if (!base || base.error) return false;
+      if (!base || base.error) throw new Error("날짜별 시간표 조회 실패");
       if (!gridTeacher) return teacherGridHasItems_(base);
       return getScheduleTeacherMembership_(sheetName, base, forceRefresh).indexOf(gridTeacher) !== -1;
     });
     scheduleCachePut_(cache, cacheKey, JSON.stringify(filtered), 120);
     return filtered;
   } catch (e) {
-    return [];
+    throw new Error("강사의 전체 수업일을 확인하지 못했습니다. 다시 조회해 주세요.");
   }
 }
 

@@ -7,7 +7,7 @@ const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve()
 async function check(file) {
   const html = fs.readFileSync(path.join(root, file), 'utf8');
   const app = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).find(s => s.includes("function loadData("));
-  const scope = {console, AbortController, window: {addEventListener() {}}, document: {addEventListener() {}, getElementById() {return {style: {}, classList: {add() {}, remove() {}}};}, querySelectorAll: () => []}, localStorage: {getItem: () => null}, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, URLSearchParams, Date, Promise, Set, Map};
+  const scope = {TimetableAlimtalk: require("../assets/alimtalk-contract.js"), console, AbortController, window: {addEventListener() {}}, document: {addEventListener() {}, getElementById() {return {style: {}, classList: {add() {}, remove() {}}};}, querySelectorAll: () => []}, localStorage: {getItem: () => null}, setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {}, URLSearchParams, Date, Promise, Set, Map};
   vm.createContext(scope);
   vm.runInContext(app, scope);
   const run = code => vm.runInContext(code, scope);
@@ -43,6 +43,31 @@ async function check(file) {
   assert.equal(run(`getEnrollmentIdentityForStudent('Alice','School 2').studentId`), 'new');
   await refresh(changedId.map(r => r.id === 'new' ? {...r,active:false} : r), true);
   assert.equal(run(`getEnrollmentIdentityForStudent('Alice','School 2')`), null);
+  scope.identityRows = [
+    { id: 'third', name: '합성학생B', school: '가상중학교', grade: '중3' },
+    { id: 'second', name: '합성학생b', school: '가상중', grade: 2 },
+    { id: 'archived', name: '합성학생b', school: '가상중', grade: 2, isAlias: true },
+    { id: 'other', name: '다른학생', school: '나고3' },
+    { id: 'special', name: '연도학생', school: '교육청', grade: '2007' }
+  ];
+  run('globalThis.previousEnrollment=studentEnrollmentStatusState; studentEnrollmentStatusState=buildEnrollmentStatusIndex(identityRows)');
+  assert.equal(run("getEnrollmentIdentityForStudent('합성학생b','가상중3').studentId"), 'third');
+  assert.equal(run("getEnrollmentIdentityForStudent('합성학생B','가상중2').studentId"), 'second');
+  assert.equal(run("getEnrollmentIdentityForStudent('연도학생','교육청2007').studentId"), 'special');
+  assert.equal(run("getEnrollmentIdentityForStudent('연도학생','교육청2006')"), null);
+  for (const school of ['다른고3','나고2','나고','']) {
+    scope.lookupSchool = school;
+    assert.equal(run("getEnrollmentIdentityForStudent('다른학생',lookupSchool)"), null);
+  }
+  for (const flags of [{disabled:true},{deletedAt:'2026-01-01'},{isDeleted:true},{mergedInto:'other'},{status:'MERGED'},
+                       {identityStatus:'ALIAS'},{campusId:'another-campus'},{canonicalStudentId:'other'}]) {
+    scope.flags = flags;
+    run("studentEnrollmentStatusState=buildEnrollmentStatusIndex([{id:'stale',name:'검증',school:'가상중2',...flags}])");
+    assert.equal(run("getEnrollmentIdentityForStudent('검증','가상중2')"), null);
+  }
+  run("studentEnrollmentStatusState=buildEnrollmentStatusIndex(identityRows.concat({id:'ambiguous',name:'합성학생B',school:'가상중2'}))");
+  assert.equal(run("getEnrollmentIdentityForStudent('합성학생b','가상중2')"), null);
+  run('studentEnrollmentStatusState=previousEnrollment');
   const failed = run('loadStudentEnrollmentStatusWarnings(true)');
   await flush(); run(`requests.at(-1).reject(new Error('offline'))`);
   await assert.rejects(failed, /offline/);
@@ -86,8 +111,13 @@ async function check(file) {
   run('resetStudentEnrollmentStatus();authResolve(auth)');
   assert.equal(await pendingAuth,false); assert.equal(run('requests.length'),before);
   // Exercise production pagination beyond old historical limits.
-  run(`globalThis.page=0;fetch=()=>Promise.resolve({ok:true,json:()=>Promise.resolve({documents:Array.from({length:300},(_,i)=>({name:'students/'+(page*300+i),fields:{name:{stringValue:'Name'+(page*300+i)}}})),nextPageToken:++page<6?'next':''})});`);
+  run(`globalThis.page=0;globalThis.readUrls=[];fetch=url=>(readUrls.push(url),Promise.resolve({ok:true,json:()=>Promise.resolve({documents:Array.from({length:300},(_,i)=>({name:'students/'+(page*300+i),fields:{name:{stringValue:'Name'+(page*300+i)}}})),nextPageToken:++page<6?'next':''})}));`);
   assert.equal((await run('originalFetchEnrollment("token")')).length,1800);
+  for(const url of run('readUrls')){
+    const fields = new URL(url).searchParams.getAll('mask.fieldPaths');
+    assert(fields.includes('name') && fields.includes('grade') && fields.includes('status'));
+    assert(!fields.some(field=>/phone|contact|address/i.test(field)));
+  }
   console.log(file + ': enrollment semantics, freshness/force, identities, session races, failure isolation and 1800-row pagination passed');
 }
 (async()=>{await check('Index.html');await check('docs/index.html');})().catch(error=>{console.error(error);process.exitCode=1;});

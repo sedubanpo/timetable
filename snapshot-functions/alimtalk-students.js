@@ -16,12 +16,11 @@ function contacts(doc){
 function createStudentAdapter({readStudent,findMappings,allowInactiveNotices=false}){
   return async function resolve(id,signal){
     if(!valid(id))fail('INVALID_STUDENT_ID');
-    const seen=new Set();let current=id,doc;
+    const seen=new Set();let current=id;
     for(let depth=0;depth<8;depth++){
       if(signal?.aborted)fail('ABORTED');
       if(seen.has(current))fail('IDENTITY_CYCLE');seen.add(current);
-      doc=await readStudent(current,signal);
-      const mappings=await findMappings(current,signal);
+      const [doc,mappings]=await Promise.all([readStudent(current,signal),findMappings(current,signal)]);
       if(!Array.isArray(mappings)||mappings.length>20)fail('IDENTITY_MAPPING_LIMIT');
       const refs=new Set();
       for(const m of mappings){
@@ -82,8 +81,10 @@ function withStudentDirectory({loadMappedDay,resolveStudent,readClearance,readNo
       }
       try{
         if(typeof readClearance!=='function')fail('CONTACT_CLEARANCE_REQUIRED');
-        const clearance=await readClearance(actor,id,date,signal);
-        const notice=typeof readNoticeContacts==='function'?await readNoticeContacts(actor,id,date):null;
+        const [clearance,notice]=await Promise.all([
+          readClearance(actor,id,date,signal),
+          typeof readNoticeContacts==='function'?readNoticeContacts(actor,id,date):null
+        ]);
         const {validRecord,applyNoticeContacts}=require('./alimtalk-notice-contacts');
         const approved=validRecord(notice,actor,date,student,now());
         if(student.noticeDate&&student.noticeDate!==date)fail('TEMPORARY_ATTENDANCE_REQUIRED');
