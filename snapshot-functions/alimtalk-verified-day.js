@@ -18,10 +18,10 @@ async function verifiedStudentDay({actor,date,id,signal,audience,loadSource,reso
     alias.confirmedSourceSchool===entries[0].sourceSchool;
   if(!directorySchool||(entries[0].sourceSchool!==directorySchool&&!confirmedAlias&&!(entries[0].sourceSchool===''&&m?.confirmedMissingSchool===true)))fail('STUDENT_SCHOOL_MISMATCH');
   let revision;
-  const match=audience==='guardian' && source.guardianMatches?.find(candidate=>candidate.id===id);
-  if(!m && match && match.identityRevision===student.identityRevision){
-    if(entries.some(e=>assignments[hash(e.id)]))fail('STUDENT_COVERAGE_INCOMPLETE');
-    revision=hash(['directory-guardian',actor.academyId,date,id,student.identityRevision,entries.map(e=>[e.id,e.fingerprint])]);
+  const match=(audience==='guardian'||audience==='student') && source.directoryMatches?.find(candidate=>candidate.id===id);
+  if(match && match.identityRevision===student.identityRevision){
+    if(entries.some(e=>assignments[hash(e.id)] && assignments[hash(e.id)].studentId!==id))fail('STUDENT_COVERAGE_INCOMPLETE');
+    revision=hash(['directory-'+audience,actor.academyId,date,id,student.identityRevision,entries.map(e=>[e.id,e.fingerprint])]);
   }else{
     if(!m||m.studentId!==student.id||m.academyId!==actor.academyId||m.date!==date||!m.verifiedBy||!m.revision||(!m.sourceRevision||!allowUnchangedCells&&m.sourceRevision!==source.revision)||m.identityRevision!==student.identityRevision)fail('MAPPING_CHANGED');
     if(!Array.isArray(m.entries)||entries.length!==m.entries.length||entries.some(e=>!m.entries.some(x=>x.id===e.id&&x.fingerprint===e.fingerprint)||assignments[hash(e.id)]?.studentId!==student.id||assignments[hash(e.id)]?.revision!==m.revision||assignments[hash(e.id)]?.fingerprint!==e.fingerprint))fail('STUDENT_COVERAGE_INCOMPLETE');

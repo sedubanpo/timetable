@@ -44,7 +44,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   if(!src.complete)throw Object.assign(Error('SOURCE_INCOMPLETE'),{code:'SOURCE_INCOMPLETE',sourceProblem:src.sourceProblem});
   const assign=await reviewStore.dayAssignments(a.academyId,date);
   const history=hist.filter(r=>r.studentId!=='__alimtalk_admin_test__'&&(r.kind||'daily-lessons')===kind).sort(newest);
-  const ids=only||[...new Set([...(src.guardianMatches||[]).map(match=>match.id),...Object.values(assign).map(v=>v.studentId),...history.map(r=>r.studentId)])];
+  const ids=only||[...new Set([...(src.directoryMatches||[]).map(match=>match.id),...Object.values(assign).map(v=>v.studentId),...history.map(r=>r.studentId)])];
   if(ids.length>350)fail('ROSTER_LIMIT');
   const rows=await pooled(ids,async id=>{
    const past=history.filter(r=>r.studentId===id),received=past.filter(r=>r.state==='DELIVERED');

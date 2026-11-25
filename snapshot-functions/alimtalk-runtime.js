@@ -44,11 +44,17 @@ function createRuntime({db,auth,sourceUrl,sourceSecret,apiKey,apiSecret,request,
   const response=await request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:options.body,signal:options.signal});
   if(!response.ok)fail('SOURCE_UNAVAILABLE');return response.json();
  }});
- const linkSource=require('./alimtalk-links').createLinkResolver({store:rs,resolveStudent,now,findCandidates:async(name,source)=>{
+ const linkSource=require('./alimtalk-links').createLinkResolver({store:rs,resolveStudent,now,findCandidates:async(name,source,audience)=>{
   const candidates=await searchStudents({academyId:'banpo'},name);
   const usable=candidates.filter(s=>['ACTIVE','RETURNED','INACTIVE','STOPPED','PAUSED','SUSPENDED','중지','휴원','퇴원'].includes(s.status));
-  if(usable.length)return usable.map(s=>s.id);
   const schools=[...new Set(source.entries.filter(e=>e.sourceName===name).map(e=>e.sourceSchool))];
+  if(usable.length){
+   if((audience==='guardian'||audience==='student') && schools.length===1 && schools[0]){
+    const exact=usable.filter(s=>rules.directorySchoolKey(s.school,s.grade)===schools[0]);
+    if(exact.length===1)return [exact[0].id];
+   }
+   return usable.map(s=>s.id);
+  }
   if(schools.length===1)return (await require('./alimtalk-notice-contacts').existingGuests(rs,source.date,name,schools[0])).map(s=>s.id);
   return [];
 

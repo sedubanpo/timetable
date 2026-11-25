@@ -113,7 +113,7 @@ for(const status of ['신규생','정규'])test(status+' without a prior link qu
  const preview=await batch.batchPreview('',args);
  assert.deepEqual(preview.items.map(r=>[r.studentId,r.relation]),[['s1','모']]);
  assert.equal((await batch.batchRoster('',args)).rows[0].issue,'');
- assert.equal((await batch.batchPreview('',{...args,audience:'student'})).items.length,0);
+ assert.deepEqual((await batch.batchPreview('',{...args,audience:'student'})).items.map(r=>[r.studentId,r.relation]),[['s1','학생']]);
  assert.equal(await x.store.rememberedMapping('banpo','s1'),null);
  assert.equal(sent.length,0);
  x.student.recipients[0].verified=false;
@@ -121,14 +121,13 @@ for(const status of ['신규생','정규'])test(status+' without a prior link qu
 });
 
 test('automatic guardian matching requires a unique active student and free schedule cells',async()=>{
- for(const scenario of ['duplicate','inactive','school','noGuardian','ownership']){
+ for(const scenario of ['duplicate','inactive','school','ownership']){
   const x=await setup();
   x.db.data.clear();
   x.source.entries[0].lesson.status='첫수업';
   if(scenario==='duplicate')x.candidates(['s1','s2']);
   if(scenario==='inactive')x.student.registrationInactive=true;
   if(scenario==='school')x.source.entries[0].sourceSchool='다른중2';
-  if(scenario==='noGuardian')x.student.recipients=x.student.recipients.filter(r=>r.id==='student');
   if(scenario==='ownership')await x.store.saveMapping({academyId:'banpo',date:x.source.date,studentId:'other',revision:'existing',entries:[{id:'new-cell',fingerprint:'prior'}]},null);
   await assert.rejects(verifiedStudentDay({
    actor:x.actor,date:x.source.date,id:'s1',audience:'guardian',resolveStudent:x.resolveStudent,reviewStore:x.store,
