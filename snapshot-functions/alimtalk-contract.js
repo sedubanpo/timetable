@@ -22,7 +22,7 @@
     // A student with suffix T followed by their school is a student row.
     if(!match[1].trim()){
       const next=text.slice(match[0].length).trim().split(/\s+/)[0];
-      if(/[초중고]\d+$/.test(next)||isRetakerLabel(next)||isHomeschoolLabel(next))return null;
+      if(/[초중고]\d+$/.test(next)||isRetakerLabel(next)||isHomeschoolLabel(next)||isEducationOfficeYear(next))return null;
     }
     const tokens=match[1].trim().split(/\s+/).filter(Boolean);
     const subject=/^(수학|수II|수I|수1|수2|미적|기하|확통|과학|물리|물리학|화학|생명과학|생명|지구과학|물|화|생|지|국어|언매|화작|영어|사회|한국사|역사|사탐|생활과윤리|윤리와사상|생윤|윤사|한국지리|세계지리|한지|세지|사회문화|사문|정치와법|정법|경제|동아시아사|동사|세계사|컨설팅|클리닉|면접)(?:[12ⅠⅡ])?$/;
@@ -56,12 +56,16 @@
   function isRetakerLabel(value){
     return /^(?:고3@|재수(?:생|[12])?|삼수(?:생)?|교육청(?:[123](?:학년)?)?)$/.test(String(value||'').replace(/\s+/g,''));
   }
+  function isEducationOfficeYear(label){
+    return /^교육청(?:19|20)[0-9]{2}$/.test(String(label||''));
+  }
   function isHomeschoolLabel(label){
     return /^홈스쿨(?:링)?[1-6]$/.test(String(label||''));
   }
   function directorySchoolKey(school,grade){
     const name=String(school||'').trim();
     const level=String(grade||'').trim();
+    if(isEducationOfficeYear(name+level))return name+level;
     if(isRetakerLabel(name)||isRetakerLabel(level)||isRetakerLabel(name+level))return '재수생';
     const digit=level.match(/^(?:초|중|고)?([1-6])(?:학년)?$/);
     if(!name||!digit)return '';
@@ -238,5 +242,5 @@
     return label;
   }
   function mask(phone){return /^010\d{8}$/.test(phone)?phone.slice(0,3)+'-****-'+phone.slice(-4):'번호 확인 필요';}
-  return {templateId,pfId,templateName,content,labels,historyLabel,studentNameKey,studentNameSpellings,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
+  return {templateId,pfId,templateName,content,labels,historyLabel,studentNameKey,studentNameSpellings,parseLessonHeader,exclusion,isRetakerLabel,isEducationOfficeYear,isHomeschoolLabel,directorySchoolKey,timeNoteForDate,scheduleStatus,readTimeNote,applyTimeNotes,isSaturdayChoiceNote,cardTimeRange,lessonStatusLabel,normalize,formatLesson,compose,verifyTemplate,mask,validDate};
 });

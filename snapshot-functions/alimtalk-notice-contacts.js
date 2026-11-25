@@ -2,7 +2,7 @@
 // Date-scoped contacts for temporary attendance. Never changes the registration record.
 const {randomUUID}=require('node:crypto');
 const {hash}=require('./alimtalk-service');
-const {mask,validDate,studentNameKey,studentNameSpellings,directorySchoolKey,exclusion}=require('./alimtalk-contract');
+const {mask,validDate,studentNameKey,studentNameSpellings,directorySchoolKey,isEducationOfficeYear,exclusion}=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 const guestId=(date,name,school)=>'notice_'+hash(['banpo',date,name,school]);
 async function existingGuests(store,date,name,school){
@@ -40,7 +40,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   return {source,entries,school:schools[0],rows,fingerprint:hash(entries.map(e=>[e.id,e.fingerprint]))};
  }
  function guest(date,name,school){
-  const m=/^(.*?)([1-6])$/.exec(school);
+  const m=isEducationOfficeYear(school)?[school,'교육청',school.slice(-4)]:/^(.*?)([1-6])$/.exec(school);
   if(!m&&school!=='재수생')fail('STUDENT_SCHOOL_MISMATCH');
   name=studentNameKey(name);
   const id=guestId(date,name,school);

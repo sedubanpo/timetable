@@ -1,6 +1,6 @@
 'use strict';
 const {hash}=require('./alimtalk-service'),core=require('./core');
-const {studentNameKey,studentNameSpellings,parseLessonHeader,exclusion,isRetakerLabel,isHomeschoolLabel,readTimeNote,isSaturdayChoiceNote}=require('./alimtalk-contract');
+const {studentNameKey,studentNameSpellings,parseLessonHeader,exclusion,isRetakerLabel,isEducationOfficeYear,isHomeschoolLabel,readTimeNote,isSaturdayChoiceNote}=require('./alimtalk-contract');
 const fail=code=>{throw Object.assign(Error(code),{code});};
 // Conservative grammar: unsupported cells are held, never guessed or silently omitted.
 const statuses=new Set(['정규','보강','결석보강','보충','일반보충','당취보충','자습','오늘만','신규생','첫수업','결석','결석예고','당일취소','당취','휴강','지각','병결','직보','특강']);
@@ -46,7 +46,7 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
    const raw=items[index].trim();if(!raw||headers.includes(items[index]))continue;
    if(/^(자습|자기주도(?:\s*학습)?)$/.test(raw))continue; // Explicit label, not a named student's lesson.
    const chunks=raw.match(/\S+\s*/g),parts=chunks.map(s=>s.trimEnd()),name=studentNameKey(parts[0]);
-   const schoolToken=(isRetakerLabel(parts[1])||isHomeschoolLabel(parts[1]))?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
+   const schoolToken=(isRetakerLabel(parts[1])||isHomeschoolLabel(parts[1])||isEducationOfficeYear(parts[1]))?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
    const school=isRetakerLabel(schoolToken)?'재수생':schoolToken;
    if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!(header&&parts.slice(1).some(s=>statuses.has(s))))){
     issues.push('STUDENT_TEXT_UNRECOGNIZED');

@@ -107,6 +107,11 @@ test('retaker aliases are academic fields, not a match on words in a note',()=>{
   s.data.grid[16][0][1]='가학생 '+label+' 정규';
   const e=parseSnapshot(s,now).entries[0];assert.equal(e.sourceSchool,'재수생');assert.deepEqual(e.lesson.reviewReasons,[]);
  }
+ s.data.grid[16][0][1]='가학생 교육청2007 오늘만';
+ const entry=parseSnapshot(s,now).entries[0];
+ assert.equal(entry.sourceSchool,'교육청2007');assert.deepEqual(entry.lesson.reviewReasons,[]);
+ assert.equal(R.directorySchoolKey('교육청','2007'),entry.sourceSchool);
+ assert.notEqual(R.directorySchoolKey('교육청','2006'),entry.sourceSchool);
  for(const [school,grade] of [['재수','1'],['고','3@'],['교육청','3']])assert.equal(R.directorySchoolKey(school,grade),'재수생');
  s.data.grid[16][0][1]='가학생 가상고3 정규 교육청 모의고사';assert.equal(parseSnapshot(s,now).entries[0].sourceSchool,'가상고3');
  s.data.grid[16][0][1]='가학생 정규 교육청 모의고사';assert.equal(parseSnapshot(s,now).entries[0].sourceSchool,'');

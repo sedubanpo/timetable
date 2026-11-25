@@ -53,6 +53,7 @@ for(const file of ['Index.html','docs/index.html']){
  assert.deepEqual(Object.keys(scope.studentImageScheduleMap).sort(),['가학생','가학생b','가학생c']);
  assert.deepEqual(Array.from(scope.studentImageScheduleMap['가학생b'],row=>row.hour),[13,19]);
  assert.equal(scope.parseStudentRawText('검증학생 가상중3 정규 지각, 10:11 도착').status,'지각','live attendance still shows lateness');
+ assert.equal(scope.parseStudentRawText('검증학생 교육청2007 오늘만').school,'교육청2007');
  for(const label of ['고3@','재수','재수1','재수2','교육청']){
   scope.SCHEDULE_START_HOUR=10;scope.SCHEDULE_END_HOUR=12;
   scope.lastData={headers:['1강의실'],grid:{}};
