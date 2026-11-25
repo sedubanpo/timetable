@@ -1,7 +1,7 @@
 'use strict';
 const {hash}=require('./alimtalk-service');
 const {studentNameKey,directorySchoolKey,exclusion}=require('./alimtalk-contract');
-// Directory matches for first lessons apply only to the current guardian notice.
+// Directory matches without a prior link apply only to the current guardian notice.
 function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
  return async(actor,source,audience)=>{
   if(!source.complete)return source;
@@ -36,9 +36,8 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
     const alias=proof?.date==='identity' && proof.studentId===student.id && proof.identityRevision===student.identityRevision && proof.verifiedBy ? proof.confirmedSourceSchool : null;
     if(studentNameKey(student.name)!==name||!directorySchoolKey(student.school,student.grade)||entries.some(e=>e.sourceSchool!==directorySchoolKey(student.school,student.grade) && (!alias || e.sourceSchool!==alias))){issues[name]='이름·학교·학년 불일치 · 원장 확인 필요';continue;}
     if(!proof){
-     const firstLesson=entries.some(e=>['신규생','첫수업'].includes(e.lesson.status));
      const guardian=student.recipients?.some(r=>['mother','father'].includes(r.id)&&r.verified===true);
-     if(audience==='guardian' && candidates.length===1 && firstLesson && guardian &&
+     if(audience==='guardian' && candidates.length===1 && guardian &&
         !student.registrationInactive && !student.noticeDate && student.identityRevision){
       guardianMatches.push({id:student.id,identityRevision:student.identityRevision});
      }else issues[name]='처음 연결하는 학생 · 학생 확인 필요';

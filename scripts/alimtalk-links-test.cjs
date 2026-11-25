@@ -92,10 +92,10 @@ test('transaction rechecks ownership revision before releasing a vacated positio
  assert.equal((await x.store.mapping('banpo',x.source.date,'a')).revision,'old-a');
 });
 
-test('a new student with a matching directory guardian appears in both individual and bulk guardian previews',async()=>{
+for(const status of ['신규생','정규'])test(status+' without a prior link qualifies for individual and bulk guardian previews',async()=>{
  const x=await setup();
  x.db.data.clear();
- x.source.entries[0].lesson={...require('./alimtalk-fixture.cjs').fixture().lesson,date:x.source.date,status:'신규생'};
+ x.source.entries[0].lesson={...require('./alimtalk-fixture.cjs').fixture().lesson,date:x.source.date,status};
  const loadSource=(actor,date,signal,audience)=>x.link(actor,x.source,audience);
  const loadDay=withStudentDirectory({
   loadMappedDay:(actor,date,[id],signal)=>verifiedStudentDay({
@@ -120,15 +120,14 @@ test('a new student with a matching directory guardian appears in both individua
  assert.equal((await batch.batchPreview('',args)).items.length,0);
 });
 
-test('automatic guardian matching requires a unique active first lesson student and free schedule cells',async()=>{
- for(const scenario of ['duplicate','inactive','school','regular','noGuardian','ownership']){
+test('automatic guardian matching requires a unique active student and free schedule cells',async()=>{
+ for(const scenario of ['duplicate','inactive','school','noGuardian','ownership']){
   const x=await setup();
   x.db.data.clear();
   x.source.entries[0].lesson.status='첫수업';
   if(scenario==='duplicate')x.candidates(['s1','s2']);
   if(scenario==='inactive')x.student.registrationInactive=true;
   if(scenario==='school')x.source.entries[0].sourceSchool='다른중2';
-  if(scenario==='regular')x.source.entries[0].lesson.status='정규';
   if(scenario==='noGuardian')x.student.recipients=x.student.recipients.filter(r=>r.id==='student');
   if(scenario==='ownership')await x.store.saveMapping({academyId:'banpo',date:x.source.date,studentId:'other',revision:'existing',entries:[{id:'new-cell',fingerprint:'prior'}]},null);
   await assert.rejects(verifiedStudentDay({
