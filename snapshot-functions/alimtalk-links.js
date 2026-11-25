@@ -6,7 +6,7 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
  return async(actor,source,audience)=>{
   if(!source.complete)return source;
   const groups=new Map();for(const e of source.entries){if(!groups.has(e.sourceName))groups.set(e.sourceName,[]);groups.get(e.sourceName).push(e);}
-  const names=[...groups.keys()],plans=[],issues={},guardianMatches=[];let next=0;
+  const names=[...groups.keys()],plans=[],issues={},guardianMatches=[],confirmedEntries=new Set();let next=0;
   await Promise.all(Array.from({length:Math.min(6,names.length)},async()=>{while(next<names.length){
    const name=names[next++],entries=groups.get(name);
    const excludedOnly=entries.every(e=>exclusion(e.lesson));
@@ -24,6 +24,14 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
     }
     const student=await resolveStudent(selected);
     if(student.id!==selected){issues[name]='원장 대표 학생 변경 · 다시 확인 필요';continue;}
+    if(entries.every(e=>e.sourceSchool==='')&&studentNameKey(student.name)===name){
+     const mapping=await store.mapping(actor.academyId,source.date,student.id);
+     if(mapping?.confirmedMissingSchool&&mapping.verifiedBy&&mapping.identityRevision===student.identityRevision&&mapping.entries?.length===entries.length&&entries.every(e=>mapping.entries.some(x=>x.id===e.id&&x.fingerprint===e.fingerprint))){
+      for(const entry of entries)confirmedEntries.add(entry);
+      continue;
+     }
+     issues[name]='시간표 학교·학년 미기재 · 연결 추천 학생 선택 필요';continue;
+    }
     const proof=await store.rememberedMapping(actor.academyId,student.id);
     const alias=proof?.date==='identity' && proof.studentId===student.id && proof.identityRevision===student.identityRevision && proof.verifiedBy ? proof.confirmedSourceSchool : null;
     if(studentNameKey(student.name)!==name||!directorySchoolKey(student.school,student.grade)||entries.some(e=>e.sourceSchool!==directorySchoolKey(student.school,student.grade) && (!alias || e.sourceSchool!==alias))){issues[name]='이름·학교·학년 불일치 · 원장 확인 필요';continue;}
@@ -86,7 +94,8 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
   }
 
   if(safe.length)await store.synchronizeMappings(actor,source,safe,now());
-  return {...source,guardianMatches,linkIssues:issues,linkedStudentIds:safe.map(p=>p.student.id)};
+  const entries=source.entries.map(e=>confirmedEntries.has(e)?{...e,lesson:{...e.lesson,reviewReasons:e.lesson.reviewReasons.filter(reason=>reason!=='학교·학년 확인 필요')}}:e);
+  return {...source,entries,guardianMatches,linkIssues:issues,linkedStudentIds:safe.map(p=>p.student.id)};
  };
 }
 module.exports={createLinkResolver};

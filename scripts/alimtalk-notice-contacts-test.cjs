@@ -159,3 +159,14 @@ test('registered number can select direct LMS; stale tickets stop, guardian keep
  f.db.data.get('students/s1').studentContact='01000000008';
  assert.equal((await f.form()).choices.find(r=>r.id==='student').channel,'ATA');
 });
+test('staff can select a directory student for an unlabelled day; only unchanged reviewed lessons become sendable',async()=>{
+ const f=fixture();f.snapshot.data.grid[19][0][1]=f.name+' 오늘만';
+ const form=await f.form();assert.equal(form.matches,true);
+ assert.equal((await f.api('saveNoticeContacts',form)).code,'STUDENT_SCHOOL_MISMATCH');
+ assert.equal((await f.api('saveNoticeContacts',{...form,confirmRecommended:true})).code,200);
+ const request={date:f.date,audience:'guardian',mode:'unsent'};
+ const result=await f.api('batchPreview',request);assert.equal(result.items.length,1,JSON.stringify(result.rows));
+ f.snapshot.data.grid[20]=[[...f.snapshot.data.grid[19][0]]];
+ assert.equal((await f.api('batchPreview',request)).items.length,0);
+ assert.equal(f.sent.length,0);
+});

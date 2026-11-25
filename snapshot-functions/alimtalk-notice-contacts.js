@@ -28,7 +28,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   const entries=source.entries.filter(e=>e.sourceName===studentNameKey(input.name));
   if(!entries.length||entries.every(e=>exclusion(e.lesson)))fail('NO_NOTICE_LESSONS');
   const schools=[...new Set(entries.map(e=>e.sourceSchool))];
-  if(schools.length!==1||!schools[0])fail('STUDENT_SCHOOL_MISMATCH');
+  if(schools.length!==1)fail('STUDENT_SCHOOL_MISMATCH');
   const candidates=await searchStudents(a,input.name);
   if(!Array.isArray(candidates)||candidates.length>20)fail('CANDIDATE_LIMIT');
   const rows=[];
@@ -47,12 +47,12 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   return {id,name,school:m?m[1]:'재수생',grade:m?m[2]:'',noticeDate:date,registrationInactive:true,identityRevision:hash([id,name,school]),recipients:[['student','학생'],['mother','모'],['father','부']].map(([id,relation])=>({id,relation,phone:'',verified:false,reason:'번호 없음'}))};
  }
  async function options(session,input){
-  const a=await auth(session),c=await context(a,input),students=c.rows.length?c.rows:[guest(input.date,input.name,c.school)];
+  const a=await auth(session),c=await context(a,input),students=c.rows.length?c.rows:c.school?[guest(input.date,input.name,c.school)]:[];
   const candidates=[];
   for(const s of students){
    const record=await store.noticeContacts(a.academyId,input.date,s.id);
    const effective=validRecord(record,a,input.date,s,now())?applyNoticeContacts(s,record):s;
-   candidates.push({id:s.id,name:s.name,school:s.school,grade:s.grade,inactive:!!s.registrationInactive,guest:!!s.noticeDate,matches:studentNameKey(s.name)===studentNameKey(input.name)&&directorySchoolKey(s.school,s.grade)===c.school,
+   candidates.push({id:s.id,name:s.name,school:s.school,grade:s.grade,inactive:!!s.registrationInactive,guest:!!s.noticeDate,matches:studentNameKey(s.name)===studentNameKey(input.name)&&(c.school?directorySchoolKey(s.school,s.grade)===c.school:!!directorySchoolKey(s.school,s.grade)&&!s.noticeDate),
     contactVersion:hash([s.identityRevision,s.recipients]),expectedRevision:record?.revision||null,
     choices:effective.recipients.map(r=>({id:r.id,relation:r.relation,masked:mask(r.phone),...(!s.noticeDate&&r.verified&&!r.temporary?{channel:r.channel||'ATA'}:{}),available:r.verified,temporary:!!r.temporary,canEnter:s.recipients.find(x=>x.id===r.id).reason==='번호 없음',reason:r.reason}))});
   }
@@ -64,7 +64,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   if(input.confirmed!==true||input.sourceFingerprint!==c.fingerprint)fail('SOURCE_CHANGED');
   let student=c.rows.find(s=>s.id===input.studentId);
   if(!student&&c.rows.length===0){student=guest(input.date,input.name,c.school);if(student.id!==input.studentId)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');}
-  if(!student||studentNameKey(student.name)!==studentNameKey(input.name)||directorySchoolKey(student.school,student.grade)!==c.school)fail('STUDENT_SCHOOL_MISMATCH');
+  if(!student||studentNameKey(student.name)!==studentNameKey(input.name)||(c.school?directorySchoolKey(student.school,student.grade)!==c.school:!directorySchoolKey(student.school,student.grade)||student.noticeDate||input.confirmRecommended!==true))fail('STUDENT_SCHOOL_MISMATCH');
   if(hash([student.identityRevision,student.recipients])!==input.contactVersion)fail('CONTACT_CHANGED');
   const old=await store.noticeContacts(a.academyId,input.date,student.id);
   if((old?.revision||null)!==(input.expectedRevision||null))fail('REVIEW_CONFLICT');
@@ -88,7 +88,8 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   const effective=applyNoticeContacts(student,record);
   if(!effective.recipients.some(r=>r.verified)&&!validRecord(old,a,input.date,student,now()))fail('CONTACT_REQUIRED');
   const mapping={academyId:a.academyId,date:input.date,studentId:student.id,sourceRevision:c.source.revision,sourceCapturedAt:c.source.capturedAt,revision:randomUUID(),verifiedBy:a.uid,verifiedAt:now(),identityRevision:student.identityRevision,entries:c.entries.map(e=>({id:e.id,fingerprint:e.fingerprint}))};
-  if(!student.noticeDate)mapping.identityLink={name:student.name,school:student.school,grade:student.grade};
+  if(!c.school)mapping.confirmedMissingSchool=true;
+  else if(!student.noticeDate)mapping.identityLink={name:student.name,school:student.school,grade:student.grade};
   const existing=await store.mapping(a.academyId,input.date,student.id);
   await auth(session);
   await store.saveNoticeContacts({record,mapping,guest:student.noticeDate?student:null},input.expectedRevision||null,existing?.revision||null);

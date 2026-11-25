@@ -269,7 +269,7 @@ function drawAlimtalkRoster(list,keyword){
     try{await openCardRosterAction(name,state);}finally{action.disabled=false;action.removeAttribute('aria-busy');action.textContent=actionLabel;}
    };controls.push(action);
   }
-  if(studentImageScheduleMap[name]){const contactButton=make('button','등록·임시 연락처');contactButton.type='button';contactButton.className='roster-contact-action';contactButton.onclick=()=>openCardNoticeContacts();controls.push(contactButton);}
+  if(studentImageScheduleMap[name]){const contactButton=make('button',/학교·학년 미기재/.test(row?.issue||'')?'연결 추천 학생':'등록·임시 연락처');contactButton.type='button';contactButton.className='roster-contact-action';contactButton.onclick=()=>openCardNoticeContacts();controls.push(contactButton);}
   sections.get(group).push(tile);
  }
  for(const [state,[title,description]] of Object.entries(groups)){

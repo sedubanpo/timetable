@@ -11,12 +11,12 @@ async function verifiedStudentDay({actor,date,id,signal,audience,loadSource,reso
   const [m,assignments]=await Promise.all([reviewStore.mapping(actor.academyId,date,student.id),reviewStore.dayAssignments(actor.academyId,date)]);
   if(!source.complete||source.date!==date||source.academyId!==actor.academyId)fail('SOURCE_INCOMPLETE');
   const entries=source.entries.filter(e=>e.sourceName===nameKey);
-  if(!entries.length||entries.some(e=>!e.sourceSchool)||new Set(entries.map(e=>e.sourceSchool)).size!==1)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
+  if(!entries.length||new Set(entries.map(e=>e.sourceSchool)).size!==1)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
   const directorySchool=directorySchoolKey(student.school,student.grade);
   const alias=m?.identityLink;
   const confirmedAlias=alias&&studentNameKey(alias.name)===nameKey && alias.school===student.school && alias.grade===student.grade &&
     alias.confirmedSourceSchool===entries[0].sourceSchool;
-  if(!directorySchool||(entries[0].sourceSchool!==directorySchool&&!confirmedAlias))fail('STUDENT_SCHOOL_MISMATCH');
+  if(!directorySchool||(entries[0].sourceSchool!==directorySchool&&!confirmedAlias&&!(entries[0].sourceSchool===''&&m?.confirmedMissingSchool===true)))fail('STUDENT_SCHOOL_MISMATCH');
   let revision;
   const match=audience==='guardian' && source.guardianMatches?.find(candidate=>candidate.id===id);
   if(!m && match && match.identityRevision===student.identityRevision){
