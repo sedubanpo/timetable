@@ -223,6 +223,9 @@ function drawAlimtalkRoster(list,keyword,options={}){
   if(entry){
    const caption=make('span',entry.caption);
    detail.append(caption,...entry.controls);
+   if(entry.row?.issue==='시간 메모 확인 필요'&&entry.row.studentId&&document.getElementById('cardAlimtalkPanel')?.hidden){
+    openCardAlimtalk(false);
+   }
   }
  }
  list.replaceChildren();

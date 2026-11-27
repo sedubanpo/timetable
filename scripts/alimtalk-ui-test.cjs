@@ -81,11 +81,11 @@ test('memo confirmation is saved without sending and survives remount and audien
   calls.push(action);if(action==='saveMemoReview'){assert.equal(input.previewId,'p');assert.equal(input.confirmed,true);savedBody=body;return {saved:true};}assert.equal(action,'preview');const t=input.targets[0];
   const id=ctx.audience==='student'?'student':'mother',key=ctx.audience+body;
   const confirmed=savedBody===body,ready=available&&confirmed&&t.recipientIds.join()===id;
-  return {previewId:'p',counts:{students:+ready,messages:+ready,numbers:+ready},rows:[{studentId:'s1',text:body,
+  return {previewId:'p',counts:{students:+ready,messages:+ready,numbers:+ready},rows:[{studentId:'s1',text:body,variables:{'#{수업목록}':body},
    choices:available?[{id,relation:id,masked:'***'}]:[],reasons:ready?[]:['보류'],memoReview:{key,confirmed,persisted:confirmed,notes:['확인할 비고']}}]};
  };let ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api});
  try{
-  await ui.load();assert(host.querySelector('input').checked);assert(host.querySelector('.send-action').disabled);
+  await ui.load();const memo=host.querySelectorAll('fieldset')[1];assert.match(memo.textContent,/확인할 비고/);assert.equal(memo.querySelector('pre').textContent,body);assert(host.querySelector('input').checked);assert(host.querySelector('.send-action').disabled);
   host.querySelectorAll('input')[1].click();await new Promise(r=>setTimeout(r,0));
   assert(!host.querySelector('.send-action').disabled);assert.match(host.textContent,/확인 완료 · 저장됨/);assert.equal(calls.filter(a=>a==='saveMemoReview').length,1);
   ui.reset();ctx.audience='student';ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api});await ui.load();
@@ -215,5 +215,20 @@ test('background changes keep checked bulk recipients and the bulk title until e
   assert.equal(panel.querySelector('.batch-student-names input'),pick);assert(pick.checked);
   w.document.querySelector('[data-roster-filter="all"]').click();
   assert.equal(panel.hidden,true);
+ }finally{dom.window.close();}
+});
+
+test('selecting a time-memo hold opens the review once and leaves an active panel alone',()=>{
+ const {dom,w}=setup();
+ try{
+  w.document.body.innerHTML='<div id="list"></div><div id="batchRosterStatus"></div><div id="rosterDetail"></div><div id="cardAlimtalkPanel" hidden></div>';
+  const panel=w.document.getElementById('cardAlimtalkPanel'),list=w.document.getElementById('list');
+  let opens=0;
+  Object.assign(w,{cardAudience:'guardian',currentSheetName:'11/28',attendanceDateKey:()=>sample.date,getScheduleSessionKey:()=>'',timetableLoginSequence:1,studentImageScheduleMap:{가:[],나:[]},selectedStudentForImage:'가',selectStudentImageItem:name=>{w.selectedStudentForImage=name;panel.hidden=true;},refreshStudentImageListSelectionState:()=>{},openCardAlimtalk:results=>{assert.equal(results,false);opens++;panel.hidden=false;}});
+  w.eval(fs.readFileSync('assets/alimtalk-roster.js','utf8'));
+  w.cardRosterScope=w.rosterKey();w.cardRosterRows=[{name:'가',studentId:'a',state:'unsent'},{name:'나',studentId:'b',state:'unsent',issue:'시간 메모 확인 필요'}];
+  w.drawAlimtalkRoster(list,'');assert.equal(opens,0);
+  list.querySelector('[data-student-name="나"]').click();assert.equal(opens,1);
+  w.drawAlimtalkRoster(list,'',{background:true});assert.equal(opens,1);
  }finally{dom.window.close();}
 });

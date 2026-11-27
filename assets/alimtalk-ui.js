@@ -47,6 +47,8 @@
         if(row.memoReview){
           const memo=el('fieldset');memo.append(el('legend','시간표 원본 비고'));
           for(const text of row.memoReview.notes)memo.append(el('p',text));
+          const schedule=row.variables?.['#{수업목록}'];
+          if(schedule)memo.append(el('strong','안내할 수업 시각'),el('pre',schedule));
           const label=el('label'),check=el('input');check.type='checkbox';check.checked=row.memoReview.confirmed;
           check.disabled=row.memoReview.persisted===true;
           check.onchange=async()=>{
@@ -60,7 +62,7 @@
             },28000);
             if(saved)await load();
           };
-          label.append(check,document.createTextNode(' 비고와 아래 수업 시각을 대조했습니다. 이 학생에게 표시된 시간표로 안내합니다.'));
+          label.append(check,document.createTextNode(' 비고와 안내할 수업 시각이 일치합니다 (체크하면 저장).'));
           memo.append(label);if(row.memoReview.persisted)memo.append(el('p','확인 완료 · 저장됨. 수업 내용이 바뀌면 다시 확인합니다.'));section.append(memo);
         }
         for(const r of row.excluded||[])section.append(el('p','제외 · '+r.reason));
