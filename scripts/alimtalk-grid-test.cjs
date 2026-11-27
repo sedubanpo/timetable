@@ -22,7 +22,7 @@ test('dated half-hour notes survive raw sheet import and appear in the message',
  assert.deepEqual(body.reasons,[]);assert.match(body.text,/사탐 오늘만 15:30–17:30/);
 });
 test('actual string grid produces explicit source references and exact room metadata',()=>{const s=parseSnapshot(fixture(),now);assert(s.complete);assert.equal(s.entries[0].lesson.building,'2관');assert.equal(s.entries[0].lesson.room,'3강의실');assert.equal(s.entries[0].lesson.type,'1:1');assert.equal(s.entries[0].lesson.teacher,'가상');});
-test('unsupported room/student strings held; missing headers not guessed',()=>{const x=fixture();x.data.headers=['unknown'];assert(parseSnapshot(x,now).complete);assert.deepEqual(parseSnapshot(x,now).entries[0].lesson.reviewReasons,['강의실 표기 확인 필요']);const y=fixture();y.data.grid[16][0]=['공지사항'];assert(!parseSnapshot(y,now).complete);const z=fixture();z.data.grid[16][0]=['가학생 가상중2 정규'];assert.equal(parseSnapshot(z,now).entries[0].lesson.teacher,'');});
+test('unsupported room/student strings held; missing headers not guessed',()=>{const x=fixture();x.data.headers=['unknown'];assert(parseSnapshot(x,now).complete);assert.deepEqual(parseSnapshot(x,now).entries[0].lesson.reviewReasons,['강의실 표기 확인 필요']);const y=fixture();y.data.grid[16][0]=['공지사항'];assert.ok(parseSnapshot(y,now).sourceProblem);const z=fixture();z.data.grid[16][0]=['가학생 가상중2 정규'];assert.equal(parseSnapshot(z,now).entries[0].lesson.teacher,'');});
 test('cancelled source remains mapped with exclusion status; generated gaps not invented',()=>{const x=fixture();x.data.grid[16][0][1]='가학생 가상중2 당일취소';const s=parseSnapshot(x,now);assert.equal(s.entries.length,1);assert.equal(s.entries[0].lesson.status,'당일취소');});
 test('mapped day needs complete source coverage and matching revisions',async()=>{const s=parseSnapshot(fixture(),now),e=s.entries[0],a={[hash(e.id)]:{studentId:'s1',fingerprint:e.fingerprint,revision:'m1'}},m={academyId:'banpo',date:s.date,studentId:'s1',sourceRevision:s.revision,revision:'m1',verifiedBy:'admin',entries:[{id:e.id,fingerprint:e.fingerprint}]};const load=createMappedDay({loadSource:async()=>s,readDayAssignments:async()=>a,readMapping:async()=>m});const day=await load({academyId:'banpo'},s.date,['s1']);assert.equal(day.students[0].lessons[0].studentId,'s1');a[hash(e.id)].fingerprint='changed';await assert.rejects(load({academyId:'banpo'},s.date,['s1']),{code:'SOURCE_MAPPING_INCOMPLETE'});});
 test('note-based partial-hour schedule is held rather than silently sent as full-hour',()=>{const s=fixture();s.data.grid[16][0][1]='가학생 가상중2 정규 16:30 등원';const parsed=parseSnapshot(s,now);assert.equal(parsed.complete,true);assert.equal(parsed.entries.length,1);assert.deepEqual(parsed.entries[0].lesson.reviewReasons,['시간 메모 확인 필요']);});
@@ -123,7 +123,7 @@ test('standalone self study heading is not a student and does not block the date
   const s=fixture();s.data.grid[15]=[[label]];const p=parseSnapshot(s,now);
   assert(p.complete);assert.equal(p.entries.length,1);assert.equal(p.entries[0].sourceName,'가학생');
  }
- const s=fixture();s.data.grid[15]=[['자기주도 확인필요']];assert.equal(parseSnapshot(s,now).complete,false);
+ const s=fixture();s.data.grid[15]=[['자기주도 확인필요']];assert.ok(parseSnapshot(s,now).sourceProblem);
 });
 
 test('Saturday choice uses the verified student policy and clears only the matching first lesson note',()=>{
@@ -202,7 +202,7 @@ test('header parser does not consume student memos and unknown identity still pr
  for(const raw of ['가학생 가상중2 정규 검증T , 18시까지','가학생 정규 검증T','수학 두과목 검증T','수학 영어 개별 검증T'])assert.equal(R.parseLessonHeader(raw),null,raw);
  for(const raw of ['수학 개별 검증T , 18시까지','개별 수학 검증 T\n18시까지','수학 개별 검증T: 18시까지'])assert.equal(R.parseLessonHeader(raw).teacher,'검증',raw);
  const s=fixture();s.data.grid[13]=[['수학 개별 검증T , 18시까지','누군지 알 수 없음']];
- assert.equal(parseSnapshot(s,now).complete,false);
+ assert.ok(parseSnapshot(s,now).sourceProblem);
 });
 
 test('row permutations and removals retain the verified same-hour lesson and its daily clearance revision',async()=>{
@@ -257,7 +257,7 @@ test('subject consulting lesson is a header and produces a complete notice for t
 test('unrecognized source text reports cell locations without memo contents and clears after repair',()=>{
  const s=fixture();s.data.grid[16]=[['수학 영어 가상T','가학생 가상중2 정규','? 비공개메모']];
  const broken=parseSnapshot(s,now);
- assert.equal(broken.complete,false);
+ assert.equal(broken.complete,true);
  assert.deepEqual(broken.sourceProblem,{sheet:s.sheet,count:2,locations:[
   {hour:16,room:'2관 3강의실',position:1,kind:'header',first:'수학'},
   {hour:16,room:'2관 3강의실',position:3,kind:'row',first:''}
@@ -280,4 +280,16 @@ test('only the trailing student discriminator folds, with stable verified legacy
  s.data.grid[16][0].splice(1,1);s.data.grid[16][0].push(lower);
  const row=parseSnapshot(s,now,saved).entries.find(e=>e.sourceName==='가학생b');
  assert.equal(row.id,old[0].id);assert.equal(row.fingerprint,legacy);
+});
+
+test('a broken room or student row holds only affected schedules',()=>{
+ const s=fixture(),rules=require('../snapshot-functions/alimtalk-contract');
+ s.data.grid[14]=[['수학 영어 가상T','나학생 신규생']];
+ s.data.grid[17]=[['개별 영어 검증T','다학생 가상중2 정규','다학생? 오류']];
+ const parsed=parseSnapshot(s,now);
+ assert.ok(parsed.complete);assert.ok(parsed.sourceProblem);
+ const reasons=name=>rules.compose({id:'s',name,mappingVerified:true},s.date,parsed.entries.filter(e=>e.sourceName===name).map(e=>({...e.lesson,studentId:'s'}))).reasons;
+ assert.deepEqual(reasons('가학생'),[]);
+ assert.ok(reasons('나학생').length);assert.ok(reasons('다학생').includes('원본 수업 확인 필요'));
+ assert.ok(!parsed.entries.some(e=>e.sourceName==='수학'));
 });

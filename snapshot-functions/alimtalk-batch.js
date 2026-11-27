@@ -128,7 +128,8 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   }
   // Keep removed students in history/change review if a delivery was attempted.
   const currentNames=new Set(src.entries.map(e=>e.sourceName));
-  return rows.filter(row=>only||(currentNames.has(row.name)&&!row.excludedOnly)||row.past.length).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  const visibleRows=rows.filter(row=>only||(currentNames.has(row.name)&&!row.excludedOnly)||row.past.length).sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  return {rows:visibleRows,sourceProblem:src.sourceProblem};
  }
  function waitReason(row){
   const waiting=row.items.filter(item=>item.state==='unsent');
@@ -144,14 +145,14 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
   ...(r.state==='changed'?{current:r.text,comparisons:r.comparisons,...(r.absentSubjects?.length?{absentSubjects:r.absentSubjects}:{}),...(r.stoppedWithoutLessons?{stoppedWithoutLessons:true}:{})}:{}),failed:!!r.failed,trackingMissing:(r.past||[]).some(x=>outstanding.has(x.state)&&(!x.messageId||!x.groupId))});
  async function roster(session,input){
   const a=await reviewer(session);validate(input);await store.rate(a.uid,'batchRoster',now(),30);
-  const rows=await scan(a,input,input.studentIds);await reviewer(session);return {rows:rows.map(summary)};
+  const {rows,sourceProblem}=await scan(a,input,input.studentIds);await reviewer(session);return {rows:rows.map(summary),...(sourceProblem?{sourceProblem}:{})};
  }
  async function prepare(session,input){
   const {date,audience,mode}=input;
   const a=await reviewer(session);validate(input);
   if(!['unsent','changed'].includes(mode))fail('INVALID_REQUEST');
   await store.rate(a.uid,'batchPreview',now(),15);
-  const rows=await scan(a,input,input.studentIds);
+  const {rows}=await scan(a,input,input.studentIds);
   const changes=mode==='changed'?rows.filter(r=>r.comparisons?.length).map(r=>({
    name:r.name,studentId:r.id,current:r.text,issue:r.issue,comparisons:r.comparisons
   })):[];
@@ -182,7 +183,7 @@ function createBatch({authorize,loadSource,resolveStudent,reviewStore,store,prov
     p.audience!==input.audience||p.date!==input.date||p.mode!==input.mode||tickets.some(t=>!Object.hasOwn(p.tickets,t)))fail('PREVIEW_EXPIRED');
   await store.rate(a.uid,'batchSend',now(),36);await store.rate('academy:'+a.academyId,'batchSend',now(),48);
   const ids=[...new Set(tickets.map(t=>p.tickets[t]))];
-  const rows=await scan(a,p,ids);
+  const {rows}=await scan(a,p,ids);
   const fresh=rows.flatMap(r=>r.items.filter(x=>x.state===p.mode));
   const selected=tickets.map(t=>fresh.find(x=>x.ticket===t));
   if(selected.some(x=>!x))fail('BATCH_CHANGED');

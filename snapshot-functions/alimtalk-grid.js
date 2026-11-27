@@ -34,7 +34,7 @@ function retainCellReferences(entries,positionId,cellLength,assignments,knownFin
  }
 }
 function parseSnapshot(snapshot,now=Date.now(),assignments={}){
- core.validate(snapshot,now);const entries=[],issues=[],locations=[];
+ core.validate(snapshot,now);const entries=[],issues=[],locations=[],uncertainNames=new Set();
  const saved=Object.values(assignments),knownFingerprints=new Set(saved.map(row=>row.fingerprint));
  for(let hour=8;hour<=23;hour++)snapshot.data.grid[hour].forEach((items,col)=>{
   if(!items.length)return;
@@ -48,7 +48,9 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
    const chunks=raw.match(/\S+\s*/g),parts=chunks.map(s=>s.trimEnd()),name=studentNameKey(parts[0]);
    const schoolToken=(isRetakerLabel(parts[1])||isHomeschoolLabel(parts[1])||isEducationOfficeYear(parts[1]))?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
    const school=isRetakerLabel(schoolToken)?'재수생':schoolToken;
-   if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!(header&&parts.slice(1).some(s=>statuses.has(s))))){
+   if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!statuses.has(parts[1]))){
+    const candidate=studentNameKey(parts[0].replace(/[^가-힣A-Za-z]+$/u,''));
+    if(candidate)uncertainNames.add(candidate);
     issues.push('STUDENT_TEXT_UNRECOGNIZED');
     if(locations.length<20){
      const kind=/[가-힣A-Za-z]\s*T(?:$|[\s,，:：])/.test(raw)?'header':'row';
@@ -89,7 +91,10 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
   retainCellReferences(cellEntries,positionId,items.length,assignments,knownFingerprints,saved.length);
   entries.push(...cellEntries);
  });
- return {academyId:'banpo',date:snapshot.date,capturedAt:snapshot.capturedAt,revision:snapshot.data.version,complete:issues.length===0,entries,issues:[...new Set(issues)],...(issues.length?{sourceProblem:{sheet:snapshot.sheet,count:issues.length,locations}}:{})};
+ for(const entry of entries){
+  if(uncertainNames.has(entry.sourceName))entry.lesson.reviewReasons.push('원본 학생 행 확인 필요');
+ }
+ return {academyId:'banpo',date:snapshot.date,capturedAt:snapshot.capturedAt,revision:snapshot.data.version,complete:true,entries,issues:[...new Set(issues)],...(issues.length?{sourceProblem:{sheet:snapshot.sheet,count:issues.length,locations}}:{})};
 }
 function createMappedDay({loadSource,readDayAssignments,readMapping}){
  return async(actor,date,ids,signal)=>{
