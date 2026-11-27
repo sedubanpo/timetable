@@ -46,9 +46,10 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
    const raw=items[index].trim();if(!raw||headers.includes(items[index]))continue;
    if(/^(자습|자기주도(?:\s*학습)?)$/.test(raw))continue; // Explicit label, not a named student's lesson.
    const chunks=raw.match(/\S+\s*/g),parts=chunks.map(s=>s.trimEnd()),name=studentNameKey(parts[0]);
-   const schoolToken=(isRetakerLabel(parts[1])||isHomeschoolLabel(parts[1])||isEducationOfficeYear(parts[1]))?parts[1]:parts.slice(1).find(s=>/[초중고]\d+$/.test(s));
+   const schoolNeedsReview=/^(신규생|첫수업)$/.test(parts[2]) && /^[가-힣A-Za-z][가-힣A-Za-z0-9·-]*$/.test(parts[1]) && !statuses.has(parts[1]);
+   const schoolToken=(isRetakerLabel(parts[1])||isHomeschoolLabel(parts[1])||isEducationOfficeYear(parts[1]))?parts[1]:(schoolNeedsReview?parts.slice(1,2):parts.slice(1)).find(s=>/[초중고]\d+$/.test(s));
    const school=isRetakerLabel(schoolToken)?'재수생':schoolToken;
-   if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!statuses.has(parts[1]))){
+   if(!/^[가-힣A-Za-z]+$/.test(name)||(!school&&!statuses.has(parts[1])&&!schoolNeedsReview)){
     const candidate=studentNameKey(parts[0].replace(/[^가-힣A-Za-z]+$/u,''));
     if(candidate)uncertainNames.add(candidate);
     issues.push('STUDENT_TEXT_UNRECOGNIZED');
@@ -62,7 +63,7 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
    }
    // A cancellation mentioned in the memo can describe an earlier lesson.
    // Only the status field and a dedicated closure room set this lesson's status.
-   const statusIndex=schoolToken?parts.indexOf(schoolToken)+1:1;
+   const statusIndex=schoolToken?parts.indexOf(schoolToken)+1:schoolNeedsReview?2:1;
    const fieldStatus=statuses.has(parts[statusIndex])?parts[statusIndex]:'';
    const status=/휴강/.test(roomText)?'휴강':fieldStatus;
    // Preserve every identifiable occurrence, including held/cancelled lessons.
@@ -86,7 +87,7 @@ function parseSnapshot(snapshot,now=Date.now(),assignments={}){
    const fingerprint=fingerprints.includes(prior)?prior:fingerprints.find(fp=>knownFingerprints.has(fp))||fingerprints[0];
    const lesson={sourceId:id,date:snapshot.date,start:String(hour).padStart(2,'0')+':00',end:String(hour+1).padStart(2,'0')+':00',subject:header?.subject||'',type:header?.type||'',teacher:header?.teacher||'',...(header?.note?{headerNote:header.note}:{}),building:room?(room[1]||'본관'):'',room:room?room[2]:'',status,...(timeNote.held||timeNote.ranges.length?{timeNoteText:note}:{}),todayOnly:timeNote.todayOnly,timeRanges:timeNote.ranges,...(timeNote.held&&isSaturdayChoiceNote(note,snapshot.date)?{saturdayChoiceNote:true}:{}),reviewReasons};
    // Missing teacher/subject/type remains a student's hold reason in compose.
-   cellEntries.push({id,fingerprint,sourceName:name,sourceSchool:school||'',label:name+' · '+(school||'학교·학년 미기재'),summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
+   cellEntries.push({id,fingerprint,sourceName:name,sourceSchool:school||'',...(schoolNeedsReview&&!school?{schoolText:parts[1]}:{}),label:name+' · '+(school||'학교·학년 미기재'),summary:lesson.subject+' '+lesson.start+'–'+lesson.end+' · '+lesson.building+' '+lesson.room+' · '+lesson.teacher+(reviewReasons.length?' · [발송 보류: '+reviewReasons.join(' / ')+']':'' )+(exclusion({status})?' · [제외: '+status+']':''),lesson});
   }
   retainCellReferences(cellEntries,positionId,items.length,assignments,knownFingerprints,saved.length);
   entries.push(...cellEntries);

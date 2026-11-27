@@ -28,7 +28,7 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   const entries=source.entries.filter(e=>e.sourceName===studentNameKey(input.name));
   if(!entries.length||entries.every(e=>exclusion(e.lesson)))fail('NO_NOTICE_LESSONS');
   const schools=[...new Set(entries.map(e=>e.sourceSchool))];
-  if(schools.length!==1)fail('STUDENT_SCHOOL_MISMATCH');
+  if(schools.length!==1||new Set(entries.map(e=>e.schoolText||'')).size!==1)fail('STUDENT_SCHOOL_MISMATCH');
   const candidates=await searchStudents(a,input.name);
   if(!Array.isArray(candidates)||candidates.length>20)fail('CANDIDATE_LIMIT');
   const rows=[];
@@ -37,34 +37,35 @@ function createNoticeContactsService({authorize,loadSource,searchStudents,resolv
   }
   if(candidates.length&&!rows.length)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');
   if(!candidates.length&&store.noticeGuest)rows.push(...await existingGuests(store,input.date,input.name,schools[0]));
-  return {source,entries,school:schools[0],rows,fingerprint:hash(entries.map(e=>[e.id,e.fingerprint]))};
+  const newcomer=entries.every(e=>['신규생','첫수업'].includes(e.lesson.status));
+  return {source,entries,newcomer,school:schools[0],rows,fingerprint:hash(entries.map(e=>[e.id,e.fingerprint]))};
  }
  function guest(date,name,school){
   const m=isEducationOfficeYear(school)?[school,'교육청',school.slice(-4)]:/^(.*?)([1-6])$/.exec(school);
-  if(!m&&school!=='재수생')fail('STUDENT_SCHOOL_MISMATCH');
+  if(!m&&school&&school!=='재수생')fail('STUDENT_SCHOOL_MISMATCH');
   name=studentNameKey(name);
   const id=guestId(date,name,school);
-  return {id,name,school:m?m[1]:'재수생',grade:m?m[2]:'',noticeDate:date,registrationInactive:true,identityRevision:hash([id,name,school]),recipients:[['student','학생'],['mother','모'],['father','부']].map(([id,relation])=>({id,relation,phone:'',verified:false,reason:'번호 없음'}))};
+  return {id,name,school:m?m[1]:school,grade:m?m[2]:'',noticeDate:date,registrationInactive:true,identityRevision:hash([id,name,school]),recipients:[['student','학생'],['mother','모'],['father','부']].map(([id,relation])=>({id,relation,phone:'',verified:false,reason:'번호 없음'}))};
  }
  async function options(session,input){
-  const a=await auth(session),c=await context(a,input),students=c.rows.length?c.rows:c.school?[guest(input.date,input.name,c.school)]:[];
+  const a=await auth(session),c=await context(a,input),students=c.rows.length?c.rows:c.school||c.newcomer?[guest(input.date,input.name,c.school)]:[];
   const candidates=[];
   for(const s of students){
    const record=await store.noticeContacts(a.academyId,input.date,s.id);
    const effective=validRecord(record,a,input.date,s,now())?applyNoticeContacts(s,record):s;
-   candidates.push({id:s.id,name:s.name,school:s.school,grade:s.grade,inactive:!!s.registrationInactive,guest:!!s.noticeDate,matches:studentNameKey(s.name)===studentNameKey(input.name)&&(c.school?directorySchoolKey(s.school,s.grade)===c.school:!!directorySchoolKey(s.school,s.grade)&&!s.noticeDate),
+   candidates.push({id:s.id,name:s.name,school:s.school,grade:s.grade,inactive:!!s.registrationInactive,guest:!!s.noticeDate,matches:studentNameKey(s.name)===studentNameKey(input.name)&&(c.school?directorySchoolKey(s.school,s.grade)===c.school:c.newcomer||!!directorySchoolKey(s.school,s.grade)&&!s.noticeDate),
     contactVersion:hash([s.identityRevision,s.recipients]),expectedRevision:record?.revision||null,
     choices:effective.recipients.map(r=>({id:r.id,relation:r.relation,masked:mask(r.phone),...(!s.noticeDate&&r.verified&&!r.temporary?{channel:r.channel||'ATA'}:{}),available:r.verified,temporary:!!r.temporary,canEnter:s.recipients.find(x=>x.id===r.id).reason==='번호 없음',reason:r.reason}))});
   }
   await auth(session);
-  return {date:input.date,name:input.name,school:c.school,sourceFingerprint:c.fingerprint,candidates,lessons:c.entries.filter(e=>!exclusion(e.lesson)).map(e=>e.summary)};
+  return {date:input.date,name:input.name,school:c.school,schoolText:c.entries[0].schoolText||'',sourceFingerprint:c.fingerprint,candidates,lessons:c.entries.filter(e=>!exclusion(e.lesson)).map(e=>e.summary)};
  }
  async function save(session,input){
   const a=await auth(session),c=await context(a,input);
   if(input.confirmed!==true||input.sourceFingerprint!==c.fingerprint)fail('SOURCE_CHANGED');
   let student=c.rows.find(s=>s.id===input.studentId);
-  if(!student&&c.rows.length===0){student=guest(input.date,input.name,c.school);if(student.id!==input.studentId)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');}
-  if(!student||studentNameKey(student.name)!==studentNameKey(input.name)||(c.school?directorySchoolKey(student.school,student.grade)!==c.school:!directorySchoolKey(student.school,student.grade)||student.noticeDate||input.confirmRecommended!==true))fail('STUDENT_SCHOOL_MISMATCH');
+  if(!student&&!c.rows.length&&(c.school||c.newcomer)){student=guest(input.date,input.name,c.school);if(student.id!==input.studentId)fail('STUDENT_IDENTITY_REVIEW_REQUIRED');}
+  if(!student||studentNameKey(student.name)!==studentNameKey(input.name)||(c.school?directorySchoolKey(student.school,student.grade)!==c.school:(!c.newcomer&&(!directorySchoolKey(student.school,student.grade)||student.noticeDate))||input.confirmRecommended!==true))fail('STUDENT_SCHOOL_MISMATCH');
   if(hash([student.identityRevision,student.recipients])!==input.contactVersion)fail('CONTACT_CHANGED');
   const old=await store.noticeContacts(a.academyId,input.date,student.id);
   if((old?.revision||null)!==(input.expectedRevision||null))fail('REVIEW_CONFLICT');

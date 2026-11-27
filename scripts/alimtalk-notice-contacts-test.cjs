@@ -170,3 +170,16 @@ test('staff can select a directory student for an unlabelled day; only unchanged
  assert.equal((await f.api('batchPreview',request)).items.length,0);
  assert.equal(f.sent.length,0);
 });
+for(const [guest,school] of [[false,''],[true,''],[false,'KIS제주2012'],[true,'KIS제주2012']])test('newcomer guardian review '+JSON.stringify({guest,school}),async()=>{
+ const f=fixture({guest});f.snapshot.data.grid[19]=[[]];
+ for(const hour of [14,15])f.snapshot.data.grid[hour]=[['수학 1:1 검증T',[f.name,school,'신규생'].filter(Boolean).join(' ')]];
+ const input=await f.form();assert(input.matches);
+ const before=await f.api('batchPreview',{date:f.date,audience:'guardian',mode:'unsent'});assert(!before.items?.length);
+ input.confirmRecommended=true;if(guest)input.temporary={mother:'01000000004'};
+ assert.equal((await f.api('saveNoticeContacts',input)).code,200);
+ const p=await f.api('batchPreview',{date:f.date,audience:'guardian',mode:'unsent'});
+ assert.equal(p.items.length,1);assert.equal(p.items[0].studentId,input.studentId);
+ const send=await f.api('batchSend',{date:f.date,audience:'guardian',mode:'unsent',previewId:p.previewId,tickets:p.items.map(i=>i.ticket),confirmed:true});
+ assert.equal(send.code,200);assert.equal(f.sent[0].to,guest?'01000000004':'01000000002');
+ assert.match(JSON.stringify(f.sent[0]),/14:00–16:00/);
+});

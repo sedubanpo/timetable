@@ -16,7 +16,8 @@ async function verifiedStudentDay({actor,date,id,signal,audience,loadSource,reso
   const alias=m?.identityLink;
   const confirmedAlias=alias&&studentNameKey(alias.name)===nameKey && alias.school===student.school && alias.grade===student.grade &&
     alias.confirmedSourceSchool===entries[0].sourceSchool;
-  if(!directorySchool||(entries[0].sourceSchool!==directorySchool&&!confirmedAlias&&!(entries[0].sourceSchool===''&&m?.confirmedMissingSchool===true)))fail('STUDENT_SCHOOL_MISMATCH');
+  const confirmedWithoutSchool=entries[0].sourceSchool===''&&m?.confirmedMissingSchool===true;
+  if(!confirmedWithoutSchool&&(!directorySchool||entries[0].sourceSchool!==directorySchool&&!confirmedAlias))fail('STUDENT_SCHOOL_MISMATCH');
   let revision;
   const match=(audience==='guardian'||audience==='student') && source.directoryMatches?.find(candidate=>candidate.id===id);
   if(match && match.identityRevision===student.identityRevision){

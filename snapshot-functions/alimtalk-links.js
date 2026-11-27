@@ -30,7 +30,7 @@ function createLinkResolver({findCandidates,resolveStudent,store,now=Date.now}){
       for(const entry of entries)confirmedEntries.add(entry);
       continue;
      }
-     issues[name]='시간표 학교·학년 미기재 · 연결 추천 학생 선택 필요';continue;
+     issues[name]=entries.some(e=>e.schoolText)?'학교 표기 확인 필요 · 수업과 수신번호 확인':'시간표 학교·학년 미기재 · 수업과 수신번호 확인';continue;
     }
     const proof=await store.rememberedMapping(actor.academyId,student.id);
     const alias=proof?.date==='identity' && proof.studentId===student.id && proof.identityRevision===student.identityRevision && proof.verifiedBy ? proof.confirmedSourceSchool : null;

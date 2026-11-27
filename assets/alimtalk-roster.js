@@ -274,7 +274,7 @@ function drawAlimtalkRoster(list,keyword,options={}){
     try{await openCardRosterAction(name,state);}finally{action.disabled=false;action.removeAttribute('aria-busy');action.textContent=actionLabel;}
    };controls.push(action);
   }
-  if(studentImageScheduleMap[name]){const contactButton=make('button',/학교·학년 미기재/.test(row?.issue||'')?'연결 추천 학생':'등록·임시 연락처');contactButton.type='button';contactButton.className='roster-contact-action';contactButton.onclick=()=>openCardNoticeContacts();controls.push(contactButton);}
+  if(studentImageScheduleMap[name]){const contactButton=make('button',/학교·학년 미기재|학교 표기 확인 필요|신규·미등록 학생/.test(row?.issue||'')?'수업·수신번호 확인':'등록·임시 연락처');contactButton.type='button';contactButton.className='roster-contact-action';contactButton.onclick=()=>openCardNoticeContacts();controls.push(contactButton);}
   sections.get(group).push(tile);
  }
  for(const [state,[title,description]] of Object.entries(groups)){
