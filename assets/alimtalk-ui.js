@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   const R=root.TimetableAlimtalk;
-  function mount({host,api,context,deadline=10000,previewDeadline=deadline}){
+  function mount({host,api,context,onMemoSaved,deadline=10000,previewDeadline=deadline}){
     let preview=null,selection=[],generation=0,busy=false,requestContext='';
     function current(g){if(g!==generation)return false;if(requestContext!==JSON.stringify(context())){reset();shell();host.append(el('p','학생·날짜·로그인 상태가 변경됐습니다. 다시 미리보기해 주세요.'));return false;}return true;}
     const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
@@ -48,22 +48,31 @@
           const memo=el('fieldset');memo.append(el('legend','시간표 원본 비고'));
           for(const text of row.memoReview.notes)memo.append(el('p',text));
           const schedule=row.variables?.['#{수업목록}'];
-          if(schedule)memo.append(el('strong','안내할 수업 시각'),el('pre',schedule));
-          const label=el('label'),check=el('input');check.type='checkbox';check.checked=row.memoReview.confirmed;
-          check.disabled=row.memoReview.persisted===true;
-          check.onchange=async()=>{
-            if(!check.checked)return;
-            const id=preview?.previewId;
-            preview=null;host.querySelector('.alimtalk-confirm')?.remove();locked(send);check.disabled=true;
-            let saved=false;
-            await run(async g=>{
-              await api('saveMemoReview',{previewId:id,confirmed:true});
-              if(current(g))saved=true;
-            },28000);
-            if(saved)await load();
-          };
-          label.append(check,document.createTextNode(' 비고와 안내할 수업 시각이 일치합니다 (체크하면 저장).'));
-          memo.append(label);if(row.memoReview.persisted)memo.append(el('p','확인 완료 · 저장됨. 수업 내용이 바뀌면 다시 확인합니다.'));section.append(memo);
+          if(schedule){
+            const summary=el('details');summary.append(el('summary','안내할 수업 시각'),el('pre',schedule));memo.append(summary);
+          }
+          if(row.memoReview.persisted){
+            memo.append(el('p','확인 완료 · 저장됨. 수업 내용이 바뀌면 다시 확인합니다.'));
+          }else{
+            const approve=button('비고 확인 · 승인 저장',async()=>{
+              if(!preview?.previewId||busy)return;
+              const id=preview.previewId;
+              preview=null;locked(approve);locked(send);approve.textContent='승인 저장 중…';
+              let saved=false;
+              await run(async g=>{
+                const result=await api('saveMemoReview',{previewId:id,confirmed:true});
+                if(!result?.saved)throw Object.assign(Error(),{code:'RESULT_UNCERTAIN'});
+                if(current(g))saved=true;
+              },28000);
+              if(!saved&&approve.isConnected)approve.textContent='저장 결과 확인 필요';
+              if(saved&&onMemoSaved){
+                host.replaceChildren(el('h3',row.name+' · 비고 승인 저장 완료'),el('p','발송 명단에서 이 학생의 수신 상태를 확인하고 있습니다.'));
+                await onMemoSaved(row.studentId);
+              }else if(saved)await load();
+            });
+            approve.className='memo-approve primary';memo.append(approve);
+          }
+          section.append(memo);
         }
         for(const r of row.excluded||[])section.append(el('p','제외 · '+r.reason));
         if(row.messageText){section.append(el('strong','문자 전용 본문'),el('pre',row.messageText));}

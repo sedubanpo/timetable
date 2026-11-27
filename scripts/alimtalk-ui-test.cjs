@@ -86,10 +86,10 @@ test('memo confirmation is saved without sending and survives remount and audien
  };let ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api});
  try{
   await ui.load();const memo=host.querySelectorAll('fieldset')[1];assert.match(memo.textContent,/확인할 비고/);assert.equal(memo.querySelector('pre').textContent,body);assert(host.querySelector('input').checked);assert(host.querySelector('.send-action').disabled);
-  host.querySelectorAll('input')[1].click();await new Promise(r=>setTimeout(r,0));
+  host.querySelector('.memo-approve').click();await new Promise(r=>setTimeout(r,0));
   assert(!host.querySelector('.send-action').disabled);assert.match(host.textContent,/확인 완료 · 저장됨/);assert.equal(calls.filter(a=>a==='saveMemoReview').length,1);
   ui.reset();ctx.audience='student';ui=w.TimetableAlimtalkUI.mount({host,context:()=>ctx,api});await ui.load();
-  assert(!host.querySelector('.send-action').disabled);assert(host.querySelectorAll('input')[1].checked);
+  assert(!host.querySelector('.send-action').disabled);assert.match(host.textContent,/확인 완료 · 저장됨/);
   ui.reset();body+=' 수정';await ui.load();assert(host.querySelector('.send-action').disabled);
   ui.reset();available=false;await ui.load();assert(host.querySelector('.send-action').disabled);
   assert(!calls.includes('send'));
@@ -103,7 +103,7 @@ test('failed memo save never enables send or claims saved confirmation; explicit
   if(action==='saveMemoReview'){calls++;throw Object.assign(Error(),{code:'RESULT_UNCERTAIN'});}
   return {...sample,sendEnabled:true,counts:{students:0,messages:0,numbers:0},rows:[{studentId:'s1',text:'확인 본문',reasons:['시간 메모 확인 필요'],choices:[],memoReview:{key:'k',confirmed:false,persisted:false,notes:['비고']}}]};
  }});
- try{await ui.load();host.querySelector('input').click();await new Promise(r=>setTimeout(r,0));assert.equal(calls,1);assert(host.querySelector('.send-action').disabled);assert(!host.textContent.includes('확인 완료 · 저장됨'));assert.match(host.textContent,/저장 결과를 확인하지 못했습니다/);await ui.load();assert(!host.querySelector('input').checked);}finally{dom.window.close();}
+ try{await ui.load();host.querySelector('.memo-approve').click();await new Promise(r=>setTimeout(r,0));assert.equal(calls,1);assert(host.querySelector('.send-action').disabled);assert(!host.textContent.includes('확인 완료 · 저장됨'));assert.match(host.textContent,/저장 결과를 확인하지 못했습니다/);await ui.load();assert(!host.querySelector('.memo-approve').disabled);}finally{dom.window.close();}
 });
 
 test('changed roster groups the visible names once per reason using delivered lesson text',()=>{
@@ -230,5 +230,18 @@ test('selecting a time-memo hold opens the review once and leaves an active pane
   w.drawAlimtalkRoster(list,'');assert.equal(opens,0);
   list.querySelector('[data-student-name="나"]').click();assert.equal(opens,1);
   w.drawAlimtalkRoster(list,'',{background:true});assert.equal(opens,1);
+ }finally{dom.window.close();}
+});
+
+test('approval receipt stays visible while only the approved student is refreshed',async()=>{
+ const {dom,w,host}=setup(),calls=[],refreshed=[];
+ const ui=w.TimetableAlimtalkUI.mount({host,context:()=>({studentId:'s1',date:sample.date}),
+  api:async(action)=>{calls.push(action);if(action==='saveMemoReview')return {saved:true};
+   return {...sample,rows:[{...sample.rows[0],memoReview:{notes:['시간 변경 확인'],persisted:false}}]};},
+  onMemoSaved:async id=>refreshed.push(id)});
+ try{
+  await ui.load();await host.querySelector('.memo-approve').onclick();
+  assert.deepEqual(calls,['preview','saveMemoReview']);assert.deepEqual(refreshed,['s1']);
+  assert.match(host.textContent,/승인 저장 완료/);
  }finally{dom.window.close();}
 });
