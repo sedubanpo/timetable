@@ -1,15 +1,15 @@
 (function(root){
   'use strict';
   const R=root.TimetableAlimtalk;
-  function mount({host,api,context,deadline=10000}){
+  function mount({host,api,context,deadline=10000,previewDeadline=deadline}){
     let preview=null,selection=[],generation=0,busy=false,requestContext='';
     function current(g){if(g!==generation)return false;if(requestContext!==JSON.stringify(context())){reset();shell();host.append(el('p','학생·날짜·로그인 상태가 변경됐습니다. 다시 미리보기해 주세요.'));return false;}return true;}
     const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
     const button=(text,fn)=>{const b=el('button',text);b.type='button';b.onclick=fn;return b;};
     function reset(){generation++;preview=null;selection=[];busy=false;host.replaceChildren();}
     function shell(){host.replaceChildren();host.append(el('h3','알림톡 안내'));const note=el('p','받는 번호와 수업 시각을 확인해 주세요.');host.append(note);}
-    function error(e){const messages={MEMO_REVIEW_CHANGED:'비고 또는 수업 내용이 바뀌었습니다. 최신 본문을 다시 확인해 주세요.',RESULT_UNCERTAIN:'저장 결과를 확인하지 못했습니다. 미리보기를 다시 조회해 저장 여부를 확인하세요.',TIMEOUT:'요청 시간이 초과되었습니다. 재발송 전에 발송 결과를 확인하세요.',AUTH_CONNECTION_FAILED:'로그인 연결을 불러오지 못했습니다.',TOKEN_UNAVAILABLE:'로그인 인증을 확인하지 못했습니다. 로그인 상태를 확인해 주세요.',NETWORK_UNAVAILABLE:'알림톡 서버에 연결하지 못했습니다. 네트워크 또는 브라우저 차단을 확인하세요.',INVALID_RESPONSE:'서버 응답을 해석하지 못했습니다.',UNAUTHORIZED:'허브 로그인 상태를 확인해 주세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 시간표·데스크 접근 권한을 확인해 주세요.',SESSION_CHANGED:'학생·날짜·로그인 상태가 변경됐습니다.'};const code=e&&typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'UI_ERROR';const p=el('p','확인을 완료하지 못했습니다. '+(messages[code]||'확인 코드: '+code));p.setAttribute('role','alert');host.append(p,button('미리보기 다시 확인',()=>load()),button('발송 결과 확인',()=>showResults()));}
-    async function run(fn,operationDeadline=deadline){
+    function error(e,previewRead){if(previewRead)shell();const messages={MEMO_REVIEW_CHANGED:'비고 또는 수업 내용이 바뀌었습니다. 최신 본문을 다시 확인해 주세요.',RESULT_UNCERTAIN:'저장 결과를 확인하지 못했습니다. 미리보기를 다시 조회해 저장 여부를 확인하세요.',TIMEOUT:previewRead?'미리보기 조회 시간이 초과되었습니다. 잠시 후 다시 확인해 주세요.':'요청 시간이 초과되었습니다. 재발송 전에 발송 결과를 확인하세요.',AUTH_CONNECTION_FAILED:'로그인 연결을 불러오지 못했습니다.',TOKEN_UNAVAILABLE:'로그인 인증을 확인하지 못했습니다. 로그인 상태를 확인해 주세요.',NETWORK_UNAVAILABLE:'알림톡 서버에 연결하지 못했습니다. 네트워크 또는 브라우저 차단을 확인하세요.',INVALID_RESPONSE:'서버 응답을 해석하지 못했습니다.',UNAUTHORIZED:'허브 로그인 상태를 확인해 주세요.',FORBIDDEN:'반포관 실무자 권한을 확인할 수 없습니다. 시간표·데스크 접근 권한을 확인해 주세요.',SESSION_CHANGED:'학생·날짜·로그인 상태가 변경됐습니다.'};const code=e&&typeof e.code==='string'&&/^[A-Z_]{1,60}$/.test(e.code)?e.code:'UI_ERROR';const p=el('p','확인을 완료하지 못했습니다. '+(messages[code]||'확인 코드: '+code));p.setAttribute('role','alert');host.append(p,button('미리보기 다시 확인',()=>load()),button('발송 결과 확인',()=>showResults()));}
+    async function run(fn,operationDeadline=deadline,previewRead=false){
       if(busy)return;
       busy=true;const g=++generation;requestContext=JSON.stringify(context());
       host.querySelectorAll('button').forEach(b=>b.disabled=true);
@@ -17,12 +17,12 @@
       const timeout=new Promise((_,reject)=>{
         renewDeadline=()=>{
           clearTimeout(timer);
-          timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),deadline);
+          timer=setTimeout(()=>reject(Object.assign(Error('TIMEOUT'),{code:'TIMEOUT'})),operationDeadline);
         };
         renewDeadline();
       });
       try{await Promise.race([fn(g,renewDeadline),timeout]);}
-      catch(e){if(current(g))error(e);}
+      catch(e){if(current(g))error(e,previewRead);}
       finally{
         clearTimeout(timer);
         if(current(g)){generation++;busy=false;host.querySelectorAll('button').forEach(b=>{if(!b.dataset.locked)b.disabled=false;});}
@@ -90,7 +90,7 @@
         if(again){renewDeadline();p=await read();if(!current(g))return;}
       }
       draw(p);
-    });}
+    },previewDeadline,true);}
     function confirmSend(confirmChanges){
       if(!preview)return;const p=preview,c=p.counts;const box=el('div');box.className='alimtalk-confirm';box.setAttribute('role','group');box.setAttribute('aria-label','알림톡 발송 확인');
       if(!p.testMode)for(const row of p.rows)box.append(el('p',row.name+' · '+row.date+' · '+(row.recipients||[]).map(r=>r.relation+' '+r.masked+(r.channel==='LMS'?' · 문자 전용':'')).join(', ')));
