@@ -42,6 +42,20 @@ function firestoreStore(db){
       tx.create(ref,value);return {created:true,record:value};
     });},
     async update(id,fn){return db.runTransaction(async tx=>{const ref=records.doc(id),snap=await tx.get(ref);const value=fn(snap.data()||null);tx.set(ref,value);return value;});},
+    async updateWebhookRecords(ids,reduce){
+      // Keep reads ahead of writes and serialize all reports for the same delivery.
+      for(let offset=0;offset<ids.length;offset+=100){
+        const refs=ids.slice(offset,offset+100).map(id=>records.doc(id));
+        await db.runTransaction(async tx=>{
+          const snapshots=await tx.getAll(...refs);
+          for(const snap of snapshots){
+            if(!snap.exists)continue;
+            const old=snap.data(),next=reduce(snap.id,old);
+            if(next!==old)tx.set(snap.ref,next);
+          }
+        });
+      }
+    },
     async history(academyId,date,studentIds){
       // Bounded query; overflow is explicit, never silently a complete history.
       const snap=await records.where('academyId','==',academyId).where('date','==',date).where('studentId','in',studentIds).limit(201).get();

@@ -176,7 +176,7 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     // An empty provider search does not prove non-delivery; keep retries blocked.
     return store.update(old.id,current=>afterEmptyLookup(current,now(),deadline));
   }
-  async function apply(id,event){return store.update(id,old=>{
+  function nextResult(id,old,event){
     if(!old||event.key!==id||(old.messageId&&old.messageId!==event.messageId)||(old.groupId&&old.groupId!==event.groupId))fail('RESULT_MISMATCH');
     const next=event.registrationFailed===true?'FAILED':status(event.statusCode),terminal=['DELIVERED','FAILED'];
     if(terminal.includes(old.state))return old; // duplicate and stale events cannot undo a final result
@@ -190,14 +190,31 @@ function createService({authorize,loadDay,store,provider,now=Date.now,deadline=8
     if(old.fallbackResult==='CHECKING')return old;
     if(old.state==='PROCESSING'&&next==='ACCEPTED')return old;
     return {...old,state:next,messageId:event.messageId,groupId:event.groupId,lastResultCheckAt:now(),trackingIssue:null,errorCode:next==='FAILED'||next==='UNKNOWN'?String(event.statusCode):null,updatedAt:now()};
-  });}
-  async function webhook(header,events){if(!verifyWebhook(webhookSecret,header))fail('UNAUTHORIZED');if(!Array.isArray(events)||events.length>100)fail('INVALID_REQUEST');
-    // Persist before acknowledging; failed storage returns non-2xx to permit provider retry.
-    for(const e of events){const id=e.customFields?.timetableKey;if(id===undefined)continue;if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');const old=await store.get(id);if(!old)continue;
-      // Replacement reports have their own ID. Reconcile their group before settling the original.
-      if(old.channel==='LMS'&&(e.replacement===true||e.type&&e.type!=='LMS'))continue;
-      if(old.smsFallback && (e.replacement===true||['SMS','LMS'].includes(e.type)))continue;
-      await apply(id,{messageId:e.messageId,groupId:e.groupId,statusCode:e.statusCode,key:id});}return {ok:true};}
+  }
+  async function apply(id,event){return store.update(id,old=>nextResult(id,old,event));}
+  async function webhook(header,events){
+    if(!verifyWebhook(webhookSecret,header))fail('UNAUTHORIZED');
+    if(!Array.isArray(events))fail('INVALID_RESULT');
+    const reports=new Map();
+    for(const e of events){
+      const id=e?.customFields?.timetableKey;
+      if(id===undefined)continue;
+      if(typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)||!e.messageId||!e.groupId)fail('INVALID_RESULT');
+      if(!reports.has(id))reports.set(id,[]);
+      reports.get(id).push(e);
+    }
+    await store.updateWebhookRecords([...reports.keys()],(id,old)=>{
+      let current=old;
+      for(const e of reports.get(id)){
+        // Reconciliation owns replacement reports with a different provider message ID.
+        if(old.channel==='LMS'&&(e.replacement===true||e.type&&e.type!=='LMS'))continue;
+        if(old.smsFallback&&(e.replacement===true||['SMS','LMS'].includes(e.type)))continue;
+        current=nextResult(id,current,{messageId:e.messageId,groupId:e.groupId,statusCode:e.statusCode,key:id});
+      }
+      return current;
+    });
+    return {ok:true};
+  }
   return {preview,saveMemoReview,send,results,reconcile,webhook,dispatch,apply};
 }
 module.exports={createService,afterEmptyLookup,status,verifyWebhook,hash,timeMemoReview,memoScheduleKey};

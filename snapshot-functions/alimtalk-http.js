@@ -4,9 +4,19 @@ function createHandler({review,delivery,allowedOrigins,allowSend=false,batch,stu
  if(!Array.isArray(allowedOrigins)||!allowedOrigins.length)throw Error('ORIGIN_CONFIG_REQUIRED');
  return async(req,res)=>{
   if(req.path==='/webhook'){
-   if(req.method!=='POST'||!Array.isArray(req.body)||req.body.length>100||Buffer.byteLength(JSON.stringify(req.body))>100000)return res.status(400).json({code:'INVALID_RESULT'});
-   let timer;try{await Promise.race([delivery.webhook(req.headers['x-solapi-secret'],req.body),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('TIMEOUT')),4000);})]);return res.status(200).json({ok:true});}
-   catch{return res.status(503).json({code:'WEBHOOK_NOT_APPLIED'});}finally{clearTimeout(timer);}
+   if(req.method!=='POST')return res.status(405).json({code:'METHOD_NOT_ALLOWED'});
+   if(!Array.isArray(req.body))return res.status(400).json({code:'INVALID_RESULT'});
+   // SOLAPI bundles reports up to about 500 KB, including on retry.
+   if((req.rawBody?.length??Buffer.byteLength(JSON.stringify(req.body)))>1024*1024)return res.status(413).json({code:'REQUEST_LIMIT'});
+   try{
+    await delivery.webhook(req.headers['x-solapi-secret'],req.body);
+    return res.status(200).json({ok:true});
+   }catch(e){
+    if(e.code==='UNAUTHORIZED')return res.status(401).json({code:'UNAUTHORIZED'});
+    if(e.code==='INVALID_RESULT')return res.status(400).json({code:'INVALID_RESULT'});
+    console.warn('timetableWebhookNotApplied',{count:req.body.length,reason:e.code==='RESULT_MISMATCH'?'RESULT_MISMATCH':'STORAGE'});
+    return res.status(503).json({code:'WEBHOOK_NOT_APPLIED'});
+   }
   }
   const origin=req.headers.origin;
   if(origin&&!allowedOrigins.includes(origin))return res.status(403).json({code:'FORBIDDEN'});

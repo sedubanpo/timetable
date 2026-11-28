@@ -101,3 +101,14 @@ test('memo save is actor-bound, explicitly confirmed, revalidates displayed cont
   assert.equal(await f.deps.store.memoReview('banpo',f.input.date,f.student.id),undefined);assert.equal(f.sent.length,0);
  }
 });
+
+test('webhook bulk storage reads distinct deliveries in chunks and skips unknown and unchanged records',async()=>{
+ const {firestoreStore}=require('../snapshot-functions/alimtalk-store'),reads=[],writes=[];
+ const db={collection:()=>({doc:id=>({id})}),runTransaction:async fn=>fn({
+  getAll:async(...refs)=>{reads.push(refs.length);return refs.map(ref=>({ref,id:ref.id,exists:ref.id!=='missing',data:()=>({state:'PROCESSING'})}));},
+  set:(ref,value)=>writes.push([ref.id,value.state])
+ })};
+ const ids=['missing','done',...Array.from({length:133},(_,i)=>String(i))];
+ await firestoreStore(db).updateWebhookRecords(ids,(id,old)=>id==='done'?old:{state:'DELIVERED'});
+ assert.deepEqual(reads,[100,35]);assert.equal(writes.length,133);
+});

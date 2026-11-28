@@ -14,3 +14,9 @@ test('memo review save routes are separated by audience and do not require send 
  for(const action of ['saveMemoReview','studentSaveMemoReview']){x.req.body={action,input:{previewId:'synthetic',confirmed:true}};await handler(x.req,x.res);assert.equal(x.res.body.saved,true);}
  assert.deepEqual(calls,['guardian','student']);
 });
+test('provider retry bundles above 100 KB and 100 events are acknowledged only after persistence',async()=>{
+ const x=setup(),body=Array.from({length:160},()=>({text:'x'.repeat(1024)}));let persisted=false;
+ const h=createHandler({review:{},delivery:{webhook:async(_,rows)=>{assert.equal(rows,body);await Promise.resolve();persisted=true;}},allowedOrigins:['https://sedubanpo.github.io']});
+ await h({path:'/webhook',method:'POST',headers:{},body},x.res);
+ assert.equal(x.res.code,200);assert(persisted);
+});
